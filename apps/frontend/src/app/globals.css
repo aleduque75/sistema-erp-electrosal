@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 330 30% 90%;
+    --foreground: 240 10% 3.9%;
+    --card: 330 30% 85%;
+    --CardContent: 330 30% 85%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 330 80% 50%; /* Fúcsia vibrante para o modo claro */
+    --primary-foreground: 0 0% 98%;
+    --primary-50: 330 80% 95%;
+    --primary-100: 330 80% 90%;
+    --primary-200: 330 80% 80%;
+    --primary-300: 330 80% 70%;
+    --primary-400: 330 80% 60%;
+    --primary-500: 330 80% 50%;
+    --primary-600: 330 80% 40%;
+    --primary-700: 330 80% 30%; /* Fúcsia escuro para o Navbar */
+    --primary-800: 330 80% 20%;
+    --primary-900: 330 80% 10%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 330 80% 90%; /* Fúcsia mais claro para hover no modo claro */
+    --accent-foreground: 240 5.9% 10%; /* Texto escuro para hover no modo claro */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 70%;
+    --input: 220 13% 91%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 20 50% 40%; /* Um tom diferente para o modo escuro */
+    --primary-foreground: 210 20% 98%;
+    --primary-50: 20 50% 95%;
+    --primary-100: 20 50% 90%;
+    --primary-200: 20 50% 80%;
+    --primary-300: 20 50% 70%;
+    --primary-400: 20 50% 60%;
+    --primary-500: 20 50% 50%;
+    --primary-600: 20 50% 40%;
+    --primary-700: 20 50% 30%;
+    --primary-800: 20 50% 20%;
+    --primary-900: 20 50% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 240 3.7% 25%; /* Tom de cinza mais claro para hover no modo escuro */
+    --accent-foreground: 0 0% 98%; /* Texto branco para hover no modo escuro */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 20%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  }
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/90 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2;
+  }
+  .btn-danger {
+    @apply bg-destructive text-destructive-foreground px-4 py-2 rounded-md hover:bg-destructive/90 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2;
+  }
+  .card {
+    @apply bg-card text-card-foreground shadow-md rounded-lg p-6;
+  }
+  .table-auto {
+    @apply w-full text-left border-collapse;
+  }
+  .table-auto th,
+  .table-auto td {
+    @apply px-4 py-2 border-b border-border;
+  }
+  .table-auto th {
+    @apply bg-muted text-muted-foreground font-semibold;
+  }
+}

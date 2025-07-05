@@ -1,0 +1,27 @@
+{
+  "name": "sistema-beleza",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "jest",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "turbo": "latest",
+    "webpack-node-externals": "^3.0.0"
+  },
+  "packageManager": "yarn@1.22.19",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@nestjs/swagger": "^11.2.0",
+    "swagger-ui-express": "^5.0.1"
+  }
+}

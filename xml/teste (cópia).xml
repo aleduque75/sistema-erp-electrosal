@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe09876543210987654321098765432109876543210987" versao="4.00">
+      <ide>
+        <nNF>1001</nNF>
+      </ide>
+      <emit>
+        <xNome>Distribuidora de Cosméticos BelezaPura</xNome>
+      </emit>
+      <det nItem="1">
+        <prod>
+          <xProd>Creme Hidratante Facial</xProd>
+          <qCom>20.0000</qCom>
+          <vUnCom>35.5000000000</vUnCom>
+        </prod>
+      </det>
+      <det nItem="2">
+        <prod>
+          <xProd>Óleo Essencial de Lavanda</xProd>
+          <qCom>15.0000</qCom>
+          <vUnCom>22.0000000000</vUnCom>
+        </prod>
+      </det>
+      <det nItem="3">
+        <prod>
+          <xProd>Sabonete em Barra Glicerinado (Caixa)</xProd>
+          <qCom>30.0000</qCom>
+          <vUnCom>5.0000000000</vUnCom>
+        </prod>
+      </det>
+      <cobr>
+        <dup>
+          <nDup>001</nDup>
+          <dVenc>2025-08-15</dVenc>
+          <vDup>595.00</vDup>
+        </dup>
+        <dup>
+          <nDup>002</nDup>
+          <dVenc>2025-09-15</dVenc>
+          <vDup>595.00</vDup>
+        </dup>
+      </cobr>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <chNFe>09876543210987654321098765432109876543210987</chNFe>
+    </infProt>
+  </protNFe>
+</nfeProc>
