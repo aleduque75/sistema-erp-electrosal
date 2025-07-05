@@ -1,0 +1,215 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = [] // O array agora está vazio
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  clients         Client[]
+  products        Product[]
+  sales           Sale[]
+  accountsPay     AccountPay[]
+  accountsRec     AccountRec[]
+  contasCorrentes ContaCorrente[]
+  contasContabeis ContaContabil[]
+  transacoes      Transacao[]     @relation("TransacaoUserEnvolvido")
+  XmlImportLog    XmlImportLog[]
+}
+
+model Client {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  name            String
+  email           String?   @unique
+  phone           String?
+  address         String?
+  // Detailed profile fields
+  birthDate       DateTime?
+  gender          String?
+  preferences     String? // e.g., JSON or text field for beauty preferences
+  purchaseHistory Json? // Store purchase history as JSON
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales Sale[]
+}
+
+model Product {
+  id          String  @id @default(uuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  price       Decimal @db.Decimal(10, 2)
+  stock       Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  saleItems      SaleItem[]
+  stockMovements StockMovement[]
+}
+
+model StockMovement {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  type      String // e.g., "IN", "OUT", "ADJUSTMENT"
+  quantity  Int
+
+  createdAt DateTime @default(now())
+}
+
+model Sale {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  orderNumber   String   @unique
+  totalAmount   Decimal  @db.Decimal(10, 2)
+  feeAmount     Decimal? @db.Decimal(10, 2) // <--- NOVO: Valor da taxa cobrada
+  netAmount     Decimal? @db.Decimal(10, 2) // <--- NOVO: Valor líquido após a taxa  saleDate      DateTime @default(now())
+  paymentMethod String? // New field for payment method
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  saleItems SaleItem[]
+}
+
+model SaleItem {
+  id        String  @id @default(uuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AccountPay {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  description String
+  amount      Decimal   @db.Decimal(10, 2)
+  dueDate     DateTime
+  paid        Boolean   @default(false)
+  paidAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AccountRec {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  description String
+  amount      Decimal   @db.Decimal(10, 2)
+  dueDate     DateTime
+  receiveDate DateTime?
+  received    Boolean   @default(false)
+  receivedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- ENUMS ADICIONADOS ---
+
+enum TipoTransacaoPrisma {
+  CREDITO
+  DEBITO
+}
+
+enum TipoContaContabilPrisma {
+  ATIVO
+  PASSIVO
+  PATRIMONIO_LIQUIDO
+  RECEITA
+  DESPESA
+}
+
+// --- MODELOS ADICIONADOS ---
+
+model ContaContabil {
+  id               String                  @id @default(uuid())
+  userId           String // Mapeado de 'empresaId'
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade) // Mapeado de 'Empresa'
+  codigo           String
+  nome             String
+  tipo             TipoContaContabilPrisma
+  aceitaLancamento Boolean                 @default(true)
+  contaPaiId       String?
+  contaPai         ContaContabil?          @relation("SubContas", fields: [contaPaiId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subContas        ContaContabil[]         @relation("SubContas")
+  transacoes       Transacao[]
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  @@unique([userId, codigo])
+  @@map("contas_contabeis")
+}
+
+model ContaCorrente {
+  id           String      @id @default(uuid())
+  userId       String // Mapeado de 'pessoaId'
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade) // Mapeado de 'Pessoa'
+  numeroConta  String
+  saldo        Decimal     @db.Decimal(10, 2)
+  moeda        String      @default("BRL")
+  dataAbertura DateTime    @default(now())
+  transacoes   Transacao[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  deletedAt    DateTime? // Campo para soft delete
+
+  @@unique([userId, numeroConta])
+  @@map("contas_correntes")
+}
+
+model Transacao {
+  id              String              @id @default(uuid())
+  tipo            TipoTransacaoPrisma
+  valor           Decimal             @db.Decimal(10, 2)
+  moeda           String
+  dataHora        DateTime            @default(now())
+  descricao       String?
+  contaContabilId String
+  contaContabil   ContaContabil       @relation(fields: [contaContabilId], references: [id])
+  contaCorrenteId String?
+  contaCorrente   ContaCorrente?      @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction) // Alterado para NoAction
+  userEnvolvidoId String? // Mapeado de 'pessoaEnvolvidaId'
+  userEnvolvido   User?               @relation("TransacaoUserEnvolvido", fields: [userEnvolvidoId], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@map("transacoes")
+}
+
+model XmlImportLog {
+  id        String   @id @default(cuid())
+  nfeKey    String   @unique // A chave de 44 dígitos da NF-e
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}

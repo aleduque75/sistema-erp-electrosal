@@ -1,0 +1,42 @@
+# .gitignore na raiz do monorepo
+
+# Logs e arquivos de depuração
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependências (essencial!)
+# A barra no início garante que ele só ignore a pasta na raiz,
+# mas sem a barra, ele ignora qualquer pasta com esse nome, o que é ideal para monorepos.
+node_modules
+.pnpm-store
+
+# Arquivos de build e produção
+dist
+.next
+.output
+build
+
+# Arquivos de sistema e de IDE
+.DS_Store
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Arquivos de ambiente (NUNCA versione segredos!)
+.env
+.env.local
+.env.*.local
+
+# Arquivos de cache de testes
+.jest-cache
+coverage
+
+# Regras que você copiou de apps/backend/.gitignore já devem estar cobertas
+# pelas regras acima (como node_modules, dist, .env). Verifique se há algo
+# específico que precise ser adicionado.

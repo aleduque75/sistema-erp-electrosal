@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe12345678901234567890123456789012345678901234" versao="4.00">
+      <ide>
+        <nNF>999</nNF>
+      </ide>
+      <emit>
+        <xNome>Fornecedor de Teste Ltda</xNome>
+      </emit>
+      <det nItem="1">
+        <prod>
+          <xProd>Produto Totalmente Novo de Teste</xProd>
+          <qCom>10.0000</qCom>
+          <vUnCom>15.5000000000</vUnCom>
+        </prod>
+      </det>
+      <det nItem="2">
+        <prod>
+          <xProd>Item para Associar Manualmente</xProd>
+          <qCom>5.0000</qCom>
+          <vUnCom>25.0000000000</vUnCom>
+        </prod>
+      </det>
+      <cobr>
+        <dup>
+          <nDup>001</nDup>
+          <dVenc>2025-08-10</dVenc>
+          <vDup>280.00</vDup>
+        </dup>
+      </cobr>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <chNFe>12345678901234567890123456789012345678901234</chNFe>
+    </infProt>
+  </protNFe>
+</nfeProc>
