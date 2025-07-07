@@ -1,73 +1,40 @@
 import {
   IsString,
   IsNotEmpty,
-  IsNumber,
   IsEnum,
+  IsNumber,
+  IsDate,
   IsOptional,
-  IsISO8601,
+  IsUUID,
 } from 'class-validator';
 import { TipoTransacaoPrisma } from '@prisma/client';
+import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/mapped-types';
 
 export class CreateTransacaoDto {
   @IsEnum(TipoTransacaoPrisma)
-  @IsNotEmpty()
   tipo: TipoTransacaoPrisma;
 
   @IsNumber()
-  @IsNotEmpty()
   valor: number;
 
   @IsString()
-  @IsNotEmpty()
   moeda: string;
 
-  @IsISO8601()
-  @IsNotEmpty()
-  dataHora: string;
+  @IsDate()
+  @Type(() => Date)
+  dataHora: Date;
 
   @IsString()
   @IsOptional()
   descricao?: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   contaContabilId: string;
 
-  @IsString()
+  @IsUUID()
   @IsOptional()
   contaCorrenteId?: string;
-
-  @IsString()
-  @IsOptional()
-  userEnvolvidoId?: string;
 }
 
-export class UpdateTransacaoDto {
-  @IsEnum(TipoTransacaoPrisma)
-  @IsOptional()
-  tipo?: TipoTransacaoPrisma;
-
-  @IsNumber()
-  @IsOptional()
-  valor?: number;
-
-  @IsString()
-  @IsOptional()
-  moeda?: string;
-
-  @IsString()
-  @IsOptional()
-  descricao?: string;
-
-  @IsString()
-  @IsOptional()
-  contaContabilId?: string;
-
-  @IsString()
-  @IsOptional()
-  contaCorrenteId?: string;
-
-  @IsString()
-  @IsOptional()
-  userEnvolvidoId?: string;
-}
+export class UpdateTransacaoDto extends PartialType(CreateTransacaoDto) {}

@@ -1,73 +1,61 @@
-// apps/backend/src/accounts-rec/accounts-rec.controller.ts
 import {
   Controller,
   Get,
   Post,
   Body,
-  Patch, // Importe Patch
+  Patch,
   Param,
   Delete,
   UseGuards,
   Request,
+  Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { AccountsRecService } from './accounts-rec.service';
+import { AuthGuard } from '@nestjs/passport';
 import {
   CreateAccountRecDto,
   UpdateAccountRecDto,
-  ReceivePaymentDto, // Garanta que ReceivePaymentDto está importado
+  ReceivePaymentDto,
 } from './dtos/account-rec.dto';
-import { AuthGuard } from '@nestjs/passport';
-import { AuthRequest } from '../auth/types/auth-request.type';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('accounts-rec')
 export class AccountsRecController {
-  constructor(private readonly accountsRecService: AccountsRecService) {}
+  constructor(private readonly service: AccountsRecService) {}
 
   @Post()
-  create(
-    @Request() req: AuthRequest,
-    @Body() createAccountRecDto: CreateAccountRecDto,
-  ) {
-    return this.accountsRecService.create(req.user.id, createAccountRecDto);
+  create(@Request() req, @Body() createDto: CreateAccountRecDto) {
+    return this.service.create(req.user.id, createDto);
   }
 
   @Get()
-  findAll(@Request() req: AuthRequest) {
-    return this.accountsRecService.findAll(req.user.id);
-  }
-
-  @Get(':id')
-  findOne(@Request() req: AuthRequest, @Param('id') id: string) {
-    return this.accountsRecService.findOne(req.user.id, id);
+  findAll(@Request() req, @Query('search') search?: string) {
+    return this.service.findAll(req.user.id, search);
   }
 
   @Patch(':id')
   update(
-    @Request() req: AuthRequest,
+    @Request() req,
     @Param('id') id: string,
-    @Body() updateAccountRecDto: UpdateAccountRecDto,
+    @Body() updateDto: UpdateAccountRecDto,
   ) {
-    return this.accountsRecService.update(req.user.id, id, updateAccountRecDto);
+    return this.service.update(req.user.id, id, updateDto);
+  }
+
+  @Patch(':id/receive')
+  receive(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: ReceivePaymentDto,
+  ) {
+    return this.service.receive(req.user.id, id, dto);
   }
 
   @Delete(':id')
-  remove(@Request() req: AuthRequest, @Param('id') id: string) {
-    return this.accountsRecService.remove(req.user.id, id);
-  }
-
-  // NOVO: Rota para marcar como recebido
-  @Patch(':id/receive') // <--- MÉTODO HTTP PATCH, Rota: /accounts-rec/:id/receive
-  markAsReceived(
-    @Request() req: AuthRequest,
-    @Param('id') id: string,
-    @Body() receivePaymentDto: ReceivePaymentDto, // Recebe o DTO com receivedAt e contaCorrenteId
-  ) {
-    // Chama o método markAsReceived do serviço
-    return this.accountsRecService.markAsReceived(
-      req.user.id,
-      id,
-      receivePaymentDto,
-    );
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Request() req, @Param('id') id: string) {
+    return this.service.remove(req.user.id, id);
   }
 }

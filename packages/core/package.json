@@ -9,5 +9,8 @@
   },
   "devDependencies": {
     "typescript": "latest"
+  },
+  "dependencies": {
+    "nanoid": "^5.1.5"
   }
 }

@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ContaCorrente } from '@prisma/client';
 import {
   CreateContaCorrenteDto,
   UpdateContaCorrenteDto,
@@ -10,104 +9,53 @@ import {
 export class ContasCorrentesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(
-    userId: string,
-    data: CreateContaCorrenteDto,
-  ): Promise<ContaCorrente> {
+  // ✅ MÉTODO CREATE CORRIGIDO
+  create(userId: string, createDto: CreateContaCorrenteDto) {
+    // 1. Desestruturamos o DTO para separar o saldoInicial dos outros dados
+    const { saldoInicial, ...restOfDto } = createDto;
+
+    // 2. Montamos o objeto de dados apenas com os campos que o banco conhece
     return this.prisma.contaCorrente.create({
       data: {
-        ...data,
-        saldo: data.saldo,
-        dataAbertura: new Date(data.dataAbertura),
-        userId,
+        ...restOfDto, // Os outros dados (nome, numeroConta, etc.)
+        saldo: saldoInicial, // O campo 'saldo' do banco recebe o valor de 'saldoInicial'
+        userId: userId,
       },
     });
   }
 
-  async findAll(userId: string): Promise<ContaCorrente[]> {
+  findAll(userId: string) {
     return this.prisma.contaCorrente.findMany({
       where: { userId, deletedAt: null },
+      orderBy: { nome: 'asc' },
     });
   }
 
-  async findOne(userId: string, id: string): Promise<ContaCorrente | null> {
-    return this.prisma.contaCorrente.findUnique({
-      where: {
-        id,
-        userId,
-        deletedAt: null,
-      },
+  async findOne(userId: string, id: string) {
+    const conta = await this.prisma.contaCorrente.findFirst({
+      where: { id, userId, deletedAt: null },
     });
+    if (!conta) {
+      throw new NotFoundException('Conta corrente não encontrada.');
+    }
+    return conta;
   }
 
-  async findOneByNumeroConta(
-    userId: string,
-    numeroConta: string,
-  ): Promise<ContaCorrente | null> {
-    return this.prisma.contaCorrente.findUnique({
-      where: {
-        userId_numeroConta: {
-          userId,
-          numeroConta,
-        },
-        deletedAt: null,
-      },
-    });
-  }
-
-  async update(
-    userId: string,
-    id: string,
-    data: UpdateContaCorrenteDto,
-  ): Promise<ContaCorrente> {
+  async update(userId: string, id: string, updateDto: UpdateContaCorrenteDto) {
+    await this.findOne(userId, id);
+    // O saldo não é atualizado aqui, apenas outros dados cadastrais
+    const { saldoInicial, ...updateData } = updateDto as any;
     return this.prisma.contaCorrente.update({
-      where: {
-        id,
-        userId,
-        deletedAt: null,
-      },
-      data,
+      where: { id },
+      data: updateData,
     });
   }
 
-  async remove(userId: string, id: string): Promise<ContaCorrente> {
+  async remove(userId: string, id: string) {
+    await this.findOne(userId, id);
     return this.prisma.contaCorrente.update({
-      where: {
-        id,
-        userId,
-      },
+      where: { id },
       data: { deletedAt: new Date() },
     });
-  }
-
-  async getOpeningBalance(
-    contaCorrenteId: string,
-    startDate: Date,
-  ): Promise<number> {
-    const grouped = await this.prisma.transacao.groupBy({
-      by: ['tipo'],
-      where: {
-        contaCorrenteId: contaCorrenteId,
-        dataHora: {
-          lt: startDate, // 'lt' (less than) - todas as transações ANTES da data de início
-        },
-      },
-      _sum: {
-        valor: true, // Prisma vai somar os valores
-      },
-    });
-
-    let openingBalance = 0;
-    for (const group of grouped) {
-      const sum = group._sum.valor ?? 0;
-      if (group.tipo === 'CREDITO') {
-        openingBalance += Number(sum);
-      } else {
-        // DEBITO
-        openingBalance -= Number(sum);
-      }
-    }
-
-    return openingBalance;
   }
 }

@@ -1,8 +1,9 @@
 import "./globals.css";
-import Navbar from "../components/Navbar";
 import { AuthProvider } from "../contexts/AuthContext";
 import { ThemeProvider } from "../components/theme-provider";
 import { Toaster } from "sonner";
+import { QueryProvider } from "@/components/providers/query-provider"; // ✅ 1. Importar o QueryProvider
+import { Header } from "@/components/layout/header"; // ✅ 2. Importar o Header
 
 export default function RootLayout({
   children,
@@ -10,7 +11,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning>
       <body>
         <ThemeProvider
           attribute="class"
@@ -18,11 +19,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <QueryProvider>
+          {/* Header component */}
           <AuthProvider>
             {/* Navbar component */}
-            <Navbar />
+           
             <main className="container mx-auto p-4">{children}</main>
           </AuthProvider>
+          </QueryProvider>
         </ThemeProvider>
         <Toaster richColors position="top-right" />{" "}
       </body>

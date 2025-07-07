@@ -1,9 +1,11 @@
+import { PartialType } from '@nestjs/mapped-types';
 import {
   IsString,
   IsNotEmpty,
   IsEnum,
   IsBoolean,
   IsOptional,
+  IsUUID,
 } from 'class-validator';
 import { TipoContaContabilPrisma } from '@prisma/client';
 
@@ -17,36 +19,17 @@ export class CreateContaContabilDto {
   nome: string;
 
   @IsEnum(TipoContaContabilPrisma)
-  @IsNotEmpty()
   tipo: TipoContaContabilPrisma;
 
   @IsBoolean()
-  @IsOptional()
-  aceitaLancamento?: boolean;
+  aceitaLancamento: boolean;
 
-  @IsString()
+  @IsUUID()
   @IsOptional()
   contaPaiId?: string;
 }
 
-export class UpdateContaContabilDto {
-  @IsString()
-  @IsOptional()
-  codigo?: string;
-
-  @IsString()
-  @IsOptional()
-  nome?: string;
-
-  @IsEnum(TipoContaContabilPrisma)
-  @IsOptional()
-  tipo?: TipoContaContabilPrisma;
-
-  @IsBoolean()
-  @IsOptional()
-  aceitaLancamento?: boolean;
-
-  @IsString()
-  @IsOptional()
-  contaPaiId?: string;
-}
+// Usar PartialType garante que o UpdateDto tenha a propriedade 'codigo' opcional
+export class UpdateContaContabilDto extends PartialType(
+  CreateContaContabilDto,
+) {}
