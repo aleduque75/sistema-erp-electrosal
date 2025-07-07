@@ -1,12 +1,14 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = [] // O array agora está vazio
+  previewFeatures = []
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// --- MODELOS PRINCIPAIS ---
 
 model User {
   id        String   @id @default(uuid())
@@ -24,9 +26,54 @@ model User {
   accountsRec     AccountRec[]
   contasCorrentes ContaCorrente[]
   contasContabeis ContaContabil[]
-  transacoes      Transacao[]     @relation("TransacaoUserEnvolvido")
+  settings        UserSettings?
   XmlImportLog    XmlImportLog[]
+  transacoes      Transacao[] // ✅ ADICIONE ESTA LINHA
 }
+
+model Product {
+  id             String          @id @default(uuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  name           String
+  description    String?
+  price          Decimal         @db.Decimal(10, 2)
+  stock          Int
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  saleItems      SaleItem[]
+  stockMovements StockMovement[] // ✅ A relação existe aqui
+}
+
+// ✅ E O MODELO ESTÁ DE VOLTA AQUI
+model StockMovement {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  type      String // "IN", "OUT_SALE", "ADJUSTMENT"
+  quantity  Int
+  createdAt DateTime @default(now())
+}
+
+model Sale {
+  id            String       @id @default(uuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  clientId      String
+  client        Client       @relation(fields: [clientId], references: [id])
+  orderNumber   String       @unique
+  totalAmount   Decimal      @db.Decimal(10, 2)
+  // ✅ ADICIONANDO OS CAMPOS QUE FALTAVAM
+  feeAmount     Decimal?     @db.Decimal(10, 2)
+  netAmount     Decimal?     @db.Decimal(10, 2)
+  paymentMethod String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  saleItems     SaleItem[]
+  accountsRec   AccountRec[]
+}
+
+// ... todos os outros modelos que já estavam corretos ...
 
 model Client {
   id              String    @id @default(uuid())
@@ -36,105 +83,26 @@ model Client {
   email           String?   @unique
   phone           String?
   address         String?
-  // Detailed profile fields
   birthDate       DateTime?
   gender          String?
-  preferences     String? // e.g., JSON or text field for beauty preferences
-  purchaseHistory Json? // Store purchase history as JSON
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  sales Sale[]
-}
-
-model Product {
-  id          String  @id @default(uuid())
-  userId      String
-  user        User    @relation(fields: [userId], references: [id])
-  name        String
-  description String?
-  price       Decimal @db.Decimal(10, 2)
-  stock       Int
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  saleItems      SaleItem[]
-  stockMovements StockMovement[]
-}
-
-model StockMovement {
-  id        String  @id @default(uuid())
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-  type      String // e.g., "IN", "OUT", "ADJUSTMENT"
-  quantity  Int
-
-  createdAt DateTime @default(now())
-}
-
-model Sale {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  clientId      String
-  client        Client   @relation(fields: [clientId], references: [id])
-  orderNumber   String   @unique
-  totalAmount   Decimal  @db.Decimal(10, 2)
-  feeAmount     Decimal? @db.Decimal(10, 2) // <--- NOVO: Valor da taxa cobrada
-  netAmount     Decimal? @db.Decimal(10, 2) // <--- NOVO: Valor líquido após a taxa  saleDate      DateTime @default(now())
-  paymentMethod String? // New field for payment method
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  saleItems SaleItem[]
+  preferences     String?
+  purchaseHistory Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  sales           Sale[]
 }
 
 model SaleItem {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   saleId    String
-  sale      Sale    @relation(fields: [saleId], references: [id])
+  sale      Sale     @relation(fields: [saleId], references: [id])
   productId String
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
   quantity  Int
-  price     Decimal @db.Decimal(10, 2)
-
+  price     Decimal  @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
-model AccountPay {
-  id          String    @id @default(uuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  description String
-  amount      Decimal   @db.Decimal(10, 2)
-  dueDate     DateTime
-  paid        Boolean   @default(false)
-  paidAt      DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model AccountRec {
-  id          String    @id @default(uuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  description String
-  amount      Decimal   @db.Decimal(10, 2)
-  dueDate     DateTime
-  receiveDate DateTime?
-  received    Boolean   @default(false)
-  receivedAt  DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// --- ENUMS ADICIONADOS ---
 
 enum TipoTransacaoPrisma {
   CREDITO
@@ -149,12 +117,40 @@ enum TipoContaContabilPrisma {
   DESPESA
 }
 
-// --- MODELOS ADICIONADOS ---
+model AccountPay {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  description String
+  amount      Decimal   @db.Decimal(10, 2)
+  dueDate     DateTime
+  paid        Boolean   @default(false)
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AccountRec {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  saleId          String?
+  sale            Sale?          @relation(fields: [saleId], references: [id])
+  description     String
+  amount          Decimal        @db.Decimal(10, 2)
+  dueDate         DateTime
+  received        Boolean        @default(false)
+  receivedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  contaCorrenteId String?
+  contaCorrente   ContaCorrente? @relation(fields: [contaCorrenteId], references: [id])
+}
 
 model ContaContabil {
   id               String                  @id @default(uuid())
-  userId           String // Mapeado de 'empresaId'
-  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade) // Mapeado de 'Empresa'
+  userId           String
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   codigo           String
   nome             String
   tipo             TipoContaContabilPrisma
@@ -171,17 +167,19 @@ model ContaContabil {
 }
 
 model ContaCorrente {
-  id           String      @id @default(uuid())
-  userId       String // Mapeado de 'pessoaId'
-  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade) // Mapeado de 'Pessoa'
-  numeroConta  String
-  saldo        Decimal     @db.Decimal(10, 2)
-  moeda        String      @default("BRL")
-  dataAbertura DateTime    @default(now())
-  transacoes   Transacao[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  deletedAt    DateTime? // Campo para soft delete
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nome        String
+  numeroConta String
+  agencia     String?
+  saldo       Decimal      @db.Decimal(10, 2)
+  moeda       String       @default("BRL")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  transacoes  Transacao[]
+  accountsRec AccountRec[]
 
   @@unique([userId, numeroConta])
   @@map("contas_correntes")
@@ -189,17 +187,18 @@ model ContaCorrente {
 
 model Transacao {
   id              String              @id @default(uuid())
+  // ✅ PADRONIZANDO: A transação sempre pertence a um usuário
+  userId          String
+  user            User                @relation(fields: [userId], references: [id])
   tipo            TipoTransacaoPrisma
   valor           Decimal             @db.Decimal(10, 2)
   moeda           String
-  dataHora        DateTime            @default(now())
   descricao       String?
+  dataHora        DateTime            @default(now()) // ✅ Verifique se este campo existe
   contaContabilId String
   contaContabil   ContaContabil       @relation(fields: [contaContabilId], references: [id])
   contaCorrenteId String?
-  contaCorrente   ContaCorrente?      @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction) // Alterado para NoAction
-  userEnvolvidoId String? // Mapeado de 'pessoaEnvolvidaId'
-  userEnvolvido   User?               @relation("TransacaoUserEnvolvido", fields: [userEnvolvidoId], references: [id], onDelete: SetNull)
+  contaCorrente   ContaCorrente?      @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction)
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
@@ -208,8 +207,19 @@ model Transacao {
 
 model XmlImportLog {
   id        String   @id @default(cuid())
-  nfeKey    String   @unique // A chave de 44 dígitos da NF-e
+  nfeKey    String   @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model UserSettings {
+  id                    String  @id @default(uuid())
+  userId                String  @unique
+  user                  User    @relation(fields: [userId], references: [id])
+  defaultReceitaContaId String?
+  defaultCaixaContaId   String?
+  defaultDespesaContaId String?
+
+  @@map("user_settings")
 }

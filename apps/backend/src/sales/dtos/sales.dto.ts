@@ -1,4 +1,4 @@
-// apps/backend/src/sales/dtos/sales.dto.ts
+import { PartialType } from '@nestjs/mapped-types';
 import {
   IsString,
   IsNotEmpty,
@@ -9,53 +9,44 @@ import {
   IsOptional,
   IsUUID,
 } from 'class-validator';
-import { Type } from 'class-transformer'; // Garanta que 'Type' está importado
+import { Type } from 'class-transformer';
 
-// --- CreateSaleItemDto (COMPLETO E CORRETO) ---
 export class CreateSaleItemDto {
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
-  productId: string; // <-- DEVE ESTAR AQUI
+  productId: string;
 
   @IsNumber()
   @Min(1)
-  quantity: number; // <-- DEVE ESTAR AQUI
+  quantity: number;
 
   @IsNumber()
-  price: number; // <-- DEVE ESTAR AQUI
+  price: number;
 }
 
-// --- CreateSaleDto (COMPLETO E CORRETO) ---
 export class CreateSaleDto {
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
   clientId: string;
 
-  @IsArray() // Indica que 'items' é um array
-  @ValidateNested({ each: true }) // Valida cada item do array
-  @Type(() => CreateSaleItemDto) // <--- CRUCIAL: Converte cada objeto para uma instância de CreateSaleItemDto
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateSaleItemDto)
   items: CreateSaleItemDto[];
 
   @IsString()
   @IsNotEmpty()
   paymentMethod: string;
 
-  @IsNumber()
-  totalAmount: number;
-
+  // Opcional: O valor total pode ser calculado no backend para segurança
   @IsNumber()
   @IsOptional()
-  feeAmount?: number;
-
-  @IsNumber()
-  @IsOptional()
-  netAmount?: number;
+  totalAmount?: number;
 
   @IsString()
-  @IsNotEmpty()
-  contaContabilId: string;
+  @IsOptional() // ✅ TORNAR ESTE CAMPO OPCIONAL
+  contaContabilId?: string;
 
-  @IsString()
   @IsUUID()
   @IsOptional()
   contaCorrenteId?: string | null;
@@ -66,20 +57,4 @@ export class CreateSaleDto {
   numberOfInstallments?: number;
 }
 
-// --- UpdateSaleDto (apenas para referência) ---
-export class UpdateSaleDto {
-  @IsString() @IsOptional() clientId?: string;
-  @IsString() @IsOptional() paymentMethod?: string;
-  @IsNumber() @IsOptional() totalAmount?: number;
-  @IsNumber() @IsOptional() feeAmount?: number;
-  @IsNumber() @IsOptional() netAmount?: number;
-  @IsString() @IsOptional() contaContabilId?: string;
-  @IsString() @IsUUID() @IsOptional() contaCorrenteId?: string | null;
-  @IsNumber() @Min(1) @IsOptional() numberOfInstallments?: number;
-  // Se permitir a atualização de itens de venda, você precisaria de:
-  // @IsArray()
-  // @IsOptional()
-  // @ValidateNested({ each: true })
-  // @Type(() => UpdateSaleItemDto)
-  // items?: UpdateSaleItemDto[];
-}
+export class UpdateSaleDto extends PartialType(CreateSaleDto) {}

@@ -14,6 +14,8 @@ import { ContasCorrentesModule } from './contas-correntes/contas-correntes.modul
 import { TransacoesModule } from './transacoes/transacoes.module';
 import { ConfigModule } from '@nestjs/config';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { SettingsModule } from './settings/settings.module'; // ✅ Importação do módulo de configurações
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }), // Load .env file and make it global
@@ -29,6 +31,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     ContasCorrentesModule,
     TransacoesModule,
     DashboardModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

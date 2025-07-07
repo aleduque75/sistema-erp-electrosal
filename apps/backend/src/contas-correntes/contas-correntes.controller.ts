@@ -7,117 +7,44 @@ import {
   Param,
   Delete,
   UseGuards,
-  Req,
+  Request,
   HttpCode,
   HttpStatus,
-  Query,
 } from '@nestjs/common';
-import { AuthRequest } from '../auth/types/auth-request.type';
 import { ContasCorrentesService } from './contas-correntes.service';
 import {
   CreateContaCorrenteDto,
   UpdateContaCorrenteDto,
 } from './dtos/contas-correntes.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { TransacoesService } from '../transacoes/transacoes.service';
+import { AuthGuard } from '@nestjs/passport';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(AuthGuard('jwt'))
 @Controller('contas-correntes')
 export class ContasCorrentesController {
-  constructor(
-    private readonly contasCorrentesService: ContasCorrentesService,
-    private readonly transacoesService: TransacoesService,
-  ) {}
+  constructor(private readonly service: ContasCorrentesService) {}
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
-  create(
-    @Req() req: AuthRequest,
-    @Body() createContaCorrenteDto: CreateContaCorrenteDto,
-  ) {
-    return this.contasCorrentesService.create(
-      req.user.id,
-      createContaCorrenteDto,
-    );
+  create(@Request() req, @Body() createDto: CreateContaCorrenteDto) {
+    return this.service.create(req.user.id, createDto);
   }
 
   @Get()
-  findAll(@Req() req: AuthRequest) {
-    return this.contasCorrentesService.findAll(req.user.id);
-  }
-
-  @Get(':id')
-  findOne(@Req() req: AuthRequest, @Param('id') id: string) {
-    return this.contasCorrentesService.findOne(req.user.id, id);
+  findAll(@Request() req) {
+    return this.service.findAll(req.user.id);
   }
 
   @Patch(':id')
   update(
-    @Req() req: AuthRequest,
+    @Request() req,
     @Param('id') id: string,
-    @Body() updateContaCorrenteDto: UpdateContaCorrenteDto,
+    @Body() updateDto: UpdateContaCorrenteDto,
   ) {
-    return this.contasCorrentesService.update(
-      req.user.id,
-      id,
-      updateContaCorrenteDto,
-    );
+    return this.service.update(req.user.id, id, updateDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Req() req: AuthRequest, @Param('id') id: string) {
-    return this.contasCorrentesService.remove(req.user.id, id);
-  }
-
-  @Get(':id/extrato')
-  async getExtract(
-    @Req() req: AuthRequest,
-    @Param('id') contaCorrenteId: string,
-    @Query('startDate') startDateString: string,
-    @Query('endDate') endDateString: string,
-  ) {
-    const userId = req.user.id;
-
-    // Garante que a conta existe e pertence ao usuário
-    const contaCorrente = await this.contasCorrentesService.findOne(
-      userId,
-      contaCorrenteId,
-    );
-
-    const startDate = new Date(startDateString || '1970-01-01');
-    const endDate = new Date(endDateString || new Date());
-
-    // 1. Pega o saldo inicial de forma precisa com o novo método
-    const saldoAnterior = await this.contasCorrentesService.getOpeningBalance(
-      contaCorrenteId,
-      startDate,
-    );
-
-    // 2. Busca apenas as transações do período selecionado
-    const transacoes = await this.transacoesService.findExtract(
-      userId,
-      contaCorrenteId,
-      startDate,
-      endDate,
-    );
-
-    // 3. Calcula o saldo final a partir do saldo anterior
-    let saldoFinal = saldoAnterior;
-    for (const transacao of transacoes) {
-      if (transacao.tipo === 'CREDITO') {
-        saldoFinal += transacao.valor.toNumber();
-      } else {
-        // DEBITO
-        saldoFinal -= transacao.valor.toNumber();
-      }
-    }
-
-    return {
-      contaCorrente,
-      saldoAnterior,
-      transacoes,
-      saldoFinal,
-    };
+  remove(@Request() req, @Param('id') id: string) {
+    return this.service.remove(req.user.id, id);
   }
 }

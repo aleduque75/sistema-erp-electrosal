@@ -9,9 +9,12 @@ async function bootstrap() {
   // Ativa as validações dos DTOs em toda a aplicação
   app.useGlobalPipes(
     new ValidationPipe({
-      transform: true, // <--- GARANTA QUE ISSO É 'true'
-      whitelist: true, // Opcional, remove propriedades não definidas no DTO
-      forbidNonWhitelisted: true, // Opcional, avisa se houver propriedades não definidas
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true, // <--- ADICIONE ESTA OPÇÃO
+      transformOptions: {
+        enableImplicitConversion: true, // Garante a conversão de tipos (ex: string para number)
+      },
     }),
   );
 
