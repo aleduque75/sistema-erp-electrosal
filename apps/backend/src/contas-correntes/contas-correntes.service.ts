@@ -58,4 +58,52 @@ export class ContasCorrentesService {
       data: { deletedAt: new Date() },
     });
   }
+  async getExtrato(userId: string, id: string, startDate: Date, endDate: Date) {
+    const contaCorrente = await this.findOne(userId, id);
+
+    // 1. Busca transações no período
+    const transacoesNoPeriodo = await this.prisma.transacao.findMany({
+      where: {
+        contaCorrenteId: id,
+        dataHora: { gte: startDate, lte: endDate },
+      },
+      orderBy: { dataHora: 'asc' },
+      include: { contaContabil: true },
+    });
+
+    // 2. Calcula o saldo anterior
+    const creditosAnteriores = await this.prisma.transacao.aggregate({
+      _sum: { valor: true },
+      where: {
+        contaCorrenteId: id,
+        tipo: 'CREDITO',
+        dataHora: { lt: startDate },
+      },
+    });
+    const debitosAnteriores = await this.prisma.transacao.aggregate({
+      _sum: { valor: true },
+      where: {
+        contaCorrenteId: id,
+        tipo: 'DEBITO',
+        dataHora: { lt: startDate },
+      },
+    });
+    const saldoAnterior =
+      (creditosAnteriores._sum.valor?.toNumber() || 0) -
+      (debitosAnteriores._sum.valor?.toNumber() || 0);
+
+    // 3. Calcula o saldo final
+    let saldoFinal = saldoAnterior;
+    transacoesNoPeriodo.forEach((t) => {
+      if (t.tipo === 'CREDITO') saldoFinal += t.valor.toNumber();
+      else saldoFinal -= t.valor.toNumber();
+    });
+
+    return {
+      contaCorrente,
+      saldoAnterior,
+      transacoes: transacoesNoPeriodo,
+      saldoFinal,
+    };
+  }
 }
