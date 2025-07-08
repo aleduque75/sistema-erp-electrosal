@@ -14,18 +14,32 @@ export class ContasContabeisService {
   constructor(private prisma: PrismaService) {}
 
   async create(userId: string, data: CreateContaContabilDto) {
-    const existingCode = await this.prisma.contaContabil.findFirst({
-      where: { userId, codigo: data.codigo },
-    });
-    if (existingCode) {
-      throw new ConflictException('O código da conta já está em uso.');
-    }
-    return this.prisma.contaContabil.create({ data: { ...data, userId } });
+    const proximoCodigo = await this.getNextCodigo(userId, data.contaPaiId);
+    const finalData = {
+      ...data,
+      userId,
+      codigo: proximoCodigo.proximoCodigo,
+    };
+
+    return this.prisma.contaContabil.create({ data: finalData });
   }
 
-  async findAll(userId: string) {
+  async findAll(userId: string, tipo?: 'RECEITA' | 'DESPESA') {
+    const where: any = { userId };
+
+    // Se um tipo for especificado (vindo do form de transação), filtramos
+    // apenas as contas que podem receber lançamentos daquele tipo.
+    if (tipo) {
+      where.aceitaLancamento = true;
+      if (tipo === 'RECEITA') {
+        where.tipo = { in: ['RECEITA', 'PASSIVO', 'PATRIMONIO_LIQUIDO'] };
+      } else if (tipo === 'DESPESA') {
+        where.tipo = { in: ['DESPESA', 'ATIVO'] };
+      }
+    } // Se nenhum tipo for passado (vindo da tela do plano de contas), não adiciona filtros extras.
+
     return this.prisma.contaContabil.findMany({
-      where: { userId },
+      where,
       orderBy: { codigo: 'asc' },
     });
   }
@@ -44,18 +58,6 @@ export class ContasContabeisService {
 
   async update(userId: string, id: string, data: UpdateContaContabilDto) {
     await this.findOne(userId, id);
-
-    // Esta verificação agora funcionará com o DTO correto
-    if (data.codigo) {
-      const existingCode = await this.prisma.contaContabil.findFirst({
-        where: { userId, codigo: data.codigo, id: { not: id } },
-      });
-      if (existingCode) {
-        throw new ConflictException(
-          'O código da conta já pertence a outra conta.',
-        );
-      }
-    }
     return this.prisma.contaContabil.update({ where: { id }, data });
   }
 
@@ -78,5 +80,51 @@ export class ContasContabeisService {
       );
     }
     return this.prisma.contaContabil.delete({ where: { id } });
+  }
+  async getNextCodigo(
+    userId: string,
+    contaPaiId?: string,
+  ): Promise<{ proximoCodigo: string }> {
+    let proximoCodigo: string;
+
+    if (contaPaiId) {
+      // Lógica para subcontas
+      const contaPai = await this.prisma.contaContabil.findUnique({
+        where: { id: contaPaiId },
+      });
+      if (!contaPai) throw new NotFoundException('Conta pai não encontrada.');
+
+      const irmaos = await this.prisma.contaContabil.findMany({
+        where: { userId, contaPaiId },
+        select: { codigo: true },
+      });
+
+      if (irmaos.length === 0) {
+        proximoCodigo = `${contaPai.codigo}.1`;
+      } else {
+        const ultimosSegmentos = irmaos.map((c) =>
+          parseInt(c.codigo.split('.').pop() || '0', 10),
+        );
+        const maiorSegmento = Math.max(...ultimosSegmentos);
+        proximoCodigo = `${contaPai.codigo}.${maiorSegmento + 1}`;
+      }
+    } else {
+      // Lógica para contas raiz
+      const contasRaiz = await this.prisma.contaContabil.findMany({
+        where: { userId, contaPaiId: null },
+        select: { codigo: true },
+      });
+      if (contasRaiz.length === 0) {
+        proximoCodigo = '1';
+      } else {
+        const codigosRaiz = contasRaiz.map((c) =>
+          parseInt(c.codigo.split('.')[0], 10),
+        );
+        const maiorCodigo = Math.max(...codigosRaiz);
+        proximoCodigo = (maiorCodigo + 1).toString();
+      }
+    }
+
+    return { proximoCodigo }; // Retorna um objeto para consistência
   }
 }

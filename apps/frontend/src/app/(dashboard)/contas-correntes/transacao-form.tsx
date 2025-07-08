@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +33,7 @@ const formSchema = z.object({
   contaContabilId: z.string({
     required_error: "Selecione uma conta contábil.",
   }),
+  dataHora: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de data inválido (AAAA-MM-DD)."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -43,15 +44,48 @@ interface TransacaoFormProps {
 
 export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
   const [contasContabeis, setContasContabeis] = useState([]);
-  const form = useForm<FormValues>({ resolver: zodResolver(formSchema) });
+  const form = useForm<FormValues>({ 
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      dataHora: new Date().toISOString().split('T')[0], // Data atual no formato YYYY-MM-DD
+    },
+  });
+
+  const tipoLancamento = form.watch("tipo");
 
   useEffect(() => {
-    api
-      .get("/contas-contabeis")
-      .then((res) =>
-        setContasContabeis(res.data.filter((c) => c.aceitaLancamento))
-      );
-  }, []);
+    if (tipoLancamento) {
+      const endpoint = `/contas-contabeis?tipo=${tipoLancamento === 'CREDITO' ? 'RECEITA' : 'DESPESA'}`;
+      api.get(endpoint).then((res) => {
+        setContasContabeis(res.data);
+      });
+    } else {
+      setContasContabeis([]);
+    }
+  }, [tipoLancamento]);
+
+  useEffect(() => {
+    form.setValue("contaContabilId", "");
+  }, [tipoLancamento, form.setValue]);
+
+  // ✅ MANTENHA APENAS ESTA DECLARAÇÃO DE filteredOptions
+  const filteredOptions = useMemo(() => {
+    if (!tipoLancamento) return [];
+    if (tipoLancamento === "CREDITO") {
+      const options = contasContabeis
+        .filter((c: any) =>
+          ["RECEITA", "PASSIVO", "PATRIMONIO_LIQUIDO"].includes(c.tipo)
+        )
+        .map((c: any) => ({ value: c.id, label: `${c.codigo} - ${c.nome}` }));
+      // console.log("Opções para CRÉDITO:", options); // Mantenha este log se estiver depurando o filtro
+      return options;
+    }
+    const options = contasContabeis
+      .filter((c: any) => ["DESPESA", "ATIVO"].includes(c.tipo))
+      .map((c: any) => ({ value: c.id, label: `${c.codigo} - ${c.nome}` }));
+    // console.log("Opções para DÉBITO:", options); // Mantenha este log se estiver depurando o filtro
+    return options;
+  }, [tipoLancamento, contasContabeis]);
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -59,7 +93,6 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
         ...data,
         contaCorrenteId,
         moeda: "BRL",
-        dataHora: new Date(),
       });
       toast.success("Lançamento realizado com sucesso!");
       onSave();
@@ -106,6 +139,19 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
           )}
         />
         <FormField
+          name="dataHora"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Data do Lançamento</FormLabel>
+              <FormControl>
+                <Input type="date" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
           name="descricao"
           control={form.control}
           render={({ field }) => (
@@ -122,19 +168,17 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
           )}
         />
         <FormField
-          name="contaContabilId"
           control={form.control}
+          name="contaContabilId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Contrapartida Contábil</FormLabel>
               <Combobox
-                options={contasContabeis.map((c) => ({
-                  value: c.id,
-                  label: `${c.codigo} - ${c.nome}`,
-                }))}
+                options={filteredOptions}
                 value={field.value}
                 onValueChange={field.onChange}
                 placeholder="Selecione a conta..."
+                disabled={!tipoLancamento}
               />
               <FormMessage />
             </FormItem>

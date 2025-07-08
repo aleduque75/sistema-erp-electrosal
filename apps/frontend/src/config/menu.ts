@@ -1,105 +1,106 @@
-// apps/frontend/src/config/menu.ts
+import {
+  LayoutDashboard,
+  Users,
+  Package,
+  ShoppingCart,
+  DollarSign,
+  CreditCard,
+  FileText,
+  Wallet,
+  Settings,
+  LifeBuoy,
+  User as UserIcon,
+  LogOut,
+  ListChecks,
+  PlusCircle,
+  ArrowDownToLine,
+  ArrowUpToLine,
+} from "lucide-react";
+import React from "react";
 
 export interface NavItem {
   title: string;
   href: string;
   disabled?: boolean;
-  external?: boolean;
+  icon?: React.ElementType;
+  description?: string;
   subItems?: NavItem[];
 }
 
 export const menuConfig: NavItem[] = [
+  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   {
-    title: 'Dashboard',
-    href: '/dashboard',
-  },
-  {
-    title: 'Cadastros',
-    href: '#', // Não tem link direto, pois é um gatilho para o submenu
+    title: "Cadastros",
+    href: "#",
+    icon: Users,
     subItems: [
       {
-        title: 'Produtos',
-        href: '/products',
-        subItems: [ // Sub-sub-itens para descrição no menu desktop
-          { title: 'Listar Produtos', href: '/products' },
-          { title: 'Novo Produto', href: '/products/new' },
-          { title: 'Relatórios de Produtos', href: '/products/reports' },
-        ],
+        title: "Produtos",
+        href: "/products",
+        icon: Package,
+        description: "Gerencie seus produtos, estoque e preços.",
       },
       {
-        title: 'Clientes',
-        href: '/clients',
-        subItems: [
-          { title: 'Listar Clientes', href: '/clients' },
-          { title: 'Novo Cliente', href: '/clients/new' },
-          { title: 'Relatórios de Clientes', href: '/clients/reports' },
-        ],
+        title: "Clientes",
+        href: "/clients",
+        icon: Users,
+        description: "Cadastre e gerencie seus clientes.",
       },
       {
-        title: 'Plano de Contas',
-        href: '/contas-contabeis',
-        subItems: [
-          { title: 'Visualizar Plano', href: '/accounting/chart-of-accounts' },
-          { title: 'Nova Conta', href: '/accounting/chart-of-accounts/new' },
-        ],
+        title: "Plano de Contas",
+        href: "/contas-contabeis",
+        icon: FileText,
+        description: "Organize suas finanças.",
+      },
+      {
+        title: "Meus Cartões",
+        href: "/credit-cards",
+        icon: CreditCard,
+        description: "Cadastre seus cartões de crédito.",
       },
     ],
   },
   {
-    title: 'Vendas',
-    href: '#',
+    title: "Operações",
+    href: "#",
+    icon: ShoppingCart,
     subItems: [
       {
-        title: 'Lista de Vendas',
-        href: '/sales',
+        title: "Realizar Venda",
+        href: "/sales/new",
+        icon: PlusCircle,
+        description: "Registre uma nova venda.",
       },
       {
-        title: 'Relatórios de Vendas',
-        href: '/sales/reports',
+        title: "Lista de Vendas",
+        href: "/sales",
+        icon: ListChecks,
+        description: "Acompanhe todas as suas vendas.",
       },
     ],
   },
   {
-    title: 'Financeiro',
-    href: '#',
+    title: "Financeiro",
+    href: "#",
+    icon: DollarSign,
     subItems: [
       {
-        title: 'Contas a Pagar',
-        href: '/accounts-pay',
+        title: "Contas a Pagar",
+        href: "/accounts-pay",
+        icon: ArrowDownToLine,
+        description: "Controle suas contas a pagar.",
       },
       {
-        title: 'Contas a Receber',
-        href: '/accounts-rec',
+        title: "Contas a Receber",
+        href: "/accounts-rec",
+        icon: ArrowUpToLine,
+        description: "Gerencie suas contas a receber.",
       },
       {
-        title: 'Extratos Bancários',
-        href: '/financial/statements',
-      },
-      {
-        title: 'Fluxo de Caixa',
-        href: '/contas-correntes',
-      },
-    ],
-  },
-  {
-    title: 'Configurações',
-    href: '#',
-    subItems: [
-      {
-        title: 'Central de Ajuda',
-        href: '/help-center',
-      },
-       {
-        title: 'Meu Perfil',
-        href: '/profile',
-      },
-      {
-        title: 'Configurações',
-        href: '/settings',
-      },
-      {
-        title: 'Sobre',
-        href: '/about',
+        title: "Contas Correntes",
+        href: "/contas-correntes",
+        icon: Wallet,
+        description: "Acompanhe o fluxo de caixa.",
       },
     ],
   },

@@ -31,6 +31,20 @@ export class CreateContaCorrenteDto {
 }
 
 // ✅ 2. CORREÇÃO: Usando OmitType para remover 'saldoInicial' ANTES de aplicar PartialType
-export class UpdateContaCorrenteDto extends PartialType(
-  OmitType(CreateContaCorrenteDto, ['saldoInicial'] as const),
-) {}
+export class UpdateContaCorrenteDto {
+  @IsString()
+  @IsOptional()
+  nome?: string;
+
+  @IsString()
+  @IsOptional()
+  numeroConta?: string;
+
+  @IsString()
+  @IsOptional()
+  agencia?: string;
+
+  @IsString()
+  @IsOptional()
+  moeda?: string;
+}

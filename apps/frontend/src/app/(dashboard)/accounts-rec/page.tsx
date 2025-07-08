@@ -391,7 +391,7 @@ export default function AccountsRecPage() {
             <Combobox
               options={contasCorrentes.map((c) => ({
                 value: c.id,
-                label: c.numeroConta,
+                label: c.nome,
               }))}
               value={selectedCCId}
               onValueChange={setSelectedCCId}

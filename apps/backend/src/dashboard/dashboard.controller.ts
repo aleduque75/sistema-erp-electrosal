@@ -19,6 +19,21 @@ export class DashboardController {
     return this.dashboardService.getDashboardSummary(userId);
   }
 
+  @Get('credit-card-expenses-by-month')
+  async getCreditCardExpensesByMonth(@Request() req: AuthRequest) {
+    return this.dashboardService.getCreditCardExpensesByMonth(req.user.id);
+  }
+
+  @Get('accounts-pay-status')
+  async getAccountsPayStatus(@Request() req: AuthRequest) {
+    return this.dashboardService.getAccountsPayStatus(req.user.id);
+  }
+
+  @Get('cash-flow-summary')
+  async getCashFlowSummary(@Request() req: AuthRequest) {
+    return this.dashboardService.getCashFlowSummary(req.user.id);
+  }
+
   // Todos os métodos CRUD (create, findAll, findOne, update, remove) foram REMOVIDOS.
   // Eles não se aplicam a um endpoint de resumo de dashboard e podem causar confusão.
 }

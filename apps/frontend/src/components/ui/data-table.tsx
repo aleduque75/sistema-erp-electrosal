@@ -29,6 +29,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   filterColumnId: string;
   filterPlaceholder?: string;
+  pageSize?: number; // Nova propriedade para controlar o tamanho da página
 }
 
 export function DataTable<TData, TValue>({
@@ -36,6 +37,7 @@ export function DataTable<TData, TValue>({
   data,
   filterColumnId,
   filterPlaceholder,
+  pageSize = 10, // Valor padrão para 10, se não for fornecido
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -52,6 +54,11 @@ export function DataTable<TData, TValue>({
     state: {
       sorting,
       columnFilters,
+    },
+    initialState: {
+      pagination: {
+        pageSize: pageSize,
+      },
     },
   });
 

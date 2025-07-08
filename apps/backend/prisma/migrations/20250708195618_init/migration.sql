@@ -17,6 +17,35 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
+CREATE TABLE "user_settings" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "defaultReceitaContaId" TEXT,
+    "defaultCaixaContaId" TEXT,
+    "defaultDespesaContaId" TEXT,
+
+    CONSTRAINT "user_settings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Client" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "email" TEXT,
+    "phone" TEXT,
+    "address" TEXT,
+    "birthDate" TIMESTAMP(3),
+    "gender" TEXT,
+    "preferences" TEXT,
+    "purchaseHistory" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Client_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Product" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -48,29 +77,13 @@ CREATE TABLE "Sale" (
     "clientId" TEXT NOT NULL,
     "orderNumber" TEXT NOT NULL,
     "totalAmount" DECIMAL(10,2) NOT NULL,
+    "feeAmount" DECIMAL(10,2),
+    "netAmount" DECIMAL(10,2),
     "paymentMethod" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Sale_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Client" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "email" TEXT,
-    "phone" TEXT,
-    "address" TEXT,
-    "birthDate" TIMESTAMP(3),
-    "gender" TEXT,
-    "preferences" TEXT,
-    "purchaseHistory" JSONB,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Client_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -87,7 +100,7 @@ CREATE TABLE "SaleItem" (
 );
 
 -- CreateTable
-CREATE TABLE "AccountPay" (
+CREATE TABLE "accounts_pay" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "description" TEXT NOT NULL,
@@ -98,7 +111,7 @@ CREATE TABLE "AccountPay" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "AccountPay_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "accounts_pay_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -157,12 +170,69 @@ CREATE TABLE "transacoes" (
     "valor" DECIMAL(10,2) NOT NULL,
     "moeda" TEXT NOT NULL,
     "descricao" TEXT,
+    "dataHora" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "contaContabilId" TEXT NOT NULL,
     "contaCorrenteId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "transacoes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "credit_cards" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "flag" TEXT NOT NULL,
+    "closingDay" INTEGER NOT NULL,
+    "dueDate" INTEGER NOT NULL,
+
+    CONSTRAINT "credit_cards_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "credit_card_transactions" (
+    "id" TEXT NOT NULL,
+    "creditCardId" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "isInstallment" BOOLEAN NOT NULL DEFAULT false,
+    "installments" INTEGER,
+    "currentInstallment" INTEGER,
+    "categoryId" TEXT,
+    "creditCardBillId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "credit_card_transactions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "credit_card_bills" (
+    "id" TEXT NOT NULL,
+    "creditCardId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "startDate" TIMESTAMP(3) NOT NULL,
+    "endDate" TIMESTAMP(3) NOT NULL,
+    "dueDate" TIMESTAMP(3) NOT NULL,
+    "totalAmount" DECIMAL(10,2) NOT NULL,
+    "paid" BOOLEAN NOT NULL DEFAULT false,
+    "paidAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "credit_card_bills_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "transaction_categories" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+
+    CONSTRAINT "transaction_categories_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -175,25 +245,17 @@ CREATE TABLE "XmlImportLog" (
     CONSTRAINT "XmlImportLog_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "user_settings" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "defaultReceitaContaId" TEXT,
-    "defaultCaixaContaId" TEXT,
-    "defaultDespesaContaId" TEXT,
-
-    CONSTRAINT "user_settings_pkey" PRIMARY KEY ("id")
-);
-
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Sale_orderNumber_key" ON "Sale"("orderNumber");
+CREATE UNIQUE INDEX "user_settings_userId_key" ON "user_settings"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Client_email_key" ON "Client"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Sale_orderNumber_key" ON "Sale"("orderNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "contas_contabeis_userId_codigo_key" ON "contas_contabeis"("userId", "codigo");
@@ -202,10 +264,16 @@ CREATE UNIQUE INDEX "contas_contabeis_userId_codigo_key" ON "contas_contabeis"("
 CREATE UNIQUE INDEX "contas_correntes_userId_numeroConta_key" ON "contas_correntes"("userId", "numeroConta");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "XmlImportLog_nfeKey_key" ON "XmlImportLog"("nfeKey");
+CREATE UNIQUE INDEX "transaction_categories_userId_name_key" ON "transaction_categories"("userId", "name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "user_settings_userId_key" ON "user_settings"("userId");
+CREATE UNIQUE INDEX "XmlImportLog_nfeKey_key" ON "XmlImportLog"("nfeKey");
+
+-- AddForeignKey
+ALTER TABLE "user_settings" ADD CONSTRAINT "user_settings_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Client" ADD CONSTRAINT "Client_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Product" ADD CONSTRAINT "Product_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -220,16 +288,13 @@ ALTER TABLE "Sale" ADD CONSTRAINT "Sale_userId_fkey" FOREIGN KEY ("userId") REFE
 ALTER TABLE "Sale" ADD CONSTRAINT "Sale_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Client" ADD CONSTRAINT "Client_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "SaleItem" ADD CONSTRAINT "SaleItem_saleId_fkey" FOREIGN KEY ("saleId") REFERENCES "Sale"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "SaleItem" ADD CONSTRAINT "SaleItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "AccountPay" ADD CONSTRAINT "AccountPay_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "accounts_pay" ADD CONSTRAINT "accounts_pay_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "AccountRec" ADD CONSTRAINT "AccountRec_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -259,7 +324,22 @@ ALTER TABLE "transacoes" ADD CONSTRAINT "transacoes_contaContabilId_fkey" FOREIG
 ALTER TABLE "transacoes" ADD CONSTRAINT "transacoes_contaCorrenteId_fkey" FOREIGN KEY ("contaCorrenteId") REFERENCES "contas_correntes"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "XmlImportLog" ADD CONSTRAINT "XmlImportLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "credit_cards" ADD CONSTRAINT "credit_cards_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "user_settings" ADD CONSTRAINT "user_settings_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "credit_card_transactions" ADD CONSTRAINT "credit_card_transactions_creditCardId_fkey" FOREIGN KEY ("creditCardId") REFERENCES "credit_cards"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "credit_card_transactions" ADD CONSTRAINT "credit_card_transactions_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "transaction_categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "credit_card_transactions" ADD CONSTRAINT "credit_card_transactions_creditCardBillId_fkey" FOREIGN KEY ("creditCardBillId") REFERENCES "credit_card_bills"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "credit_card_bills" ADD CONSTRAINT "credit_card_bills_creditCardId_fkey" FOREIGN KEY ("creditCardId") REFERENCES "credit_cards"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction_categories" ADD CONSTRAINT "transaction_categories_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "XmlImportLog" ADD CONSTRAINT "XmlImportLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

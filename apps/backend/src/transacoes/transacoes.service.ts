@@ -8,31 +8,57 @@ export class TransacoesService {
   constructor(private prisma: PrismaService) {}
 
   create(userId: string, createDto: CreateTransacaoDto): Promise<Transacao> {
-    const { contaContabilId, contaCorrenteId, ...rest } = createDto;
+    const { contaContabilId, contaCorrenteId, dataHora, ...rest } = createDto;
+
+    // Parse the date string directly into UTC components to avoid timezone issues
+    const [year, month, day] = dataHora.toISOString().split('T')[0].split('-').map(Number);
+    const dataHoraUtc = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+
     return this.prisma.transacao.create({
       data: {
         ...rest,
-        user: { connect: { id: userId } }, // ✅ Relação correta com User
-        contaContabil: { connect: { id: contaContabilId } },
-        contaCorrente: contaCorrenteId ? { connect: { id: contaCorrenteId } } : undefined,
+        dataHora: dataHoraUtc,
+        userId: userId,
+        contaContabilId: contaContabilId,
+        contaCorrenteId: contaCorrenteId,
       },
     });
   }
 
   // Busca todas as transações do usuário
   findAll(userId: string): Promise<Transacao[]> {
-    return this.prisma.transacao.findMany({ where: { userId } });
+    return this.prisma.transacao.findMany({
+      where: {
+        // A transação pertence ao usuário logado
+        userId: userId,
+      },
+      include: {
+        // Inclui os nomes das contas para exibição na tabela
+        contaContabil: true,
+        contaCorrente: true,
+      },
+      orderBy: {
+        dataHora: 'desc', // Mostra as mais recentes primeiro
+      },
+    });
   }
 
   async findOne(userId: string, id: string): Promise<Transacao> {
-    const transacao = await this.prisma.transacao.findFirst({ where: { id, userId } });
+    const transacao = await this.prisma.transacao.findFirst({
+      where: { id, userId },
+      include: { contaContabil: true, contaCorrente: true },
+    });
     if (!transacao) {
       throw new NotFoundException(`Transação com ID ${id} não encontrada.`);
     }
     return transacao;
   }
 
-  async update(userId: string, id: string, data: UpdateTransacaoDto): Promise<Transacao> {
+  async update(
+    userId: string,
+    id: string,
+    data: UpdateTransacaoDto,
+  ): Promise<Transacao> {
     await this.findOne(userId, id);
     return this.prisma.transacao.update({
       where: { id },
@@ -52,7 +78,12 @@ export class TransacoesService {
   }
 
   // Busca transações por Conta Corrente e período
-  findByContaCorrente(userId: string, contaCorrenteId: string, startDate: Date, endDate: Date): Promise<Transacao[]> {
+  findByContaCorrente(
+    userId: string,
+    contaCorrenteId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Transacao[]> {
     return this.prisma.transacao.findMany({
       where: {
         contaCorrenteId,

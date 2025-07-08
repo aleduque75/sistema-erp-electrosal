@@ -75,10 +75,7 @@ export class AccountsRecService {
         },
       });
 
-      await tx.contaCorrente.update({
-        where: { id: dto.contaCorrenteId },
-        data: { saldo: { increment: accountRec.amount } },
-      });
+      
 
       const settings = await tx.userSettings.findUnique({ where: { userId } });
       if (!settings?.defaultCaixaContaId) {

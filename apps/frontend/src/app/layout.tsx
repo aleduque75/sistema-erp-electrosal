@@ -2,8 +2,8 @@ import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
 import { ThemeProvider } from "../components/theme-provider";
 import { Toaster } from "sonner";
-import { QueryProvider } from "@/components/providers/query-provider"; // ✅ 1. Importar o QueryProvider
-import { Header } from "@/components/layout/header"; // ✅ 2. Importar o Header
+import { QueryProvider } from "@/components/providers/query-provider";
+import { Sidebar } from "@/components/Sidebar";
 
 export default function RootLayout({
   children,
@@ -20,15 +20,15 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-          {/* Header component */}
-          <AuthProvider>
-            {/* Navbar component */}
-           
-            <main className="container mx-auto p-4">{children}</main>
-          </AuthProvider>
+            <AuthProvider>
+              <div className="flex">
+               
+                <main className="flex-1 p-4">{children}</main>
+              </div>
+            </AuthProvider>
           </QueryProvider>
         </ThemeProvider>
-        <Toaster richColors position="top-right" />{" "}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

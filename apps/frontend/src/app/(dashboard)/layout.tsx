@@ -1,6 +1,6 @@
 // Substitua o conteúdo deste arquivo por este código:
 
-import { Header } from '@/components/Header'; // Importa o novo Header
+import { Header } from '@/components/layout/header'; // Importa o novo Header
 
 export default function DashboardLayout({
   children,

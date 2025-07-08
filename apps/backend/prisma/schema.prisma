@@ -8,7 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- MODELOS PRINCIPAIS ---
+// --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
 
 model User {
   id        String   @id @default(uuid())
@@ -18,62 +18,33 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relationships
-  clients         Client[]
-  products        Product[]
-  sales           Sale[]
-  accountsPay     AccountPay[]
-  accountsRec     AccountRec[]
-  contasCorrentes ContaCorrente[]
-  contasContabeis ContaContabil[]
-  settings        UserSettings?
-  XmlImportLog    XmlImportLog[]
-  transacoes      Transacao[] // ✅ ADICIONE ESTA LINHA
+  // Relacionamentos
+  clients               Client[]
+  products              Product[]
+  sales                 Sale[]
+  accountsPay           AccountPay[]
+  accountsRec           AccountRec[]
+  contasCorrentes       ContaCorrente[]
+  contasContabeis       ContaContabil[]
+  settings              UserSettings?
+  XmlImportLog          XmlImportLog[]
+  transacoes            Transacao[]
+  creditCards           CreditCard[] // Relação com cartões
+  transactionCategories TransactionCategory[] // Relação com categorias
 }
 
-model Product {
-  id             String          @id @default(uuid())
-  userId         String
-  user           User            @relation(fields: [userId], references: [id])
-  name           String
-  description    String?
-  price          Decimal         @db.Decimal(10, 2)
-  stock          Int
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  saleItems      SaleItem[]
-  stockMovements StockMovement[] // ✅ A relação existe aqui
+model UserSettings {
+  id                    String  @id @default(uuid())
+  userId                String  @unique
+  user                  User    @relation(fields: [userId], references: [id])
+  defaultReceitaContaId String?
+  defaultCaixaContaId   String?
+  defaultDespesaContaId String?
+
+  @@map("user_settings")
 }
 
-// ✅ E O MODELO ESTÁ DE VOLTA AQUI
-model StockMovement {
-  id        String   @id @default(uuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  type      String // "IN", "OUT_SALE", "ADJUSTMENT"
-  quantity  Int
-  createdAt DateTime @default(now())
-}
-
-model Sale {
-  id            String       @id @default(uuid())
-  userId        String
-  user          User         @relation(fields: [userId], references: [id])
-  clientId      String
-  client        Client       @relation(fields: [clientId], references: [id])
-  orderNumber   String       @unique
-  totalAmount   Decimal      @db.Decimal(10, 2)
-  // ✅ ADICIONANDO OS CAMPOS QUE FALTAVAM
-  feeAmount     Decimal?     @db.Decimal(10, 2)
-  netAmount     Decimal?     @db.Decimal(10, 2)
-  paymentMethod String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  saleItems     SaleItem[]
-  accountsRec   AccountRec[]
-}
-
-// ... todos os outros modelos que já estavam corretos ...
+// --- MODELOS DE NEGÓCIO (VENDAS, PRODUTOS, CLIENTES) ---
 
 model Client {
   id              String    @id @default(uuid())
@@ -92,6 +63,46 @@ model Client {
   sales           Sale[]
 }
 
+model Product {
+  id             String          @id @default(uuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  name           String
+  description    String?
+  price          Decimal         @db.Decimal(10, 2)
+  stock          Int
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  saleItems      SaleItem[]
+  stockMovements StockMovement[]
+}
+
+model StockMovement {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  type      String
+  quantity  Int
+  createdAt DateTime @default(now())
+}
+
+model Sale {
+  id            String       @id @default(uuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  clientId      String
+  client        Client       @relation(fields: [clientId], references: [id])
+  orderNumber   String       @unique
+  totalAmount   Decimal      @db.Decimal(10, 2)
+  feeAmount     Decimal?     @db.Decimal(10, 2)
+  netAmount     Decimal?     @db.Decimal(10, 2)
+  paymentMethod String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  saleItems     SaleItem[]
+  accountsRec   AccountRec[]
+}
+
 model SaleItem {
   id        String   @id @default(uuid())
   saleId    String
@@ -103,6 +114,8 @@ model SaleItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// --- MODELOS FINANCEIROS ---
 
 enum TipoTransacaoPrisma {
   CREDITO
@@ -128,6 +141,8 @@ model AccountPay {
   paidAt      DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@map("accounts_pay")
 }
 
 model AccountRec {
@@ -187,14 +202,13 @@ model ContaCorrente {
 
 model Transacao {
   id              String              @id @default(uuid())
-  // ✅ PADRONIZANDO: A transação sempre pertence a um usuário
   userId          String
   user            User                @relation(fields: [userId], references: [id])
   tipo            TipoTransacaoPrisma
   valor           Decimal             @db.Decimal(10, 2)
   moeda           String
   descricao       String?
-  dataHora        DateTime            @default(now()) // ✅ Verifique se este campo existe
+  dataHora        DateTime            @default(now())
   contaContabilId String
   contaContabil   ContaContabil       @relation(fields: [contaContabilId], references: [id])
   contaCorrenteId String?
@@ -205,21 +219,77 @@ model Transacao {
   @@map("transacoes")
 }
 
+// --- MODELOS DE CARTÃO DE CRÉDITO ---
+
+model CreditCard {
+  id           String                  @id @default(uuid())
+  userId       String
+  user         User                    @relation(fields: [userId], references: [id])
+  name         String
+  flag         String
+  closingDay   Int
+  dueDate      Int
+  transactions CreditCardTransaction[]
+  bills        CreditCardBill[]
+
+  @@map("credit_cards")
+}
+
+model CreditCardTransaction {
+  id                 String               @id @default(uuid())
+  creditCardId       String
+  creditCard         CreditCard           @relation(fields: [creditCardId], references: [id])
+  description        String
+  amount             Decimal              @db.Decimal(10, 2)
+  date               DateTime
+  isInstallment      Boolean              @default(false)
+  installments       Int?
+  currentInstallment Int?
+  categoryId         String?
+  category           TransactionCategory? @relation(fields: [categoryId], references: [id])
+  creditCardBillId   String?
+  creditCardBill     CreditCardBill?      @relation(fields: [creditCardBillId], references: [id])
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@map("credit_card_transactions")
+}
+
+model CreditCardBill {
+  id           String                  @id @default(uuid())
+  creditCardId String
+  creditCard   CreditCard              @relation(fields: [creditCardId], references: [id])
+  name         String
+  startDate    DateTime
+  endDate      DateTime
+  dueDate      DateTime
+  totalAmount  Decimal                 @db.Decimal(10, 2)
+  paid         Boolean                 @default(false)
+  paidAt       DateTime?
+  transactions CreditCardTransaction[]
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  @@map("credit_card_bills")
+}
+
+model TransactionCategory {
+  id                     String                  @id @default(uuid())
+  userId                 String
+  user                   User                    @relation(fields: [userId], references: [id])
+  name                   String
+  creditCardTransactions CreditCardTransaction[]
+
+  @@unique([userId, name])
+  @@map("transaction_categories")
+}
+
+// --- MODELOS AUXILIARES ---
+
 model XmlImportLog {
   id        String   @id @default(cuid())
   nfeKey    String   @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
-}
-
-model UserSettings {
-  id                    String  @id @default(uuid())
-  userId                String  @unique
-  user                  User    @relation(fields: [userId], references: [id])
-  defaultReceitaContaId String?
-  defaultCaixaContaId   String?
-  defaultDespesaContaId String?
-
-  @@map("user_settings")
 }
