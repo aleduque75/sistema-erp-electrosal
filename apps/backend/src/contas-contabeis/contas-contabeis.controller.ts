@@ -10,6 +10,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { ContasContabeisService } from './contas-contabeis.service';
 import {
@@ -21,24 +22,30 @@ import { AuthGuard } from '@nestjs/passport';
 @UseGuards(AuthGuard('jwt'))
 @Controller('contas-contabeis')
 export class ContasContabeisController {
+  // ✅ CORREÇÃO: Altere 'service' para 'contasContabeisService' ou o nome que você usou no construtor
   constructor(
     private readonly contasContabeisService: ContasContabeisService,
   ) {}
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
   create(@Request() req, @Body() createDto: CreateContaContabilDto) {
     return this.contasContabeisService.create(req.user.id, createDto);
   }
 
   @Get()
-  findAll(@Request() req) {
-    return this.contasContabeisService.findAll(req.user.id);
+  findAll(@Request() req, @Query('tipo') tipo?: 'RECEITA' | 'DESPESA') {
+    return this.contasContabeisService.findAll(req.user.id, tipo);
   }
 
   @Get(':id')
   findOne(@Request() req, @Param('id') id: string) {
     return this.contasContabeisService.findOne(req.user.id, id);
+  }
+
+  @Get('proximo-codigo')
+  getNextCodigo(@Request() req, @Query('contaPaiId') contaPaiId?: string) {
+    // ✅ CORREÇÃO: Use this.contasContabeisService
+    return this.contasContabeisService.getNextCodigo(req.user.id, contaPaiId);
   }
 
   @Patch(':id')

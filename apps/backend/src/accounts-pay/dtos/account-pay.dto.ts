@@ -1,67 +1,25 @@
+import { PartialType } from '@nestjs/mapped-types';
 import {
   IsNotEmpty,
-  IsString,
   IsNumber,
-  IsDateString,
   IsOptional,
-  IsBoolean,
+  IsString,
+  Min,
   IsUUID,
+  IsDate,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateAccountPayDto {
-  @IsNotEmpty()
-  @IsString()
-  description: string;
-
-  @IsNotEmpty()
-  @IsNumber()
-  amount: number;
-
-  @IsNotEmpty()
-  @IsDateString()
-  dueDate: Date;
-
-  @IsOptional()
-  @IsBoolean()
-  paid?: boolean;
-
-  @IsOptional()
-  @IsDateString()
-  paidAt?: Date;
+  @IsString() @IsNotEmpty() description: string;
+  @IsNumber() @Min(0.01) amount: number;
+  @IsDate() @Type(() => Date) dueDate: Date;
 }
 
-export class UpdateAccountPayDto {
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @IsOptional()
-  @IsNumber()
-  amount?: number;
-
-  @IsOptional()
-  @IsDateString()
-  dueDate?: Date;
-
-  @IsOptional()
-  @IsBoolean()
-  paid?: boolean;
-
-  @IsOptional()
-  @IsDateString()
-  paidAt?: Date;
-}
+export class UpdateAccountPayDto extends PartialType(CreateAccountPayDto) {}
 
 export class PayAccountDto {
-  @IsUUID()
-  @IsNotEmpty()
-  contaCorrenteId: string; // De qual conta o dinheiro saiu?
-
-  @IsUUID()
-  @IsNotEmpty()
-  contaContabilId: string; // Qual a classificação contábil dessa despesa?
-
-  @IsDateString()
-  @IsOptional()
-  paidAt?: Date; // Data do pagamento
+  @IsUUID() @IsNotEmpty() contaCorrenteId: string;
+  @IsUUID() @IsNotEmpty() contaContabilId: string;
+  @IsDate() @IsOptional() @Type(() => Date) paidAt?: Date;
 }

@@ -31,13 +31,12 @@ interface ContaContabil {
   id: string;
   codigo: string;
   nome: string;
-  tipo: "ATIVO" | "PASSIVO" | "PATRIMONIO_LIQUIDO" | "RECEITA" | "DESPESA";
+  tipo: any;
   aceitaLancamento: boolean;
   contaPaiId?: string | null;
 }
 
 const formSchema = z.object({
-  codigo: z.string().min(1, "O código é obrigatório."),
   nome: z.string().min(3, "O nome é obrigatório."),
   tipo: z.enum([
     "ATIVO",
@@ -59,7 +58,6 @@ interface ContaContabilFormProps {
 
 export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
   const [contasPai, setContasPai] = useState<ContaContabil[]>([]);
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -70,6 +68,8 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
       contaPaiId: conta?.contaPaiId || null,
     },
   });
+  const { control, handleSubmit, watch, setValue } = form;
+  const contaPaiId = watch("contaPaiId");
 
   useEffect(() => {
     async function fetchParentAccounts() {
@@ -85,6 +85,8 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
     }
     fetchParentAccounts();
   }, [conta?.id]);
+
+  
 
   const onSubmit = async (data: FormValues) => {
     const payload = { ...data, contaPaiId: data.contaPaiId || null };
@@ -104,38 +106,25 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            name="codigo"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Código</FormLabel>
-                <FormControl>
-                  <Input placeholder="1.01.01" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          
           <FormField
             name="nome"
-            control={form.control}
+            control={control}
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Nome</FormLabel>
                 <FormControl>
-                  <Input placeholder="Despesas com Salários" {...field} />
+                  <Input placeholder="Ex: Despesas com Pessoal" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-
         <FormField
-          control={form.control}
+          control={control}
           name="contaPaiId"
           render={({ field }) => (
             <FormItem>
@@ -146,7 +135,7 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
                   onValueChange={field.onChange}
                   placeholder="Selecione a conta pai..."
                   options={[
-                    { value: null, label: "Nenhuma" },
+                    { value: null, label: "Nenhuma (Conta Raiz)" },
                     ...contasPai.map((pai) => ({
                       value: pai.id,
                       label: `${pai.codigo} - ${pai.nome}`,
@@ -158,10 +147,8 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
             </FormItem>
           )}
         />
-
-        {/* ✅ Campo 'Tipo' preenchido */}
         <FormField
-          control={form.control}
+          control={control}
           name="tipo"
           render={({ field }) => (
             <FormItem>
@@ -169,7 +156,7 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo da conta" />
+                    <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -184,8 +171,6 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
             </FormItem>
           )}
         />
-
-        {/* ✅ Campo 'Aceita Lançamento' preenchido */}
         <FormField
           control={form.control}
           name="aceitaLancamento"
@@ -203,7 +188,6 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
             </FormItem>
           )}
         />
-
         <Button type="submit" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? "Salvando..." : "Salvar"}
         </Button>

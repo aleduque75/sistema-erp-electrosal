@@ -14,11 +14,14 @@ import { ContasCorrentesModule } from './contas-correntes/contas-correntes.modul
 import { TransacoesModule } from './transacoes/transacoes.module';
 import { ConfigModule } from '@nestjs/config';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { SettingsModule } from './settings/settings.module'; // ✅ Importação do módulo de configurações
+import { SettingsModule } from './settings/settings.module';
+import { CreditCardBillsModule } from './credit-card-bills/credit-card-bills.module';
+import { CreditCardTransactionsModule } from './credit-card-transactions/credit-card-transactions.module';
+import { CreditCardsModule } from './credit-cards/credit-cards.module'; // ✅ 1. Importe o novo módulo
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }), // Load .env file and make it global
+    ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     UsersModule,
     PrismaModule,
@@ -32,6 +35,9 @@ import { SettingsModule } from './settings/settings.module'; // ✅ Importação
     TransacoesModule,
     DashboardModule,
     SettingsModule,
+    CreditCardBillsModule,
+    CreditCardTransactionsModule,
+    CreditCardsModule, // ✅ 2. Adicione o novo módulo aqui
   ],
   controllers: [AppController],
   providers: [AppService],

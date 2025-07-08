@@ -25,47 +25,40 @@ async function main() {
   console.log('Criando plano de contas padrão...');
   const contasContabeisData = [
     {
-      codigo: '1',
       nome: 'ATIVO',
       tipo: TipoContaContabilPrisma.ATIVO,
       aceitaLancamento: false,
     },
     {
-      codigo: '1.1',
       nome: 'ATIVO CIRCULANTE',
       tipo: TipoContaContabilPrisma.ATIVO,
       aceitaLancamento: false,
-      contaPaiCodigo: '1',
+      contaPaiNome: 'ATIVO',
     },
     {
-      codigo: '1.1.1',
       nome: 'CAIXA E EQUIVALENTES',
       tipo: TipoContaContabilPrisma.ATIVO,
       aceitaLancamento: false,
-      contaPaiCodigo: '1.1',
+      contaPaiNome: 'ATIVO CIRCULANTE',
     },
     {
-      codigo: '1.1.1.01',
       nome: 'CAIXA GERAL',
       tipo: TipoContaContabilPrisma.ATIVO,
       aceitaLancamento: true,
-      contaPaiCodigo: '1.1.1',
+      contaPaiNome: 'CAIXA E EQUIVALENTES',
     },
     {
-      codigo: '4',
       nome: 'RECEITAS',
       tipo: TipoContaContabilPrisma.RECEITA,
       aceitaLancamento: false,
     },
     {
-      codigo: '4.1',
       nome: 'RECEITA DE VENDAS',
       tipo: TipoContaContabilPrisma.RECEITA,
       aceitaLancamento: true,
-      contaPaiCodigo: '4',
+      contaPaiNome: 'RECEITAS',
     },
     {
-      codigo: '5',
       nome: 'DESPESAS',
       tipo: TipoContaContabilPrisma.DESPESA,
       aceitaLancamento: false,
@@ -74,24 +67,69 @@ async function main() {
 
   const createdContasMap: Map<string, string> = new Map();
 
+  // Função auxiliar para obter o próximo código
+  async function getNextCodigo(currentUserId: string, parentContaId?: string | null): Promise<string> {
+    let proximoCodigo: string;
+
+    if (parentContaId) {
+      const contaPai = await prisma.contaContabil.findUnique({
+        where: { id: parentContaId },
+      });
+      if (!contaPai) throw new Error('Conta pai não encontrada.');
+
+      const irmaos = await prisma.contaContabil.findMany({
+        where: { userId: currentUserId, contaPaiId: parentContaId },
+        select: { codigo: true },
+      });
+
+      if (irmaos.length === 0) {
+        proximoCodigo = `${contaPai.codigo}.1`;
+      } else {
+        const ultimosSegmentos = irmaos.map((c) =>
+          parseInt(c.codigo.split('.').pop() || '0', 10),
+        );
+        const maiorSegmento = Math.max(...ultimosSegmentos);
+        proximoCodigo = `${contaPai.codigo}.${maiorSegmento + 1}`;
+      }
+    } else {
+      const contasRaiz = await prisma.contaContabil.findMany({
+        where: { userId: currentUserId, contaPaiId: null },
+        select: { codigo: true },
+      });
+      if (contasRaiz.length === 0) {
+        proximoCodigo = '1';
+      } else {
+        const codigosRaiz = contasRaiz.map((c) =>
+          parseInt(c.codigo.split('.')[0], 10),
+        );
+        const maiorCodigo = Math.max(...codigosRaiz);
+        proximoCodigo = (maiorCodigo + 1).toString();
+      }
+    }
+    return proximoCodigo;
+  }
+
   for (const contaData of contasContabeisData) {
-    const contaPaiId = contaData.contaPaiCodigo
-      ? createdContasMap.get(contaData.contaPaiCodigo)
+    const contaPai = contaData.contaPaiNome
+      ? await prisma.contaContabil.findFirst({ where: { nome: contaData.contaPaiNome, userId } })
       : null;
+    const contaPaiId = contaPai ? contaPai.id : null;
+
+    const proximoCodigo = await getNextCodigo(userId, contaPaiId);
 
     const conta = await prisma.contaContabil.upsert({
-      where: { userId_codigo: { userId, codigo: contaData.codigo } },
+      where: { userId_codigo: { userId, codigo: proximoCodigo } }, // Usar o código gerado
       update: {},
       create: {
         userId,
-        codigo: contaData.codigo,
+        codigo: proximoCodigo,
         nome: contaData.nome,
         tipo: contaData.tipo,
         aceitaLancamento: contaData.aceitaLancamento,
         contaPaiId: contaPaiId,
       },
     });
-    createdContasMap.set(conta.codigo, conta.id);
+    createdContasMap.set(conta.nome, conta.id); // Mapear pelo nome agora
   }
   console.log('Plano de contas padrão verificado/criado.');
 
@@ -103,7 +141,7 @@ async function main() {
       userId,
       nome: 'Caixa da Loja',
       numeroConta: 'CAIXA-01',
-      saldo: 1500.0,
+      saldo: 0.0,
       moeda: 'BRL',
       agencia: 'Principal',
     },
@@ -111,7 +149,7 @@ async function main() {
       userId,
       nome: 'Banco Principal',
       numeroConta: 'BANCO-01',
-      saldo: 12500.5,
+      saldo: 0.0,
       moeda: 'BRL',
       agencia: '0001',
     },

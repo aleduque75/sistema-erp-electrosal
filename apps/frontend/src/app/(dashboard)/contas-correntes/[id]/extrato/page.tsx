@@ -81,7 +81,15 @@ export default function ExtratoPage() {
 
   useEffect(() => {
     if (id) {
-      fetchExtrato();
+      setIsFetching(true);
+      const queryParams = new URLSearchParams({ startDate, endDate });
+      api
+        .get(`/contas-correntes/${id}/extrato?${queryParams.toString()}`)
+        .then((response) => {
+          setExtrato(response.data);
+        })
+        .catch(() => toast.error("Falha ao carregar extrato."))
+        .finally(() => setIsFetching(false));
     }
   }, [id, startDate, endDate]);
 
@@ -152,12 +160,7 @@ export default function ExtratoPage() {
                     {formatCurrency(extrato.saldoAnterior)}
                   </p>
                 </div>
-                <div>
-                  <strong>Saldo Atual (na conta):</strong>
-                  <p className="font-bold text-2xl text-blue-600">
-                    {formatCurrency(extrato.contaCorrente.saldo)}
-                  </p>
-                </div>
+                
                 <div>
                   <strong>Saldo Final do Período:</strong>
                   <p className="font-semibold text-lg">

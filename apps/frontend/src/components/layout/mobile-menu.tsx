@@ -1,16 +1,14 @@
-// apps/frontend/src/components/layout/mobile-menu.tsx
-'use client';
+"use client";
 
-import * as React from 'react';
-import Link from 'next/link';
-// Adicione ChevronRight ao import do lucide-react
-import { Menu, ChevronRight } from 'lucide-react'; 
-import { Button } from '@/components/ui/button';
+import * as React from "react";
+import Link from "next/link";
+import { Menu, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+} from "@/components/ui/collapsible";
 import {
   Drawer,
   DrawerClose,
@@ -19,8 +17,8 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from '@/components/ui/drawer';
-import { menuConfig } from '@/config/menu';
+} from "@/components/ui/drawer";
+import { menuConfig } from "@/config/menu";
 
 export function MobileMenu() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -39,41 +37,40 @@ export function MobileMenu() {
         <DrawerHeader className="text-left">
           <DrawerTitle>Navegação</DrawerTitle>
         </DrawerHeader>
-
         <div className="p-4">
-          <div className="flex flex-col space-y-2">
+          <div className="flex flex-col space-y-1">
             {menuConfig.map((item) => {
-              const Icon = item.icon; // Pega o componente do ícone
-              
+              const Icon = item.icon;
               return item.subItems ? (
                 <Collapsible key={item.title}>
-                  {/* Adicionamos `group` para animar a seta */}
-                  <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-2 py-2 text-sm font-medium hover:bg-accent">
-                    <div className="flex items-center gap-2">
-                      {Icon && <Icon className="h-5 w-5" />}
-                      {item.title}
+                  <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium hover:bg-accent">
+                    <div className="flex items-center gap-3">
+                      {Icon && <Icon className="h-5 w-5" />} {item.title}
                     </div>
-                    {/* A seta que rotaciona quando o menu está aberto */}
-                    <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                    <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-6 border-l-2 ml-4 mt-1">
-                    {item.subItems.map((subItem) => (
-                      <Link
-                        key={subItem.title}
-                        href={subItem.href}
-                        className="block rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-accent"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {subItem.title}
-                      </Link>
-                    ))}
+                  <CollapsibleContent className="pl-8 border-l-2 ml-4">
+                    {item.subItems.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      return (
+                        <Link
+                          key={subItem.title}
+                          href={subItem.href}
+                          className="flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground hover:bg-accent"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          {SubIcon && <SubIcon className="h-4 w-4" />}
+                          {subItem.title}
+                        </Link>
+                      );
+                    })}
                   </CollapsibleContent>
                 </Collapsible>
               ) : (
                 <Link
                   key={item.title}
                   href={item.href}
-                  className="flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium hover:bg-accent"
+                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
                   onClick={() => setIsOpen(false)}
                 >
                   {Icon && <Icon className="h-5 w-5" />}
@@ -83,7 +80,6 @@ export function MobileMenu() {
             })}
           </div>
         </div>
-
         <DrawerFooter className="pt-2">
           <DrawerClose asChild>
             <Button variant="outline">Fechar</Button>

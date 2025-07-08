@@ -109,7 +109,7 @@ export default function ContasContabeisPage() {
   };
 
   const columns: ColumnDef<ContaContabil>[] = [
-    { accessorKey: "codigo", header: "Código" },
+    
     {
       accessorKey: "nome",
       header: "Nome",
@@ -201,7 +201,7 @@ export default function ContasContabeisPage() {
             <DialogTitle>Detalhes da Conta</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <DetailItem label="Código" value={contaToView?.codigo} />
+            
             <DetailItem label="Nome" value={contaToView?.nome} />
             <DetailItem label="Tipo" value={contaToView?.tipo} />
             <DetailItem

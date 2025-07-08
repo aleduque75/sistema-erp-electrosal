@@ -12,10 +12,6 @@ import { TipoContaContabilPrisma } from '@prisma/client';
 export class CreateContaContabilDto {
   @IsString()
   @IsNotEmpty()
-  codigo: string;
-
-  @IsString()
-  @IsNotEmpty()
   nome: string;
 
   @IsEnum(TipoContaContabilPrisma)

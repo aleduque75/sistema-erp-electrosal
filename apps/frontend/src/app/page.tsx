@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import translations from "../../public/locales/pt/common.json";
-import { PublicNavbar } from "@/components/PublicNavBar"; // ✅ 1. Importe o novo menu
+
+
+import { PublicNavbar } from "@/components/layout/PublicNavbar";
 
 export default function HomePage() {
   return (
     <>
       <PublicNavbar />
+      
 
       <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 min-h-screen">
         {/* Hero Section */}

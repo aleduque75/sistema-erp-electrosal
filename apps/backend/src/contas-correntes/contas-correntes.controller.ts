@@ -42,9 +42,8 @@ export class ContasCorrentesController {
     @Query('startDate') startDateString: string,
     @Query('endDate') endDateString: string,
   ) {
-    const startDate = startDateString ? new Date(startDateString) : new Date(0);
-    const endDate = endDateString ? new Date(endDateString) : new Date();
-    return this.service.getExtrato(req.user.id, id, startDate, endDate);
+    // Adiciona a hora e o fuso horário para evitar problemas de conversão
+    return this.service.getExtrato(req.user.id, id, startDateString, endDateString);
   }
 
   // ✅ ROTA ADICIONADA PARA BUSCAR UMA ÚNICA CONTA
