@@ -31,6 +31,7 @@ model User {
   transacoes            Transacao[]
   creditCards           CreditCard[] // Relação com cartões
   transactionCategories TransactionCategory[] // Relação com categorias
+  CreditCardBill        CreditCardBill[]
 }
 
 model UserSettings {
@@ -256,19 +257,25 @@ model CreditCardTransaction {
 }
 
 model CreditCardBill {
-  id           String                  @id @default(uuid())
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
   creditCardId String
-  creditCard   CreditCard              @relation(fields: [creditCardId], references: [id])
-  name         String
-  startDate    DateTime
-  endDate      DateTime
-  dueDate      DateTime
-  totalAmount  Decimal                 @db.Decimal(10, 2)
-  paid         Boolean                 @default(false)
-  paidAt       DateTime?
+  creditCard   CreditCard @relation(fields: [creditCardId], references: [id])
+
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  dueDate     DateTime
+  totalAmount Decimal   @db.Decimal(10, 2)
+  paid        Boolean   @default(false)
+  paidAt      DateTime?
+
   transactions CreditCardTransaction[]
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("credit_card_bills")
 }

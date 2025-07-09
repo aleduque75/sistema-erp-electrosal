@@ -16,7 +16,7 @@ import {
   CreateCreditCardBillDto,
   UpdateCreditCardBillDto,
   PayCreditCardBillDto,
-  CreateCreditCardBillWithTransactionsDto,
+  CreateBillFromTransactionsDto,
 } from './dtos/credit-card-bill.dto';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -25,17 +25,13 @@ import { AuthGuard } from '@nestjs/passport';
 export class CreditCardBillsController {
   constructor(private readonly service: CreditCardBillsService) {}
 
-  @Post()
-  create(@Request() req, @Body() createDto: CreateCreditCardBillDto) {
-    return this.service.create(req.user.id, createDto);
-  }
-
-  @Post('with-transactions')
-  createBillWithTransactions(
+  // ✅ ROTA QUE ESTAVA FALTANDO
+  @Post('from-transactions')
+  createFromTransactions(
     @Request() req,
-    @Body() createDto: CreateCreditCardBillWithTransactionsDto,
+    @Body() createDto: CreateBillFromTransactionsDto,
   ) {
-    return this.service.createBillWithTransactions(req.user.id, createDto);
+    return this.service.createFromTransactions(req.user.id, createDto);
   }
 
   @Get()
@@ -46,6 +42,15 @@ export class CreditCardBillsController {
   @Get(':id')
   findOne(@Request() req, @Param('id') id: string) {
     return this.service.findOne(req.user.id, id);
+  }
+
+  @Patch(':id/pay')
+  pay(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() payDto: PayCreditCardBillDto,
+  ) {
+    return this.service.pay(req.user.id, id, payDto);
   }
 
   @Patch(':id')
