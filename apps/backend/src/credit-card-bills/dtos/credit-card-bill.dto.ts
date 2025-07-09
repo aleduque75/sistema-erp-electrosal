@@ -5,44 +5,55 @@ import {
   IsUUID,
   IsOptional,
   IsArray,
-  IsNumber,
-  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
+// DTO para CRIAR uma nova fatura a partir de transações
 export class CreateCreditCardBillDto {
-  @IsUUID() @IsNotEmpty() creditCardId: string;
-  @IsString() @IsNotEmpty() name: string;
-  @IsDate() @Type(() => Date) startDate: Date;
-  @IsDate() @Type(() => Date) endDate: Date;
-  @IsDate() @Type(() => Date) dueDate: Date;
-  @IsNumber() @Min(0) totalAmount: number;
-}
+  @IsUUID()
+  @IsNotEmpty()
+  creditCardId: string;
 
-// ✅ CORREÇÃO: DTO de atualização definido manualmente
-export class UpdateCreditCardBillDto {
-  @IsUUID() @IsOptional() creditCardId?: string;
-  @IsString() @IsOptional() name?: string;
-  @IsDate() @Type(() => Date) @IsOptional() startDate?: Date;
-  @IsDate() @Type(() => Date) @IsOptional() endDate?: Date;
-  @IsDate() @Type(() => Date) @IsOptional() dueDate?: Date;
-  @IsNumber() @Min(0) @IsOptional() totalAmount?: number;
-}
+  @IsString()
+  @IsNotEmpty()
+  name: string;
 
-export class PayCreditCardBillDto {
-  @IsUUID() @IsNotEmpty() contaCorrenteId: string;
-  @IsUUID() @IsNotEmpty() contaContabilId: string;
-  @IsDate() @IsOptional() @Type(() => Date) paidAt?: Date;
-}
+  @IsDate()
+  @Type(() => Date)
+  startDate: Date;
 
-export class CreateCreditCardBillWithTransactionsDto {
-  @IsUUID() @IsNotEmpty() creditCardId: string;
-  @IsString() @IsNotEmpty() name: string;
-  @IsDate() @Type(() => Date) startDate: Date;
-  @IsDate() @Type(() => Date) endDate: Date;
-  @IsDate() @Type(() => Date) dueDate: Date;
+  @IsDate()
+  @Type(() => Date)
+  endDate: Date;
+
+  @IsDate()
+  @Type(() => Date)
+  dueDate: Date;
 
   @IsArray()
   @IsUUID('4', { each: true })
   transactionIds: string[];
+}
+
+// DTO para ATUALIZAR uma fatura existente
+export class UpdateCreditCardBillDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsDate()
+  @Type(() => Date)
+  @IsOptional()
+  dueDate?: Date;
+}
+
+// DTO para a ação de PAGAR uma fatura
+export class PayCreditCardBillDto {
+  @IsUUID()
+  @IsNotEmpty()
+  contaCorrenteId: string;
+
+  @IsUUID()
+  @IsNotEmpty()
+  contaContabilId: string;
 }

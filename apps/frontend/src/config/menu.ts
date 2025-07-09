@@ -4,17 +4,15 @@ import {
   Package,
   ShoppingCart,
   DollarSign,
-  CreditCard,
+  CreditCard, // Ícone que já temos
   FileText,
   Wallet,
-  Settings,
-  LifeBuoy,
-  User as UserIcon,
-  LogOut,
+  ArrowRightLeft, // Ícone para transações
   ListChecks,
-  PlusCircle,
   ArrowDownToLine,
   ArrowUpToLine,
+  PlusCircle,
+  FilePlus2,
 } from "lucide-react";
 import React from "react";
 
@@ -50,13 +48,14 @@ export const menuConfig: NavItem[] = [
         title: "Plano de Contas",
         href: "/contas-contabeis",
         icon: FileText,
-        description: "Organize suas finanças.",
+        description: "Organize suas finanças com um plano de contas.",
       },
+      // ✅ NOVO ITEM AQUI
       {
         title: "Meus Cartões",
         href: "/credit-cards",
         icon: CreditCard,
-        description: "Cadastre seus cartões de crédito.",
+        description: "Cadastre e gerencie seus cartões de crédito.",
       },
     ],
   },
@@ -69,13 +68,20 @@ export const menuConfig: NavItem[] = [
         title: "Realizar Venda",
         href: "/sales/new",
         icon: PlusCircle,
-        description: "Registre uma nova venda.",
+        description: "Registre uma nova venda de produtos ou serviços.",
       },
       {
         title: "Lista de Vendas",
         href: "/sales",
         icon: ListChecks,
-        description: "Acompanhe todas as suas vendas.",
+        description: "Acompanhe o histórico de todas as suas vendas.",
+      },
+      // ✅ NOVO ITEM AQUI
+      {
+        title: "Lançar Compra no Cartão",
+        href: "/credit-card-transactions",
+        icon: ArrowRightLeft,
+        description: "Registre uma nova compra ou despesa no cartão.",
       },
     ],
   },
@@ -100,7 +106,20 @@ export const menuConfig: NavItem[] = [
         title: "Contas Correntes",
         href: "/contas-correntes",
         icon: Wallet,
-        description: "Acompanhe o fluxo de caixa.",
+        description: "Acompanhe o saldo e o fluxo de caixa.",
+      },
+      {
+        title: "Faturas de Cartão",
+        href: "/credit-card-bills",
+        icon: CreditCard,
+        description: "Acompanhe e pague as faturas dos seus cartões.",
+      },
+      // ✅ NOVO ITEM ADICIONADO
+      {
+        title: "Gerar Fatura Manual",
+        href: "/credit-card-bills/new",
+        icon: FilePlus2,
+        description: "Agrupe transações em aberto para criar uma nova fatura.",
       },
     ],
   },
