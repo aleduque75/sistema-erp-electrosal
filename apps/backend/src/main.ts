@@ -2,6 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { config } from 'dotenv';
+
+config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -44,8 +47,8 @@ async function bootstrap() {
   // Habilita o CORS para permitir que seu frontend acesse a API
   app.enableCors();
 
-  await app.listen(3000);
-  console.log(`Application is running on: ${await app.getUrl()}`);
+  await app.listen(process.env.PORT || 3001); // Se PORT não estiver definido, usa 3001
+  //   console.log(`Application is running on: ${await app.getUrl()}`);
   console.log(
     `Swagger documentation is available at: ${await app.getUrl()}/api`,
   );

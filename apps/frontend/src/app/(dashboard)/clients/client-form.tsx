@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import { format, parse } from "date-fns";
+import { format, parse } from "date-fns"; // 'parse' é importante para converter string para Date
 import api from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { DateInput } from "@/components/ui/date-input";
+import { DateInput } from "@/components/ui/date-input"; // Assumindo que este componente lida com máscara DD/MM/YYYY
 
 interface Client {
   id: string;
@@ -27,7 +27,7 @@ interface Client {
   email?: string | null;
   phone?: string | null;
   address?: string | null;
-  birthDate?: Date | null;
+  birthDate?: Date | null; // Assumindo que do backend pode vir como Date
   gender?: string | null;
 }
 
@@ -41,23 +41,12 @@ const formSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   gender: z.string().optional(),
-  birthDate: z.preprocess(
-    (arg) => {
-      if (typeof arg === "string" && arg.length >= 8) {
-        const parsedDate = parse(arg, "dd/MM/yyyy", new Date());
-        if (!isNaN(parsedDate.getTime())) return parsedDate;
-      }
-      if (arg instanceof Date) return arg;
-      return undefined;
-    },
-    z
-      .date({
-        errorMap: () => ({
-          message: "Por favor, insira uma data válida no formato DD/MM/AAAA.",
-        }),
-      })
-      .optional()
-  ),
+  birthDate: z.union([
+    z.date(),
+    z.string().refine((val) => !val || !isNaN(parse(val, "dd/MM/yyyy", new Date()).getTime()), {
+      message: "Data inválida",
+    }),
+  ]).optional().nullable(),
 });
 
 type ClientFormValues = z.infer<typeof formSchema>;
@@ -75,18 +64,36 @@ export function ClientForm({ client, onSave }: ClientFormProps) {
       email: client?.email || "",
       phone: client?.phone || "",
       address: client?.address || "",
-      birthDate: client?.birthDate ? new Date(client.birthDate) : undefined,
+      // Ajuste para defaultValues:
+      // birthDate precisa ser um objeto Date ou undefined, conforme o schema.
+      // Se client?.birthDate for string, converta para Date. Se for Date, use como está.
+      birthDate: client?.birthDate
+        ? client.birthDate instanceof Date
+          ? client.birthDate // Já é Date
+          : new Date(client.birthDate) // Converte string para Date
+        : undefined, // Se não houver, é undefined
       gender: client?.gender || "",
     },
   });
 
   const onSubmit = async (data: ClientFormValues) => {
     try {
+      // ✅ IMPORTANTE: Se o backend espera string YYYY-MM-DD ou Date, ajuste aqui.
+      // O Zod já garante que data.birthDate é um Date | undefined | null.
+      // Se você precisa que seja string para o backend:
+      const dataToSend = {
+        ...data,
+        birthDate:
+          data.birthDate instanceof Date && !isNaN(data.birthDate.getTime())
+            ? format(data.birthDate, "yyyy-MM-dd")
+            : null, // Ou undefined, dependendo do que o backend aceita para nulo/ausente
+      };
+
       if (client) {
-        await api.patch(`/clients/${client.id}`, data);
+        await api.patch(`/clients/${client.id}`, dataToSend); // Use dataToSend
         toast.success("Cliente atualizado com sucesso!");
       } else {
-        await api.post("/clients", data);
+        await api.post("/clients", dataToSend); // Use dataToSend
         toast.success("Cliente criado com sucesso!");
       }
       onSave();
@@ -165,21 +172,23 @@ export function ClientForm({ client, onSave }: ClientFormProps) {
             control={form.control}
             name="birthDate"
             render={({ field }) => {
-              // ✅ **CORREÇÃO APLICADA AQUI**
-              // O valor pode ser um objeto Date (do 'defaultValues') ou uma string (do input do usuário).
-              // A máscara já formata a string visualmente, então só precisamos converter o objeto Date.
+              // ✅ CORREÇÃO APLICADA AQUI NO RENDER:
+              // O DateInput espera uma string formatada (DD/MM/YYYY).
+              // field.value virá do useForm (será Date ou undefined).
+              // Convertemos Date para string 'DD/MM/YYYY' para exibir no input.
               const displayValue =
-                field.value instanceof Date
+                field.value instanceof Date && !isNaN(field.value.getTime())
                   ? format(field.value, "dd/MM/yyyy")
-                  : field.value || "";
+                  : ""; // Se não for Date válido, exibe vazio
 
               return (
                 <FormItem>
                   <FormLabel>Data de Nascimento</FormLabel>
                   <FormControl>
                     <DateInput
-                      value={displayValue}
-                      onAccept={(value: any) => field.onChange(value)}
+                      value={displayValue} // Passa a string formatada para o input
+                      // onAccept deve passar a string formatada para o Zod preprocessar
+                      onAccept={(value: string) => field.onChange(value)}
                       placeholder="DD/MM/AAAA"
                     />
                   </FormControl>

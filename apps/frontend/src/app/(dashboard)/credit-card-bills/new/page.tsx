@@ -144,7 +144,6 @@ export default function GenerateBillPage() {
         creditCardId: selectedCardId,
         transactionIds, // Agora envia o array de UUIDs correto
         startDate: new Date(startDate),
-        endDate: new Date(endDate),
       });
       toast.success('Fatura gerada com sucesso!');
       router.push('/credit-card-bills');

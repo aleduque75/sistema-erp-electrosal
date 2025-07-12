@@ -7,13 +7,33 @@ import {
   Min,
   IsUUID,
   IsDate,
+  IsBoolean, // Adicione este import
+  IsInt, // Adicione este import
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateAccountPayDto {
-  @IsString() @IsNotEmpty() description: string;
-  @IsNumber() @Min(0.01) amount: number;
-  @IsDate() @Type(() => Date) dueDate: Date;
+  @IsString()
+  @IsNotEmpty()
+  description: string;
+
+  @IsNumber()
+  @Min(0.01)
+  amount: number;
+
+  @IsDate()
+  @Type(() => Date)
+  dueDate: Date;
+
+  // ADICIONE ESTES DOIS CAMPOS:
+  @IsBoolean()
+  @IsOptional()
+  isInstallment?: boolean;
+
+  @IsInt()
+  @Min(2)
+  @IsOptional()
+  totalInstallments?: number;
 }
 
 export class UpdateAccountPayDto extends PartialType(CreateAccountPayDto) {}

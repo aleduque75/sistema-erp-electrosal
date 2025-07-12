@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
+import * as z from "zod";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,15 @@ const formatCurrency = (value?: number) => {
     currency: "BRL",
   }).format(value || 0);
 };
+
+const formSchema = z.object({
+  clientId: z.string().min(1, "Selecione um cliente."),
+  paymentMethod: z.string().min(1, "Selecione a forma de pagamento."),
+  numberOfInstallments: z.number().int().min(1).optional(),
+  contaCorrenteId: z.string().nullable().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface NewSaleFormProps {
   onSave: () => void;
@@ -150,7 +160,7 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
     return items.reduce((total, item) => total + item.price * item.quantity, 0);
   }, [items]);
 
-  const onFinalizeSale = async (formData) => {
+  const onFinalizeSale = async (formData: FormValues) => {
     if (items.length === 0) {
       toast.error("Adicione pelo menos um item à venda.");
       return;

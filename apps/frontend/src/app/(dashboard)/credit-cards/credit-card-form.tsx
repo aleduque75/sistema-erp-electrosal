@@ -35,7 +35,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface CreditCardFormProps {
-  card?: FormValues & { id: string };
+  card?: (FormValues & { id: string }) | null; // Agora aceita null
   onSave: () => void;
 }
 

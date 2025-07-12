@@ -5,7 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,15 +20,20 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
-// ✅ 1. SCHEMA SIMPLIFICADO: dueDate agora é uma string, como o input nativo retorna
+// ✅ Schema agora espera um objeto Date
 const formSchema = z
   .object({
     description: z.string().min(3, "A descrição é obrigatória."),
     amount: z.coerce.number().positive("O valor deve ser maior que zero."),
-    dueDate: z
-      .string({ required_error: "A data de vencimento é obrigatória." })
-      .min(1, "A data de vencimento é obrigatória."),
+    dueDate: z.date({ required_error: "A data de vencimento é obrigatória." }),
     isInstallment: z.boolean().default(false),
     totalInstallments: z.coerce.number().int().min(2).optional(),
   })
@@ -55,25 +62,26 @@ interface AccountPayFormProps {
 export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    // ✅ 2. VALOR PADRÃO AJUSTADO: dueDate agora é uma string no formato 'yyyy-MM-dd'
     defaultValues: {
       description: account?.description || "",
       amount: account?.amount || 0,
-      dueDate: account?.dueDate
-        ? format(new Date(account.dueDate), "yyyy-MM-dd")
-        : format(new Date(), "yyyy-MM-dd"),
+      dueDate: account?.dueDate ? new Date(account.dueDate) : new Date(),
       isInstallment:
         !!account?.totalInstallments && account.totalInstallments > 1,
-      totalInstallments: account?.totalInstallments || undefined,
+      totalInstallments: account?.totalInstallments || 2, // Use um valor padrão
     },
   });
 
   const onSubmit = async (data: FormValues) => {
     try {
       if (account) {
-        await api.patch(`/accounts-pay/${account.id}`, data);
+        // Para ATUALIZAR, ainda é bom remover os campos, pois não se edita o parcelamento.
+        const { isInstallment, totalInstallments, ...payload } = data;
+        await api.patch(`/accounts-pay/${account.id}`, payload);
         toast.success("Conta atualizada com sucesso!");
       } else {
+        // Para CRIAR, ENVIE O OBJETO 'data' COMPLETO.
+        // Ele contém 'isInstallment' e 'totalInstallments' que o backend precisa para decidir.
         await api.post("/accounts-pay", data);
         toast.success("Conta criada com sucesso!");
       }
@@ -114,16 +122,41 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
             )}
           />
 
-          {/* ✅ 3. CAMPO DE DATA SIMPLIFICADO para um input nativo */}
+          {/* ✅ Campo de data substituído pelo Date Picker */}
           <FormField
-            name="dueDate"
             control={form.control}
+            name="dueDate"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Vencimento</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: ptBR })
+                        ) : (
+                          <span>Escolha uma data</span>
+                        )}
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}

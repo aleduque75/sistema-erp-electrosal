@@ -8,6 +8,7 @@ import {
   CreateBillFromTransactionsDto, // Garanta que este DTO está sendo importado
   UpdateCreditCardBillDto,
   PayCreditCardBillDto,
+  CreateCreditCardBillDto,
 } from './dtos/credit-card-bill.dto';
 import { CreditCardBill, TipoTransacaoPrisma } from '@prisma/client';
 

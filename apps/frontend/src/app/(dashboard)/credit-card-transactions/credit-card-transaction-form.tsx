@@ -20,9 +20,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput } from "@/components/ui/date-input";
-import { CreateInstallmentTransactionsDto } from "@/app/api/credit-card-transactions/dtos/credit-card-transaction.dto";
 
-// Interfaces
+
+interface CreateInstallmentTransactionsDto {
+  description: string;
+  totalAmount: number;
+  installments: number;
+  firstInstallmentDate: Date;
+  creditCardId: string;
+  categoryId?: string;
+}
 interface CreditCard {
   id: string;
   name: string;
@@ -44,7 +51,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface FormProps {
-  transaction?: FormValues & { id: string };
+  transaction?: (FormValues & { id: string }) | null; // Agora aceita null
   onSave: () => void;
 }
 
@@ -88,9 +95,11 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
       } else {
         // Se for à vista (1 parcela), chama o endpoint de criação única
         const payload = {
-          ...data,
-          isInstallment: false,
-          installments: 1,
+          creditCardId: data.creditCardId,
+          description: data.description,
+          amount: data.amount,
+          date: data.date,
+          categoryId: data.categoryId,
         };
         await api.post("/credit-card-transactions", payload);
         toast.success("Transação criada com sucesso!");

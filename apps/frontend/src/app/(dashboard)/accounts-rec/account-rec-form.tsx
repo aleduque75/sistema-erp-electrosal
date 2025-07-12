@@ -5,6 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,19 +19,18 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { DateInput } from "@/components/ui/date-input"; // Usando nosso input com máscara
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   description: z.string().min(3, "A descrição é obrigatória."),
   amount: z.coerce.number().positive("O valor deve ser maior que zero."),
-  dueDate: z.preprocess(
-    (arg) => {
-      if (typeof arg === "string" && arg.length >= 8)
-        return new Date(arg.split("/").reverse().join("-"));
-      if (arg instanceof Date) return arg;
-    },
-    z.date({ required_error: "A data de vencimento é obrigatória." })
-  ),
+  dueDate: z.date({ required_error: "A data de vencimento é obrigatória." }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -73,13 +75,13 @@ export function AccountRecForm({ account, onSave }: AccountRecFormProps) {
             <FormItem>
               <FormLabel>Descrição</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: Venda para Cliente X" {...field} />
+                <Input placeholder="Ex: Venda para Cliente Y" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             name="amount"
             control={form.control}
@@ -94,22 +96,39 @@ export function AccountRecForm({ account, onSave }: AccountRecFormProps) {
             )}
           />
           <FormField
-            name="dueDate"
             control={form.control}
+            name="dueDate"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Vencimento</FormLabel>
-                <FormControl>
-                  <DateInput
-                    value={
-                      field.value
-                        ? new Date(field.value).toLocaleDateString("pt-BR")
-                        : ""
-                    }
-                    onAccept={(value: any) => field.onChange(value)}
-                    placeholder="DD/MM/AAAA"
-                  />
-                </FormControl>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: ptBR })
+                        ) : (
+                          <span>Escolha uma data</span>
+                        )}
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}

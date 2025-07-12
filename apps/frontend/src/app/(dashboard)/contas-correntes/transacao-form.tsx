@@ -178,7 +178,6 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
                 value={field.value}
                 onValueChange={field.onChange}
                 placeholder="Selecione a conta..."
-                disabled={!tipoLancamento}
               />
               <FormMessage />
             </FormItem>

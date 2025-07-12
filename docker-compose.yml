@@ -1,15 +1,16 @@
-version: '3.8'
+# docker-compose.yml para desenvolvimento local
 services:
   db:
     image: postgres:16
     restart: always
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: aleduque
+      POSTGRES_PASSWORD: testpassword123
       POSTGRES_DB: sistema_beleza
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+
 volumes:
-  db_data:
+  db_data: {}

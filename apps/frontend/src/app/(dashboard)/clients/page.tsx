@@ -171,7 +171,7 @@ export default function ClientsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={clients} />
+          <DataTable columns={columns} data={clients} filterColumnId="name" />
         </CardContent>
       </Card>
 

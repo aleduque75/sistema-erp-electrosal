@@ -26,9 +26,6 @@ export class ContasContabeisService {
 
   async findAll(userId: string, tipo?: 'RECEITA' | 'DESPESA') {
     const where: any = { userId };
-
-    // Se um tipo for especificado (vindo do form de transação), filtramos
-    // apenas as contas que podem receber lançamentos daquele tipo.
     if (tipo) {
       where.aceitaLancamento = true;
       if (tipo === 'RECEITA') {
@@ -36,14 +33,15 @@ export class ContasContabeisService {
       } else if (tipo === 'DESPESA') {
         where.tipo = { in: ['DESPESA', 'ATIVO'] };
       }
-    } // Se nenhum tipo for passado (vindo da tela do plano de contas), não adiciona filtros extras.
+    }
 
-    return this.prisma.contaContabil.findMany({
+    const contas = await this.prisma.contaContabil.findMany({
       where,
       orderBy: { codigo: 'asc' },
     });
-  }
 
+    return contas;
+  }
   async findOne(userId: string, id: string) {
     const conta = await this.prisma.contaContabil.findFirst({
       where: { id, userId },

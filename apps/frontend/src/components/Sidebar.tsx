@@ -1,5 +1,5 @@
-import { DesktopMenu } from "./layout/DesktopMenu";
-import { MobileMenu } from "./layout/MobileMenu";
+import { MainMenu } from "./layout/main-menu";
+import { MobileMenu } from "./layout/mobile-menu";
 
 export function Sidebar() {
   return (
@@ -7,7 +7,7 @@ export function Sidebar() {
       <div className="flex items-center gap-4">
         <MobileMenu />
         <div className="hidden md:flex">
-          <DesktopMenu />
+          <MainMenu />
         </div>
       </div>
     </div>
