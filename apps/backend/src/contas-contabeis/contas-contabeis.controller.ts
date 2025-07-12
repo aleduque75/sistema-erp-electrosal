@@ -33,7 +33,11 @@ export class ContasContabeisController {
   }
 
   @Get()
-  findAll(@Request() req, @Query('tipo') tipo?: 'RECEITA' | 'DESPESA') {
+  findAll(
+    @Request() req,
+    @Query('tipo') tipo?: 'RECEITA' | 'DESPESA', // <-- ESTA PARTE É A CHAVE
+  ) {
+    // Ela extrai o "?tipo=DESPESA" da URL e o passa para o service
     return this.contasContabeisService.findAll(req.user.id, tipo);
   }
 

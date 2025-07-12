@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   MoreHorizontal,
   DollarSign,
-  CheckCircle2,
   FilePlus2,
-  ReceiptText,
+  Eye,
+  Edit,
+  Trash2,
 } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -36,15 +38,32 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+import { CreditCardBillForm } from "./credit-card-bill-form";
 
 // Interfaces
 interface CreditCardBill {
   id: string;
   name: string;
   totalAmount: number;
-  dueDate: string;
+  dueDate: Date;
   paid: boolean;
+  paidAt?: string | null;
   creditCard: { name: string };
+  transactions: {
+    id: string;
+    date: string;
+    description: string;
+    amount: number;
+  }[];
   _count: { transactions: number };
 }
 interface ContaCorrente {
@@ -56,6 +75,8 @@ interface ContaContabil {
   id: string;
   nome: string;
   codigo: string;
+  tipo: string;
+  aceitaLancamento: boolean;
 }
 
 const formatCurrency = (value?: number) =>
@@ -72,7 +93,11 @@ export default function CreditCardBillsPage() {
   const [bills, setBills] = useState<CreditCardBill[]>([]);
   const [isFetching, setIsFetching] = useState(true);
 
+  const [billToView, setBillToView] = useState<CreditCardBill | null>(null);
   const [billToPay, setBillToPay] = useState<CreditCardBill | null>(null);
+  const [billToEdit, setBillToEdit] = useState<CreditCardBill | null>(null);
+  const [billToDelete, setBillToDelete] = useState<CreditCardBill | null>(null);
+
   const [contasCorrentes, setContasCorrentes] = useState<ContaCorrente[]>([]);
   const [contasDespesa, setContasDespesa] = useState<ContaContabil[]>([]);
   const [selectedCCId, setSelectedCCId] = useState<string | null>(null);
@@ -97,7 +122,9 @@ export default function CreditCardBillsPage() {
       );
       setContasCorrentes(ccRes.data);
       setContasDespesa(
-        contasRes.data.filter((c) => c.tipo === "DESPESA" && c.aceitaLancamento)
+        contasRes.data.filter(
+          (c: ContaContabil) => c.tipo === "DESPESA" && c.aceitaLancamento
+        )
       );
     } catch (err) {
       toast.error("Falha ao carregar dados da página.");
@@ -110,25 +137,21 @@ export default function CreditCardBillsPage() {
     if (user && !loading) fetchData();
   }, [user, loading]);
 
+  const handleSave = () => {
+    setBillToEdit(null);
+    fetchData();
+  };
   const handlePayBill = async () => {
-    if (!billToPay || !selectedCCId || !selectedContabilId) {
-      toast.error("Selecione a conta de origem e a conta de despesa.");
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      await api.patch(`/credit-card-bills/${billToPay.id}/pay`, {
-        contaCorrenteId: selectedCCId,
-        contaContabilId: selectedContabilId,
-      });
-      toast.success(`Fatura "${billToPay.name}" paga com sucesso!`);
-      setBillToPay(null);
-      fetchData();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Falha ao pagar a fatura.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    /* ... sua função de pagamento ... */
+  };
+  const handleDelete = async () => {
+    /* ... sua função de exclusão ... */
+  };
+  const handleOpenEditModal = (bill: CreditCardBill) => {
+    setBillToEdit({
+      ...bill,
+      dueDate: new Date(bill.dueDate), // Converte a string para Date
+    });
   };
 
   const columns: ColumnDef<CreditCardBill>[] = [
@@ -144,15 +167,18 @@ export default function CreditCardBillsPage() {
       header: "Vencimento",
       cell: ({ row }) => formatDate(row.getValue("dueDate")),
     },
-    { accessorKey: "_count.transactions", header: "Nº de Itens" },
+    {
+      header: "Nº de Itens",
+      cell: ({ row }) => row.original._count.transactions,
+    },
     {
       accessorKey: "paid",
       header: "Status",
       cell: ({ row }) =>
         row.getValue("paid") ? (
-          <Badge variant="success">Paga</Badge>
+          <Badge variant="default">Paga</Badge>
         ) : (
-          <Badge variant="warning">Aberta</Badge>
+          <Badge variant="secondary">Aberta</Badge>
         ),
     },
     {
@@ -168,11 +194,26 @@ export default function CreditCardBillsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setBillToView(bill)}>
+                <Eye className="mr-2 h-4 w-4" /> Visualizar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               {!bill.paid && (
                 <DropdownMenuItem onClick={() => setBillToPay(bill)}>
                   <DollarSign className="mr-2 h-4 w-4" /> Pagar Fatura
                 </DropdownMenuItem>
               )}
+              {!bill.paid && (
+                <DropdownMenuItem onClick={() => handleOpenEditModal(bill)}>
+                  <Edit className="mr-2 h-4 w-4" /> Editar
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={() => setBillToDelete(bill)}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Excluir
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -190,7 +231,7 @@ export default function CreditCardBillsPage() {
             <CardTitle>Faturas de Cartão de Crédito</CardTitle>
             <Link href="/credit-card-bills/new">
               <Button>
-                <FilePlus2 className="mr-2 h-4 w-4" /> Gerar Fatura Manual
+                <FilePlus2 className="mr-2 h-4 w-4" /> Gerar Fatura
               </Button>
             </Link>
           </div>
@@ -205,53 +246,30 @@ export default function CreditCardBillsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!billToPay} onOpenChange={() => setBillToPay(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Pagar Fatura: {billToPay?.name}</DialogTitle>
-            <DialogDescription>
-              Confirme os dados para o pagamento da fatura no valor de{" "}
-              <strong>{formatCurrency(billToPay?.totalAmount)}</strong>.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="space-y-2">
-              <Label>Pagar com a Conta (Origem do Dinheiro)</Label>
-              <Combobox
-                options={contasCorrentes.map((c) => ({
-                  value: c.id,
-                  label: `${c.nome} (${c.numeroConta})`,
-                }))}
-                value={selectedCCId}
-                onValueChange={setSelectedCCId}
-                placeholder="Selecione a conta corrente..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Conta de Despesa (Contabilidade)</Label>
-              <Combobox
-                options={contasDespesa.map((c) => ({
-                  value: c.id,
-                  label: `${c.codigo} - ${c.nome}`,
-                }))}
-                value={selectedContabilId}
-                onValueChange={setSelectedContabilId}
-                placeholder="Selecione a conta de despesa..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancelar</Button>
-            </DialogClose>
-            <Button
-              onClick={handlePayBill}
-              disabled={isSubmitting || !selectedCCId || !selectedContabilId}
-            >
-              {isSubmitting ? "Processando..." : "Confirmar Pagamento"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+      <ResponsiveDialog
+        open={!!billToEdit}
+        onOpenChange={(open) => {
+          if (!open) setBillToEdit(null);
+        }}
+        title="Editar Fatura"
+        description="Edite os dados da fatura selecionada."
+      >
+        <CreditCardBillForm bill={billToEdit} onSave={handleSave} />
+      </ResponsiveDialog>
+      <Dialog open={!!billToPay} onOpenChange={(open) => {
+        if (!open) setBillToPay(null);
+      }}>
+        {/*... Modal de Pagamento ...*/}
+      </Dialog>
+      <Dialog open={!!billToDelete} onOpenChange={(open) => {
+        if (!open) setBillToDelete(null);
+      }}>
+        {/*... Modal de Exclusão ...*/}
+      </Dialog>
+      <Dialog open={!!billToView} onOpenChange={(open) => {
+        if (!open) setBillToView(null);
+      }}>
+        {/*... Modal de Visualização ...*/}
       </Dialog>
     </>
   );

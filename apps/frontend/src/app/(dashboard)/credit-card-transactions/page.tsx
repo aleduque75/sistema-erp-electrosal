@@ -53,11 +53,11 @@ interface CreditCardTransaction {
   id: string;
   description: string;
   amount: number;
-  date: string;
+  date: Date;
   isInstallment: boolean;
-  installments?: number | null;
+  installments: number;
   currentInstallment?: number | null;
-  creditCardId?: string;
+  creditCardId: string;
   categoryId?: string;
   creditCard: CreditCard;
   creditCardBillId?: string | null;
@@ -195,9 +195,9 @@ export default function CreditCardTransactionsPage() {
         const bill = row.original.creditCardBill;
         if (bill) {
           return bill.paid ? (
-            <Badge variant="success">Quitada</Badge>
+            <Badge variant="default">Quitada</Badge>
           ) : (
-            <Badge variant="warning">Na Fatura</Badge>
+            <Badge variant="secondary">Na Fatura</Badge>
           );
         }
         return <Badge variant="outline">Aberta</Badge>;
@@ -300,6 +300,7 @@ export default function CreditCardTransactionsPage() {
         open={isFormModalOpen}
         onOpenChange={setIsFormModalOpen}
         title={transactionToEdit ? "Editar Transação" : "Nova Transação"}
+        description="Preencha os detalhes da transação."
       >
         <CreditCardTransactionForm
           transaction={transactionToEdit}
@@ -309,7 +310,9 @@ export default function CreditCardTransactionsPage() {
 
       <Dialog
         open={!!transactionToDelete}
-        onOpenChange={setTransactionToDelete}
+        onOpenChange={(open) => {
+          if (!open) setTransactionToDelete(null);
+        }}
       >
         <DialogContent>
           <DialogHeader>

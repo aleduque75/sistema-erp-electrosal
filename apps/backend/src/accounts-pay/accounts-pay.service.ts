@@ -17,9 +17,56 @@ export class AccountsPayService {
   constructor(private prisma: PrismaService) {}
 
   // --- MÉTODOS CRUD BÁSICOS ---
+  async create(
+    userId: string,
+    data: CreateAccountPayDto,
+  ): Promise<AccountPay | AccountPay[]> {
+    if (
+      data.isInstallment &&
+      data.totalInstallments &&
+      data.totalInstallments > 1
+    ) {
+      const { amount, totalInstallments, dueDate, description, ...rest } = data;
 
-  async create(userId: string, data: CreateAccountPayDto): Promise<AccountPay> {
-    return this.prisma.accountPay.create({ data: { ...data, userId } });
+      // Arredonda para baixo para evitar exceder o total
+      const installmentAmount =
+        Math.floor((amount * 100) / totalInstallments) / 100;
+
+      const transactionsToCreate: any[] = [];
+
+      for (let i = 0; i < totalInstallments; i++) {
+        const installmentDueDate = addMonths(new Date(dueDate), i);
+        const installmentDescription = `${description} (${i + 1}/${totalInstallments})`;
+
+        // Lógica para a última parcela
+        let currentAmount = installmentAmount;
+        if (i === totalInstallments - 1) {
+          // Na última parcela, calcula o valor restante para garantir que a soma feche
+          const sumOfPrevious = installmentAmount * (totalInstallments - 1);
+          currentAmount = parseFloat((amount - sumOfPrevious).toFixed(2));
+        }
+
+        transactionsToCreate.push(
+          this.prisma.accountPay.create({
+            data: {
+              ...rest,
+              userId,
+              description: installmentDescription,
+              amount: currentAmount, // Usa o valor calculado para a parcela atual
+              dueDate: installmentDueDate,
+              isInstallment: true,
+              installmentNumber: i + 1,
+              totalInstallments: totalInstallments,
+            },
+          }),
+        );
+      }
+
+      return this.prisma.$transaction(transactionsToCreate);
+    } else {
+      const { isInstallment, totalInstallments, ...payload } = data;
+      return this.prisma.accountPay.create({ data: { ...payload, userId } });
+    }
   }
 
   async findAll(userId: string): Promise<AccountPay[]> {
@@ -105,6 +152,7 @@ export class AccountsPayService {
           contaContabilId: payDto.contaContabilId,
           contaCorrenteId: payDto.contaCorrenteId,
           userId: userId,
+          dataHora: payDto.paidAt || new Date(), // <<< ADICIONE ESTA LINHA
         },
       });
 

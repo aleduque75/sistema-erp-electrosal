@@ -57,3 +57,30 @@ export class PayCreditCardBillDto {
   @IsNotEmpty()
   contaContabilId: string;
 }
+
+// DTO para CRIAR uma fatura a partir de transações
+export class CreateBillFromTransactionsDto {
+  @IsUUID()
+  @IsNotEmpty()
+  creditCardId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsDate()
+  @Type(() => Date)
+  startDate: Date;
+
+  @IsDate()
+  @Type(() => Date)
+  endDate: Date;
+
+  @IsDate()
+  @Type(() => Date)
+  dueDate: Date;
+
+  @IsArray()
+  @IsUUID('4', { each: true })
+  transactionIds: string[];
+}

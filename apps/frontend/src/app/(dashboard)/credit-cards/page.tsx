@@ -154,7 +154,9 @@ export default function CreditCardsPage() {
         <CreditCardForm card={cardToEdit} onSave={handleSave} />
       </ResponsiveDialog>
 
-      <Dialog open={!!cardToDelete} onOpenChange={setCardToDelete}>
+      <Dialog open={!!cardToDelete} onOpenChange={(open) => {
+        if (!open) setCardToDelete(null);
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar Exclusão</DialogTitle>

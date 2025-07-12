@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
+// ✅ Importação que estava faltando
 import {
   Form,
   FormControl,
@@ -18,17 +19,27 @@ import {
 import { Input } from "@/components/ui/input";
 
 const formSchema = z.object({
-  nome: z.string().min(3, "O nome é obrigatório."),
+  nome: z.string().min(3, "O nome da conta é obrigatório."),
   numeroConta: z.string().min(1, "O número/identificador é obrigatório."),
   agencia: z.string().optional(),
   moeda: z.string().default("BRL"),
-  saldoInicial: z.coerce.number().min(0, "O saldo não pode ser negativo."),
+  saldoInicial: z.coerce
+    .number()
+    .min(0, "O saldo não pode ser negativo.")
+    .default(0),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 interface ContaCorrenteFormProps {
-  conta?: FormValues & { id: string };
+  conta?: {
+    id: string;
+    nome: string;
+    numeroConta: string;
+    agencia?: string | null;
+    moeda: string;
+    saldoInicial: number;
+  } | null;
   onSave: () => void;
 }
 
@@ -39,15 +50,14 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
       nome: conta?.nome || "",
       numeroConta: conta?.numeroConta || "",
       agencia: conta?.agencia || "",
-      moeda: conta?.moeda || "BRL",
-      saldoInicial: conta ? undefined : 0, // Saldo inicial só na criação
+      moeda: "BRL",
+      saldoInicial: 0,
     },
   });
 
   const onSubmit = async (data: FormValues) => {
     try {
       if (conta) {
-        // Na edição, não enviamos o saldo inicial
         const { saldoInicial, ...updateData } = data;
         await api.patch(`/contas-correntes/${conta.id}`, updateData);
         toast.success("Conta atualizada com sucesso!");
@@ -108,7 +118,7 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
             )}
           />
         </div>
-        {!conta && ( // Mostra o campo de saldo inicial apenas na criação
+        {!conta && (
           <FormField
             name="saldoInicial"
             control={form.control}

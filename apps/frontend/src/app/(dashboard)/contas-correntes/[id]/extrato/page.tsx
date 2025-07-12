@@ -36,12 +36,34 @@ const formatDateTime = (dateString?: string | null) =>
     ? new Date(dateString).toLocaleString("pt-BR", { timeZone: "UTC" })
     : "N/A";
 
+interface ContaCorrenteExtrato {
+  id: string;
+  nome: string;
+  numeroConta: string;
+  saldo: number;
+}
+
+interface TransacaoExtrato {
+  id: string;
+  dataHora: string;
+  descricao: string;
+  valor: number;
+  tipo: "CREDITO" | "DEBITO";
+}
+
+interface ExtratoData {
+  saldoAnterior: number;
+  saldoFinal: number;
+  contaCorrente: ContaCorrenteExtrato;
+  transacoes: TransacaoExtrato[];
+}
+
 export default function ExtratoPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const [extrato, setExtrato] = useState(null);
+  const [extrato, setExtrato] = useState<ExtratoData | null>(null);
   const [isFetching, setIsFetching] = useState(true);
 
   const [startDate, setStartDate] = useState(

@@ -1,34 +1,28 @@
+// Conteúdo de apps/frontend/next.config.js (CORRIGIDO)
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+   output: 'standalone',
   // Configuração de ambiente para API
   env: {
-    API_URL: process.env.API_URL || 'http://localhost:3001',
+    // Defina a variável pública aqui. next.config.js é lido no build-time
+    // O valor padrão ('http://localhost:3001') será para ambiente de desenvolvimento
+    NEXT_PUBLIC_API_URL:
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001", 
   },
-  
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      config.resolve.fallback = { 
-        fs: false, 
+      config.resolve.fallback = {
+        fs: false,
         path: false,
         crypto: false,
         stream: false,
-        util: false
+        util: false,
       };
     }
-    // Removendo a regra para carregar arquivos JSON
-    // config.module.rules.push({
-    //   test: /\.json$/,
-    //   type: 'javascript/auto',
-    //   use: [
-    //     {
-    //       loader: 'json-loader',
-    //     },
-    //   ],
-    // });
     return config;
   },
-  
-  // Configurações adicionais que podem ser úteis
+
   reactStrictMode: true,
   swcMinify: true,
 };

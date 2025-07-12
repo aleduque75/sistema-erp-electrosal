@@ -194,10 +194,29 @@ export default function ContasCorrentesPage() {
         title={contaToEdit ? "Editar Conta" : "Nova Conta"}
         description="Preencha os detalhes da sua conta corrente, caixa ou carteira."
       >
-        <ContaCorrenteForm conta={contaToEdit} onSave={handleSave} />
+        <ContaCorrenteForm
+          conta={
+            contaToEdit
+              ? {
+                  ...contaToEdit,
+                  moeda: (contaToEdit as any).moeda || "BRL",
+                  saldoInicial:
+                    (contaToEdit as any).saldoInicial !== undefined
+                      ? (contaToEdit as any).saldoInicial
+                      : contaToEdit.saldo || 0,
+                }
+              : null
+          }
+          onSave={handleSave}
+        />
       </ResponsiveDialog>
 
-      <Dialog open={!!contaToDelete} onOpenChange={setContaToDelete}>
+      <Dialog
+        open={!!contaToDelete}
+        onOpenChange={(open) => {
+          if (!open) setContaToDelete(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar Exclusão</DialogTitle>

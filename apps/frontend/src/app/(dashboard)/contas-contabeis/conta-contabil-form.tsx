@@ -37,6 +37,7 @@ interface ContaContabil {
 }
 
 const formSchema = z.object({
+  codigo: z.string().optional(),
   nome: z.string().min(3, "O nome é obrigatório."),
   tipo: z.enum([
     "ATIVO",
@@ -45,7 +46,7 @@ const formSchema = z.object({
     "RECEITA",
     "DESPESA",
   ]),
-  aceitaLancamento: z.boolean().default(false),
+  aceitaLancamento: z.boolean().optional(),
   contaPaiId: z.string().optional().nullable(),
 });
 
@@ -86,12 +87,13 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
     fetchParentAccounts();
   }, [conta?.id]);
 
-  
-
   const onSubmit = async (data: FormValues) => {
-    const payload = { ...data, contaPaiId: data.contaPaiId || null };
+    // Usamos a desestruturação para separar e remover o 'codigo' do payload.
+    const { codigo, ...payload } = data;
+
     try {
       if (conta) {
+        // O payload para o update também não precisa do código
         await api.patch(`/contas-contabeis/${conta.id}`, payload);
         toast.success("Conta atualizada com sucesso!");
       } else {
@@ -108,7 +110,6 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
     <Form {...form}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          
           <FormField
             name="nome"
             control={control}

@@ -1,6 +1,8 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = []
+  // Adicione a linha abaixo:
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -132,16 +134,19 @@ enum TipoContaContabilPrisma {
 }
 
 model AccountPay {
-  id          String    @id @default(uuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  description String
-  amount      Decimal   @db.Decimal(10, 2)
-  dueDate     DateTime
-  paid        Boolean   @default(false)
-  paidAt      DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id])
+  description       String
+  amount            Decimal   @db.Decimal(10, 2)
+  dueDate           DateTime
+  paid              Boolean   @default(false)
+  paidAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  isInstallment     Boolean? 
+  installmentNumber Int? 
+  totalInstallments Int? 
 
   @@map("accounts_pay")
 }

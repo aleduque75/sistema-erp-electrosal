@@ -477,7 +477,7 @@ export default function CreateSalePage() {
                   <SelectValue placeholder="Selecione um método de pagamento" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>
+                  <SelectItem value="">
                     Selecione um método de pagamento
                   </SelectItem>
                   <SelectItem value="Credit Card">Cartão de Crédito</SelectItem>

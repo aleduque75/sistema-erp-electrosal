@@ -326,7 +326,19 @@ export default function AccountsRecPage() {
         title={accountToEdit ? "Editar Conta" : "Nova Conta"}
         description="Preencha os detalhes da conta a receber."
       >
-        <AccountRecForm account={accountToEdit} onSave={handleSave} />
+        <AccountRecForm
+          account={
+            accountToEdit
+              ? {
+                  ...accountToEdit,
+                  dueDate: accountToEdit.dueDate
+                    ? new Date(accountToEdit.dueDate)
+                    : new Date(),
+                }
+              : undefined
+          }
+          onSave={handleSave}
+        />
       </ResponsiveDialog>
 
       <Dialog
@@ -391,7 +403,7 @@ export default function AccountsRecPage() {
             <Combobox
               options={contasCorrentes.map((c) => ({
                 value: c.id,
-                label: c.nome,
+                label: c.numeroConta,
               }))}
               value={selectedCCId}
               onValueChange={setSelectedCCId}

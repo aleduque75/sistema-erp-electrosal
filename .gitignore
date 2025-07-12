@@ -20,6 +20,7 @@ dist
 .next
 .output
 build
+.turbo
 
 # Arquivos de sistema e de IDE
 .DS_Store

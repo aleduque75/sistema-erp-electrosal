@@ -41,6 +41,11 @@ interface DashboardSummary {
   totalStockValue: number;
 }
 
+interface AccountsPayStatusEntry {
+  name: string;
+  value: number;
+}
+
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -48,7 +53,7 @@ export default function DashboardPage() {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [creditCardExpenses, setCreditCardExpenses] = useState([]);
-  const [accountsPayStatus, setAccountsPayStatus] = useState([]);
+  const [accountsPayStatus, setAccountsPayStatus] = useState<AccountsPayStatusEntry[]>([]);
   const [cashFlowSummary, setCashFlowSummary] = useState([]);
   const [chartsLoading, setChartsLoading] = useState(true);
   const [chartsError, setChartsError] = useState<string | null>(null);
