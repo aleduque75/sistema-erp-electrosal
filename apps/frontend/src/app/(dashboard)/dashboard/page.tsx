@@ -53,7 +53,9 @@ export default function DashboardPage() {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [creditCardExpenses, setCreditCardExpenses] = useState([]);
-  const [accountsPayStatus, setAccountsPayStatus] = useState<AccountsPayStatusEntry[]>([]);
+  const [accountsPayStatus, setAccountsPayStatus] = useState<
+    AccountsPayStatusEntry[]
+  >([]);
   const [cashFlowSummary, setCashFlowSummary] = useState([]);
   const [chartsLoading, setChartsLoading] = useState(true);
   const [chartsError, setChartsError] = useState<string | null>(null);
@@ -276,10 +278,15 @@ export default function DashboardPage() {
                     outerRadius={100}
                     innerRadius={60} // Adiciona o raio interno para criar o efeito de donut
                     fill="#8884d8"
-                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`} // Mostra a porcentagem no rótulo
+                    label={({ percent }) =>
+                      percent ? `${(percent * 100).toFixed(0)}%` : ""
+                    }
                   >
                     {accountsPayStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.name === 'Pagos' ? '#50C878' : '#FF6347'} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.name === "Pagos" ? "#50C878" : "#FF6347"}
+                      />
                     ))}
                   </Pie>
                   <Tooltip />

@@ -1,18 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  PlusCircle,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
-// Interfaces
+// <<< INTERFACE CORRIGIDA para corresponder ao backend >>>
 interface CreditCard {
   id: string;
   name: string;
@@ -58,8 +51,9 @@ interface CreditCardTransaction {
   installments: number;
   currentInstallment?: number | null;
   creditCardId: string;
-  categoryId?: string;
+  contaContabilId?: string | null;
   creditCard: CreditCard;
+  contaContabil?: { nome: string } | null; // Relação com a categoria
   creditCardBillId?: string | null;
   creditCardBill?: { paid: boolean } | null;
 }
@@ -89,10 +83,10 @@ export default function CreditCardTransactionsPage() {
   const [selectedCardId, setSelectedCardId] = useState<"all" | string>("all");
   const [selectedStatus, setSelectedStatus] = useState<
     "all" | "unbilled" | "billed"
-  >("all");
+  >("unbilled");
 
-  // Busca as transações com base nos filtros
-  const fetchTransactions = async () => {
+  // <<< useCallback PARA EVITAR LOOP INFINITO >>>
+  const fetchTransactions = useCallback(async () => {
     setIsFetching(true);
     try {
       const params: any = { status: selectedStatus };
@@ -108,7 +102,7 @@ export default function CreditCardTransactionsPage() {
     } finally {
       setIsFetching(false);
     }
-  };
+  }, [selectedStatus, selectedCardId]); // A função só é recriada quando os filtros mudam
 
   // Busca os cartões para o filtro
   useEffect(() => {
@@ -117,12 +111,12 @@ export default function CreditCardTransactionsPage() {
     }
   }, [user, loading]);
 
-  // Busca as transações quando os filtros mudam
+  // <<< useEffect ATUALIZADO para usar a função memoizada >>>
   useEffect(() => {
     if (user && !loading) {
       fetchTransactions();
     }
-  }, [user, loading, selectedStatus, selectedCardId]);
+  }, [user, loading, fetchTransactions]);
 
   // Funções de ações
   const handleSave = () => {
@@ -137,14 +131,14 @@ export default function CreditCardTransactionsPage() {
     setTransactionToEdit(transaction);
     setIsFormModalOpen(true);
   };
+
+  // <<< handleDelete MELHORADO para garantir consistência >>>
   const handleDelete = async () => {
     if (!transactionToDelete) return;
     try {
       await api.delete(`/credit-card-transactions/${transactionToDelete.id}`);
       toast.success("Transação excluída com sucesso!");
-      setTransactions(
-        transactions.filter((t) => t.id !== transactionToDelete.id)
-      );
+      fetchTransactions(); // Recarrega a lista da API
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Falha ao excluir.");
     } finally {
@@ -157,15 +151,23 @@ export default function CreditCardTransactionsPage() {
       accessorKey: "description",
       header: "Descrição",
       cell: ({ row }) => (
-        <span
-          className={
-            row.original.creditCardBill?.paid
-              ? "line-through text-muted-foreground"
-              : ""
-          }
-        >
-          {row.original.description}
-        </span>
+        <div>
+          <span
+            className={
+              row.original.creditCardBill?.paid
+                ? "line-through text-muted-foreground"
+                : ""
+            }
+          >
+            {row.original.description}
+          </span>
+          {/* <<< COLUNA DE CATEGORIA ADICIONADA >>> */}
+          {row.original.contaContabil && (
+            <Badge variant="outline" className="ml-2 font-normal">
+              {row.original.contaContabil.nome}
+            </Badge>
+          )}
+        </div>
       ),
     },
     {
@@ -310,9 +312,7 @@ export default function CreditCardTransactionsPage() {
 
       <Dialog
         open={!!transactionToDelete}
-        onOpenChange={(open) => {
-          if (!open) setTransactionToDelete(null);
-        }}
+        onOpenChange={(open) => !open && setTransactionToDelete(null)}
       >
         <DialogContent>
           <DialogHeader>
