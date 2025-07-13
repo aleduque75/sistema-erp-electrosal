@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.status !== 200) {
         localStorage.removeItem('accessToken');
         setUser(null);
-        router.push('/login');
+        router.push('/');
         return;
       }
 
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Failed to fetch profile:', error);
       localStorage.removeItem('accessToken');
       setUser(null);
-      router.push('/login');
+      router.push('/');
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('accessToken');
     setUser(null);
-    router.push('/login');
+    router.push('/');
   };
 
   return (

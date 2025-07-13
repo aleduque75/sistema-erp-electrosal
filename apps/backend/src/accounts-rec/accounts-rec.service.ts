@@ -70,12 +70,12 @@ export class AccountsRecService {
         where: { id },
         data: {
           received: true,
-          receivedAt: dto.receivedAt,
+          receivedAt: dto.receivedAt || new Date(),
           contaCorrenteId: dto.contaCorrenteId,
         },
       });
 
-      
+      // O bloco que atualizava o saldo foi removido daqui.
 
       const settings = await tx.userSettings.findUnique({ where: { userId } });
       if (!settings?.defaultCaixaContaId) {
@@ -92,7 +92,8 @@ export class AccountsRecService {
           descricao: `Recebimento de: ${accountRec.description}`,
           contaCorrenteId: dto.contaCorrenteId,
           contaContabilId: settings.defaultCaixaContaId,
-          userId: userId, // ✅ CORREÇÃO APLICADA
+          userId: userId,
+          dataHora: dto.receivedAt || new Date(),
         },
       });
 

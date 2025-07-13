@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,26 +20,28 @@ import {
 } from "@/components/ui/popover";
 
 export interface ComboboxOption {
-  value: string | null; // Permite valor nulo para a opção "Nenhuma"
+  value: string | null;
   label: string;
 }
 
 interface ComboboxProps {
   options: ComboboxOption[];
   value?: string | null;
-  onValueChange: (value: string | null) => void; // ✅ CORREÇÃO: Propriedade renomeada para onValueChange
+  onValueChange: (value: string | null) => void;
   placeholder?: string;
   searchPlaceholder?: string;
-  emptyPlaceholder?: string;
+  emptyMessage?: string;
+  disabled?: boolean; // <<< 1. PROPRIEDADE ADICIONADA
 }
 
 export function Combobox({
   options,
   value,
-  onValueChange, // ✅ CORREÇÃO: Usando onValueChange
+  onValueChange,
   placeholder = "Selecione uma opção...",
-  searchPlaceholder = "Buscar opção...",
-  emptyPlaceholder = "Nenhuma opção encontrada.",
+  searchPlaceholder = "Pesquisar opção...",
+  emptyMessage = "Nenhuma opção encontrada.",
+  disabled = false, // <<< 2. VALOR PADRÃO ADICIONADO
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -49,7 +52,8 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between font-normal"
+          className="w-full justify-between"
+          disabled={disabled} // <<< 3. PROPRIEDADE APLICADA AO BOTÃO
         >
           {value
             ? options.find((option) => option.value === value)?.label
@@ -61,14 +65,13 @@ export function Combobox({
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
-            <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
-                  key={option.label} // Usar label ou uma combinação única como chave
+                  key={option.value || "null-key"}
                   value={option.label}
                   onSelect={() => {
-                    // ✅ CORREÇÃO: Chamando onValueChange
                     onValueChange(option.value === value ? null : option.value);
                     setOpen(false);
                   }}

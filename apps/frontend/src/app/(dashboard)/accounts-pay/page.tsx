@@ -1,15 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+// Imports do React e bibliotecas
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal, DollarSign, Edit, Trash2 } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { addDays } from "date-fns";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+// Imports de Componentes UI
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,9 +37,13 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+
+// Imports de Componentes do Módulo
 import { AccountPayForm } from "./account-pay-form";
 import { PayAccountForm } from "./pay-account-form";
+import { CategoryChart } from "@/components/charts/category-chart";
 
+// Interface e Funções de Formatação
 interface AccountPay {
   id: string;
   description: string;
@@ -49,47 +64,71 @@ const formatDate = (dateString?: string | null) =>
     ? new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" })
     : "N/A";
 
+// Componente da Página
 export default function AccountsPayPage() {
+  // Estados de Autenticação e Carregamento
   const { user, loading } = useAuth();
+
+  // Estados dos Dados
   const [accounts, setAccounts] = useState<AccountPay[]>([]);
+  const [total, setTotal] = useState(0);
   const [isFetching, setIsFetching] = useState(true);
-  const [accountToPay, setAccountToPay] = useState<AccountPay | null>(null);
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: addDays(new Date(), -30),
+    to: new Date(),
+  });
+
+  // Estados para controlar os Modais (Dialogs)
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [accountToEdit, setAccountToEdit] = useState<AccountPay | null>(null);
   const [accountToDelete, setAccountToDelete] = useState<AccountPay | null>(
     null
   );
+  const [accountToPay, setAccountToPay] = useState<AccountPay | null>(null);
 
-  const fetchAccounts = async () => {
+  // Função para buscar os dados, agora "memorizada" com useCallback para evitar loops
+  const fetchAccounts = useCallback(async () => {
+    if (!date?.from || !date?.to) return; // Não busca se a data não estiver completa
+
     setIsFetching(true);
     try {
-      const response = await api.get("/accounts-pay");
+      const params = new URLSearchParams();
+      params.append("startDate", date.from.toISOString().split("T")[0]);
+      params.append("endDate", date.to.toISOString().split("T")[0]);
+
+      const response = await api.get(`/accounts-pay?${params.toString()}`);
+
       setAccounts(
-        response.data.map((acc: any) => ({
+        response.data.accounts.map((acc: any) => ({
           ...acc,
           amount: parseFloat(acc.amount),
         }))
       );
+      setTotal(response.data.total);
     } catch (err) {
       toast.error("Falha ao carregar contas a pagar.");
+      console.error("Erro ao buscar contas:", err);
     } finally {
       setIsFetching(false);
     }
-  };
+  }, [date]); // A função só é recriada quando o `date` muda
 
+  // useEffect principal que reage a mudanças e chama a busca de dados
   useEffect(() => {
-    if (user && !loading) fetchAccounts();
-  }, [user, loading]);
+    if (user && !loading) {
+      fetchAccounts();
+    }
+  }, [user, loading, fetchAccounts]); // Depende da função memoizada
 
+  // Funções "Handler" para interações do usuário
   const handleSave = () => {
     setIsFormModalOpen(false);
     fetchAccounts();
   };
 
-  // <<< PASSO 1: ADICIONE ESTA FUNÇÃO
   const handlePaymentSave = () => {
-    setAccountToPay(null); // Fecha o modal de pagamento
-    fetchAccounts(); // Atualiza a lista de contas
+    setAccountToPay(null);
+    fetchAccounts();
   };
 
   const handleDelete = async () => {
@@ -97,7 +136,7 @@ export default function AccountsPayPage() {
     try {
       await api.delete(`/accounts-pay/${accountToDelete.id}`);
       toast.success("Conta excluída com sucesso!");
-      setAccounts(accounts.filter((acc) => acc.id !== accountToDelete.id));
+      fetchAccounts(); // Busca os dados novamente para atualizar a lista e o total
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Falha ao excluir.");
     } finally {
@@ -115,6 +154,7 @@ export default function AccountsPayPage() {
     setIsFormModalOpen(true);
   };
 
+  // Definição das colunas da tabela
   const columns: ColumnDef<AccountPay>[] = [
     { accessorKey: "description", header: "Descrição" },
     {
@@ -171,13 +211,21 @@ export default function AccountsPayPage() {
 
   if (loading) return <p className="text-center p-10">Carregando...</p>;
 
+  // Renderização do componente
   return (
     <>
+      <div className="mb-8">
+        <CategoryChart />
+      </div>
+
       <Card className="mx-auto my-8">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <CardTitle>Contas a Pagar</CardTitle>
-            <Button onClick={handleOpenNewModal}>Nova Conta a Pagar</Button>
+            <div className="flex items-center gap-2">
+              <DateRangePicker date={date} onDateChange={setDate} />
+              <Button onClick={handleOpenNewModal}>Nova Conta</Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -192,22 +240,34 @@ export default function AccountsPayPage() {
             />
           )}
         </CardContent>
+        <CardFooter className="font-bold text-lg justify-end">
+          Total do Período: {formatCurrency(total)}
+        </CardFooter>
       </Card>
 
       <ResponsiveDialog
         open={isFormModalOpen}
         onOpenChange={setIsFormModalOpen}
         title={accountToEdit ? "Editar Conta" : "Nova Conta"}
-        description="Preencha os detalhes da conta para registrar uma nova despesa."
+        description="Preencha os detalhes da conta."
       >
-        <AccountPayForm account={accountToEdit} onSave={handleSave} />
+        <AccountPayForm
+          account={
+            accountToEdit
+              ? {
+                  ...accountToEdit,
+                  // Garante que isInstallment seja sempre boolean
+                  isInstallment: accountToEdit.isInstallment ?? false,
+                }
+              : null
+          }
+          onSave={handleSave}
+        />
       </ResponsiveDialog>
 
       <Dialog
         open={!!accountToDelete}
-        onOpenChange={(open) => {
-          if (!open) setAccountToDelete(null);
-        }}
+        onOpenChange={(open) => !open && setAccountToDelete(null)}
       >
         <DialogContent>
           <DialogHeader>
@@ -227,19 +287,15 @@ export default function AccountsPayPage() {
         </DialogContent>
       </Dialog>
 
-      {/* <<< PASSO 2: ADICIONE ESTE MODAL DE PAGAMENTO */}
       <Dialog
         open={!!accountToPay}
-        onOpenChange={(open) => {
-          if (!open) setAccountToPay(null);
-        }}
+        onOpenChange={(open) => !open && setAccountToPay(null)}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Registrar Pagamento</DialogTitle>
             <DialogDescription>
-              Selecione a conta e a data para registrar o pagamento de "
-              {accountToPay?.description}".
+              Pagamento para "{accountToPay?.description}".
             </DialogDescription>
           </DialogHeader>
           {accountToPay && (

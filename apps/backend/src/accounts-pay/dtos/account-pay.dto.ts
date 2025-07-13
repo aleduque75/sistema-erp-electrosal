@@ -17,6 +17,10 @@ export class CreateAccountPayDto {
   @IsNotEmpty()
   description: string;
 
+  @IsUUID()
+  @IsOptional()
+  contaContabilId?: string;
+
   @IsNumber()
   @Min(0.01)
   amount: number;

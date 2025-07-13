@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
@@ -20,91 +20,93 @@ import {
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput } from "@/components/ui/date-input";
+import { Switch } from "@/components/ui/switch";
 
-
-interface CreateInstallmentTransactionsDto {
-  description: string;
-  totalAmount: number;
-  installments: number;
-  firstInstallmentDate: Date;
-  creditCardId: string;
-  categoryId?: string;
+// Interfaces
+interface Categoria {
+  id: string;
+  nome: string;
 }
 interface CreditCard {
   id: string;
   name: string;
-  flag: string;
+}
+interface Transaction {
+  id: string;
+  description: string;
+  amount: number;
+  date: Date;
+  creditCardId: string;
+  contaContabilId?: string | null;
+  isInstallment: boolean;
+  installments?: number | null;
 }
 
 // Schema de validação
-const formSchema = z.object({
-  description: z.string().min(3, "A descrição é obrigatória."),
-  amount: z.coerce.number().positive("O valor deve ser maior que zero."),
-  date: z.date({ required_error: "A data da compra é obrigatória." }),
-  installments: z.coerce.number().int().min(1).default(1),
-  creditCardId: z.string({
-    required_error: "O cartão de crédito é obrigatório.",
-  }),
-  categoryId: z.string().optional(),
-});
+const formSchema = z
+  .object({
+    description: z.string().min(3, "A descrição é obrigatória."),
+    amount: z.coerce.number().positive("O valor total é obrigatório."),
+    date: z.date({ required_error: "A data da compra é obrigatória." }),
+    creditCardId: z.string({ required_error: "O cartão é obrigatório." }),
+    contaContabilId: z.string().optional(),
+    isInstallment: z.boolean().default(false),
+    installments: z.coerce.number().int().min(2).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.isInstallment && (!data.installments || data.installments < 2)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Número de parcelas é obrigatório.",
+        path: ["installments"],
+      });
+    }
+  });
 
 type FormValues = z.infer<typeof formSchema>;
 
 interface FormProps {
-  transaction?: (FormValues & { id: string }) | null; // Agora aceita null
+  transaction?: Transaction | null;
   onSave: () => void;
 }
 
 export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       description: transaction?.description || "",
       amount: transaction?.amount || 0,
       date: transaction?.date ? new Date(transaction.date) : new Date(),
-      installments: transaction?.installments || 1,
-      creditCardId: transaction?.creditCardId || undefined,
-      categoryId: transaction?.categoryId || undefined,
+      creditCardId: transaction?.creditCardId || "",
+      contaContabilId: transaction?.contaContabilId || undefined,
+      isInstallment: transaction?.isInstallment || false,
+      installments: transaction?.installments || 2,
     },
   });
 
-  // Busca os cartões de crédito disponíveis
   useEffect(() => {
     api
-      .get("/credit-cards")
-      .then((response) => setCreditCards(response.data))
-      .catch(() => toast.error("Falha ao carregar os cartões de crédito."));
+      .get("/contas-contabeis?tipo=DESPESA")
+      .then((res) => setCategorias(res.data));
+    api.get("/credit-cards").then((res) => setCreditCards(res.data));
   }, []);
 
   const onSubmit = async (data: FormValues) => {
     try {
-      // ✅ LÓGICA INTELIGENTE: Decide qual endpoint chamar
-      if (data.installments && data.installments > 1) {
-        // Se for parcelado, monta o payload para o endpoint de parcelas
-        const payload: CreateInstallmentTransactionsDto = {
-          creditCardId: data.creditCardId,
-          description: data.description,
-          totalAmount: data.amount, // O amount do form é o valor total da compra
-          installments: data.installments,
-          firstInstallmentDate: data.date,
-          categoryId: data.categoryId,
-        };
-        await api.post("/credit-card-transactions/installments", payload);
-        toast.success(`${data.installments} parcelas criadas com sucesso!`);
+      if (transaction) {
+        // Na edição, não permitimos alterar o parcelamento, então removemos os campos.
+        const { isInstallment, installments, creditCardId, ...payload } = data;
+        await api.patch(`/credit-card-transactions/${transaction.id}`, payload);
+        toast.success("Transação atualizada com sucesso!");
       } else {
-        // Se for à vista (1 parcela), chama o endpoint de criação única
-        const payload = {
-          creditCardId: data.creditCardId,
-          description: data.description,
-          amount: data.amount,
-          date: data.date,
-          categoryId: data.categoryId,
-        };
-        await api.post("/credit-card-transactions", payload);
+        // Na criação, enviamos todos os dados, incluindo os de parcela.
+        await api.post("/credit-card-transactions", data);
         toast.success("Transação criada com sucesso!");
       }
-      onSave(); // Fecha o modal e atualiza a lista
+      onSave();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Ocorreu um erro.");
     }
@@ -122,11 +124,12 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
               <Combobox
                 options={creditCards.map((card) => ({
                   value: card.id,
-                  label: `${card.name} (${card.flag})`,
+                  label: card.name,
                 }))}
                 value={field.value}
                 onValueChange={field.onChange}
                 placeholder="Selecione o cartão..."
+                disabled={!!transaction} // Desabilita na edição
               />
               <FormMessage />
             </FormItem>
@@ -137,21 +140,44 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Descrição da Compra</FormLabel>
+              <FormLabel>Descrição da Despesa</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: Almoço no restaurante" {...field} />
+                <Input placeholder="Ex: Jantar no restaurante" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <FormField
+          name="contaContabilId"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Categoria da Despesa</FormLabel>
+              <Combobox
+                options={categorias.map((cat) => ({
+                  value: cat.id,
+                  label: cat.nome,
+                }))}
+                value={field.value}
+                onValueChange={field.onChange}
+                placeholder="Selecione a categoria..."
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             name="amount"
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Valor Total (R$)</FormLabel>
+                <FormLabel>
+                  {form.watch("isInstallment")
+                    ? "Valor Total (R$)"
+                    : "Valor (R$)"}
+                </FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" {...field} />
                 </FormControl>
@@ -164,20 +190,17 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Data da Compra</FormLabel>
+                <FormLabel>
+                  {form.watch("isInstallment")
+                    ? "Data da 1ª Parcela"
+                    : "Data da Compra"}
+                </FormLabel>
                 <FormControl>
                   <DateInput
                     value={field.value ? format(field.value, "dd/MM/yyyy") : ""}
-                    onAccept={(stringValue: any) => {
-                      const newDate = parse(
-                        stringValue,
-                        "dd/MM/yyyy",
-                        new Date()
-                      );
-                      if (newDate?.getTime() !== field.value?.getTime()) {
-                        field.onChange(newDate);
-                      }
-                    }}
+                    onAccept={(val: any) =>
+                      field.onChange(parse(val, "dd/MM/yyyy", new Date()))
+                    }
                     placeholder="DD/MM/AAAA"
                   />
                 </FormControl>
@@ -185,29 +208,53 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
               </FormItem>
             )}
           />
-          <FormField
-            name="installments"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Parcelas</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(parseInt(e.target.value, 10))
-                    }
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
+
+        {/* Mostra opções de parcela apenas na CRIAÇÃO */}
+        {!transaction && (
+          <>
+            <FormField
+              control={form.control}
+              name="isInstallment"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                  <FormLabel>Compra Parcelada?</FormLabel>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            {form.watch("isInstallment") && (
+              <FormField
+                name="installments"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de Parcelas</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="2"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value, 10) || 2)
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </>
+        )}
+
         <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Salvando..." : "Salvar Transação"}
+          {form.formState.isSubmitting ? "Salvando..." : "Salvar"}
         </Button>
       </form>
     </Form>

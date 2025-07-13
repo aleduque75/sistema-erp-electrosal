@@ -9,15 +9,16 @@ import {
   UseGuards,
   Request,
   Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { CreditCardTransactionsService } from './credit-card-transactions.service';
-import { AuthGuard } from '@nestjs/passport';
-// ✅ CORREÇÃO: Importando todas as classes DTO necessárias
 import {
   CreateCreditCardTransactionDto,
   UpdateCreditCardTransactionDto,
-  CreateInstallmentTransactionsDto,
 } from './dtos/credit-card-transaction.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { AuthRequest } from '../auth/types/auth-request.type';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('credit-card-transactions')
@@ -25,45 +26,47 @@ export class CreditCardTransactionsController {
   constructor(private readonly service: CreditCardTransactionsService) {}
 
   @Post()
-  create(@Request() req, @Body() createDto: CreateCreditCardTransactionDto) {
+  create(
+    @Request() req: AuthRequest,
+    @Body() createDto: CreateCreditCardTransactionDto,
+  ) {
+    // Apenas esta rota de criação é necessária
     return this.service.create(req.user.id, createDto);
   }
 
-  @Post('installments')
-  createInstallments(
-    @Request() req,
-    @Body() createDto: CreateInstallmentTransactionsDto,
-  ) {
-    return this.service.createInstallmentTransactions(req.user.id, createDto);
-  }
   @Get()
   findAll(
-    @Request() req,
+    @Request() req: AuthRequest,
     @Query('creditCardId') creditCardId?: string,
     @Query('status') status?: 'billed' | 'unbilled' | 'all',
-    @Query('startDate') startDate?: string, // Recebe como string
-    @Query('endDate') endDate?: string, // Recebe como string
+    @Query('startDate') startDateString?: string,
+    @Query('endDate') endDateString?: string,
   ) {
-    // Converte para Date antes de passar para o serviço
-    const parsedStartDate = startDate ? new Date(startDate) : undefined;
-    const parsedEndDate = endDate ? new Date(endDate) : undefined;
+    // Converte as strings de data para objetos Date antes de chamar o service
+    // Adicionamos T00:00:00 para evitar problemas de fuso horário
+    const startDate = startDateString
+      ? new Date(`${startDateString}T00:00:00`)
+      : undefined;
+    const endDate = endDateString
+      ? new Date(`${endDateString}T00:00:00`)
+      : undefined;
+
     return this.service.findAll(
       req.user.id,
       creditCardId,
       status,
-      parsedStartDate,
-      parsedEndDate,
+      startDate,
+      endDate,
     );
   }
-
   @Get(':id')
-  findOne(@Request() req, @Param('id') id: string) {
+  findOne(@Request() req: AuthRequest, @Param('id') id: string) {
     return this.service.findOne(req.user.id, id);
   }
 
   @Patch(':id')
   update(
-    @Request() req,
+    @Request() req: AuthRequest,
     @Param('id') id: string,
     @Body() updateDto: UpdateCreditCardTransactionDto,
   ) {
@@ -71,7 +74,8 @@ export class CreditCardTransactionsController {
   }
 
   @Delete(':id')
-  remove(@Request() req, @Param('id') id: string) {
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Request() req: AuthRequest, @Param('id') id: string) {
     return this.service.remove(req.user.id, id);
   }
 }

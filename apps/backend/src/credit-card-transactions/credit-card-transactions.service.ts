@@ -7,11 +7,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateCreditCardTransactionDto,
   UpdateCreditCardTransactionDto,
-  CreateInstallmentTransactionsDto,
 } from './dtos/credit-card-transaction.dto';
 import { CreditCardTransaction, Prisma } from '@prisma/client';
-import { addMonths } from 'date-fns';
-import { startOfDay, endOfDay } from 'date-fns'; // ✅ IMPORTAÇÃO ADICIONADA AQUI
+import { addMonths, startOfDay, endOfDay } from 'date-fns';
 
 @Injectable()
 export class CreditCardTransactionsService {
@@ -20,47 +18,47 @@ export class CreditCardTransactionsService {
   async create(
     userId: string,
     data: CreateCreditCardTransactionDto,
-  ): Promise<CreditCardTransaction> {
+  ): Promise<any> {
     await this.validateCreditCard(userId, data.creditCardId);
-    return this.prisma.creditCardTransaction.create({
-      data: {
-        ...data,
-        isInstallment: data.installments ? data.installments > 1 : false,
-        currentInstallment:
-          data.installments && data.installments > 1 ? 1 : undefined,
-      },
-    });
-  }
 
-  async createInstallmentTransactions(
-    userId: string,
-    data: CreateInstallmentTransactionsDto,
-  ): Promise<{ count: number }> {
-    await this.validateCreditCard(userId, data.creditCardId);
-    return this.prisma.$transaction(async (tx) => {
-      const installmentValue = data.totalAmount / data.installments;
-      const transactionsToCreate: Prisma.CreditCardTransactionCreateManyInput[] =
-        [];
-      for (let i = 0; i < data.installments; i++) {
-        const installmentDate = addMonths(
-          new Date(data.firstInstallmentDate),
-          i,
-        );
+    if (data.isInstallment && data.installments && data.installments > 1) {
+      const { amount, installments, date, description, ...rest } = data;
+      const installmentAmount = Math.floor((amount * 100) / installments) / 100;
+
+      // <<< CORREÇÃO DE TIPAGEM AQUI
+      const transactionsToCreate: any[] = [];
+
+      for (let i = 0; i < installments; i++) {
+        const installmentDate = addMonths(new Date(date), i);
+        const installmentDescription = `${description} (${i + 1}/${installments})`;
+        let currentAmount = installmentAmount;
+        if (i === installments - 1) {
+          const sumOfPrevious = installmentAmount * (installments - 1);
+          currentAmount = parseFloat((amount - sumOfPrevious).toFixed(2));
+        }
         transactionsToCreate.push({
-          description: `${data.description} (${i + 1}/${data.installments})`,
-          amount: installmentValue,
+          ...rest,
+          description: installmentDescription,
+          amount: currentAmount,
           date: installmentDate,
           isInstallment: true,
-          installments: data.installments,
+          installments: installments,
           currentInstallment: i + 1,
-          creditCardId: data.creditCardId,
-          categoryId: data.categoryId,
         });
       }
-      return tx.creditCardTransaction.createMany({
+      return this.prisma.creditCardTransaction.createMany({
         data: transactionsToCreate,
       });
-    });
+    } else {
+      return this.prisma.creditCardTransaction.create({
+        data: {
+          ...data,
+          isInstallment: false,
+          installments: 1,
+          currentInstallment: 1,
+        },
+      });
+    }
   }
 
   async findAll(
@@ -74,33 +72,30 @@ export class CreditCardTransactionsService {
       creditCard: { userId },
     };
 
-    if (creditCardId && creditCardId !== 'all') {
+    if (creditCardId && creditCardId !== 'all')
       where.creditCardId = creditCardId;
-    }
-    if (status === 'unbilled') {
-      where.creditCardBillId = null;
-    } else if (status === 'billed') {
-      where.creditCardBillId = { not: null };
-    }
+    if (status === 'unbilled') where.creditCardBillId = null;
+    else if (status === 'billed') where.creditCardBillId = { not: null };
 
-    // ✅ Lógica de filtro por data
     if (startDate && endDate) {
-      where.date = {
-        gte: startOfDay(startDate),
-        lte: endOfDay(endDate),
-      };
+      where.date = { gte: startOfDay(startDate), lte: endOfDay(endDate) };
     }
 
     return this.prisma.creditCardTransaction.findMany({
       where,
       orderBy: { date: 'desc' },
-      include: { creditCard: true, category: true, creditCardBill: true },
+      include: {
+        creditCard: true,
+        contaContabil: true,
+        creditCardBill: true,
+      },
     });
   }
 
   async findOne(userId: string, id: string): Promise<CreditCardTransaction> {
     const transaction = await this.prisma.creditCardTransaction.findFirst({
       where: { id, creditCard: { userId } },
+      include: { contaContabil: true },
     });
     if (!transaction)
       throw new NotFoundException(`Transação com ID ${id} não encontrada.`);
@@ -113,8 +108,7 @@ export class CreditCardTransactionsService {
     data: UpdateCreditCardTransactionDto,
   ): Promise<CreditCardTransaction> {
     await this.findOne(userId, id);
-    if (data.creditCardId)
-      await this.validateCreditCard(userId, data.creditCardId);
+    // <<< CORREÇÃO LÓGICA: Não validamos mais o creditCardId aqui, pois ele não deve ser alterado.
     return this.prisma.creditCardTransaction.update({ where: { id }, data });
   }
 

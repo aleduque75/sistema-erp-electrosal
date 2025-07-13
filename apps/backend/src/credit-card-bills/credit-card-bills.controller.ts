@@ -13,49 +13,53 @@ import {
 } from '@nestjs/common';
 import { CreditCardBillsService } from './credit-card-bills.service';
 import {
-  CreateCreditCardBillDto,
+  CreateBillFromTransactionsDto,
   UpdateCreditCardBillDto,
   PayCreditCardBillDto,
-  CreateBillFromTransactionsDto,
 } from './dtos/credit-card-bill.dto';
 import { AuthGuard } from '@nestjs/passport';
+// MELHORIA: Usando caminho relativo para mais robustez
+import { AuthRequest } from '../auth/types/auth-request.type';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('credit-card-bills')
 export class CreditCardBillsController {
+  // Usamos 'service' como nome padrão para consistência
   constructor(private readonly service: CreditCardBillsService) {}
 
-  // ✅ ROTA QUE ESTAVA FALTANDO
   @Post('from-transactions')
   createFromTransactions(
-    @Request() req,
+    @Request() req: AuthRequest,
     @Body() createDto: CreateBillFromTransactionsDto,
   ) {
     return this.service.createFromTransactions(req.user.id, createDto);
   }
 
   @Get()
-  findAll(@Request() req) {
+  findAll(@Request() req: AuthRequest) {
     return this.service.findAll(req.user.id);
   }
 
   @Get(':id')
-  findOne(@Request() req, @Param('id') id: string) {
+  findOne(@Request() req: AuthRequest, @Param('id') id: string) {
     return this.service.findOne(req.user.id, id);
   }
 
-  @Patch(':id/pay')
+  // <<< CORREÇÃO: Removida a função 'pay' duplicada >>>
+  // Apenas uma rota POST para a ação de pagar.
+  @Post(':id/pay')
   pay(
-    @Request() req,
+    @Request() req: AuthRequest,
     @Param('id') id: string,
     @Body() payDto: PayCreditCardBillDto,
   ) {
+    // CORREÇÃO: Usando 'this.service' consistentemente
     return this.service.pay(req.user.id, id, payDto);
   }
 
   @Patch(':id')
   update(
-    @Request() req,
+    @Request() req: AuthRequest,
     @Param('id') id: string,
     @Body() updateDto: UpdateCreditCardBillDto,
   ) {
@@ -64,7 +68,7 @@ export class CreditCardBillsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Request() req, @Param('id') id: string) {
+  remove(@Request() req: AuthRequest, @Param('id') id: string) {
     return this.service.remove(req.user.id, id);
   }
 }

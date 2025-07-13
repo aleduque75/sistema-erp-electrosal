@@ -139,14 +139,17 @@ model AccountPay {
   user              User      @relation(fields: [userId], references: [id])
   description       String
   amount            Decimal   @db.Decimal(10, 2)
-  dueDate           DateTime
+  dueDate           DateTime  @db.Timestamptz
   paid              Boolean   @default(false)
   paidAt            DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  isInstallment     Boolean? 
-  installmentNumber Int? 
-  totalInstallments Int? 
+  isInstallment     Boolean?
+  installmentNumber Int?
+  totalInstallments Int?
+
+  contaContabilId String? // A chave estrangeira para a categoria/conta contábil
+  contaContabil   ContaContabil? @relation(fields: [contaContabilId], references: [id])
 
   @@map("accounts_pay")
 }
@@ -169,19 +172,23 @@ model AccountRec {
 }
 
 model ContaContabil {
-  id               String                  @id @default(uuid())
-  userId           String
-  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  codigo           String
-  nome             String
-  tipo             TipoContaContabilPrisma
-  aceitaLancamento Boolean                 @default(true)
-  contaPaiId       String?
-  contaPai         ContaContabil?          @relation("SubContas", fields: [contaPaiId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  subContas        ContaContabil[]         @relation("SubContas")
-  transacoes       Transacao[]
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
+  id                     String                  @id @default(uuid())
+  userId                 String
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codigo                 String
+  nome                   String
+  tipo                   TipoContaContabilPrisma
+  aceitaLancamento       Boolean                 @default(true)
+  contaPaiId             String?
+  contaPai               ContaContabil?          @relation("SubContas", fields: [contaPaiId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subContas              ContaContabil[]         @relation("SubContas")
+  transacoes             Transacao[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  AccountPay             AccountPay[]
+  creditCardTransactions CreditCardTransaction[]
+  CreditCard             CreditCard[]
+  cartoesDeCredito       CreditCard[]            @relation("CartaoParaContaPassivo")
 
   @@unique([userId, codigo])
   @@map("contas_contabeis")
@@ -238,25 +245,32 @@ model CreditCard {
   transactions CreditCardTransaction[]
   bills        CreditCardBill[]
 
+  contaContabilPassivoId String?
+  contaContabilPassivo   ContaContabil?  @relation("CartaoParaContaPassivo", fields: [contaContabilPassivoId], references: [id])
+  ContaContabil          ContaContabil? @relation(fields: [contaContabilId], references: [id])
+  contaContabilId        String?
+
   @@map("credit_cards")
 }
 
 model CreditCardTransaction {
-  id                 String               @id @default(uuid())
-  creditCardId       String
-  creditCard         CreditCard           @relation(fields: [creditCardId], references: [id])
-  description        String
-  amount             Decimal              @db.Decimal(10, 2)
-  date               DateTime
-  isInstallment      Boolean              @default(false)
-  installments       Int?
-  currentInstallment Int?
-  categoryId         String?
-  category           TransactionCategory? @relation(fields: [categoryId], references: [id])
-  creditCardBillId   String?
-  creditCardBill     CreditCardBill?      @relation(fields: [creditCardBillId], references: [id])
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  id                    String               @id @default(uuid())
+  creditCardId          String
+  creditCard            CreditCard           @relation(fields: [creditCardId], references: [id])
+  description           String
+  amount                Decimal              @db.Decimal(10, 2)
+  date                  DateTime
+  isInstallment         Boolean              @default(false)
+  installments          Int?
+  currentInstallment    Int?
+  contaContabilId       String?
+  contaContabil         ContaContabil?       @relation(fields: [contaContabilId], references: [id])
+  creditCardBillId      String?
+  creditCardBill        CreditCardBill?      @relation(fields: [creditCardBillId], references: [id])
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  TransactionCategory   TransactionCategory? @relation(fields: [transactionCategoryId], references: [id])
+  transactionCategoryId String?
 
   @@map("credit_card_transactions")
 }

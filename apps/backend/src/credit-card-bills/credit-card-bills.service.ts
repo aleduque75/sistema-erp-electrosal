@@ -98,46 +98,36 @@ export class CreditCardBillsService {
     userId: string,
     billId: string,
     payDto: PayCreditCardBillDto,
-  ): Promise<CreditCardBill> {
-    return this.prisma.$transaction(async (tx) => {
-      const bill = await this.findOne(userId, billId);
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const bill = await tx.creditCardBill.findFirst({
+        where: { id: billId, userId },
+      });
+
+      if (!bill) throw new NotFoundException('Fatura não encontrada.');
       if (bill.paid) throw new BadRequestException('Esta fatura já foi paga.');
 
-      const contaCorrente = await tx.contaCorrente.findFirst({
-        where: { id: payDto.contaCorrenteId, userId },
-      });
-      if (!contaCorrente)
-        throw new NotFoundException('Conta corrente não encontrada.');
-      if (contaCorrente.saldo.toNumber() < bill.totalAmount.toNumber()) {
-        throw new BadRequestException('Saldo insuficiente na conta corrente.');
-      }
-
-      await tx.contaCorrente.update({
-        where: { id: payDto.contaCorrenteId },
-        data: { saldo: { decrement: bill.totalAmount } },
-      });
-
-      const paidBill = await tx.creditCardBill.update({
+      // Marca a fatura e suas transações como pagas
+      await tx.creditCardBill.update({
         where: { id: billId },
-        data: { paid: true, paidAt: new Date() },
+        data: { paid: true, paidAt: payDto.paidAt || new Date() },
       });
 
-      const settings = await tx.userSettings.findUnique({ where: { userId } });
-      if (!settings?.defaultDespesaContaId)
-        throw new BadRequestException('Conta de despesa padrão não definida.');
-
+      // Cria a transação de DÉBITO na conta corrente
       await tx.transacao.create({
         data: {
           userId,
           tipo: TipoTransacaoPrisma.DEBITO,
+          descricao: `Pagamento Fatura ${bill.name}`,
           valor: bill.totalAmount,
           moeda: 'BRL',
-          descricao: `Pagamento Fatura: ${bill.name}`,
+          dataHora: payDto.paidAt || new Date(),
           contaCorrenteId: payDto.contaCorrenteId,
-          contaContabilId: settings.defaultDespesaContaId,
+          // O pagamento da fatura é uma transferência de passivo,
+          // então usamos uma conta contábil específica para isso.
+          contaContabilId: payDto.contaContabilId,
         },
       });
-      return paidBill;
     });
   }
 
@@ -158,8 +148,12 @@ export class CreditCardBillsService {
   async findOne(userId: string, id: string): Promise<CreditCardBill> {
     const bill = await this.prisma.creditCardBill.findFirst({
       where: { id, userId },
-      include: { transactions: true },
+      include: {
+        transactions: true,
+        creditCard: true, // <<< ADICIONE ESTA LINHA
+      },
     });
+
     if (!bill)
       throw new NotFoundException(`Fatura com ID ${id} não encontrada.`);
     return bill;
@@ -174,13 +168,21 @@ export class CreditCardBillsService {
     return this.prisma.creditCardBill.update({ where: { id }, data });
   }
 
-  async remove(userId: string, id: string): Promise<CreditCardBill> {
-    await this.findOne(userId, id);
-    await this.prisma.creditCardTransaction.updateMany({
-      where: { creditCardBillId: id },
-      data: { creditCardBillId: null },
-    });
-    return this.prisma.creditCardBill.delete({ where: { id } });
+  async remove(userId: string, billId: string): Promise<void> {
+    await this.findOne(userId, billId); // Garante que a fatura existe e pertence ao usuário
+
+    // Usamos uma transação para garantir que ambas as operações funcionem
+    await this.prisma.$transaction([
+      // 1. Libera as transações, desassociando-as da fatura
+      this.prisma.creditCardTransaction.updateMany({
+        where: { creditCardBillId: billId },
+        data: { creditCardBillId: null },
+      }),
+      // 2. Apaga a fatura, agora que ela está "vazia"
+      this.prisma.creditCardBill.delete({
+        where: { id: billId },
+      }),
+    ]);
   }
 
   private async validateCreditCard(userId: string, creditCardId: string) {
