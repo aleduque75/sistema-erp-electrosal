@@ -1,16 +1,39 @@
-# docker-compose.yml para desenvolvimento local
 services:
   db:
     image: postgres:16
+    container_name: sistema-beleza-db
     restart: always
     environment:
       POSTGRES_USER: aleduque
       POSTGRES_PASSWORD: testpassword123
       POSTGRES_DB: sistema_beleza
-    ports:
-      - "5432:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - /DATA/AppData/sistema-beleza/db:/var/lib/postgresql/data
 
-volumes:
-  db_data: {}
+  backend:
+    build:
+      context: .
+      dockerfile: ./apps/backend/Dockerfile
+    container_name: sistema-beleza-backend
+    restart: always
+    environment:
+      DATABASE_URL: "postgresql://aleduque:testpassword123@db:5432/sistema_beleza?schema=public"
+      JWT_SECRET: "troque_aqui_por_um_segredo_super_forte"
+      PORT: "3001"
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./apps/frontend/Dockerfile
+    container_name: sistema-beleza-frontend
+    restart: always
+    ports:
+      - "3000:3000" # A porta que o CasaOS vai usar
+    environment:
+      # No ambiente Docker, o frontend acessa a API pela rota do gateway do CasaOS
+      NEXT_PUBLIC_API_URL: /api
+      PORT: "3000"
+    depends_on:
+      - backend
