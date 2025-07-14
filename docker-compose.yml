@@ -9,31 +9,37 @@ services:
       POSTGRES_DB: sistema_beleza
     volumes:
       - /DATA/AppData/sistema-beleza/db:/var/lib/postgresql/data
+    networks: # <<< ADICIONADO
+      - beleza-net
 
   backend:
-    build:
-      context: .
-      dockerfile: ./apps/backend/Dockerfile
+    image: sistema-beleza-backend:latest
     container_name: sistema-beleza-backend
     restart: always
     environment:
       DATABASE_URL: "postgresql://aleduque:testpassword123@db:5432/sistema_beleza?schema=public"
-      JWT_SECRET: "troque_aqui_por_um_segredo_super_forte"
+      JWT_SECRET: "seu_jwt_secret_de_producao_super_forte"
       PORT: "3001"
     depends_on:
       - db
+    networks: # <<< ADICIONADO
+      - beleza-net
 
   frontend:
-    build:
-      context: .
-      dockerfile: ./apps/frontend/Dockerfile
+    image: sistema-beleza-frontend:latest
     container_name: sistema-beleza-frontend
     restart: always
     ports:
-      - "3000:3000" # A porta que o CasaOS vai usar
+      - "3000:3000"
     environment:
-      # No ambiente Docker, o frontend acessa a API pela rota do gateway do CasaOS
-      NEXT_PUBLIC_API_URL: /api
       PORT: "3000"
+      # NEXT_PUBLIC_API_URL é configurado no gateway do CasaOS
     depends_on:
       - backend
+    networks: # <<< ADICIONADO
+      - beleza-net
+
+# <<< SEÇÃO DE REDE ADICIONADA NO FINAL >>>
+networks:
+  beleza-net:
+    driver: bridge
