@@ -1,38 +1,23 @@
-# --- Estágio 1: Instalação de Dependências ---
-FROM node:20-slim AS deps
-WORKDIR /app
-
-# Copia apenas os arquivos de definição de pacotes
-COPY package.json yarn.lock ./
-COPY apps/frontend/package.json ./apps/frontend/
-COPY apps/backend/package.json ./apps/backend/
-COPY packages/core/package.json ./packages/core/
-
-# Instala TODAS as dependências do monorepo
-RUN yarn install --frozen-lockfile
-
-
-# --- Estágio 2: Build da Aplicação ---
+# --- Estágio 1: Builder ---
 FROM node:20-slim AS builder
 WORKDIR /app
-
-# Copia as dependências já instaladas do estágio anterior
-COPY --from=deps /app/node_modules ./node_modules
-# Copia todo o código fonte
 COPY . .
-
-# Roda o build do frontend
+RUN yarn install --frozen-lockfile
 RUN yarn workspace frontend build
 
-
-# --- Estágio 3: Imagem Final de Produção ---
+# --- Estágio 2: Runner (Produção) ---
 FROM node:20-slim
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copia apenas os artefatos prontos do estágio de build
+# Copia os package.json necessários para a instalação de produção
+COPY --from=builder /app/package.json /app/yarn.lock ./
+COPY --from=builder /app/apps/frontend/package.json ./apps/frontend/
+
+# <<< CORREÇÃO: Instala APENAS as dependências de produção do frontend no ambiente final >>>
+RUN yarn install --production --frozen-lockfile
+
+# Copia apenas a pasta standalone que já contém tudo que precisa
 COPY --from=builder /app/apps/frontend/.next/standalone ./
-COPY --from=builder /app/apps/frontend/.next/static ./.next/static
-COPY --from=builder /app/apps/frontend/public ./public
 
 CMD ["node", "server.js"]
