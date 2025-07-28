@@ -93,7 +93,6 @@ export class CreateSaleUseCase {
       paymentMethod,
       contaContabilId: settings.defaultReceitaContaId, // <-- MUDANÇA PRINCIPAL
       contaCorrenteId,
-      totalAmount: totalAmount,
     });
 
     // --- ETAPA 3: PERSISTÊNCIA EM TRANSAÇÃO ---

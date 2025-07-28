@@ -26,17 +26,21 @@ services:
       - beleza-net
 
   frontend:
-    image: sistema-beleza-frontend:latest
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://192.168.15.4:3001"
     container_name: sistema-beleza-frontend
     restart: always
     ports:
       - "3000:3000"
     environment:
       PORT: "3000"
-      # NEXT_PUBLIC_API_URL é configurado no gateway do CasaOS
+      NEXT_PUBLIC_API_URL: "http://192.168.15.4:3001"
     depends_on:
       - backend
-    networks: # <<< ADICIONADO
+    networks:
       - beleza-net
 
 # <<< SEÇÃO DE REDE ADICIONADA NO FINAL >>>
