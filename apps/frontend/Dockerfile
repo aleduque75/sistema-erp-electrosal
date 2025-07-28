@@ -1,23 +1,39 @@
-# --- Estágio 1: Builder ---
-FROM node:20-slim AS builder
+
+# Fase 1: Construir a aplicação
+FROM node:18-alpine AS builder
 WORKDIR /app
-COPY . .
+
+# Otimização de cache: copie apenas os manifestos de pacote primeiro
+COPY package.json yarn.lock ./
+COPY apps/frontend/package.json ./apps/frontend/
+COPY apps/backend/package.json ./apps/backend/
+COPY packages/core/package.json ./packages/core/
+
+# Instale todas as dependências
 RUN yarn install --frozen-lockfile
+
+# Copie o resto do código-fonte
+COPY . .
+
+# Construa o frontend
 RUN yarn workspace frontend build
 
-# --- Estágio 2: Runner (Produção) ---
-FROM node:20-slim
+# Fase 2: Criar a imagem de produção final e enxuta
+FROM node:18-alpine
 WORKDIR /app
+
 ENV NODE_ENV=production
 
-# Copia os package.json necessários para a instalação de produção
-COPY --from=builder /app/package.json /app/yarn.lock ./
-COPY --from=builder /app/apps/frontend/package.json ./apps/frontend/
+# Copie o servidor standalone e suas dependências
+COPY --from=builder /app/apps/frontend/.next/standalone ./ 
 
-# <<< CORREÇÃO: Instala APENAS as dependências de produção do frontend no ambiente final >>>
-RUN yarn install --production --frozen-lockfile
+# Copie a pasta de assets públicos
+COPY --from=builder /app/apps/frontend/public ./public
 
-# Copia apenas a pasta standalone que já contém tudo que precisa
-COPY --from=builder /app/apps/frontend/.next/standalone ./
+# A CORREÇÃO CRÍTICA: Copie explicitamente a pasta de assets estáticos
+COPY --from=builder /app/apps/frontend/.next/static ./_next/static
 
+EXPOSE 3000
+
+# Inicie o servidor
 CMD ["node", "server.js"]
