@@ -14,6 +14,8 @@ import {
   PlusCircle,
   FilePlus2,
   Upload,
+  Settings,
+  LayoutPanelLeft,
 } from "lucide-react";
 import React from "react";
 
@@ -127,6 +129,19 @@ export const menuConfig: NavItem[] = [
         href: "/credit-card-bills/new",
         icon: FilePlus2,
         description: "Agrupe transações em aberto para criar uma nova fatura.",
+      },
+    ],
+  },
+  {
+    title: "Administração",
+    href: "#",
+    icon: Settings,
+    subItems: [
+      {
+        title: "Editar Landing Page",
+        href: "/landing-page-manager",
+        icon: LayoutPanelLeft,
+        description: "Gerencie o conteúdo da página inicial do sistema.",
       },
     ],
   },

@@ -33,6 +33,9 @@ export type SectionConfig = HeroSectionConfig | FeaturesSectionConfig; // | Outr
 export interface LandingPageData {
   id: string;
   name: string;
+  logoText?: string; // Novo campo para o texto do logotipo
+  logoImageId?: string; // Novo campo para o ID da imagem do logotipo
+  logoImage?: { id: string; path: string; filename: string; }; // Detalhes da imagem do logotipo
   sections: { // As seções virão com o ID do banco de dados
     id: string;
     order: number;

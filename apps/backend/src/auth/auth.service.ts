@@ -36,36 +36,7 @@ export class AuthService {
     return { accessToken: this.jwtService.sign(payload) };
   }
 
-  async login(loginUserDto: LoginUserDto): Promise<{ accessToken: string }> {
-    // --- INÍCIO DO DEBUG ---
-    console.log('--- DADOS RECEBIDOS NO LOGIN ---');
-    console.log(`Email bruto: '${loginUserDto.email}'`);
-    console.log(`Senha bruta: '${loginUserDto.password}'`);
-    // --------------------
-
-    const cleanEmail = loginUserDto.email.toLowerCase().trim();
-
-    // --- DEBUG da busca no banco ---
-    console.log(`Buscando no banco de dados pelo email: '${cleanEmail}'`);
-    // -----------------------------
-
-    const user = await this.usersService.findByEmail(cleanEmail);
-    if (!user) {
-      console.log('--- Usuário NÃO encontrado no banco. ---');
-      throw new UnauthorizedException('Credenciais inválidas');
-    }
-    console.log('--- Usuário ENCONTRADO no banco. ---');
-
-    const isPasswordValid = await bcrypt.compare(
-      loginUserDto.password.trim(),
-      user.password,
-    );
-    if (!isPasswordValid) {
-      console.log('--- Senha INVÁLIDA. ---');
-      throw new UnauthorizedException('Credenciais inválidas');
-    }
-    console.log('--- Senha VÁLIDA. ---');
-
+  async login(user: any): Promise<{ accessToken: string }> { // Recebe o usuário já validado
     const payload = { email: user.email, sub: user.id };
     return { accessToken: this.jwtService.sign(payload) };
   }

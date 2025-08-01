@@ -1,20 +1,28 @@
-import { Controller, Get, Patch, Body, UseGuards, ValidationPipe } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Get, Body, Patch, UseGuards } from '@nestjs/common';
 import { LandingPageService } from './landing-page.service';
-import { UpdateLandingPageDto } from './dtos/update-landing-page.dto'; // Vamos criar este DTO
+import { UpdateLandingPageDto } from './dto/update-landing-page.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('landing-page')
 export class LandingPageController {
   constructor(private readonly landingPageService: LandingPageService) {}
 
+  @Public()
   @Get()
-  getLandingPage() {
-    return this.landingPageService.getLandingPage();
+  findOne() {
+    return this.landingPageService.findOne();
   }
 
-  @UseGuards(AuthGuard('jwt')) // Protege a rota de atualização
+  @UseGuards(AuthGuard('jwt'))
   @Patch()
-  updateLandingPage(@Body(ValidationPipe) updateDto: UpdateLandingPageDto) {
-    return this.landingPageService.updateLandingPage(updateDto.sections);
+  update(@Body() updateLandingPageDto: UpdateLandingPageDto) {
+    const { sections, logoText, logoImageId } = updateLandingPageDto; // Extrai os novos campos
+
+    const sectionsToUpdate = sections.map(section => ({
+      ...section,
+      content: JSON.parse(JSON.stringify(section.content)),
+    }));
+    return this.landingPageService.update(sectionsToUpdate, logoText, logoImageId); // Passa os novos campos
   }
 }

@@ -250,7 +250,7 @@ export default function LandingPageEditorPage() {
                           </FormControl>
                           {subField.value && (
                             <Image
-                              src={`${api.defaults.baseURL}/api/media/${subField.value}`}
+                              src={`${api.defaults.baseURL}/media/${subField.value}`}
                               alt="Imagem Principal"
                               width={100}
                               height={100}
@@ -280,7 +280,7 @@ export default function LandingPageEditorPage() {
                         {(form.watch(`sections.${index}.content.sideImages`) || []).map((imgId: string) => (
                           <Image
                             key={imgId}
-                            src={`${api.defaults.baseURL}/api/media/${imgId}`}
+                            src={`${api.defaults.baseURL}/media/${imgId}`}
                             alt="Imagem Lateral"
                             width={80}
                             height={80}

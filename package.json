@@ -12,16 +12,17 @@
     "start:prod": "docker compose -f docker-compose.prod.yml up -d"
   },
   "devDependencies": {
-    "prettier": "^3.2.5",
-    "turbo": "latest",
-    "webpack-node-externals": "^3.0.0",
-    "typescript": "^5.x.x",
-    "eslint": "^9.x.x",
     "@nestjs/common": "^11.x.x",
     "@nestjs/core": "^11.x.x",
-    "reflect-metadata": "^0.2.0",
+    "@types/node": "latest",
+    "dotenv-cli": "^10.0.0",
+    "eslint": "^9.x.x",
     "express": "^4.x.x",
-    "@types/node": "latest"
+    "prettier": "^3.2.5",
+    "reflect-metadata": "^0.2.0",
+    "turbo": "latest",
+    "typescript": "^5.x.x",
+    "webpack-node-externals": "^3.0.0"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

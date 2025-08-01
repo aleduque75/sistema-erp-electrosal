@@ -6,13 +6,14 @@ import { LandingPage, Prisma } from '@prisma/client';
 export class LandingPageService {
   constructor(private prisma: PrismaService) {}
 
-  async getLandingPage(): Promise<LandingPage> {
+  async findOne(): Promise<LandingPage> {
     let landingPage = await this.prisma.landingPage.findUnique({
       where: { name: 'default' },
       include: {
         sections: {
           orderBy: { order: 'asc' },
         },
+        logoImage: true, // Inclui os dados da imagem do logotipo
       },
     });
 
@@ -21,6 +22,8 @@ export class LandingPageService {
       landingPage = await this.prisma.landingPage.create({
         data: {
           name: 'default',
+          logoText: 'Sistema Beleza', // Texto padrão do logotipo
+          logoImageId: null, // ID da imagem do logotipo (inicialmente nulo)
           sections: {
             create: [
               {
@@ -74,19 +77,22 @@ export class LandingPageService {
           sections: {
             orderBy: { order: 'asc' },
           },
+          logoImage: true, // Inclui os dados da imagem do logotipo
         },
       });
     }
     return landingPage;
   }
 
-  async updateLandingPage(
+  async update(
     sectionsData: {
       id?: string;
       order: number;
       type: string;
       content: Prisma.JsonValue;
     }[],
+    logoText?: string | null, // Novo parâmetro
+    logoImageId?: string | null, // Novo parâmetro
   ): Promise<LandingPage> {
     const landingPage = await this.prisma.landingPage.findUnique({
       where: { name: 'default' },
@@ -99,6 +105,15 @@ export class LandingPageService {
 
     // Transação para garantir atomicidade
     return this.prisma.$transaction(async (tx) => {
+      // Atualiza os campos de logotipo da LandingPage
+      await tx.landingPage.update({
+        where: { id: landingPage.id },
+        data: {
+          logoText: logoText,
+          logoImageId: logoImageId,
+        },
+      });
+
       // Deleta seções que não estão mais presentes
       const existingSectionIds = landingPage.sections.map((s) => s.id);
       const updatedSectionIds = sectionsData
@@ -146,7 +161,10 @@ export class LandingPageService {
       // Retorna a landing page atualizada
       return tx.landingPage.findUnique({
         where: { id: landingPage.id },
-        include: { sections: { orderBy: { order: 'asc' } } },
+        include: {
+          sections: { orderBy: { order: 'asc' } },
+          logoImage: true, // Inclui os dados da imagem do logotipo
+        },
       }) as Promise<LandingPage>;
     });
   }
