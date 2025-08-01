@@ -171,18 +171,20 @@ export default function ContasContabeisPage() {
     <>
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
             <CardTitle>Plano de Contas</CardTitle>
             <Button onClick={handleOpenNewModal}>Nova Conta</Button>
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable
-            columns={columns}
-            data={contas}
-            filterColumnId="nome"
-            filterPlaceholder="Filtrar por nome da conta..."
-          />
+          <div className="overflow-x-auto">
+            <DataTable
+              columns={columns}
+              data={contas}
+              filterColumnId="nome"
+              filterPlaceholder="Filtrar por nome da conta..."
+            />
+          </div>
         </CardContent>
       </Card>
 

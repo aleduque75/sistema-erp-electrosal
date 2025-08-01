@@ -10,10 +10,11 @@ import {
 } from './dtos/credit-card-transaction.dto';
 import { CreditCardTransaction, Prisma } from '@prisma/client';
 import { addMonths, startOfDay, endOfDay } from 'date-fns';
+import { AuditLogService } from '../common/audit-log.service';
 
 @Injectable()
 export class CreditCardTransactionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private auditLogService: AuditLogService) {}
 
   async create(
     userId: string,
@@ -119,7 +120,15 @@ export class CreditCardTransactionsService {
         'Não é possível excluir uma transação que já pertence a uma fatura.',
       );
     }
-    return this.prisma.creditCardTransaction.delete({ where: { id } });
+    const deletedTransaction = await this.prisma.creditCardTransaction.delete({ where: { id } });
+    this.auditLogService.logDeletion(
+      userId,
+      'CreditCardTransaction',
+      deletedTransaction.id,
+      deletedTransaction.description, // Passando a descrição como entityName
+      `Transação de Cartão de Crédito ${deletedTransaction.description} excluída.`,
+    );
+    return deletedTransaction;
   }
 
   private async validateCreditCard(userId: string, creditCardId: string) {

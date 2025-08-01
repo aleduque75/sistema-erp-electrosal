@@ -11,10 +11,11 @@ import {
   PayAccountDto,
 } from './dtos/account-pay.dto';
 import { addMonths, startOfDay, endOfDay } from 'date-fns';
+import { AuditLogService } from '../common/audit-log.service';
 
 @Injectable()
 export class AccountsPayService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private auditLogService: AuditLogService) {}
 
   async create(
     userId: string,
@@ -118,7 +119,15 @@ export class AccountsPayService {
 
   async remove(userId: string, id: string): Promise<AccountPay> {
     await this.findOne(userId, id);
-    return this.prisma.accountPay.delete({ where: { id } });
+    const deletedAccount = await this.prisma.accountPay.delete({ where: { id } });
+    this.auditLogService.logDeletion(
+      userId,
+      'AccountPay',
+      deletedAccount.id,
+      deletedAccount.description, // Passando a descrição como entityName
+      `Conta a Pagar ${deletedAccount.description} excluída.`,
+    );
+    return deletedAccount;
   }
 
   async pay(

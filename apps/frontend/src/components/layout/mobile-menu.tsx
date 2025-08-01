@@ -19,6 +19,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { menuConfig } from "@/config/menu";
+import { UserNav } from "./user-nav";
 
 export function MobileMenu() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -43,7 +44,7 @@ export function MobileMenu() {
               const Icon = item.icon;
               return item.subItems ? (
                 <Collapsible key={item.title}>
-                  <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium hover:bg-accent">
+                  <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-3 py-2 text-base font-medium hover:bg-accent">
                     <div className="flex items-center gap-3">
                       {Icon && <Icon className="h-5 w-5" />} {item.title}
                     </div>
@@ -70,7 +71,7 @@ export function MobileMenu() {
                 <Link
                   key={item.title}
                   href={item.href}
-                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
+                  className="flex items-center gap-3 rounded-md px-3 py-2 text-base font-medium hover:bg-accent"
                   onClick={() => setIsOpen(false)}
                 >
                   {Icon && <Icon className="h-5 w-5" />}
@@ -79,6 +80,9 @@ export function MobileMenu() {
               );
             })}
           </div>
+        </div>
+        <div className="p-4 border-t">
+          <UserNav />
         </div>
         <DrawerFooter className="pt-2">
           <DrawerClose asChild>

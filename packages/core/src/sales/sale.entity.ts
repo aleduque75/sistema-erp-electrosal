@@ -1,67 +1,80 @@
-import { Entity } from "../_shared/entity";
-import { nanoid } from "nanoid";
-import { SaleItem } from "./sale-item.entity"; // Importa a entidade SaleItem
+import { randomUUID } from "crypto";
+import { SaleItem } from "./sale-item.entity";
+import { SaleInstallment } from "./sale-installment.entity";
 
-export interface SaleProps {
+export type SaleProps = {
+  id?: string;
   userId: string;
   clientId: string;
+  orderNumber: string;
+  totalAmount: number;
+  paymentMethod?: string;
   items: SaleItem[];
-  paymentMethod: string;
-  contaContabilId: string;
-  contaCorrenteId?: string | null;
-}
+  installments: SaleInstallment[];
+  createdAt?: Date;
+  // ✅ Propriedades que faltavam:
+  netAmount?: number;
+  feeAmount?: number;
+  contaContabilId?: string;
+  contaCorrenteId?: string;
+};
 
-export class Sale extends Entity<SaleProps> {
-  public readonly orderNumber: string;
-  public readonly totalAmount: number;
-  public feeAmount?: number;
-  public netAmount?: number;
+export class Sale {
+  public readonly id: string;
+  public props: Omit<SaleProps, "id">;
 
-  private constructor(props: SaleProps, id?: string) {
-    super(props, id);
-    this.orderNumber = nanoid(8);
-    this.totalAmount = this.props.items.reduce(
-      (acc, item) => acc + item.total,
-      0
-    );
-    this.processPayment();
+  private constructor(props: SaleProps) {
+    this.id = props.id || randomUUID();
+    this.props = {
+      ...props,
+      createdAt: props.createdAt || new Date(),
+    };
   }
 
-  public static create(props: SaleProps): Sale {
-    if (props.items.length === 0) {
-      throw new Error("A venda deve ter pelo menos um item.");
+  public static create(props: SaleProps) {
+    // Adicionar aqui a lógica de cálculo se necessário
+    if (props.totalAmount && props.feeAmount) {
+      props.netAmount = props.totalAmount - props.feeAmount;
     }
     return new Sale(props);
   }
 
-  private processPayment(): void {
-    if (this.props.paymentMethod === "Credit Card") {
-      const TAX_RATE = 0.04;
-      this.feeAmount = this.totalAmount * TAX_RATE;
-      this.netAmount = this.totalAmount - this.feeAmount;
-    } else {
-      this.feeAmount = 0;
-      this.netAmount = this.totalAmount;
-    }
-  }
-
-  // Getters
-  get items(): SaleItem[] {
-    return this.props.items;
-  }
-  get clientId(): string {
-    return this.props.clientId;
-  }
-  get userId(): string {
+  // Getters para todas as propriedades
+  get userId() {
     return this.props.userId;
   }
-  get paymentMethod(): string {
+  get clientId() {
+    return this.props.clientId;
+  }
+  get orderNumber() {
+    return this.props.orderNumber;
+  }
+  get totalAmount() {
+    return this.props.totalAmount;
+  }
+  get paymentMethod() {
     return this.props.paymentMethod;
   }
-  get contaContabilId(): string {
+  get items() {
+    return this.props.items;
+  }
+  get installments() {
+    return this.props.installments;
+  }
+  get createdAt() {
+    return this.props.createdAt;
+  }
+  // ✅ Getters para as novas propriedades
+  get netAmount() {
+    return this.props.netAmount;
+  }
+  get feeAmount() {
+    return this.props.feeAmount;
+  }
+  get contaContabilId() {
     return this.props.contaContabilId;
   }
-  get contaCorrenteId(): string | null | undefined {
+  get contaCorrenteId() {
     return this.props.contaCorrenteId;
   }
 }

@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Upload } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +33,7 @@ import {
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { ClientForm } from "./client-form";
 
-// ✨ 1. Interface completa do cliente, incluindo todos os campos
+// Interface
 interface Client {
   id: string;
   name: string;
@@ -43,7 +44,7 @@ interface Client {
   gender?: string | null;
 }
 
-// ✨ 2. Componente auxiliar para exibir os detalhes no modal de visualização
+// Componente auxiliar
 const DetailItem = ({
   label,
   value,
@@ -53,8 +54,9 @@ const DetailItem = ({
 }) =>
   value ? (
     <div>
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <p>{value}</p>
+      {" "}
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>{" "}
+      <p>{value}</p>{" "}
     </div>
   ) : null;
 
@@ -64,7 +66,7 @@ export default function ClientsPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
-  const [clientToView, setClientToView] = useState<Client | null>(null); // ✨ 3. Estado para o modal de visualização
+  const [clientToView, setClientToView] = useState<Client | null>(null);
 
   const fetchClients = async () => {
     try {
@@ -76,10 +78,10 @@ export default function ClientsPage() {
   };
 
   useEffect(() => {
-    if (!loading && user) {
+    if (user) {
       fetchClients();
     }
-  }, [user, loading]);
+  }, [user]);
 
   const handleOpenNewModal = () => {
     setClientToEdit(null);
@@ -110,18 +112,9 @@ export default function ClientsPage() {
   };
 
   const columns: ColumnDef<Client>[] = [
-    {
-      accessorKey: "name",
-      header: "Nome",
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
-    {
-      accessorKey: "phone",
-      header: "Telefone",
-    },
+    { accessorKey: "name", header: "Nome" },
+    { accessorKey: "email", header: "Email" },
+    { accessorKey: "phone", header: "Telefone" },
     {
       id: "actions",
       cell: ({ row }) => {
@@ -136,7 +129,6 @@ export default function ClientsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              {/* ✨ 4. Ação para abrir o modal de visualização */}
               <DropdownMenuItem onClick={() => setClientToView(client)}>
                 Visualizar
               </DropdownMenuItem>
@@ -157,36 +149,44 @@ export default function ClientsPage() {
     },
   ];
 
-  if (loading) return <p>Carregando...</p>;
+  if (loading) return <p className="text-center p-10">Carregando...</p>;
 
   return (
     <>
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
+        <h1 className="text-2xl font-bold">Clientes</h1>
+        <div className="flex space-x-2">
+          <Link href="/clients/import" passHref>
+            <Button variant="outline">
+              <Upload className="mr-2 h-4 w-4" />
+              Importar
+            </Button>
+          </Link>
+          <Button onClick={handleOpenNewModal}>Novo Cliente</Button>
+        </div>
+      </div>
+
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Clientes</CardTitle>
-            <div className="flex space-x-2">
-              <Button onClick={handleOpenNewModal}>Novo Cliente</Button>
-            </div>
+        <CardContent className="pt-6">
+          <div className="overflow-x-auto">
+            <DataTable columns={columns} data={clients} filterColumnId="name" />
           </div>
-        </CardHeader>
-        <CardContent>
-          <DataTable columns={columns} data={clients} filterColumnId="name" />
         </CardContent>
       </Card>
 
-      {/* Modal Responsivo para CRIAR/EDITAR */}
       <ResponsiveDialog
         open={isFormModalOpen}
         onOpenChange={setIsFormModalOpen}
         title={clientToEdit ? "Editar Cliente" : "Novo Cliente"}
         description="Preencha os detalhes do cliente aqui."
       >
-        <ClientForm client={clientToEdit} onSave={handleSave} />
+        <ClientForm initialData={clientToEdit} onSave={handleSave} />
       </ResponsiveDialog>
 
-      {/* ✨ 5. Modal para VISUALIZAR os detalhes do cliente */}
-      <Dialog open={!!clientToView} onOpenChange={() => setClientToView(null)}>
+      <Dialog
+        open={!!clientToView}
+        onOpenChange={(isOpen) => !isOpen && setClientToView(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Detalhes de {clientToView?.name}</DialogTitle>
@@ -216,10 +216,9 @@ export default function ClientsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para CONFIRMAR DELEÇÃO */}
       <Dialog
         open={!!clientToDelete}
-        onOpenChange={() => setClientToDelete(null)}
+        onOpenChange={(isOpen) => !isOpen && setClientToDelete(null)}
       >
         <DialogContent>
           <DialogHeader>

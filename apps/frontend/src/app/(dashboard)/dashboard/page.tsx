@@ -1,9 +1,9 @@
-// apps/frontend/src/app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import withAuth from "@/components/auth/withAuth";
 import api from "@/lib/api";
 
 // Ícones corrigidos e outros que podem ser úteis:
@@ -46,7 +46,7 @@ interface AccountsPayStatusEntry {
   value: number;
 }
 
-export default function DashboardPage() {
+function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -59,12 +59,6 @@ export default function DashboardPage() {
   const [cashFlowSummary, setCashFlowSummary] = useState([]);
   const [chartsLoading, setChartsLoading] = useState(true);
   const [chartsError, setChartsError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     const fetchSummaryAndCharts = async () => {
@@ -342,3 +336,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+export default withAuth(DashboardPage);

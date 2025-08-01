@@ -10,10 +10,11 @@ import {
   ReceivePaymentDto,
 } from './dtos/account-rec.dto';
 import { TipoTransacaoPrisma } from '@prisma/client';
+import { AuditLogService } from '../common/audit-log.service';
 
 @Injectable()
 export class AccountsRecService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private auditLogService: AuditLogService) {}
 
   create(userId: string, createDto: CreateAccountRecDto) {
     return this.prisma.accountRec.create({
@@ -103,6 +104,14 @@ export class AccountsRecService {
 
   async remove(userId: string, id: string) {
     await this.findOne(userId, id);
-    return this.prisma.accountRec.delete({ where: { id } });
+    const deletedAccount = await this.prisma.accountRec.delete({ where: { id } });
+    this.auditLogService.logDeletion(
+      userId,
+      'AccountRec',
+      deletedAccount.id,
+      deletedAccount.description, // Passando a descrição como entityName
+      `Conta a Receber ${deletedAccount.description} excluída.`,
+    );
+    return deletedAccount;
   }
 }

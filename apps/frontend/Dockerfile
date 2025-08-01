@@ -1,39 +1,50 @@
+# apps/frontend/Dockerfile
 
-# Fase 1: Construir a aplicação
-FROM node:18-alpine AS builder
+# Fase 1: Builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Otimização de cache: copie apenas os manifestos de pacote primeiro
-COPY package.json yarn.lock ./
-COPY apps/frontend/package.json ./apps/frontend/
-COPY apps/backend/package.json ./apps/backend/
-COPY packages/core/package.json ./packages/core/
+# Instalar pnpm globalmente para usar no build
+RUN npm install -g pnpm@9.0.6
 
-# Instale todas as dependências
-RUN yarn install --frozen-lockfile
+# Copiar manifestos de pacote para cache de dependências
+COPY package.json pnpm-lock.yaml ./
+COPY apps/frontend/package.json apps/frontend/
 
-# Copie o resto do código-fonte
+# Copiar todo o código-fonte do monorepo
 COPY . .
 
-# Construa o frontend
-RUN yarn workspace frontend build
+# Instalar todas as dependências do monorepo
+RUN pnpm install
 
-# Fase 2: Criar a imagem de produção final e enxuta
-FROM node:18-alpine
+# Definir NEXT_PUBLIC_API_URL explicitamente para o build do Next.js
+ENV NEXT_PUBLIC_API_URL=http://localhost:3001 # Para ambiente de desenvolvimento
+
+# Construir o frontend
+RUN pnpm --filter frontend build
+
+# Fase 2: Runner
+FROM node:20
 WORKDIR /app
-
 ENV NODE_ENV=production
 
-# Copie o servidor standalone e suas dependências
-COPY --from=builder /app/apps/frontend/.next/standalone ./ 
+# Instalar pnpm globalmente na imagem final
+RUN npm install -g pnpm@9.0.6
 
-# Copie a pasta de assets públicos
-COPY --from=builder /app/apps/frontend/public ./public
+# Copiar manifestos da raiz para a imagem final
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 
-# A CORREÇÃO CRÍTICA: Copie explicitamente a pasta de assets estáticos
-COPY --from=builder /app/apps/frontend/.next/static ./_next/static
+# Copiar node_modules da fase builder
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copiar os arquivos compilados do frontend (standalone, public, static)
+COPY --from=builder /app/apps/frontend/.next/standalone/ ./apps/frontend/.next/standalone/
+COPY --from=builder /app/apps/frontend/public/ ./apps/frontend/public/
+COPY --from=builder /app/apps/frontend/.next/static/ ./apps/frontend/.next/static/
 
 EXPOSE 3000
 
-# Inicie o servidor
-CMD ["node", "server.js"]
+# Comando final para iniciar a aplicação Next.js
+
+CMD ["pnpm", "--filter", "frontend", "start"]

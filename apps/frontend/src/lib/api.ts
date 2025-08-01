@@ -1,23 +1,45 @@
 import axios from "axios";
+import { toast } from "sonner";
 
-// A variável de ambiente é lida aqui. Se não existir, usa o fallback.
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://192.168.15.2:8080";
+  process.env.NEXT_PUBLIC_API_URL || "http://192.168.15.6:3001";
+
+// ✅ CORREÇÃO FINAL: Garante que a URL base termine com /api
+const resolvedBaseURL = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
 
 const api = axios.create({
-  // Use a constante que já tem a lógica de fallback.
-  baseURL: API_BASE_URL,
+  baseURL: resolvedBaseURL,
 });
 
+// Interceptor de Requisição
 api.interceptors.request.use(
   (config) => {
-    const accessToken = localStorage.getItem("accessToken");
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    if (typeof window !== "undefined") {
+      const accessToken = localStorage.getItem("accessToken");
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
+      }
     }
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor de Resposta
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      if (typeof window !== "undefined") {
+        toast.error("Sua sessão expirou. Por favor, faça login novamente.");
+        localStorage.removeItem("accessToken");
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 1500);
+      }
+    }
     return Promise.reject(error);
   }
 );

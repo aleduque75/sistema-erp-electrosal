@@ -1,12 +1,12 @@
 "use client";
 
-import { useForm, Controller } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { toast } from "sonner";
 import api from "@/lib/api";
-import { useEffect, useState } from "react";
-import { format, parse } from "date-fns";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,171 +18,181 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Combobox } from "@/components/ui/combobox";
-import { DateInput } from "@/components/ui/date-input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Interfaces
+interface ContaContabil {
+  id: string;
+  nome: string;
+  codigo: string;
+}
 interface CreditCard {
   id: string;
   name: string;
   flag: string;
+  closingDay: number;
+  dueDate: number;
+  contaContabilPassivoId?: string | null;
+}
+interface CreditCardFormProps {
+  initialData?: CreditCard; // Se fornecido, o formulário entra em modo de edição
+  onSave: () => void;
 }
 
-// Schema de validação
+// Schema de validação com Zod (espelhando o DTO do backend)
 const formSchema = z.object({
-  description: z.string().min(3, "A descrição é obrigatória."),
-  amount: z.coerce.number().positive("O valor deve ser maior que zero."),
-  date: z.date({ required_error: "A data da compra é obrigatória." }),
-  installments: z.coerce.number().int().min(1).default(1),
-  creditCardId: z.string({
-    required_error: "O cartão de crédito é obrigatório.",
-  }),
+  name: z.string().min(2, "O nome do cartão é obrigatório."),
+  flag: z.string().min(2, "A bandeira é obrigatória."),
+  closingDay: z.coerce.number().int().min(1).max(31),
+  dueDate: z.coerce.number().int().min(1).max(31),
+  contaContabilPassivoId: z.string().uuid().optional().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-interface FormProps {
-  transaction?: FormValues & { id: string };
-  onSave: () => void;
-}
+export function CreditCardForm({ initialData, onSave }: CreditCardFormProps) {
+  const router = useRouter();
+  const [contasPassivo, setContasPassivo] = useState<ContaContabil[]>([]);
 
-export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
-  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      description: transaction?.description || "",
-      amount: transaction?.amount || 0,
-      date: transaction?.date ? new Date(transaction.date) : new Date(),
-      installments: transaction?.installments || 1,
-      creditCardId: transaction?.creditCardId || undefined,
+      name: initialData?.name || "",
+      flag: initialData?.flag || "",
+      closingDay: initialData?.closingDay || 1,
+      dueDate: initialData?.dueDate || 10,
+      contaContabilPassivoId: initialData?.contaContabilPassivoId || null,
     },
   });
 
-  // Busca os cartões de crédito disponíveis para o seletor
+  // Busca as contas de passivo para popular o select
   useEffect(() => {
-    api
-      .get("/credit-cards")
-      .then((response) => setCreditCards(response.data))
-      .catch(() => toast.error("Falha ao carregar os cartões de crédito."));
+    const fetchContasPassivo = async () => {
+      try {
+        const response = await api.get("/contas-contabeis?tipo=PASSIVO");
+        setContasPassivo(response.data);
+      } catch (error) {
+        toast.error("Erro ao carregar contas de passivo.");
+      }
+    };
+    fetchContasPassivo();
   }, []);
 
   const onSubmit = async (data: FormValues) => {
     try {
-      if (transaction) {
-        await api.patch(`/credit-card-transactions/${transaction.id}`, data);
-        toast.success("Transação atualizada com sucesso!");
+      if (initialData) {
+        // Modo Edição
+        await api.patch(`/credit-cards/${initialData.id}`, data);
+        toast.success("Cartão de crédito atualizado com sucesso!");
       } else {
-        await api.post("/credit-card-transactions", data);
-        toast.success("Transação criada com sucesso!");
+        // Modo Criação
+        await api.post("/credit-cards", data);
+        toast.success("Cartão de crédito criado com sucesso!");
       }
-      onSave();
+      onSave(); // Avisa o componente pai (ex: para fechar o modal ou redirecionar)
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Ocorreu um erro.");
     }
   };
 
+  const isSubmitting = form.formState.isSubmitting;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
-          name="creditCardId"
+          name="name"
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Cartão de Crédito</FormLabel>
-              <Combobox
-                options={creditCards.map((card) => ({
-                  value: card.id,
-                  label: `${card.name} (${card.flag})`,
-                }))}
-                value={field.value}
-                onValueChange={field.onChange}
-                placeholder="Selecione o cartão..."
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          name="description"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descrição da Compra</FormLabel>
+              <FormLabel>Nome do Cartão</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: Almoço no restaurante" {...field} />
+                <Input placeholder="Ex: Nubank, Itaú Click" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <FormField
+          name="flag"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Bandeira</FormLabel>
+              <FormControl>
+                <Input placeholder="Ex: Mastercard, Visa" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-2 gap-4">
           <FormField
-            name="amount"
+            name="closingDay"
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Valor Total (R$)</FormLabel>
+                <FormLabel>Dia do Fechamento</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} />
+                  <Input type="number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
           <FormField
-            name="date"
+            name="dueDate"
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Data da Compra</FormLabel>
+                <FormLabel>Dia do Vencimento</FormLabel>
                 <FormControl>
-                  <DateInput
-                    value={field.value ? format(field.value, "dd/MM/yyyy") : ""}
-                    // ✅ CORREÇÃO DO LOOP INFINITO
-                    onAccept={(stringValue) => {
-                      const newDate = parse(
-                        stringValue,
-                        "dd/MM/yyyy",
-                        new Date()
-                      );
-                      // Só atualiza se a data for válida e diferente da anterior
-                      if (newDate.getTime() !== field.value?.getTime()) {
-                        field.onChange(newDate);
-                      }
-                    }}
-                    placeholder="DD/MM/AAAA"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="installments"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Parcelas</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(parseInt(e.target.value, 10))
-                    }
-                  />
+                  <Input type="number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-        <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Salvando..." : "Salvar Transação"}
-        </Button>
+
+        {/* --- CAMPO NOVO ADICIONADO AQUI --- */}
+        <FormField
+          name="contaContabilPassivoId"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Conta de Passivo Associada</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || ""}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a conta para a dívida da fatura..." />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma</SelectItem>
+                  {contasPassivo.map((conta) => (
+                    <SelectItem key={conta.id} value={conta.id}>
+                      {conta.codigo} - {conta.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end pt-4">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Salvando..." : "Salvar Cartão"}
+          </Button>
+        </div>
       </form>
     </Form>
   );

@@ -18,11 +18,21 @@ import { CreateTransacaoDto, UpdateTransacaoDto } from './dtos/transacoes.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 // import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AuthRequest } from '../auth/types/auth-request.type';
+import { CreateBulkTransacoesDto } from './dtos/create-transacao.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('transacoes')
 export class TransacoesController {
   constructor(private readonly transacoesService: TransacoesService) {}
+
+  @Post('bulk-create')
+  createMany(
+    @CurrentUser('id') userId: string,
+    @Body() createBulkDto: CreateBulkTransacoesDto,
+  ) {
+    return this.transacoesService.createMany(userId, createBulkDto);
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

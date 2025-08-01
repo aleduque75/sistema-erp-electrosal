@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Product } from '@prisma/client';
 import { CreateProductDto, UpdateProductDto } from './dtos/product.dto';
 import { parseStringPromise } from 'xml2js';
+import { AuditLogService } from '../common/audit-log.service';
 
 // Interfaces para a resposta da análise
 interface AnalyzedProduct {
@@ -61,7 +62,7 @@ interface NFeProc {
 
 @Injectable()
 export class ProductsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private auditLogService: AuditLogService) {}
 
   async create(userId: string, data: CreateProductDto): Promise<Product> {
     return this.prisma.product.create({ data: { ...data, userId } });
@@ -100,7 +101,15 @@ export class ProductsService {
         'Este produto não pode ser removido pois está associado a vendas existentes.',
       );
     }
-    return this.prisma.product.delete({ where: { id } });
+    const deletedProduct = await this.prisma.product.delete({ where: { id } });
+    this.auditLogService.logDeletion(
+      userId,
+      'Product',
+      deletedProduct.id,
+      deletedProduct.name, // Passando o nome do produto como entityName
+      `Produto ${deletedProduct.name} excluído.`,
+    );
+    return deletedProduct;
   }
 
   async analyzeXml(

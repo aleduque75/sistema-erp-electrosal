@@ -1,226 +1,277 @@
 import { PrismaClient, TipoContaContabilPrisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { faker } from '@faker-js/faker/locale/pt_BR';
+// A importação do faker não é necessária se você não o usa no seed
+// import { faker } from '@faker-js/faker';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('Iniciando o seeding...');
+// 1. ESTRUTURA DO PLANO DE CONTAS
+const planoDeContasEstruturado = [
+  {
+    codigo: '1',
+    nome: 'ATIVOS',
+    tipo: TipoContaContabilPrisma.ATIVO,
+    aceitaLancamento: false,
+    subContas: [
+      {
+        codigo: '1.1',
+        nome: 'ATIVO CIRCULANTE',
+        tipo: TipoContaContabilPrisma.ATIVO,
+        aceitaLancamento: false,
+        subContas: [
+          {
+            codigo: '1.1.1',
+            nome: 'Caixa Geral',
+            tipo: TipoContaContabilPrisma.ATIVO,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '1.1.2',
+            nome: 'Contas Correntes',
+            tipo: TipoContaContabilPrisma.ATIVO,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '1.1.3',
+            nome: 'Contas a Receber',
+            tipo: TipoContaContabilPrisma.ATIVO,
+            aceitaLancamento: true,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    codigo: '2',
+    nome: 'PASSIVOS',
+    tipo: TipoContaContabilPrisma.PASSIVO,
+    aceitaLancamento: false,
+    subContas: [
+      {
+        codigo: '2.1',
+        nome: 'PASSIVO CIRCULANTE',
+        tipo: TipoContaContabilPrisma.PASSIVO,
+        aceitaLancamento: false,
+        subContas: [
+          {
+            codigo: '2.1.1',
+            nome: 'Fornecedores',
+            tipo: TipoContaContabilPrisma.PASSIVO,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '2.1.2',
+            nome: 'Impostos a Pagar',
+            tipo: TipoContaContabilPrisma.PASSIVO,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '2.1.3',
+            nome: 'Cartões de Crédito a Pagar',
+            tipo: TipoContaContabilPrisma.PASSIVO,
+            aceitaLancamento: false,
+            subContas: [
+              {
+                codigo: '2.1.3.1',
+                nome: 'Fatura Cartão Principal',
+                tipo: TipoContaContabilPrisma.PASSIVO,
+                aceitaLancamento: true,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    codigo: '4',
+    nome: 'RECEITAS',
+    tipo: TipoContaContabilPrisma.RECEITA,
+    aceitaLancamento: false,
+    subContas: [
+      {
+        codigo: '4.1',
+        nome: 'RECEITA OPERACIONAL',
+        tipo: TipoContaContabilPrisma.RECEITA,
+        aceitaLancamento: false,
+        subContas: [
+          {
+            codigo: '4.1.1',
+            nome: 'Venda de Produtos',
+            tipo: TipoContaContabilPrisma.RECEITA,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '4.1.2',
+            nome: 'Prestação de Serviços',
+            tipo: TipoContaContabilPrisma.RECEITA,
+            aceitaLancamento: true,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    codigo: '5',
+    nome: 'DESPESAS',
+    tipo: TipoContaContabilPrisma.DESPESA,
+    aceitaLancamento: false,
+    subContas: [
+      {
+        codigo: '5.1',
+        nome: 'DESPESAS OPERACIONAIS',
+        tipo: TipoContaContabilPrisma.DESPESA,
+        aceitaLancamento: false,
+        subContas: [
+          {
+            codigo: '5.1.1',
+            nome: 'Salários e Encargos',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '5.1.2',
+            nome: 'Aluguel',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '5.1.3',
+            nome: 'Água, Luz e Telefone',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '5.1.4',
+            nome: 'Marketing e Publicidade',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '5.1.5',
+            nome: 'Transporte e Deslocamento',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '5.1.6',
+            nome: 'Assinaturas e Software',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '5.1.7',
+            nome: 'Lançamentos a Classificar',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: true,
+          },
+        ],
+      },
+    ],
+  },
+];
 
-  // --- 1. Criação do Usuário Padrão ---
-  const hashedPassword = await bcrypt.hash('password', 10);
-  const user = await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
-    update: {},
-    create: {
-      email: 'admin@example.com',
-      password: hashedPassword,
-      name: 'Administrador',
-    },
-  });
-  console.log('Usuário padrão verificado/criado.');
-  const userId = user.id;
-
-  // --- 2. Criação do Plano de Contas ---
-  console.log('Criando plano de contas padrão...');
-  const contasContabeisData = [
-    {
-      nome: 'ATIVO',
-      tipo: TipoContaContabilPrisma.ATIVO,
-      aceitaLancamento: false,
-    },
-    {
-      nome: 'ATIVO CIRCULANTE',
-      tipo: TipoContaContabilPrisma.ATIVO,
-      aceitaLancamento: false,
-      contaPaiNome: 'ATIVO',
-    },
-    {
-      nome: 'CAIXA E EQUIVALENTES',
-      tipo: TipoContaContabilPrisma.ATIVO,
-      aceitaLancamento: false,
-      contaPaiNome: 'ATIVO CIRCULANTE',
-    },
-    {
-      nome: 'CAIXA GERAL',
-      tipo: TipoContaContabilPrisma.ATIVO,
-      aceitaLancamento: true,
-      contaPaiNome: 'CAIXA E EQUIVALENTES',
-    },
-    {
-      nome: 'RECEITAS',
-      tipo: TipoContaContabilPrisma.RECEITA,
-      aceitaLancamento: false,
-    },
-    {
-      nome: 'RECEITA DE VENDAS',
-      tipo: TipoContaContabilPrisma.RECEITA,
-      aceitaLancamento: true,
-      contaPaiNome: 'RECEITAS',
-    },
-    {
-      nome: 'DESPESAS',
-      tipo: TipoContaContabilPrisma.DESPESA,
-      aceitaLancamento: false,
-    },
-  ];
-
-  const createdContasMap: Map<string, string> = new Map();
-
-  // Função auxiliar para obter o próximo código
-  async function getNextCodigo(currentUserId: string, parentContaId?: string | null): Promise<string> {
-    let proximoCodigo: string;
-
-    if (parentContaId) {
-      const contaPai = await prisma.contaContabil.findUnique({
-        where: { id: parentContaId },
-      });
-      if (!contaPai) throw new Error('Conta pai não encontrada.');
-
-      const irmaos = await prisma.contaContabil.findMany({
-        where: { userId: currentUserId, contaPaiId: parentContaId },
-        select: { codigo: true },
-      });
-
-      if (irmaos.length === 0) {
-        proximoCodigo = `${contaPai.codigo}.1`;
-      } else {
-        const ultimosSegmentos = irmaos.map((c) =>
-          parseInt(c.codigo.split('.').pop() || '0', 10),
-        );
-        const maiorSegmento = Math.max(...ultimosSegmentos);
-        proximoCodigo = `${contaPai.codigo}.${maiorSegmento + 1}`;
-      }
-    } else {
-      const contasRaiz = await prisma.contaContabil.findMany({
-        where: { userId: currentUserId, contaPaiId: null },
-        select: { codigo: true },
-      });
-      if (contasRaiz.length === 0) {
-        proximoCodigo = '1';
-      } else {
-        const codigosRaiz = contasRaiz.map((c) =>
-          parseInt(c.codigo.split('.')[0], 10),
-        );
-        const maiorCodigo = Math.max(...codigosRaiz);
-        proximoCodigo = (maiorCodigo + 1).toString();
-      }
-    }
-    return proximoCodigo;
-  }
-
-  for (const contaData of contasContabeisData) {
-    const contaPai = contaData.contaPaiNome
-      ? await prisma.contaContabil.findFirst({ where: { nome: contaData.contaPaiNome, userId } })
-      : null;
-    const contaPaiId = contaPai ? contaPai.id : null;
-
-    const proximoCodigo = await getNextCodigo(userId, contaPaiId);
-
-    const conta = await prisma.contaContabil.upsert({
-      where: { userId_codigo: { userId, codigo: proximoCodigo } }, // Usar o código gerado
-      update: {},
+// 2. FUNÇÃO RECURSIVA PARA CRIAR AS CONTAS E SUB-CONTAS
+async function seedContasRecursivo(
+  userId: string,
+  contas: any[],
+  contaPaiId: string | null = null,
+) {
+  for (const conta of contas) {
+    const createdConta = await prisma.contaContabil.upsert({
+      where: {
+        userId_codigo: { userId, codigo: conta.codigo },
+      },
+      update: {
+        nome: conta.nome,
+        tipo: conta.tipo,
+        aceitaLancamento: conta.aceitaLancamento,
+        contaPaiId: contaPaiId,
+      },
       create: {
         userId,
-        codigo: proximoCodigo,
-        nome: contaData.nome,
-        tipo: contaData.tipo,
-        aceitaLancamento: contaData.aceitaLancamento,
+        codigo: conta.codigo,
+        nome: conta.nome,
+        tipo: conta.tipo,
+        aceitaLancamento: conta.aceitaLancamento,
         contaPaiId: contaPaiId,
       },
     });
-    createdContasMap.set(conta.nome, conta.id); // Mapear pelo nome agora
-  }
-  console.log('Plano de contas padrão verificado/criado.');
 
-  // --- 3. Criação das Contas Correntes ---
-  console.log('Criando contas correntes padrão...');
-  const contasCorrentesData = [
-    // ✅ CORREÇÃO: Adicionado o campo "nome" obrigatório
-    {
-      userId,
-      nome: 'Caixa da Loja',
-      numeroConta: 'CAIXA-01',
-      saldo: 0.0,
-      moeda: 'BRL',
-      agencia: 'Principal',
+    if (conta.subContas && conta.subContas.length > 0) {
+      await seedContasRecursivo(userId, conta.subContas, createdConta.id);
+    }
+  }
+}
+
+async function main() {
+  console.log('Iniciando o processo de seed...');
+
+  console.log('Limpando dados antigos...');
+  await prisma.creditCardTransaction.deleteMany();
+  await prisma.creditCardBill.deleteMany();
+  await prisma.transacao.deleteMany();
+  await prisma.saleItem.deleteMany();
+  await prisma.accountRec.deleteMany();
+  await prisma.accountPay.deleteMany();
+  await prisma.sale.deleteMany();
+  await prisma.client.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.stockMovement.deleteMany();
+  await prisma.xmlImportLog.deleteMany();
+  await prisma.transactionCategory.deleteMany();
+  await prisma.creditCard.deleteMany();
+  await prisma.contaContabil.deleteMany();
+  await prisma.contaCorrente.deleteMany();
+  await prisma.userSettings.deleteMany();
+  await prisma.user.deleteMany();
+
+  console.log('Criando usuário principal...');
+  const hashedPassword = await bcrypt.hash('SenhaSegura123', 10);
+  const user = await prisma.user.create({
+    data: {
+      email: 'admin@example.com',
+      name: 'Administrador',
+      password: hashedPassword,
     },
-    {
-      userId,
-      nome: 'Banco Principal',
-      numeroConta: 'BANCO-01',
-      saldo: 0.0,
-      moeda: 'BRL',
-      agencia: '0001',
-    },
-  ];
-  for (const contaData of contasCorrentesData) {
-    await prisma.contaCorrente.upsert({
-      where: {
-        userId_numeroConta: { userId, numeroConta: contaData.numeroConta },
+  });
+  const userId = user.id;
+  console.log('Usuário principal criado.');
+
+  console.log('Criando plano de contas completo...');
+  await seedContasRecursivo(userId, planoDeContasEstruturado);
+
+  console.log('Criando configurações do usuário...');
+  // A busca por IDs para configurações padrão deve ser feita APÓS as contas serem criadas
+  const receitaConta = await prisma.contaContabil.findFirst({
+    where: { userId, nome: 'Venda de Produtos' },
+  });
+  const caixaGeral = await prisma.contaContabil.findFirst({
+    where: { userId, nome: 'Caixa Geral' },
+  });
+
+  if (receitaConta && caixaGeral) {
+    await prisma.userSettings.create({
+      data: {
+        userId: user.id,
+        defaultReceitaContaId: receitaConta.id,
+        defaultCaixaContaId: caixaGeral.id,
       },
-      update: {},
-      create: contaData,
     });
+    console.log('Configurações de usuário criadas.');
+  } else {
+    console.warn('Contas contábeis padrão não encontradas para UserSettings.');
   }
-  console.log('Contas correntes padrão verificadas/criadas.');
 
-  // --- 4. Criação de Clientes Aleatórios ---
-  console.log('Criando 10 clientes aleatórios...');
-  for (let i = 0; i < 10; i++) {
-    const clientEmail = faker.internet.email().toLowerCase();
-    const existingClient = await prisma.client.findUnique({
-      where: { email: clientEmail },
-    });
-    if (!existingClient) {
-      await prisma.client.create({
-        data: {
-          userId,
-          name: faker.person.fullName(),
-          email: clientEmail,
-          phone: `(${faker.string.numeric(2)}) ${faker.string.numeric(5)}-${faker.string.numeric(4)}`,
-          address: faker.location.streetAddress(true),
-          birthDate: faker.date.past({ years: 40, refDate: '2000-01-01' }),
-          gender: faker.person.sex(),
-          preferences: 'N/A',
-          purchaseHistory: {},
-        },
-      });
-    }
-  }
-  console.log('Clientes aleatórios criados.');
-
-  // --- 5. Criação de Produtos Aleatórios ---
-  console.log('Criando 15 produtos aleatórios...');
-  for (let i = 0; i < 15; i++) {
-    const productName = faker.commerce.productName();
-    const existingProduct = await prisma.product.findFirst({
-      where: { userId, name: productName },
-    });
-    if (!existingProduct) {
-      await prisma.product.create({
-        data: {
-          userId,
-          name: productName,
-          description: faker.commerce.productDescription(),
-          price: parseFloat(
-            faker.commerce.price({ min: 10, max: 200, dec: 2 }),
-          ),
-          stock: faker.number.int({ min: 10, max: 100 }),
-        },
-      });
-    }
-  }
-  console.log('Produtos aleatórios criados.');
-
-  console.log('Seeding finalizado com sucesso.');
+  console.log('Seed finalizado com sucesso!');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('Erro no seeding:', e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
+  
