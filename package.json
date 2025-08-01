@@ -5,10 +5,11 @@
   "packageManager": "pnpm@9.0.6",
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "pnpm --filter backend start:dev & pnpm --filter frontend dev",
     "test": "jest",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "start:prod": "docker compose -f docker-compose.prod.yml up -d"
   },
   "devDependencies": {
     "prettier": "^3.2.5",
@@ -19,7 +20,8 @@
     "@nestjs/common": "^11.x.x",
     "@nestjs/core": "^11.x.x",
     "reflect-metadata": "^0.2.0",
-    "express": "^4.x.x"
+    "express": "^4.x.x",
+    "@types/node": "latest"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

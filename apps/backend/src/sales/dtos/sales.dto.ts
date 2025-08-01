@@ -2,26 +2,24 @@ import { PartialType } from '@nestjs/mapped-types';
 import {
   IsString,
   IsNotEmpty,
+  IsUUID,
   IsArray,
-  IsNumber,
-  Min,
   ValidateNested,
   IsOptional,
-  IsUUID,
+  IsNumber,
+  Min,
+  IsInt,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class CreateSaleItemDto {
+class SaleItemDto {
   @IsUUID()
   @IsNotEmpty()
   productId: string;
 
-  @IsNumber()
+  @IsInt()
   @Min(1)
   quantity: number;
-
-  @IsNumber()
-  price: number;
 }
 
 export class CreateSaleDto {
@@ -29,32 +27,29 @@ export class CreateSaleDto {
   @IsNotEmpty()
   clientId: string;
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateSaleItemDto)
-  items: CreateSaleItemDto[];
-
   @IsString()
   @IsNotEmpty()
   paymentMethod: string;
 
-  // Opcional: O valor total pode ser calculado no backend para segurança
-  @IsNumber()
-  @IsOptional()
-  totalAmount?: number;
-
-  @IsString()
-  @IsOptional() // ✅ TORNAR ESTE CAMPO OPCIONAL
-  contaContabilId?: string;
-
   @IsUUID()
   @IsOptional()
-  contaCorrenteId?: string | null;
+  contaCorrenteId?: string;
 
-  @IsNumber()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SaleItemDto)
+  items: SaleItemDto[];
+
+  // ✅ CAMPOS ADICIONADOS
+  @IsInt()
   @Min(1)
   @IsOptional()
-  numberOfInstallments?: number;
+  installmentsCount?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  feeAmount?: number;
 }
 
 export class UpdateSaleDto extends PartialType(CreateSaleDto) {}

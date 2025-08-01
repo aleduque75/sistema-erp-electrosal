@@ -18,18 +18,18 @@ export class AuthService {
   async register(
     registerUserDto: RegisterUserDto,
   ): Promise<{ accessToken: string }> {
-    const existingUser = await this.usersService.findByEmail(
-      registerUserDto.email,
-    );
+    const cleanEmail = registerUserDto.email.toLowerCase().trim();
+    const existingUser = await this.usersService.findByEmail(cleanEmail);
     if (existingUser) {
-      throw new BadRequestException('User with this email already exists');
+      throw new BadRequestException('Usuário com este e-mail já existe');
     }
 
     const hashedPassword = await bcrypt.hash(registerUserDto.password, 10);
     const user = await this.usersService.create({
-      email: registerUserDto.email,
+      email: cleanEmail,
       password: hashedPassword,
       name: registerUserDto.name,
+      role: 'USER', // Define a função padrão como USER
     });
 
     const payload = { email: user.email, sub: user.id };
@@ -37,18 +37,34 @@ export class AuthService {
   }
 
   async login(loginUserDto: LoginUserDto): Promise<{ accessToken: string }> {
-    const user = await this.usersService.findByEmail(loginUserDto.email);
+    // --- INÍCIO DO DEBUG ---
+    console.log('--- DADOS RECEBIDOS NO LOGIN ---');
+    console.log(`Email bruto: '${loginUserDto.email}'`);
+    console.log(`Senha bruta: '${loginUserDto.password}'`);
+    // --------------------
+
+    const cleanEmail = loginUserDto.email.toLowerCase().trim();
+
+    // --- DEBUG da busca no banco ---
+    console.log(`Buscando no banco de dados pelo email: '${cleanEmail}'`);
+    // -----------------------------
+
+    const user = await this.usersService.findByEmail(cleanEmail);
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      console.log('--- Usuário NÃO encontrado no banco. ---');
+      throw new UnauthorizedException('Credenciais inválidas');
     }
+    console.log('--- Usuário ENCONTRADO no banco. ---');
 
     const isPasswordValid = await bcrypt.compare(
-      loginUserDto.password,
+      loginUserDto.password.trim(),
       user.password,
     );
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      console.log('--- Senha INVÁLIDA. ---');
+      throw new UnauthorizedException('Credenciais inválidas');
     }
+    console.log('--- Senha VÁLIDA. ---');
 
     const payload = { email: user.email, sub: user.id };
     return { accessToken: this.jwtService.sign(payload) };

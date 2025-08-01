@@ -164,7 +164,7 @@ export default function ProductsPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
             <CardTitle>Produtos</CardTitle>
             <div className="flex space-x-2">
               <Button onClick={handleOpenNewModal}>Novo Produto</Button>
@@ -175,12 +175,14 @@ export default function ProductsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable
-            columns={columns}
-            data={products}
-            filterColumnId="name"
-            filterPlaceholder="Filtrar por nome do produto..."
-          />
+          <div className="overflow-x-auto">
+            <DataTable
+              columns={columns}
+              data={products}
+              filterColumnId="name"
+              filterPlaceholder="Filtrar por nome do produto..."
+            />
+          </div>
         </CardContent>
       </Card>
 

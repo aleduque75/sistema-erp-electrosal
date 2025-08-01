@@ -3,9 +3,10 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { toast } from "sonner";
-import { format, parse } from "date-fns"; // 'parse' é importante para converter string para Date
 import api from "@/lib/api";
+import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,106 +18,132 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { DateInput } from "@/components/ui/date-input"; // Assumindo que este componente lida com máscara DD/MM/YYYY
 
+// Interface dos dados, agora com CPF e endereço estruturado
 interface Client {
   id: string;
   name: string;
   email?: string | null;
+  cpf?: string | null;
   phone?: string | null;
-  address?: string | null;
-  birthDate?: Date | null; // Assumindo que do backend pode vir como Date
-  gender?: string | null;
+  cep?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
+}
+interface ClientFormProps {
+  initialData?: Client | null;
+  onSave: () => void;
 }
 
+// Schema de validação atualizado com CPF e endereço
 const formSchema = z.object({
-  name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
+  name: z.string().min(2, "O nome é obrigatório."),
   email: z
     .string()
     .email("Formato de email inválido.")
     .optional()
     .or(z.literal("")),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  gender: z.string().optional(),
-  birthDate: z.union([
-    z.date(),
-    z.string().refine((val) => !val || !isNaN(parse(val, "dd/MM/yyyy", new Date()).getTime()), {
-      message: "Data inválida",
-    }),
-  ]).optional().nullable(),
+  cpf: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  cep: z.string().optional().nullable(),
+  logradouro: z.string().optional().nullable(),
+  numero: z.string().optional().nullable(),
+  complemento: z.string().optional().nullable(),
+  bairro: z.string().optional().nullable(),
+  cidade: z.string().optional().nullable(),
+  uf: z.string().optional().nullable(),
 });
 
-type ClientFormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<typeof formSchema>;
 
-interface ClientFormProps {
-  client?: Client | null;
-  onSave: () => void;
-}
-
-export function ClientForm({ client, onSave }: ClientFormProps) {
-  const form = useForm<ClientFormValues>({
+export function ClientForm({ initialData, onSave }: ClientFormProps) {
+  const [isCepLoading, setIsCepLoading] = useState(false);
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: client?.name || "",
-      email: client?.email || "",
-      phone: client?.phone || "",
-      address: client?.address || "",
-      // Ajuste para defaultValues:
-      // birthDate precisa ser um objeto Date ou undefined, conforme o schema.
-      // Se client?.birthDate for string, converta para Date. Se for Date, use como está.
-      birthDate: client?.birthDate
-        ? client.birthDate instanceof Date
-          ? client.birthDate // Já é Date
-          : new Date(client.birthDate) // Converte string para Date
-        : undefined, // Se não houver, é undefined
-      gender: client?.gender || "",
+      name: "",
+      email: "",
+      cpf: "",
+      phone: "",
+      cep: "",
+      logradouro: "",
+      numero: "",
+      complemento: "",
+      bairro: "",
+      cidade: "",
+      uf: "",
+      ...initialData,
     },
   });
 
-  const onSubmit = async (data: ClientFormValues) => {
-    try {
-      // ✅ IMPORTANTE: Se o backend espera string YYYY-MM-DD ou Date, ajuste aqui.
-      // O Zod já garante que data.birthDate é um Date | undefined | null.
-      // Se você precisa que seja string para o backend:
-      const dataToSend = {
-        ...data,
-        birthDate:
-          data.birthDate instanceof Date && !isNaN(data.birthDate.getTime())
-            ? format(data.birthDate, "yyyy-MM-dd")
-            : null, // Ou undefined, dependendo do que o backend aceita para nulo/ausente
-      };
+  const { reset, setValue } = form;
 
-      if (client) {
-        await api.patch(`/clients/${client.id}`, dataToSend); // Use dataToSend
+  useEffect(() => {
+    if (initialData) {
+      reset(initialData);
+    }
+  }, [initialData, reset]);
+
+  const handleCepLookup = async (cep: string) => {
+    const cleanedCep = cep.replace(/\D/g, "");
+    if (cleanedCep.length !== 8) return;
+
+    setIsCepLoading(true);
+    try {
+      const response = await fetch(
+        `https://viacep.com.br/ws/${cleanedCep}/json/`
+      );
+      const data = await response.json();
+      if (data.erro) {
+        toast.error("CEP não encontrado.");
+        return;
+      }
+      setValue("logradouro", data.logradouro);
+      setValue("bairro", data.bairro);
+      setValue("cidade", data.localidade);
+      setValue("uf", data.uf);
+      document.getElementById("numero")?.focus();
+    } catch (error) {
+      toast.error("Erro ao buscar CEP.");
+    } finally {
+      setIsCepLoading(false);
+    }
+  };
+
+  const onSubmit = async (data: FormValues) => {
+    try {
+      if (initialData) {
+        await api.patch(`/clients/${initialData.id}`, data);
         toast.success("Cliente atualizado com sucesso!");
       } else {
-        await api.post("/clients", dataToSend); // Use dataToSend
+        await api.post("/clients", data);
         toast.success("Cliente criado com sucesso!");
       }
       onSave();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Ocorreu um erro.";
-      toast.error(errorMessage);
+      toast.error(err.response?.data?.message || "Ocorreu um erro.");
     }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {/* Campos Name, Email, Phone, Address */}
+        {/* --- DADOS PESSOAIS --- */}
         <FormField
           name="name"
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nome Completo</FormLabel>
+              {" "}
+              <FormLabel>Nome Completo</FormLabel>{" "}
               <FormControl>
-                <Input placeholder="Nome do Cliente" {...field} />
-              </FormControl>
-              <FormMessage />
+                <Input placeholder="Nome do cliente" {...field} />
+              </FormControl>{" "}
+              <FormMessage />{" "}
             </FormItem>
           )}
         />
@@ -125,114 +152,175 @@ export function ClientForm({ client, onSave }: ClientFormProps) {
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              {" "}
+              <FormLabel>Email</FormLabel>{" "}
               <FormControl>
-                <Input
-                  type="email"
-                  placeholder="email@exemplo.com"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
+                <Input placeholder="email@exemplo.com" {...field} />
+              </FormControl>{" "}
+              <FormMessage />{" "}
             </FormItem>
           )}
         />
-        <FormField
-          name="phone"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Telefone</FormLabel>
-              <FormControl>
-                <Input placeholder="(11) 99999-9999" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          name="address"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Endereço</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Rua, Número, Bairro, Cidade - Estado"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <FormField
+            name="cpf"
             control={form.control}
-            name="birthDate"
-            render={({ field }) => {
-              // ✅ CORREÇÃO APLICADA AQUI NO RENDER:
-              // O DateInput espera uma string formatada (DD/MM/YYYY).
-              // field.value virá do useForm (será Date ou undefined).
-              // Convertemos Date para string 'DD/MM/YYYY' para exibir no input.
-              const displayValue =
-                field.value instanceof Date && !isNaN(field.value.getTime())
-                  ? format(field.value, "dd/MM/yyyy")
-                  : ""; // Se não for Date válido, exibe vazio
-
-              return (
-                <FormItem>
-                  <FormLabel>Data de Nascimento</FormLabel>
-                  <FormControl>
-                    <DateInput
-                      value={displayValue} // Passa a string formatada para o input
-                      // onAccept deve passar a string formatada para o Zod preprocessar
-                      onAccept={(value: string) => field.onChange(value)}
-                      placeholder="DD/MM/AAAA"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              );
-            }}
-          />
-
-          <FormField
-            control={form.control}
-            name="gender"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Gênero</FormLabel>
+                {" "}
+                <FormLabel>CPF</FormLabel>{" "}
                 <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="flex items-center space-x-4 pt-2"
-                  >
-                    <FormItem className="flex items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="Feminino" />
-                      </FormControl>
-                      <FormLabel className="font-normal">Feminino</FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="Masculino" />
-                      </FormControl>
-                      <FormLabel className="font-normal">Masculino</FormLabel>
-                    </FormItem>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
+                  <Input placeholder="000.000.000-00" {...field} />
+                </FormControl>{" "}
+                <FormMessage />{" "}
+              </FormItem>
+            )}
+          />
+          <FormField
+            name="phone"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                {" "}
+                <FormLabel>Telefone</FormLabel>{" "}
+                <FormControl>
+                  <Input placeholder="(11) 99999-9999" {...field} />
+                </FormControl>{" "}
+                <FormMessage />{" "}
               </FormItem>
             )}
           />
         </div>
 
-        <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Salvando..." : "Salvar"}
-        </Button>
+        {/* --- ENDEREÇO --- */}
+        <div className="border-t pt-4 mt-4">
+          <h3 className="text-lg font-medium mb-4">Endereço</h3>
+          <div className="space-y-4">
+            <FormField
+              name="cep"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CEP</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormControl>
+                      <Input
+                        placeholder="00000-000"
+                        {...field}
+                        onBlur={(e) => handleCepLookup(e.target.value)}
+                      />
+                    </FormControl>
+                    {isCepLoading && (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <FormField
+                  name="logradouro"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      {" "}
+                      <FormLabel>Logradouro</FormLabel>{" "}
+                      <FormControl>
+                        <Input placeholder="Rua, Avenida..." {...field} />
+                      </FormControl>{" "}
+                      <FormMessage />{" "}
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div>
+                <FormField
+                  name="numero"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      {" "}
+                      <FormLabel>Número</FormLabel>{" "}
+                      <FormControl>
+                        <Input id="numero" placeholder="Ex: 123" {...field} />
+                      </FormControl>{" "}
+                      <FormMessage />{" "}
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            <FormField
+              name="complemento"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  {" "}
+                  <FormLabel>Complemento</FormLabel>{" "}
+                  <FormControl>
+                    <Input placeholder="Apto, Bloco, Casa" {...field} />
+                  </FormControl>{" "}
+                  <FormMessage />{" "}
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <FormField
+                  name="bairro"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      {" "}
+                      <FormLabel>Bairro</FormLabel>{" "}
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>{" "}
+                      <FormMessage />{" "}
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                name="cidade"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    {" "}
+                    <FormLabel>Cidade</FormLabel>{" "}
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>{" "}
+                    <FormMessage />{" "}
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="uf"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    {" "}
+                    <FormLabel>UF</FormLabel>{" "}
+                    <FormControl>
+                      <Input maxLength={2} {...field} />
+                    </FormControl>{" "}
+                    <FormMessage />{" "}
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* --- BOTÃO DE AÇÃO --- */}
+        <div className="flex justify-end pt-4">
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Salvando..." : "Salvar Cliente"}
+          </Button>
+        </div>
       </form>
     </Form>
   );

@@ -4,46 +4,24 @@ services:
     container_name: sistema-beleza-db
     restart: always
     environment:
-      POSTGRES_USER: aleduque
-      POSTGRES_PASSWORD: testpassword123
-      POSTGRES_DB: sistema_beleza
+      POSTGRES_USER: ${DB_USER:-aleduque}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-testpassword123}
+      POSTGRES_DB: ${DB_NAME:-sistema_beleza_dev}
     volumes:
-      - /DATA/AppData/sistema-beleza/db:/var/lib/postgresql/data
-    networks: # <<< ADICIONADO
-      - beleza-net
-
-  backend:
-    image: sistema-beleza-backend:latest
-    container_name: sistema-beleza-backend
-    restart: always
-    environment:
-      DATABASE_URL: "postgresql://aleduque:testpassword123@db:5432/sistema_beleza?schema=public"
-      JWT_SECRET: "seu_jwt_secret_de_producao_super_forte"
-      PORT: "3001"
-    depends_on:
-      - db
-    networks: # <<< ADICIONADO
-      - beleza-net
-
-  frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: "http://192.168.15.4:3001"
-    container_name: sistema-beleza-frontend
-    restart: always
+      - ./db_data:/var/lib/postgresql/data
     ports:
-      - "3000:3000"
-    environment:
-      PORT: "3000"
-      NEXT_PUBLIC_API_URL: "http://192.168.15.4:3001"
-    depends_on:
-      - backend
+      - "5432:5432" # Expõe a porta para o seu localhost
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
-      - beleza-net
+      - app-net
 
-# <<< SEÇÃO DE REDE ADICIONADA NO FINAL >>>
 networks:
-  beleza-net:
+  app-net:
     driver: bridge
+
+volumes:
+  db_data: {}

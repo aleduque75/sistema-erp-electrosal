@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Settings, User, LogOut } from "lucide-react";
+import { Settings, User, LogOut, FileText } from "lucide-react";
 
 export function UserNav() {
   const { user, logout } = useAuth();
@@ -60,6 +60,18 @@ export function UserNav() {
             <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" />
               <span>Configurações</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/audit-logs" passHref>
+            <DropdownMenuItem>
+              <FileText className="mr-2 h-4 w-4" />
+              <span>Logs de Auditoria</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/admin/landing-page-editor" passHref>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" /> {/* Reutilizando Settings, pode mudar para um ícone mais específico se tiver */} 
+              <span>Editar Landing Page</span>
             </DropdownMenuItem>
           </Link>
         </DropdownMenuGroup>

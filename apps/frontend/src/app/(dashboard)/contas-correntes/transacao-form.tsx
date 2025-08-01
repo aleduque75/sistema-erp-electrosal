@@ -1,3 +1,5 @@
+// Possível caminho: apps/frontend/src/app/(dashboard)/contas-correntes/create/transacao-form.tsx
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -33,7 +35,9 @@ const formSchema = z.object({
   contaContabilId: z.string({
     required_error: "Selecione uma conta contábil.",
   }),
-  dataHora: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de data inválido (AAAA-MM-DD)."),
+  dataHora: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de data inválido (AAAA-MM-DD)."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -41,21 +45,28 @@ interface TransacaoFormProps {
   contaCorrenteId: string;
   onSave: () => void;
 }
+interface ContaContabil {
+  id: string;
+  nome: string;
+  codigo: string;
+}
 
 export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
-  const [contasContabeis, setContasContabeis] = useState([]);
-  const form = useForm<FormValues>({ 
+  const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      dataHora: new Date().toISOString().split('T')[0], // Data atual no formato YYYY-MM-DD
+      dataHora: new Date().toISOString().split("T")[0], // Data atual no formato YYYY-MM-DD
+      tipo: "CREDITO", // Inicia com Crédito selecionado por padrão
     },
   });
 
   const tipoLancamento = form.watch("tipo");
 
   useEffect(() => {
+    // Busca os dados filtrados do backend sempre que o tipo de lançamento muda
     if (tipoLancamento) {
-      const endpoint = `/contas-contabeis?tipo=${tipoLancamento === 'CREDITO' ? 'RECEITA' : 'DESPESA'}`;
+      const endpoint = `/contas-contabeis?tipo=${tipoLancamento === "CREDITO" ? "RECEITA" : "DESPESA"}`;
       api.get(endpoint).then((res) => {
         setContasContabeis(res.data);
       });
@@ -64,28 +75,20 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
     }
   }, [tipoLancamento]);
 
+  // Limpa o campo de conta selecionada sempre que a lista de opções mudar
   useEffect(() => {
     form.setValue("contaContabilId", "");
-  }, [tipoLancamento, form.setValue]);
+  }, [contasContabeis, form.setValue]);
 
-  // ✅ MANTENHA APENAS ESTA DECLARAÇÃO DE filteredOptions
+  // ✅ CÓDIGO SIMPLIFICADO AQUI
   const filteredOptions = useMemo(() => {
-    if (!tipoLancamento) return [];
-    if (tipoLancamento === "CREDITO") {
-      const options = contasContabeis
-        .filter((c: any) =>
-          ["RECEITA", "PASSIVO", "PATRIMONIO_LIQUIDO"].includes(c.tipo)
-        )
-        .map((c: any) => ({ value: c.id, label: `${c.codigo} - ${c.nome}` }));
-      // console.log("Opções para CRÉDITO:", options); // Mantenha este log se estiver depurando o filtro
-      return options;
-    }
-    const options = contasContabeis
-      .filter((c: any) => ["DESPESA", "ATIVO"].includes(c.tipo))
-      .map((c: any) => ({ value: c.id, label: `${c.codigo} - ${c.nome}` }));
-    // console.log("Opções para DÉBITO:", options); // Mantenha este log se estiver depurando o filtro
-    return options;
-  }, [tipoLancamento, contasContabeis]);
+    // A lista 'contasContabeis' já vem filtrada do backend.
+    // Só precisamos mapeá-la para o formato que o Combobox espera.
+    return contasContabeis.map((c) => ({
+      value: c.id,
+      label: `${c.codigo} - ${c.nome}`,
+    }));
+  }, [contasContabeis]); // A dependência agora é apenas 'contasContabeis'
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -172,12 +175,17 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
           name="contaContabilId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Contrapartida Contábil</FormLabel>
+              <FormLabel>
+                {tipoLancamento === "CREDITO"
+                  ? "Origem do Crédito"
+                  : "Destino do Débito"}
+              </FormLabel>
               <Combobox
                 options={filteredOptions}
                 value={field.value}
                 onValueChange={field.onChange}
                 placeholder="Selecione a conta..."
+                disabled={!tipoLancamento || filteredOptions.length === 0}
               />
               <FormMessage />
             </FormItem>

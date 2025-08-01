@@ -35,7 +35,7 @@ export class CreateCreditCardBillDto {
   transactionIds: string[];
 }
 
-// DTO para ATUALIZAR uma fatura existente
+// DTO para ATUALIZAR uma fatura existente (ex: mudar data de vencimento)
 export class UpdateCreditCardBillDto {
   @IsString()
   @IsOptional()
@@ -51,11 +51,11 @@ export class UpdateCreditCardBillDto {
 export class PayCreditCardBillDto {
   @IsUUID()
   @IsNotEmpty()
-  contaCorrenteId: string;
+  contaCorrenteId: string; // De qual conta corrente sairá o dinheiro
 
   @IsUUID()
   @IsNotEmpty()
-  contaContabilId: string;
+  contaContabilId: string; // Qual conta de passivo está sendo quitada (a dívida do cartão)
 
   @IsDate()
   @IsOptional()
@@ -63,29 +63,13 @@ export class PayCreditCardBillDto {
   paidAt?: Date;
 }
 
-// DTO para CRIAR uma fatura a partir de transações
+// TODO: Este DTO parece ser um duplicado do CreateCreditCardBillDto.
+// Pode ser removido se não tiver um propósito diferente.
 export class CreateBillFromTransactionsDto {
-  @IsUUID()
-  @IsNotEmpty()
-  creditCardId: string;
-
-  @IsString()
-  @IsNotEmpty()
-  name: string;
-
-  @IsDate()
-  @Type(() => Date)
-  startDate: Date;
-
-  @IsDate()
-  @Type(() => Date)
-  endDate: Date;
-
-  @IsDate()
-  @Type(() => Date)
-  dueDate: Date;
-
-  @IsArray()
-  @IsUUID('4', { each: true })
-  transactionIds: string[];
+  @IsUUID() @IsNotEmpty() creditCardId: string;
+  @IsString() @IsNotEmpty() name: string;
+  @IsDate() @Type(() => Date) startDate: Date;
+  @IsDate() @Type(() => Date) endDate: Date;
+  @IsDate() @Type(() => Date) dueDate: Date;
+  @IsArray() @IsUUID('4', { each: true }) transactionIds: string[];
 }

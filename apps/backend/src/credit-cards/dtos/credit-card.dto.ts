@@ -1,5 +1,13 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsString, IsNotEmpty, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsInt,
+  Min,
+  Max,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateCreditCardDto {
   @IsString()
@@ -19,6 +27,10 @@ export class CreateCreditCardDto {
   @Min(1)
   @Max(31)
   dueDate: number;
+
+  @IsUUID()
+  @IsOptional()
+  contaContabilPassivoId?: string;
 }
 
 export class UpdateCreditCardDto extends PartialType(CreateCreditCardDto) {}

@@ -1,35 +1,67 @@
-# --- Estágio 1: Builder ---
-FROM node:20-slim AS builder
-WORKDIR /app
-COPY . .
-RUN yarn install --frozen-lockfile
-RUN npx prisma generate --schema=./apps/backend/prisma/schema.prisma
-RUN yarn workspace @sistema-beleza/core build
-RUN yarn workspace backend build
+# apps/backend/Dockerfile
 
-# --- Estágio 2: Runner (Produção) ---
-FROM node:20-slim
+# Fase 1: Builder (onde o código é compilado e dependências instaladas)
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Instalar pnpm globalmente para usar no build
+RUN npm install -g pnpm@9.0.6
+
+# Instalar openssl para o Prisma funcionar corretamente em Alpine
+RUN apk add --no-cache openssl
+
+# Copiar arquivos de manifesto para cache de dependências
+COPY package.json pnpm-lock.yaml ./
+COPY apps/backend/package.json apps/backend/ ./
+COPY apps/frontend/package.json apps/frontend/ ./
+COPY packages/core/package.json packages/core/ ./
+
+# Copiar todo o código-fonte do monorepo
+COPY . .
+
+# Instalar todas as dependências do monorepo
+RUN pnpm install --frozen-lockfile
+
+# Gerar o cliente Prisma (necessário para a compilação do NestJS)
+RUN DATABASE_URL="postgresql://aleduque:testpassword123@db:5432/sistema_beleza?schema=public" pnpm prisma generate --schema ./apps/backend/prisma/schema.prisma
+
+# Construir o backend NestJS
+RUN pnpm --filter backend build
+
+# Compilar o script de seed para JavaScript puro
+RUN npx tsc --project apps/backend/tsconfig.seed.json
+
+# Fase 2: Runner (imagem de produção final e enxuta)
+FROM node:20
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copia os package.json de todo o monorepo
-COPY --from=builder /app/package.json /app/yarn.lock ./
-COPY --from=builder /app/apps/backend/package.json ./apps/backend/
-COPY --from=builder /app/apps/frontend/package.json ./apps/frontend/
-COPY --from=builder /app/packages/core/package.json ./packages/core/
+# Instalar pnpm globalmente na imagem final (para comandos de execução, como o seed manual)
+RUN npm install -g pnpm@9.0.6
 
-# <<< CORREÇÃO: Instala APENAS as dependências de produção no ambiente final >>>
-RUN yarn install --production --frozen-lockfile
+# Copiar manifestos da raiz para a imagem final
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 
-# Copia os artefatos prontos
+# Copiar pacotes específicos da raiz para a imagem final
+COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
+COPY --from=builder /app/apps/frontend/package.json ./apps/frontend/package.json
+COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
+
+# Instalar APENAS as dependências de produção
+RUN pnpm install --production --frozen-lockfile
+
+# Copiar os arquivos compilados do backend
 COPY --from=builder /app/apps/backend/dist ./dist
-COPY --from=builder /app/apps/backend/prisma ./prisma
 
-# Gera o cliente Prisma para a imagem final
-RUN npx prisma generate --schema=./prisma/schema.prisma
+# Copiar o schema.prisma para a imagem final (necessário em runtime)
+COPY --from=builder /app/apps/backend/prisma/schema.prisma ./prisma/schema.prisma
 
-# Roda o script de entrypoint
-COPY ./apps/backend/docker-entrypoint.sh /app/docker-entrypoint.sh
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# Copiar o script de seed COMPILADO para a imagem final
+COPY --from=builder /app/apps/backend/dist/prisma/seed.js ./dist/prisma/seed.js
 
-CMD ["node", "dist/main.js"]
+EXPOSE 3001
+
+# Definir o comando de inicialização
+# A DATABASE_URL é injetada aqui para garantir que o Node a veja em runtime
+CMD ["sh", "-c", "DATABASE_URL=\"postgresql://aleduque:testpassword123@db:5432/sistema_beleza?schema=public\" node dist/main"]

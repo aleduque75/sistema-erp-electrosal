@@ -9,20 +9,20 @@ config();
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Ativa as validações dos DTOs em toda a aplicação
+  app.setGlobalPrefix('api');
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-      transform: true, // <--- ADICIONE ESTA OPÇÃO
+      transform: true,
       transformOptions: {
-        enableImplicitConversion: true, // Garante a conversão de tipos (ex: string para number)
+        enableImplicitConversion: true,
       },
     }),
   );
 
-  // Configuração do Swagger
-  const config = new DocumentBuilder()
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('API Sistema de Beleza')
     .setDescription(
       'Documentação completa da API para o sistema de gestão de beleza.',
@@ -31,26 +31,40 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
 
-  // ABAIXO ESTÁ A LINHA MODIFICADA PARA CORRIGIR A PÁGINA EM BRANCO
-  // Ela instrui o Swagger a carregar os arquivos de um servidor público (CDN)
-  SwaggerModule.setup('api', app, document, {
-    customCssUrl:
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.1.0/swagger-ui.min.css',
-    customJs: [
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.1.0/swagger-ui-bundle.js',
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.1.0/swagger-ui-standalone-preset.js',
-    ],
+  // --- 👇 SOLUÇÃO DE CORS DEFINITIVA APLICADA AQUI 👇 ---
+  const whitelist = ['http://localhost:3000'];
+
+  app.enableCors({
+    origin: function (origin, callback) {
+      // Permite requisições sem 'origin' (Postman) ou de localhost e IPs de rede privada
+      const isAllowed =
+        !origin ||
+        origin.startsWith('http://localhost') ||
+        origin.startsWith('http://192.168.') ||
+        origin.startsWith('http://10.');
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
   });
+  // ----------------------------------------------------
 
-  // Habilita o CORS para permitir que seu frontend acesse a API
-  app.enableCors();
+  await app.listen(3001, '0.0.0.0');
 
-  await app.listen(process.env.PORT || 3001); // Se PORT não estiver definido, usa 3001
-  //   console.log(`Application is running on: ${await app.getUrl()}`);
   console.log(
-    `Swagger documentation is available at: ${await app.getUrl()}/api`,
+    `Application successfully started on port ${process.env.PORT || 3001}`,
+  );
+  console.log(
+    `Swagger documentation is available at: ${await app.getUrl()}/api/docs`,
   );
 }
-void bootstrap();
+
+bootstrap();

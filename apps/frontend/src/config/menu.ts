@@ -13,6 +13,7 @@ import {
   ArrowUpToLine,
   PlusCircle,
   FilePlus2,
+  Upload,
 } from "lucide-react";
 import React from "react";
 
@@ -107,6 +108,12 @@ export const menuConfig: NavItem[] = [
         href: "/contas-correntes",
         icon: Wallet,
         description: "Acompanhe o saldo e o fluxo de caixa.",
+      },
+      {
+        title: "Importar Extrato",
+        href: "/imports", // O link para a página que criamos
+        icon: Upload,
+        description: "Importe seu extrato bancário (OFX) para conciliação.",
       },
       {
         title: "Faturas de Cartão",

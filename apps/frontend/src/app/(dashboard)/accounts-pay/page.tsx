@@ -101,7 +101,7 @@ export default function AccountsPayPage() {
       setAccounts(
         response.data.accounts.map((acc: any) => ({
           ...acc,
-          amount: parseFloat(acc.amount),
+          amount: Number(acc.amount), // ✅ CORRIGIDO: Conversão para número
         }))
       );
       setTotal(response.data.total);
@@ -232,12 +232,14 @@ export default function AccountsPayPage() {
           {isFetching ? (
             <p className="text-center p-10">Buscando dados...</p>
           ) : (
-            <DataTable
-              columns={columns}
-              data={accounts}
-              filterColumnId="description"
-              filterPlaceholder="Pesquisar por descrição..."
-            />
+            <div className="overflow-x-auto">
+              <DataTable
+                columns={columns}
+                data={accounts}
+                filterColumnId="description"
+                filterPlaceholder="Pesquisar por descrição..."
+              />
+            </div>
           )}
         </CardContent>
         <CardFooter className="font-bold text-lg justify-end">

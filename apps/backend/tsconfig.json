@@ -1,19 +1,38 @@
-// Conteúdo de apps/backend/tsconfig.json (CORRIGIDO)
 {
   "compilerOptions": {
-    "module": "NodeNext", // <--- Mude para 'NodeNext'
-    "moduleResolution": "NodeNext", // <--- ADICIONE ESTA LINHA
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2021", // <--- Use ES2021 ou ESNext para consistência
+    "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
-    "paths": { // <--- MANTENHA APENAS UMA DEFINIÇÃO DE 'paths'
-      "@auth/*": ["src/auth/*"] // Assumindo que seu código usa src/auth
+    "baseUrl": ".",
+    "paths": {
+      "@sistema-beleza/core": ["../../packages/core/dist"],
+      "@sistema-beleza/core/*": ["../../packages/core/dist/*"],
+      "@prisma/client": ["./node_modules/@prisma/client"],
+      "@auth/*": ["src/auth/*"],
+      "@dtos/*": ["src/dtos/*"],
+      "@products/*": ["src/products/*"],
+      "@sales/*": ["src/sales/*"],
+      "@clients/*": ["src/clients/*"],
+      "@accounts-pay/*": ["src/accounts-pay/*"],
+      "@accounts-rec/*": ["src/accounts-rec/*"],
+      "@contas-contabeis/*": ["src/contas-contabeis/*"],
+      "@contas-correntes/*": ["src/contas-correntes/*"],
+      "@credit-card-bills/*": ["src/credit-card-bills/*"],
+      "@credit-card-transactions/*": ["src/credit-card-transactions/*"],
+      "@credit-cards/*": ["src/credit-cards/*"],
+      "@dashboard/*": ["src/dashboard/*"],
+      "@transacoes/*": ["src/transacoes/*"],
+      "@users/*": ["src/users/*"],
+      "@settings/*": ["src/settings/*"],
+      "@nestjs/mapped-types": ["./node_modules/@nestjs/mapped-types"],
+      "bcryptjs": ["./node_modules/bcryptjs"]
     },
     "incremental": true,
     "skipLibCheck": true,
@@ -23,5 +42,6 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"] // <--- 'auth' já está dentro de 'src' (se seu alias for 'src/auth')
+  "include": ["src/**/*.ts", "test/**/*.ts", "prisma/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

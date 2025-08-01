@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuditLogService } from './common/audit-log.service';
 
 // Importe CADA módulo de funcionalidade que você criou
 import { AuthModule } from './auth/auth.module';
@@ -20,7 +21,11 @@ import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module'; // O Prisma também costuma ser um módulo
 import { AccountsRecModule } from './accounts-rec/accounts-rec.module'; // Módulo de contas a receber
 import { AccountsPayModule } from './accounts-pay/accounts-pay.module'; // Módulo de
-
+import { BankStatementImportsModule } from './bank-statement-imports/bank-statement-imports.module';
+import { ClientImportsModule } from './client-imports/client-imports.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { LandingPageModule } from './landing-page/landing-page.module';
+import { MediaModule } from './media/media.module';
 
 
 @Module({
@@ -43,9 +48,9 @@ import { AccountsPayModule } from './accounts-pay/accounts-pay.module'; // Módu
     TransacoesModule,
     PrismaModule,
     AccountsRecModule, // <-- Registre o módulo aqui
-    AccountsPayModule, // <-- Registre o módulo aqui
+    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, // <-- Registre o módulo aqui
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, AuditLogService],
 })
 export class AppModule {}

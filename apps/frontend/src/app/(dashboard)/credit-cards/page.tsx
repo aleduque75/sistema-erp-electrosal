@@ -1,179 +1,155 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/ui/data-table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
-import { CreditCardForm } from "./credit-card-form";
 
+// Importe o formulário que criamos
+import { CreditCardForm } from "./credit-card-form"; // Ajuste o caminho se o form estiver em outro lugar
+
+// Interface para tipar os dados do cartão
 interface CreditCard {
   id: string;
   name: string;
   flag: string;
   closingDay: number;
   dueDate: number;
+  contaContabilPassivoId?: string | null;
 }
 
 export default function CreditCardsPage() {
-  const { user, loading } = useAuth();
   const [cards, setCards] = useState<CreditCard[]>([]);
-  const [isFetching, setIsFetching] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [cardToEdit, setCardToEdit] = useState<CreditCard | null>(null);
-  const [cardToDelete, setCardToDelete] = useState<CreditCard | null>(null);
+  // --- LÓGICA DA MODAL ---
+  // Estado para controlar qual cartão está sendo editado. Se for 'null', a modal está fechada.
+  // Se for um objeto de cartão, a modal de edição abre.
+  // Se for 'new', a modal de criação abre.
+  const [modalState, setModalState] = useState<"new" | CreditCard | null>(null);
 
+  // Função para buscar os cartões
   const fetchCards = async () => {
-    setIsFetching(true);
+    setIsLoading(true);
     try {
       const response = await api.get("/credit-cards");
       setCards(response.data);
-    } catch (err) {
-      toast.error("Falha ao carregar cartões.");
+    } catch (error) {
+      toast.error("Falha ao carregar cartões de crédito.");
     } finally {
-      setIsFetching(false);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user && !loading) fetchCards();
-  }, [user, loading]);
-
-  const handleSave = () => {
-    setIsFormModalOpen(false);
     fetchCards();
-  };
-  const handleDelete = async () => {
-    if (!cardToDelete) return;
-    try {
-      await api.delete(`/credit-cards/${cardToDelete.id}`);
-      toast.success("Cartão excluído com sucesso!");
-      setCards(cards.filter((c) => c.id !== cardToDelete.id));
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Falha ao excluir.");
-    } finally {
-      setCardToDelete(null);
-    }
-  };
+  }, []);
 
-  const handleOpenNewModal = () => {
-    setCardToEdit(null);
-    setIsFormModalOpen(true);
+  // Função chamada pelo formulário quando um cartão é salvo
+  const handleSave = () => {
+    setModalState(null); // Fecha a modal
+    fetchCards(); // Atualiza a lista de cartões
   };
-  const handleOpenEditModal = (card: CreditCard) => {
-    setCardToEdit(card);
-    setIsFormModalOpen(true);
-  };
-
-  const columns: ColumnDef<CreditCard>[] = [
-    { accessorKey: "name", header: "Nome do Cartão" },
-    { accessorKey: "flag", header: "Bandeira" },
-    { accessorKey: "closingDay", header: "Dia Fechamento" },
-    { accessorKey: "dueDate", header: "Dia Vencimento" },
-    {
-      id: "actions",
-      cell: ({ row }) => {
-        const card = row.original;
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleOpenEditModal(card)}>
-                <Edit className="mr-2 h-4 w-4" /> Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setCardToDelete(card)}
-                className="text-red-600 focus:text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Excluir
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
-  ];
-
-  if (loading) return <p className="text-center p-10">Carregando...</p>;
 
   return (
-    <>
-      <Card className="mx-auto my-8">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Meus Cartões de Crédito</CardTitle>
-            <Button onClick={handleOpenNewModal}>Novo Cartão</Button>
-          </div>
-        </CardHeader>
+    <div className="mx-auto my-8 space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Meus Cartões de Crédito</h1>
+        <Button onClick={() => setModalState("new")}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Novo Cartão
+        </Button>
+      </div>
+
+      <Card>
         <CardContent>
-          {isFetching ? (
-            <p>Buscando cartões...</p>
-          ) : (
-            <DataTable
-              columns={columns}
-              data={cards}
-              filterColumnId="name"
-              filterPlaceholder="Pesquisar por nome..."
-            />
-          )}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Bandeira</TableHead>
+                <TableHead>Fechamento</TableHead>
+                <TableHead>Vencimento</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center">
+                    Carregando...
+                  </TableCell>
+                </TableRow>
+              ) : (
+                cards.map((card) => (
+                  <TableRow key={card.id}>
+                    <TableCell>{card.name}</TableCell>
+                    <TableCell>{card.flag}</TableCell>
+                    <TableCell>Dia {card.closingDay}</TableCell>
+                    <TableCell>Dia {card.dueDate}</TableCell>
+                    <TableCell className="text-right">
+                      {/* Botão que abre a modal de edição */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setModalState(card)}
+                      >
+                        Editar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      <ResponsiveDialog
-        open={isFormModalOpen}
-        onOpenChange={setIsFormModalOpen}
-        title={cardToEdit ? "Editar Cartão" : "Novo Cartão"}
-        description="Preencha os detalhes do seu cartão de crédito."
+      {/* --- LÓGICA DA MODAL --- */}
+      <Dialog
+        open={modalState !== null}
+        onOpenChange={(isOpen) => !isOpen && setModalState(null)}
       >
-        <CreditCardForm card={cardToEdit} onSave={handleSave} />
-      </ResponsiveDialog>
-
-      <Dialog open={!!cardToDelete} onOpenChange={(open) => {
-        if (!open) setCardToDelete(null);
-      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir o cartão "{cardToDelete?.name}"?
-            </DialogDescription>
+            <DialogTitle>
+              {modalState === "new"
+                ? "Criar Novo Cartão"
+                : "Editar Cartão de Crédito"}
+            </DialogTitle>
           </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancelar</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={handleDelete}>
-              Confirmar Exclusão
-            </Button>
-          </DialogFooter>
+
+          {/* Renderiza o formulário dentro da modal */}
+          <CreditCardForm
+            // Se modalState for um cartão, passa como initialData. Se for 'new', passa undefined.
+            initialData={modalState !== "new" ? modalState : undefined}
+            onSave={handleSave}
+          />
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

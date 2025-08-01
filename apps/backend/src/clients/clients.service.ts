@@ -1,11 +1,15 @@
 import {
+  ConflictException, // <-- Import adicionado
   Injectable,
   NotFoundException,
-  ConflictException,
-} from '@nestjs/common'; // Adicione ConflictException
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Client } from '@prisma/client';
-import { CreateClientDto, UpdateClientDto } from './dtos/client.dto';
+import {
+  CreateClientDto,
+  UpdateClientDto,
+  ClientLoteDto,
+} from './dtos/create-client.dto';
+import { Client } from '@prisma/client'; // <-- Import adicionado
 
 @Injectable()
 export class ClientsService {
@@ -25,12 +29,18 @@ export class ClientsService {
   }
 
   async findOne(userId: string, id: string): Promise<Client | null> {
-    return this.prisma.client.findUnique({
+    // CORRIGIDO: Usa findFirst para checar o 'id' e a posse do 'userId'
+    const client = await this.prisma.client.findFirst({
       where: {
         id,
         userId,
       },
     });
+
+    if (!client) {
+      throw new NotFoundException(`Cliente com ID ${id} não encontrado.`);
+    }
+    return client;
   }
 
   async update(
@@ -38,18 +48,27 @@ export class ClientsService {
     id: string,
     data: UpdateClientDto,
   ): Promise<Client> {
-    return this.prisma.client.update({
+    const { count } = await this.prisma.client.updateMany({
       where: {
         id,
         userId,
       },
       data,
     });
+
+    if (count === 0) {
+      throw new NotFoundException(
+        `Cliente com ID ${id} não encontrado ou não pertence ao usuário.`,
+      );
+    }
+
+    // CORRIGIDO: Usa findUniqueOrThrow para garantir que o retorno não será nulo
+    return this.prisma.client.findUniqueOrThrow({ where: { id } });
   }
 
   async remove(userId: string, id: string): Promise<Client> {
-    // Primeiro, garante que o cliente existe e pertence ao usuário
-    const client = await this.prisma.client.findUnique({
+    // CORRIGIDO: Usa findFirst para garantir a posse antes de qualquer ação
+    const client = await this.prisma.client.findFirst({
       where: { id, userId },
     });
 
@@ -57,7 +76,6 @@ export class ClientsService {
       throw new NotFoundException(`Cliente com ID ${id} não encontrado.`);
     }
 
-    // Agora, verifica se o cliente tem vendas associadas
     const saleCount = await this.prisma.sale.count({
       where: { clientId: id },
     });
@@ -68,9 +86,19 @@ export class ClientsService {
       );
     }
 
-    // Se não houver vendas, pode deletar com segurança
     return this.prisma.client.delete({
       where: { id },
+    });
+  }
+
+  async createMany(userId: string, clientsData: ClientLoteDto[]) {
+    const clientsToCreate = clientsData.map((client) => ({
+      ...client,
+      userId,
+    }));
+    return this.prisma.client.createMany({
+      data: clientsToCreate,
+      skipDuplicates: true,
     });
   }
 }

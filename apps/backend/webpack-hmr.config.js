@@ -1,21 +1,29 @@
-// Importe o pacote no início do arquivo
+// apps/backend/webpack-hmr.config.js
+
+// Importe os pacotes no início do arquivo
 const nodeExternals = require('webpack-node-externals');
-const path = require('path'); // Exemplo de outra importação comum
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin'); // <-- 1. IMPORTE O PLUGIN
+const path = require('path');
 
 module.exports = {
-  // ... outras configurações do seu webpack como 'entry'
-  entry: './src/main.ts', // ou o que for seu ponto de entrada
-
-  // GARANTA QUE ESTA LINHA EXISTA
+  entry: './src/main.ts',
   target: 'node',
-
+  externals: [nodeExternals()],
   output: {
     path: path.join(__dirname, 'dist'),
     filename: 'main.js',
   },
 
-  // ADICIONE ESTA LINHA
-  externals: [nodeExternals()],
+  // 2. ADICIONE ESTA SEÇÃO 'resolve' PARA ENSINAR O WEBPACK SOBRE OS ATALHOS
+  resolve: {
+    plugins: [
+      new TsconfigPathsPlugin({
+        configFile: './tsconfig.json', // Aponta para o seu tsconfig.json principal
+      }),
+    ],
+    // É uma boa prática também adicionar as extensões que o Webpack deve resolver
+    extensions: ['.ts', '.js'],
+  },
 
-  // ... resto das suas configurações (module, resolve, plugins, etc.)
+  // ... O resto das suas configurações (module, etc.) continua aqui
 };
