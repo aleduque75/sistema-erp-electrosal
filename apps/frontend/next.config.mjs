@@ -2,15 +2,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
    output: 'standalone',
-  // Configuração de ambiente para API
-  env: {
-    // Defina a variável pública aqui. next.config.js é lido no build-time
-    // O valor padrão ('http://localhost:3001') será para ambiente de desenvolvimento
-    NEXT_PUBLIC_API_URL:
-      process.env.NEXT_PUBLIC_API_URL || "http://192.168.15.6:3001", 
-  },
+  
 
   webpack: (config, { isServer }) => {
+    // Adiciona uma regra para SVG
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: ["@svgr/webpack"],
+    });
+
     if (!isServer) {
       config.resolve.fallback = {
         fs: false,
@@ -26,6 +26,8 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
+    dangerouslyAllowSVG: true, // Permite o uso de SVG
+    contentDispositionType: 'attachment', // Garante que o navegador não tente baixar o SVG
     remotePatterns: [
       {
         protocol: 'http',

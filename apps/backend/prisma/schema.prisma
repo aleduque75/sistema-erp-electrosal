@@ -363,11 +363,14 @@ model XmlImportLog {
 // --- MODELOS DA LANDING PAGE ---
 
 model LandingPage {
-  id        String    @id @default(uuid())
-  name      String    @unique @default("default") // Apenas uma landing page principal
-  sections  Section[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  name        String    @unique @default("default") // Apenas uma landing page principal
+  logoText    String?   // Novo campo para o texto do logotipo
+  logoImageId String?   // Novo campo para o ID da imagem do logotipo
+  logoImage   Media?    @relation(fields: [logoImageId], references: [id]) // Relação com o modelo Media
+  sections    Section[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Section {
@@ -393,4 +396,5 @@ model Media {
   path      String   @unique // Caminho relativo ou URL do arquivo
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  landingPageLogos LandingPage[] // Relação inversa para LandingPage
 }

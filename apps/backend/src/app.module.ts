@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditLogService } from './common/audit-log.service';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 // Importe CADA módulo de funcionalidade que você criou
 import { AuthModule } from './auth/auth.module';
@@ -51,6 +53,13 @@ import { MediaModule } from './media/media.module';
     AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, // <-- Registre o módulo aqui
   ],
   controllers: [AppController],
-  providers: [AppService, AuditLogService],
+  providers: [
+    AppService, 
+    AuditLogService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {}

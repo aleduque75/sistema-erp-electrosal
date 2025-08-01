@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import api from '../lib/api';
 
 interface AuthContextType {
@@ -16,16 +16,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [storedAccessToken, setStoredAccessToken] = useState<string | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    if (accessToken) {
-      fetchProfile(accessToken);
+    const token = localStorage.getItem('accessToken');
+    setStoredAccessToken(token);
+  }, []); // Executa apenas uma vez para obter o token inicial
+
+  useEffect(() => {
+    if (storedAccessToken && pathname !== '/') {
+      fetchProfile(storedAccessToken);
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [storedAccessToken, pathname]);
 
   const fetchProfile = async (accessToken: string) => {
     try {
@@ -38,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.status !== 200) {
         localStorage.removeItem('accessToken');
         setUser(null);
-        router.push('/');
+        // Não redirecionar para /login aqui, apenas limpar o estado
         return;
       }
 
@@ -48,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Failed to fetch profile:', error);
       localStorage.removeItem('accessToken');
       setUser(null);
-      router.push('/');
+      // Não redirecionar para /login aqui, apenas limpar o estado
     } finally {
       setLoading(false);
     }
@@ -62,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('accessToken');
     setUser(null);
-    router.push('/');
+    // Não redirecionar para /login aqui, apenas limpar o estado
   };
 
   return (

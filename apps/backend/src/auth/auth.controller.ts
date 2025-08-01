@@ -1,25 +1,36 @@
-// Em: apps/backend/src/auth/auth.controller.ts
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginUserDto, RegisterUserDto } from './dtos/auth.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { RegisterUserDto } from './dtos/auth.dto';
+import { Public } from './decorators/public.decorator'; // <-- 1. IMPORTE O DECORATOR
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
-  // ... (seu método de register, se existir)
+  @Public() // <-- 2. MARQUE A ROTA COMO PÚBLICA
+  @Post('register')
+  async register(@Body() registerUserDto: RegisterUserDto) {
+    return this.authService.register(registerUserDto);
+  }
 
-  @HttpCode(HttpStatus.OK)
+  @Public() // <-- 3. MARQUE A ROTA COMO PÚBLICA
+  @UseGuards(AuthGuard('local'))
+  @HttpCode(HttpStatus.OK) // Boa prática: retorna 200 OK no login
   @Post('login')
-  async login(@Body() loginUserDto: LoginUserDto) {
-    // --- PONTO DE DEBUG ---
-    // Vamos imprimir os dados exatamente como chegam do frontend
-    console.log('--- DADOS RECEBIDOS NA ROTA DE LOGIN ---');
-    console.log(`Email Recebido: '${loginUserDto.email}'`);
-    console.log(`Senha Recebida: '${loginUserDto.password}'`);
-    console.log('---------------------------------------');
-    // ------------------------
-
-    return this.authService.login(loginUserDto);
+  async login(@Request() req) {
+    return this.authService.login(req.user);
   }
 }

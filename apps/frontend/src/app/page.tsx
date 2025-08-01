@@ -1,130 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react"; // Adicionado useEffect e useState
-import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
-
-// Removidos ícones não utilizados diretamente aqui
-// import { ArrowRight, CalendarCheck, Users, BarChart3, Star } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { useEffect, useState } from "react"; // Adicionado de volta
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 
 // Importações dos novos componentes e tipos de configuração
-import { LandingPageData, SectionConfig } from "@/config/landing-page";
+import { LandingPageData, SectionConfig, HeroSectionConfig } from "@/config/landing-page";
 import { HeroSection } from "@/components/landing-page/HeroSection";
 import { FeaturesSection } from "@/components/landing-page/FeaturesSection";
-
-// Componente do Formulário de Login (com os logs de depuração)
-const loginSchema = z.object({
-  email: z.string().email("Por favor, insira um email válido."),
-  password: z.string().min(1, "A senha é obrigatória."),
-});
-type LoginFormValues = z.infer<typeof loginSchema>;
-
-export function LoginForm() {
-  const { login } = useAuth();
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const form = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
-
-  const onSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true);
-
-    // --- INÍCIO DO DEBUG ---
-    console.log("--- 1. Função onSubmit do login foi chamada ---");
-    console.log("Dados do formulário:", data);
-    // -----------------------
-
-    try {
-      console.log("--- 2. Tentando enviar para a API... ---");
-      const response = await api.post("/auth/login", {
-        email: data.email,
-        password: data.password,
-      });
-
-      console.log(
-        "--- 3. Sucesso! Resposta recebida da API. ---",
-        response.data
-      );
-      login(response.data.accessToken);
-      router.push("/dashboard");
-      toast.success("Login realizado com sucesso!");
-    } catch (error) {
-      console.error("--- 4. ERRO! A chamada à API falhou. ---", error);
-      toast.error("Falha no login. Verifique suas credenciais.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="seu@email.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Senha</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Entrando..." : "Entrar"}
-        </Button>
-      </form>
-    </Form>
-  );
-}
 
 // Componente Principal da Página
 export default function HomePage() {
@@ -136,7 +20,27 @@ export default function HomePage() {
     const fetchLandingPageData = async () => {
       try {
         const response = await api.get("/landing-page");
-        setLandingPageData(response.data);
+        const processedData: LandingPageData = { // Explicitamente tipando
+          ...response.data,
+          sections: response.data.sections.map(section => {
+            if (section.type === 'hero' && section.content) {
+              const heroContent = section.content as HeroSectionConfig;
+              return {
+                ...section,
+                content: {
+                  ...heroContent,
+                  mainImage: heroContent.mainImage ? `${api.defaults.baseURL}/media/${heroContent.mainImage}` : '',
+                  sideImages: heroContent.sideImages?.map(id => `${api.defaults.baseURL}/media/${id}`) || [],
+                },
+              };
+            }
+            return section;
+          }),
+          // Garantir que logoText e logoImage estejam no nível superior
+          logoText: response.data.logoText || undefined,
+          logoImage: response.data.logoImage || undefined,
+        };
+        setLandingPageData(processedData);
       } catch (err: any) {
         console.error("Failed to fetch landing page data:", err);
         setError("Falha ao carregar o conteúdo da página.");
@@ -162,7 +66,10 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <PublicNavbar />
+      <PublicNavbar
+        logoText={landingPageData.logoText}
+        logoImage={landingPageData.logoImage}
+      />
 
       <main className="flex-1">
         {landingPageData.sections.map((section) => {

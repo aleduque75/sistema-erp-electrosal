@@ -135,7 +135,7 @@ export function MediaLibrary({ onSelect, selectedMediaId }: MediaLibraryProps) {
                         onClick={() => onSelect(media.id)}
                       >
                         <Image
-                          src={`${api.defaults.baseURL}${media.path}`}
+                          src={`${api.defaults.baseURL}/media/${media.id}`}
                           alt={media.filename}
                           width={200}
                           height={200}

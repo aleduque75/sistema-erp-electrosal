@@ -22,10 +22,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: { sub: string; email: string }) {
+    console.log('--- JwtStrategy.validate called with payload: ', payload); // NOVO LOG
     const user = await this.usersService.findById(payload.sub);
     if (!user) {
+      console.log('--- User NOT found in JwtStrategy for sub: ', payload.sub); // NOVO LOG
       throw new UnauthorizedException();
     }
+    console.log('--- User FOUND in JwtStrategy: ', user.id); // NOVO LOG
     const { ...result } = user;
     return result;
   }

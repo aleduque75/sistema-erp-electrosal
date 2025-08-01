@@ -15,7 +15,8 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { Response } from 'express';
 
-@UseGuards(AuthGuard('jwt'))
+import { Public } from '../auth/decorators/public.decorator';
+
 @Controller('media')
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
@@ -44,9 +45,11 @@ export class MediaController {
     return this.mediaService.findAll();
   }
 
+  @Public()
   @Get(':id')
   async findOne(@Param('id') id: string, @Res() res: Response) {
     const media = await this.mediaService.findOne(id);
+    console.log(`Serving file: ${media.filename} from root: ./uploads`); // NOVO LOG
     res.sendFile(media.filename, { root: './uploads' }); // Serve o arquivo estático
   }
 }

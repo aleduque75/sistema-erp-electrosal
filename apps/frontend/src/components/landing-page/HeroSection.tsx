@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { LoginForm } from "@/app/page"; // Importe o LoginForm se ele estiver em page.tsx
+// REMOVIDO: import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+// REMOVIDO: import { LoginForm } from "@/app/page"; // Importe o LoginForm se ele estiver em page.tsx
 import { HeroSectionConfig } from "@/config/landing-page";
 
 interface HeroSectionProps {
@@ -22,23 +22,10 @@ export function HeroSection({ config }: HeroSectionProps) {
               {config.description}
             </p>
             <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center lg:justify-start">
-              {/* Botão que abre o Modal de Login */}
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="lg">{config.ctaButtonText}</Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Acessar minha conta</DialogTitle>
-                    <DialogDescription>
-                      Bem-vindo(a) de volta! Insira seus dados para continuar.
-                    </DialogDescription>
-                  </DialogHeader>
-                  {/* Certifique-se de que LoginForm é um componente exportado corretamente */}
-                  {/* Se LoginForm não for exportado por padrão, você precisará importá-lo como { LoginForm } */}
-                  <LoginForm />
-                </DialogContent>
-              </Dialog>
+              {/* Botão CTA principal agora é um link */}
+              <Link href={config.ctaButtonLink} passHref>
+                <Button size="lg">{config.ctaButtonText}</Button>
+              </Link>
               <Link href={config.secondaryButtonLink} passHref>
                 <Button size="lg" variant="outline">
                   {config.secondaryButtonText}
