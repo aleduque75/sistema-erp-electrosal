@@ -7,74 +7,69 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
-import {
-  CreateProductDto,
-  UpdateProductDto,
-  ImportXmlDto,
-} from './dtos/product.dto';
+import { CreateProductDto, UpdateProductDto } from './dtos/create-product.dto';
+import { ImportXmlDto, ConfirmImportXmlDto } from './dtos/import-xml.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { AuthRequest } from '../auth/types/auth-request.type';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  @Post()
-  create(
-    @Request() req: AuthRequest,
-    @Body() createProductDto: CreateProductDto,
+  @Post('import-xml/analyze')
+  importXmlAnalyze(
+    @CurrentUser('orgId') organizationId: string,
+    @Body() importXmlDto: ImportXmlDto,
   ) {
-    return this.productsService.create(req.user.id, createProductDto);
+    return this.productsService.importXmlAnalyze(organizationId, importXmlDto);
   }
 
-  // Rota de importação ajustada
   @Post('import-xml')
   importXml(
-    @Request() req: AuthRequest,
-    @Body()
-    body: { xmlContent: string; manualMatches: { [xmlName: string]: string } },
+    @CurrentUser('orgId') organizationId: string,
+    @Body() confirmImportXmlDto: ConfirmImportXmlDto,
   ) {
-    return this.productsService.importXml(
-      req.user.id,
-      body.xmlContent,
-      body.manualMatches,
-    );
+    return this.productsService.importXml(organizationId, confirmImportXmlDto);
   }
 
-  // Nova rota de análise
-  @Post('import-xml/analyze')
-  analyzeXml(@Request() req: AuthRequest, @Body() importXmlDto: ImportXmlDto) {
-    return this.productsService.analyzeXml(
-      req.user.id,
-      importXmlDto.xmlContent,
-    );
+  @Post()
+  create(
+    @CurrentUser('orgId') organizationId: string,
+    @Body() createProductDto: CreateProductDto,
+  ) {
+    return this.productsService.create(organizationId, createProductDto);
   }
 
   @Get()
-  findAll(@Request() req: AuthRequest) {
-    return this.productsService.findAll(req.user.id);
+  findAll(@CurrentUser('orgId') organizationId: string) {
+    return this.productsService.findAll(organizationId);
   }
 
   @Get(':id')
-  findOne(@Request() req: AuthRequest, @Param('id') id: string) {
-    return this.productsService.findOne(req.user.id, id);
+  findOne(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.productsService.findOne(organizationId, id);
   }
 
   @Patch(':id')
   update(
-    @Request() req: AuthRequest,
+    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
   ) {
-    return this.productsService.update(req.user.id, id, updateProductDto);
+    return this.productsService.update(organizationId, id, updateProductDto);
   }
 
   @Delete(':id')
-  remove(@Request() req: AuthRequest, @Param('id') id: string) {
-    return this.productsService.remove(req.user.id, id);
+  remove(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.productsService.remove(organizationId, id);
   }
 }

@@ -1,19 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { LandingPage, Prisma, Media, Section } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { LandingPage, Prisma } from '@prisma/client';
+
+type LandingPageWithRelations = LandingPage & {
+  sections: Section[];
+  logoImage: Media | null;
+};
 
 @Injectable()
 export class LandingPageService {
   constructor(private prisma: PrismaService) {}
 
-  async findOne(): Promise<LandingPage> {
+  async findOne(hydrate = true): Promise<LandingPageWithRelations> {
     let landingPage = await this.prisma.landingPage.findUnique({
       where: { name: 'default' },
       include: {
         sections: {
           orderBy: { order: 'asc' },
         },
-        logoImage: true, // Inclui os dados da imagem do logotipo
+        logoImage: true,
       },
     });
 
@@ -22,8 +27,9 @@ export class LandingPageService {
       landingPage = await this.prisma.landingPage.create({
         data: {
           name: 'default',
-          logoText: 'Sistema Beleza', // Texto padrão do logotipo
-          logoImageId: null, // ID da imagem do logotipo (inicialmente nulo)
+          logoText: 'Sistema Beleza',
+          logoImageId: null,
+          customThemeName: null, // Changed from customTheme to customThemeName
           sections: {
             create: [
               {
@@ -33,8 +39,8 @@ export class LandingPageService {
                   title: 'Gestão Completa para seu Salão de Beleza',
                   description:
                     'Agendamentos, clientes, estoque e financeiro em um só lugar. Foque na beleza, nós cuidamos da organização.',
-                  mainImage: '', // Será preenchido com ID de mídia
-                  sideImages: [], // Será preenchido com IDs de mídia
+                  mainImage: '',
+                  sideImages: [],
                   ctaButtonText: 'Entrar no Sistema',
                   ctaButtonLink: '/login',
                   secondaryButtonText: 'Ver Funcionalidades',
@@ -73,15 +79,38 @@ export class LandingPageService {
             ],
           },
         },
-        include: {
+        include: { // Added include for create method
           sections: {
             orderBy: { order: 'asc' },
           },
-          logoImage: true, // Inclui os dados da imagem do logotipo
+          logoImage: true,
         },
       });
     }
-    return landingPage;
+
+    // Hidratar caminhos de imagem para seções Hero, se solicitado
+    if (hydrate && landingPage && landingPage.sections) {
+      for (const section of landingPage.sections) {
+        if (section.type === 'hero' && section.content) {
+          const heroContent = section.content as any; // Usar any para acessar propriedades dinamicamente
+          if (heroContent.mainImage) {
+            const mainMedia = await this.prisma.media.findUnique({ where: { id: heroContent.mainImage } });
+            if (mainMedia) {
+              heroContent.mainImage = mainMedia.path; // Substitui o ID pelo caminho
+            }
+          }
+          if (heroContent.sideImages && Array.isArray(heroContent.sideImages)) {
+            const sideMediaPromises = heroContent.sideImages.map(async (id: string) => {
+              const media = await this.prisma.media.findUnique({ where: { id } });
+              return media ? media.path : null;
+            });
+            heroContent.sideImages = (await Promise.all(sideMediaPromises)).filter(Boolean); // Substitui IDs por caminhos, remove nulos
+          }
+        }
+      }
+    }
+
+    return landingPage as LandingPageWithRelations; // Cast para o tipo correto
   }
 
   async update(
@@ -91,12 +120,13 @@ export class LandingPageService {
       type: string;
       content: Prisma.JsonValue;
     }[],
-    logoText?: string | null, // Novo parâmetro
-    logoImageId?: string | null, // Novo parâmetro
-  ): Promise<LandingPage> {
+    logoText?: string | null,
+    logoImageId?: string | null,
+    customThemeName?: string | null, // Changed from customTheme to customThemeName
+  ): Promise<LandingPageWithRelations> { // Updated return type
     const landingPage = await this.prisma.landingPage.findUnique({
       where: { name: 'default' },
-      include: { sections: true }, // Incluir seções existentes para comparação
+      include: { sections: true },
     });
 
     if (!landingPage) {
@@ -111,6 +141,7 @@ export class LandingPageService {
         data: {
           logoText: logoText,
           logoImageId: logoImageId,
+          customThemeName: customThemeName, // Changed from customTheme to customThemeName
         },
       });
 
@@ -163,9 +194,9 @@ export class LandingPageService {
         where: { id: landingPage.id },
         include: {
           sections: { orderBy: { order: 'asc' } },
-          logoImage: true, // Inclui os dados da imagem do logotipo
+          logoImage: true,
         },
-      }) as Promise<LandingPage>;
+      }) as Promise<LandingPageWithRelations>; // Cast para o tipo correto
     });
   }
 }

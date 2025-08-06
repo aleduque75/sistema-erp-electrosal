@@ -1,16 +1,31 @@
-// Substitua o conteúdo deste arquivo por este código:
+import { Header } from '@/components/layout/header';
+import { LandingPageData } from '@/config/landing-page';
+import api from '@/lib/api';
 
-import { Header } from '@/components/layout/header'; // Importa o novo Header
+async function getLandingPageData(): Promise<LandingPageData | null> {
+  try {
+    // Usando uma URL relativa para o fetch no lado do servidor
+    const response = await api.get('/landing-page');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch landing page data for layout:', error);
+    return null;
+  }
+}
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const landingPageData = await getLandingPageData();
+
   return (
-    // A estrutura agora é vertical: Header em cima, conteúdo embaixo
     <div className="relative flex min-h-screen flex-col">
-      <Header />
+      <Header 
+        logoImage={landingPageData?.logoImage}
+        logoText={landingPageData?.logoText}
+      />
       <main className="flex-1 container mx-auto p-4 sm:p-6 md:p-8">
         {children}
       </main>

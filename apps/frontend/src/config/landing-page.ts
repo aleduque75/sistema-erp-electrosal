@@ -29,13 +29,13 @@ export type FeaturesSectionConfig = {
 
 export type SectionConfig = HeroSectionConfig | FeaturesSectionConfig; // | OutrosTiposDeSecao
 
-// --- Tipos para a Landing Page completa (vindo do backend) ---
 export interface LandingPageData {
   id: string;
   name: string;
   logoText?: string; // Novo campo para o texto do logotipo
   logoImageId?: string; // Novo campo para o ID da imagem do logotipo
   logoImage?: { id: string; path: string; filename: string; }; // Detalhes da imagem do logotipo
+  customThemeName?: string; // Novo campo para o nome do tema personalizado
   sections: { // As seções virão com o ID do banco de dados
     id: string;
     order: number;

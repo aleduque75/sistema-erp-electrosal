@@ -10,14 +10,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { menuConfig } from "@/config/menu";
 import { UserNav } from "./user-nav";
 
@@ -25,20 +25,19 @@ export function MobileMenu() {
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
-    <Drawer open={isOpen} onOpenChange={setIsOpen}>
-      <DrawerTrigger asChild>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
         <Button variant="ghost" size="icon">
           <Menu className="h-5 w-5" />
           <span className="sr-only">Abrir Menu</span>
         </Button>
-      </DrawerTrigger>
+      </SheetTrigger>
 
-      <DrawerContent>
-        <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-        <DrawerHeader className="text-left">
-          <DrawerTitle>Navegação</DrawerTitle>
-        </DrawerHeader>
-        <div className="p-4">
+      <SheetContent side="left" className="flex flex-col">
+        <SheetHeader className="text-left">
+          <SheetTitle>Navegação</SheetTitle>
+        </SheetHeader>
+        <div className="flex-1 overflow-y-auto">
           <div className="flex flex-col space-y-1">
             {menuConfig.map((item) => {
               const Icon = item.icon;
@@ -84,12 +83,12 @@ export function MobileMenu() {
         <div className="p-4 border-t">
           <UserNav />
         </div>
-        <DrawerFooter className="pt-2">
-          <DrawerClose asChild>
+        <SheetFooter className="pt-2">
+          <SheetClose asChild>
             <Button variant="outline">Fechar</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+          </SheetClose>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

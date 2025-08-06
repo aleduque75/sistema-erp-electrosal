@@ -27,6 +27,7 @@ const formSchema = z.object({
     .number()
     .min(0, "O saldo não pode ser negativo.")
     .default(0),
+  limite: z.coerce.number().min(0).default(0).optional(), // Adicionado
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -39,6 +40,7 @@ interface ContaCorrenteFormProps {
     agencia?: string | null;
     moeda: string;
     saldoInicial: number;
+    limite?: number; // Adicionado
   } | null;
   onSave: () => void;
 }
@@ -52,6 +54,7 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
       agencia: conta?.agencia || "",
       moeda: "BRL",
       saldoInicial: 0,
+      limite: conta?.limite || 0, // Inicializa com o limite existente
     },
   });
 
@@ -133,6 +136,19 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
             )}
           />
         )}
+        <FormField
+          name="limite"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Limite (Cheque Especial)</FormLabel>
+              <FormControl>
+                <Input type="number" step="0.01" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <Button type="submit" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? "Salvando..." : "Salvar"}
         </Button>

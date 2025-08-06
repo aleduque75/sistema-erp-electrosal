@@ -1,7 +1,7 @@
 import axios from "axios";
 import { toast } from "sonner";
 
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://192.168.15.6:3001";
 
 // ✅ CORREÇÃO FINAL: Garante que a URL base termine com /api

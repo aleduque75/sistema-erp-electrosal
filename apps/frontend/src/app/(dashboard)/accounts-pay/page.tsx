@@ -1,16 +1,20 @@
 "use client";
 
-// Imports do React e bibliotecas
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, DollarSign, Edit, Trash2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  DollarSign,
+  Edit,
+  Trash2,
+  PlusCircle,
+} from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { addDays } from "date-fns";
 
-// Imports de Componentes UI
 import {
   Card,
   CardHeader,
@@ -25,6 +29,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -37,11 +43,12 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+import { Badge } from "@/components/ui/badge";
 
-// Imports de Componentes do Módulo
-import { AccountPayForm } from "./account-pay-form";
-import { PayAccountForm } from "./pay-account-form";
-import { CategoryChart } from "@/components/charts/category-chart";
+// Supondo que estes formulários existam em uma pasta 'components'
+import { AccountPayForm } from "./components/pay-account-form";
+import { PayAccountForm } from "./components/pay-account-form";
+import { formatInTimeZone } from "date-fns-tz";
 
 // Interface e Funções de Formatação
 interface AccountPay {
@@ -50,6 +57,7 @@ interface AccountPay {
   amount: number;
   dueDate: string;
   paid: boolean;
+  paidAt?: string | null;
   isInstallment?: boolean;
   totalInstallments?: number;
 }
@@ -61,15 +69,11 @@ const formatCurrency = (value?: number) =>
 
 const formatDate = (dateString?: string | null) =>
   dateString
-    ? new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" })
+    ? formatInTimeZone(new Date(dateString), "UTC", "dd/MM/yyyy")
     : "N/A";
 
 // Componente da Página
 export default function AccountsPayPage() {
-  // Estados de Autenticação e Carregamento
-  const { user, loading } = useAuth();
-
-  // Estados dos Dados
   const [accounts, setAccounts] = useState<AccountPay[]>([]);
   const [total, setTotal] = useState(0);
   const [isFetching, setIsFetching] = useState(true);
@@ -78,7 +82,6 @@ export default function AccountsPayPage() {
     to: new Date(),
   });
 
-  // Estados para controlar os Modais (Dialogs)
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [accountToEdit, setAccountToEdit] = useState<AccountPay | null>(null);
   const [accountToDelete, setAccountToDelete] = useState<AccountPay | null>(
@@ -86,9 +89,8 @@ export default function AccountsPayPage() {
   );
   const [accountToPay, setAccountToPay] = useState<AccountPay | null>(null);
 
-  // Função para buscar os dados, agora "memorizada" com useCallback para evitar loops
   const fetchAccounts = useCallback(async () => {
-    if (!date?.from || !date?.to) return; // Não busca se a data não estiver completa
+    if (!date?.from || !date?.to) return;
 
     setIsFetching(true);
     try {
@@ -97,32 +99,22 @@ export default function AccountsPayPage() {
       params.append("endDate", date.to.toISOString().split("T")[0]);
 
       const response = await api.get(`/accounts-pay?${params.toString()}`);
-
-      setAccounts(
-        response.data.accounts.map((acc: any) => ({
-          ...acc,
-          amount: Number(acc.amount), // ✅ CORRIGIDO: Conversão para número
-        }))
-      );
-      setTotal(response.data.total);
+      setAccounts(response.data.accounts || []);
+      setTotal(response.data.total || 0);
     } catch (err) {
       toast.error("Falha ao carregar contas a pagar.");
-      console.error("Erro ao buscar contas:", err);
     } finally {
       setIsFetching(false);
     }
-  }, [date]); // A função só é recriada quando o `date` muda
+  }, [date]);
 
-  // useEffect principal que reage a mudanças e chama a busca de dados
   useEffect(() => {
-    if (user && !loading) {
-      fetchAccounts();
-    }
-  }, [user, loading, fetchAccounts]); // Depende da função memoizada
+    fetchAccounts();
+  }, [fetchAccounts]);
 
-  // Funções "Handler" para interações do usuário
   const handleSave = () => {
     setIsFormModalOpen(false);
+    setAccountToEdit(null);
     fetchAccounts();
   };
 
@@ -136,7 +128,7 @@ export default function AccountsPayPage() {
     try {
       await api.delete(`/accounts-pay/${accountToDelete.id}`);
       toast.success("Conta excluída com sucesso!");
-      fetchAccounts(); // Busca os dados novamente para atualizar a lista e o total
+      fetchAccounts();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Falha ao excluir.");
     } finally {
@@ -154,13 +146,16 @@ export default function AccountsPayPage() {
     setIsFormModalOpen(true);
   };
 
-  // Definição das colunas da tabela
   const columns: ColumnDef<AccountPay>[] = [
     { accessorKey: "description", header: "Descrição" },
     {
       accessorKey: "amount",
-      header: "Valor",
-      cell: ({ row }) => formatCurrency(row.getValue("amount")),
+      header: () => <div className="text-right">Valor</div>,
+      cell: ({ row }) => (
+        <div className="text-right">
+          {formatCurrency(row.getValue("amount"))}
+        </div>
+      ),
     },
     {
       accessorKey: "dueDate",
@@ -170,82 +165,87 @@ export default function AccountsPayPage() {
     {
       accessorKey: "paid",
       header: "Status",
-      cell: ({ row }) => (row.getValue("paid") ? "Pago" : "Pendente"),
+      cell: ({ row }) => (
+        <Badge variant={row.original.paid ? "default" : "secondary"}>
+          {row.original.paid
+            ? `Pago em ${formatDate(row.original.paidAt)}`
+            : "Pendente"}
+        </Badge>
+      ),
     },
     {
       id: "actions",
       cell: ({ row }) => {
         const account = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                disabled={account.paid}
-                onClick={() => setAccountToPay(account)}
-              >
-                <DollarSign className="mr-2 h-4 w-4" /> Registrar Pagamento
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={account.paid}
-                onClick={() => handleOpenEditModal(account)}
-              >
-                <Edit className="mr-2 h-4 w-4" /> Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setAccountToDelete(account)}
-                className="text-red-600 focus:text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Excluir
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                <DropdownMenuItem
+                  disabled={account.paid}
+                  onClick={() => setAccountToPay(account)}
+                >
+                  <DollarSign className="mr-2 h-4 w-4" /> Registrar Pagamento
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={account.paid}
+                  onClick={() => handleOpenEditModal(account)}
+                >
+                  <Edit className="mr-2 h-4 w-4" /> Editar
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setAccountToDelete(account)}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },
   ];
 
-  if (loading) return <p className="text-center p-10">Carregando...</p>;
-
-  // Renderização do componente
   return (
     <>
-      <div className="mb-8">
-        <CategoryChart />
-      </div>
-
-      <Card className="mx-auto my-8">
-        <CardHeader>
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <CardTitle>Contas a Pagar</CardTitle>
-            <div className="flex items-center gap-2">
-              <DateRangePicker date={date} onDateChange={setDate} />
-              <Button onClick={handleOpenNewModal}>Nova Conta</Button>
-            </div>
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <h1 className="text-2xl font-bold">Contas a Pagar</h1>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <DateRangePicker
+              date={date}
+              onDateChange={setDate}
+              className="w-full sm:w-auto"
+            />
+            <Button onClick={handleOpenNewModal} className="w-full sm:w-auto">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Nova Conta
+            </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isFetching ? (
-            <p className="text-center p-10">Buscando dados...</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <DataTable
-                columns={columns}
-                data={accounts}
-                filterColumnId="description"
-                filterPlaceholder="Pesquisar por descrição..."
-              />
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="font-bold text-lg justify-end">
-          Total do Período: {formatCurrency(total)}
-        </CardFooter>
-      </Card>
+        </div>
+
+        <Card>
+          <CardContent className="pt-6">
+            <DataTable
+              columns={columns}
+              data={accounts}
+              filterColumnId="description"
+              isLoading={isFetching}
+            />
+          </CardContent>
+          <CardFooter className="font-bold text-lg justify-end">
+            Total Pendente no Período: {formatCurrency(total)}
+          </CardFooter>
+        </Card>
+      </div>
 
       <ResponsiveDialog
         open={isFormModalOpen}
@@ -253,18 +253,7 @@ export default function AccountsPayPage() {
         title={accountToEdit ? "Editar Conta" : "Nova Conta"}
         description="Preencha os detalhes da conta."
       >
-        <AccountPayForm
-          account={
-            accountToEdit
-              ? {
-                  ...accountToEdit,
-                  // Garante que isInstallment seja sempre boolean
-                  isInstallment: accountToEdit.isInstallment ?? false,
-                }
-              : null
-          }
-          onSave={handleSave}
-        />
+        <AccountPayForm account={accountToEdit} onSave={handleSave} />
       </ResponsiveDialog>
 
       <Dialog
@@ -304,6 +293,7 @@ export default function AccountsPayPage() {
             <PayAccountForm
               accountId={accountToPay.id}
               onSave={handlePaymentSave}
+              initialAmount={accountToPay.amount}
             />
           )}
         </DialogContent>

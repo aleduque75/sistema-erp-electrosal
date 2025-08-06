@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"; // ✅ Importar Dialog
 import { TransacaoForm } from "../../transacao-form"; // ✅ Importar o formulário
+import { formatInTimeZone } from 'date-fns-tz';
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(

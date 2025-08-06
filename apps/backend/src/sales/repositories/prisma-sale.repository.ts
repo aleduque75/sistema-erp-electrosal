@@ -1,24 +1,27 @@
-// apps/backend/src/sales/repositories/prisma-sale.repository.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ISaleRepository, Sale } from '@sistema-beleza/core';
 import { Prisma } from '@prisma/client';
 
-// ✅ CORRIGIDO: O tipo correto é Prisma.TransactionClient
 type PrismaTransaction = Prisma.TransactionClient;
 
 @Injectable()
 export class PrismaSaleRepository implements ISaleRepository {
   constructor(private prisma: PrismaService) {}
 
-  async create(sale: Sale, tx?: PrismaTransaction): Promise<void> {
+  // Recebe organizationId
+  async create(
+    organizationId: string,
+    sale: Sale,
+    tx?: PrismaTransaction,
+  ): Promise<void> {
     const prismaClient = tx || this.prisma;
 
     await prismaClient.sale.create({
       data: {
         id: sale.id,
-        userId: sale.userId,
-        clientId: sale.clientId,
+        organization: { connect: { id: organizationId } }, // Conecta à organização existente
+        client: { connect: { id: sale.clientId } }, // Conecta o cliente
         orderNumber: sale.orderNumber,
         totalAmount: sale.totalAmount,
         paymentMethod: sale.paymentMethod,
@@ -31,38 +34,31 @@ export class PrismaSaleRepository implements ISaleRepository {
             price: item.price,
           })),
         },
-        accountsRec: {
-          create: sale.installments.map((installment) => ({
-            id: installment.id,
-            userId: sale.userId,
-            description: `Parcela ${installment.installmentNumber ?? ''} da venda ${sale.orderNumber}`,
-            amount: installment.amount,
-            dueDate: installment.dueDate,
-          })),
-        },
+        // A criação de accountsRec agora é feita no UseCase
+        // para acomodar diferentes lógicas por forma de pagamento
       },
     });
   }
 
-  // ✅ ADICIONADO DE VOLTA: Métodos que estavam faltando
-  async findAll(userId: string): Promise<Sale[]> {
+  // Recebe organizationId
+  async findAll(organizationId: string): Promise<Sale[]> {
     const salesFromDb = await this.prisma.sale.findMany({
-      where: { userId },
+      where: { organizationId }, // Usa organizationId
       include: { saleItems: true, accountsRec: true },
       orderBy: { createdAt: 'desc' },
     });
-    // Aqui você faria o mapeamento de volta para a sua entidade Sale do core
-    // Por simplicidade, vamos retornar como está por enquanto
+    // TODO: Mapear de volta para a entidade Sale do core
     return salesFromDb as any;
   }
 
-  async findById(id: string): Promise<Sale | null> {
-    const saleFromDb = await this.prisma.sale.findUnique({
-      where: { id },
+  // Recebe organizationId
+  async findById(organizationId: string, id: string): Promise<Sale | null> {
+    const saleFromDb = await this.prisma.sale.findFirst({
+      where: { id, organizationId }, // Usa organizationId
       include: { saleItems: true, accountsRec: true },
     });
     if (!saleFromDb) return null;
-    // Mapear de volta para a entidade Sale
+    // TODO: Mapear de volta para a entidade Sale
     return saleFromDb as any;
   }
 }

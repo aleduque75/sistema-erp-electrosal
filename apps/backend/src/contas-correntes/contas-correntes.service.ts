@@ -4,141 +4,126 @@ import {
   CreateContaCorrenteDto,
   UpdateContaCorrenteDto,
 } from './dtos/contas-correntes.dto';
-import { startOfDay, endOfDay } from 'date-fns'; // Garanta que está importando
+import { ContaCorrente, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ContasCorrentesService {
   constructor(private prisma: PrismaService) {}
 
-  // ✅ MÉTODO CREATE CORRIGIDO
-  create(userId: string, createDto: CreateContaCorrenteDto) {
-    // 1. Desestruturamos o DTO para separar o saldoInicial dos outros dados
-    const { saldoInicial, ...restOfDto } = createDto;
-
-    // 2. Montamos o objeto de dados apenas com os campos que o banco conhece
+  async create(
+    organizationId: string,
+    data: CreateContaCorrenteDto,
+  ): Promise<ContaCorrente> {
+    // Assume que DTO tem saldoInicial, e o schema tem saldo
     return this.prisma.contaCorrente.create({
       data: {
-        ...restOfDto, // Os outros dados (nome, numeroConta, etc.)
-        saldo: saldoInicial, // O campo 'saldo' do banco recebe o valor de 'saldoInicial'
-        userId: userId,
+        nome: data.nome,
+        numeroConta: data.numeroConta,
+        agencia: data.agencia,
+        moeda: data.moeda,
+        saldo: data.saldoInicial || 0,
+        organizationId: organizationId,
       },
     });
   }
 
-  async findAll(userId: string) {
-    const contas = await this.prisma.contaCorrente.findMany({
-      where: { userId, deletedAt: null },
-      include: {
-        transacoes: {
-          select: {
-            tipo: true,
-            valor: true,
-          },
-        },
-      },
+  async findAll(organizationId: string): Promise<ContaCorrente[]> {
+    return this.prisma.contaCorrente.findMany({
+      where: { organizationId, deletedAt: null },
       orderBy: { nome: 'asc' },
     });
-
-    // Calcula o saldo dinamicamente para cada conta
-    return contas.map((conta) => {
-      const saldoCalculado = conta.transacoes.reduce((acc, transacao) => {
-        if (transacao.tipo === 'CREDITO') {
-          return acc + transacao.valor.toNumber();
-        } else {
-          return acc - transacao.valor.toNumber();
-        }
-      }, conta.saldo.toNumber()); // Começa com o saldo inicial
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { transacoes, ...rest } = conta;
-      return {
-        ...rest,
-        saldo: saldoCalculado,
-      };
-    });
   }
 
-  async findOne(userId: string, id: string) {
+  async findOne(organizationId: string, id: string): Promise<ContaCorrente> {
     const conta = await this.prisma.contaCorrente.findFirst({
-      where: { id, userId, deletedAt: null },
+      where: { id, organizationId },
     });
     if (!conta) {
-      throw new NotFoundException('Conta corrente não encontrada.');
+      throw new NotFoundException(
+        `Conta corrente com ID ${id} não encontrada.`,
+      );
     }
     return conta;
   }
 
-  async update(userId: string, id: string, updateDto: UpdateContaCorrenteDto) {
-    await this.findOne(userId, id);
-    // O saldo não é atualizado aqui, apenas outros dados cadastrais
-    const { saldoInicial, ...updateData } = updateDto as any;
-    return this.prisma.contaCorrente.update({
-      where: { id },
-      data: updateData,
-    });
-  }
-
-  async remove(userId: string, id: string) {
-    await this.findOne(userId, id);
-    return this.prisma.contaCorrente.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-  }
-
   async getExtrato(
-    userId: string,
+    organizationId: string,
     id: string,
-    startDateString: string,
-    endDateString: string,
+    startDate: Date,
+    endDate: Date,
   ) {
-    const contaCorrente = await this.findOne(userId, id);
+    // 1. Garante que a conta corrente existe e pertence à organização
+    const contaCorrente = await this.findOne(organizationId, id);
 
-    // 1. Define o período de busca de forma segura
-    const startDate = startOfDay(new Date(`${startDateString}T00:00:00`));
-    const endDate = endOfDay(new Date(`${endDateString}T00:00:00`));
-
-    // 2. Busca TODAS as transações da conta até a data final do período
-    const todasAsTransacoes = await this.prisma.transacao.findMany({
+    // 2. Calcula o Saldo Anterior
+    const agregadosAnteriores = await this.prisma.transacao.groupBy({
+      by: ['tipo'],
       where: {
         contaCorrenteId: id,
-        userId,
-        dataHora: { lte: endDate }, // Pega tudo até o fim do período selecionado
+        dataHora: {
+          lt: startDate, // lt = less than (menor que a data de início)
+        },
       },
-      orderBy: { dataHora: 'asc' },
-      include: { contaContabil: true },
+      _sum: {
+        valor: true,
+      },
     });
 
-    // 3. Separa as transações em dois grupos usando JavaScript
-    const transacoesAnteriores = todasAsTransacoes.filter(
-      (t) => t.dataHora < startDate,
-    );
-    const transacoesNoPeriodo = todasAsTransacoes.filter(
-      (t) => t.dataHora >= startDate && t.dataHora <= endDate,
-    );
+    const creditosAnteriores =
+      agregadosAnteriores
+        .find((a) => a.tipo === 'CREDITO')
+        ?._sum.valor?.toNumber() || 0;
+    const debitosAnteriores =
+      agregadosAnteriores
+        .find((a) => a.tipo === 'DEBITO')
+        ?._sum.valor?.toNumber() || 0;
 
-    // 4. Calcula o Saldo Anterior
-    const saldoAnterior = transacoesAnteriores.reduce((saldo, t) => {
-      return t.tipo === 'CREDITO'
-        ? saldo + t.valor.toNumber()
-        : saldo - t.valor.toNumber();
-    }, contaCorrente.saldo.toNumber()); // Começa com o saldo inicial da conta
+    // O saldo anterior é simplesmente a diferença entre créditos e débitos passados
+    const saldoAnterior = creditosAnteriores - debitosAnteriores;
 
-    // 5. Calcula o Saldo Final
-    const saldoFinal = transacoesNoPeriodo.reduce((saldo, t) => {
-      return t.tipo === 'CREDITO'
-        ? saldo + t.valor.toNumber()
-        : saldo - t.valor.toNumber();
-    }, saldoAnterior); // Começa com o saldo anterior que acabamos de calcular
+    // 3. Busca as Transações do Período
+    const transacoesNoPeriodo = await this.prisma.transacao.findMany({
+      where: {
+        contaCorrenteId: id,
+        dataHora: {
+          gte: startDate, // gte = greater than or equal to (a partir da data de início)
+          lte: endDate, // lte = less than or equal to (até a data de fim)
+        },
+      },
+      include: { contaContabil: true },
+      orderBy: { dataHora: 'asc' },
+    });
+
+    // 4. Calcula o Saldo Final a partir do saldo anterior CORRETO
+    const saldoFinal = transacoesNoPeriodo.reduce((acc, transacao) => {
+      const valor = Number(transacao.valor);
+      return transacao.tipo === 'CREDITO' ? acc + valor : acc - valor;
+    }, saldoAnterior);
 
     return {
-      contaCorrente: {
-        ...contaCorrente,
-        saldo: contaCorrente.saldo.toNumber(),
-      },
       saldoAnterior,
-      transacoes: transacoesNoPeriodo,
       saldoFinal,
+      contaCorrente,
+      transacoes: transacoesNoPeriodo,
     };
+  }
+  async update(
+    organizationId: string,
+    id: string,
+    data: UpdateContaCorrenteDto,
+  ): Promise<ContaCorrente> {
+    await this.findOne(organizationId, id); // Garante a posse
+    return this.prisma.contaCorrente.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async remove(organizationId: string, id: string): Promise<ContaCorrente> {
+    await this.findOne(organizationId, id); // Garante a posse
+    // Aqui você poderia implementar um soft-delete (marcar como deletado) em vez de apagar
+    return this.prisma.contaCorrente.delete({
+      where: { id },
+    });
   }
 }

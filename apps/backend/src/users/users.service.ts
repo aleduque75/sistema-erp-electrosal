@@ -1,31 +1,34 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { User, Prisma } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { AuditLogService } from '../common/audit-log.service';
+import { CreateUserDto, UpdateUserDto } from './dtos/create-user.dto'; // Importe o UpdateUserDto
+import * as bcrypt from 'bcryptjs';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService, private auditLogService: AuditLogService) {}
+  constructor(private prisma: PrismaService) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+
+    // A criação de um usuário AGORA também cria uma Organização
     return this.prisma.user.create({
       data: {
-        ...createUserDto,
+        email: createUserDto.email,
+        name: createUserDto.name,
+        role: createUserDto.role,
         password: hashedPassword,
+        // Cria uma nova organização para este novo usuário
+        organization: {
+          create: {
+            name: `Empresa de ${createUserDto.name}`, // Nome padrão
+          },
+        },
       },
     });
   }
 
-  async findAll(): Promise<User[]> {
-    return this.prisma.user.findMany();
-  }
-
   async findByEmail(email: string): Promise<User | null> {
-    console.log(`UsersService: Executando findByEmail para: '${email}'`); // --- DEBUG ---
     return this.prisma.user.findUnique({ where: { email } });
   }
 
@@ -33,40 +36,28 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    const data: Prisma.UserUpdateInput = { ...updateUserDto };
-    if (updateUserDto.password) {
-      data.password = await bcrypt.hash(updateUserDto.password, 10);
-    }
-    try {
-      return await this.prisma.user.update({
-        where: { id },
-        data,
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`Usuário com ID ${id} não encontrado.`);
-      }
-      throw error;
-    }
+  async findByIdAndOrganization(id: string, organizationId: string): Promise<User | null> {
+    return this.prisma.user.findFirst({ where: { id, organizationId } });
   }
 
-  async remove(id: string): Promise<User> {
-    try {
-      const deletedUser = await this.prisma.user.delete({ where: { id } });
-      this.auditLogService.logDeletion(
-        undefined, // userId é undefined porque o próprio usuário está sendo excluído
-        'User',
-        deletedUser.id,
-        deletedUser.email, // Passando o email como entityName
-        `Usuário ${deletedUser.email} excluído.`,
-      );
-      return deletedUser;
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`Usuário com ID ${id} não encontrado.`);
-      }
-      throw error;
+  // --- 👇 MÉTODOS FALTANTES ADICIONADOS AQUI 👇 ---
+  async findAll(organizationId: string): Promise<User[]> {
+    return this.prisma.user.findMany({ where: { organizationId } });
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto, organizationId: string): Promise<User> {
+    if (updateUserDto.password) {
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
     }
+    return this.prisma.user.update({
+      where: { id, organizationId },
+      data: updateUserDto,
+    });
+  }
+
+  async remove(id: string, organizationId: string): Promise<User> {
+    return this.prisma.user.delete({
+      where: { id, organizationId },
+    });
   }
 }

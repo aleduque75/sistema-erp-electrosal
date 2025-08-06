@@ -1,3 +1,4 @@
+// Caminho: apps/backend/src/accounts-rec/dtos/accounts-rec.dto.ts
 import { PartialType } from '@nestjs/mapped-types';
 import {
   IsString,
@@ -5,7 +6,6 @@ import {
   IsNumber,
   IsDate,
   IsOptional,
-  IsBoolean,
   IsUUID,
   Min,
 } from 'class-validator';
@@ -32,11 +32,17 @@ export class CreateAccountRecDto {
 export class UpdateAccountRecDto extends PartialType(CreateAccountRecDto) {}
 
 export class ReceivePaymentDto {
-  @IsDate()
-  @Type(() => Date)
-  receivedAt: Date;
-
   @IsUUID()
   @IsNotEmpty()
   contaCorrenteId: string;
+
+  @IsDate()
+  @IsOptional()
+  @Type(() => Date)
+  receivedAt?: Date;
+
+  @IsNumber()
+  @Min(0.01)
+  @IsOptional()
+  amountReceived?: number;
 }

@@ -28,6 +28,7 @@
     "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.5",
+    "@nestjs/serve-static": "^5.0.3",
     "@nestjs/swagger": "^11.2.0",
     "@prisma/client": "^6.11.0",
     "@sistema-beleza/core": "workspace:*",
@@ -51,7 +52,8 @@
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.1.0",
     "vcard-parser": "^1.0.0",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "sharp": "^0.32.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -71,6 +73,7 @@
     "@types/papaparse": "^5.3.16",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
+    "@types/xml2js": "^0.4.14",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",

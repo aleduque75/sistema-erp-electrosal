@@ -4,213 +4,136 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AccountPay, TipoTransacaoPrisma } from '@prisma/client';
 import {
   CreateAccountPayDto,
   UpdateAccountPayDto,
   PayAccountDto,
 } from './dtos/account-pay.dto';
-import { addMonths, startOfDay, endOfDay } from 'date-fns';
-import { AuditLogService } from '../common/audit-log.service';
+import { AccountPay, Prisma } from '@prisma/client'; // Adicionado Prisma
+import { TipoTransacaoPrisma } from '@prisma/client';
 
 @Injectable()
 export class AccountsPayService {
-  constructor(private prisma: PrismaService, private auditLogService: AuditLogService) {}
+  constructor(private prisma: PrismaService) {}
 
   async create(
-    userId: string,
+    organizationId: string,
     data: CreateAccountPayDto,
-  ): Promise<AccountPay | AccountPay[]> {
-    if (
-      data.isInstallment &&
-      data.totalInstallments &&
-      data.totalInstallments > 1
-    ) {
-      const { amount, totalInstallments, dueDate, description, ...rest } = data;
-      const installmentAmount =
-        Math.floor((amount * 100) / totalInstallments) / 100;
-      const transactionsToCreate: any[] = [];
-      for (let i = 0; i < totalInstallments; i++) {
-        const installmentDueDate = addMonths(new Date(dueDate), i);
-        const installmentDescription = `${description} (${
-          i + 1
-        }/${totalInstallments})`;
-        let currentAmount = installmentAmount;
-        if (i === totalInstallments - 1) {
-          const sumOfPrevious = installmentAmount * (totalInstallments - 1);
-          currentAmount = parseFloat((amount - sumOfPrevious).toFixed(2));
-        }
-        transactionsToCreate.push(
-          this.prisma.accountPay.create({
-            data: {
-              ...rest,
-              userId,
-              description: installmentDescription,
-              amount: currentAmount,
-              dueDate: installmentDueDate,
-              isInstallment: true,
-              installmentNumber: i + 1,
-              totalInstallments: totalInstallments,
-              contaContabilId: data.contaContabilId,
-            },
-          }),
-        );
-      }
-      return this.prisma.$transaction(transactionsToCreate);
-    } else {
-      const { isInstallment, totalInstallments, ...payload } = data;
-      return this.prisma.accountPay.create({ data: { ...payload, userId } });
+  ): Promise<AccountPay> {
+    const createData: Prisma.AccountPayCreateInput = {
+      description: data.description,
+      amount: data.amount,
+      dueDate: data.dueDate,
+      organization: { connect: { id: organizationId } },
+    };
+
+    if (data.contaContabilId !== undefined) {
+      createData.contaContabil = { connect: { id: data.contaContabilId } };
     }
+
+    return this.prisma.accountPay.create({ data: createData });
   }
 
-  async findAll(
-    userId: string,
-    startDateString?: string,
-    endDateString?: string,
-  ) {
-    const where: any = { userId, paid: false };
-    if (startDateString && endDateString) {
-      const startDate = new Date(
-        Date.UTC(
-          parseInt(startDateString.substring(0, 4)),
-          parseInt(startDateString.substring(5, 7)) - 1,
-          parseInt(startDateString.substring(8, 10)),
-        ),
-      );
-      const endDate = new Date(
-        Date.UTC(
-          parseInt(endDateString.substring(0, 4)),
-          parseInt(endDateString.substring(5, 7)) - 1,
-          parseInt(endDateString.substring(8, 10)),
-          23,
-          59,
-          59,
-          999,
-        ),
-      );
-      where.dueDate = { gte: startDate, lte: endDate };
-    }
+  async findAll(organizationId: string): Promise<any> {
+    // Retorna any para o objeto complexo
     const accounts = await this.prisma.accountPay.findMany({
-      where,
+      where: { organizationId },
+      include: { contaContabil: true },
       orderBy: { dueDate: 'asc' },
     });
-    const total = accounts.reduce((sum, acc) => sum + acc.amount.toNumber(), 0);
-    return { accounts, total };
+
+    // Calcula o total
+    const total = accounts.reduce((sum, acc) => sum + Number(acc.amount), 0);
+
+    // Mapeia para um formato JSON-friendly
+    const formattedAccounts = accounts.map((acc) => ({
+      ...acc,
+      amount: Number(acc.amount),
+    }));
+
+    // Retorna o objeto esperado pelo frontend
+    return { accounts: formattedAccounts, total };
   }
 
-  async findOne(userId: string, id: string): Promise<AccountPay> {
-    const accountPay = await this.prisma.accountPay.findFirst({
-      where: { id, userId },
+  async findOne(organizationId: string, id: string): Promise<AccountPay> {
+    const account = await this.prisma.accountPay.findFirst({
+      where: { id, organizationId },
     });
-    if (!accountPay) {
+    if (!account) {
       throw new NotFoundException(`Conta a pagar com ID ${id} não encontrada.`);
     }
-    return accountPay;
+    return account;
   }
 
   async update(
-    userId: string,
+    organizationId: string,
     id: string,
     data: UpdateAccountPayDto,
   ): Promise<AccountPay> {
-    await this.findOne(userId, id);
-    return this.prisma.accountPay.update({ where: { id }, data });
-  }
-
-  async remove(userId: string, id: string): Promise<AccountPay> {
-    await this.findOne(userId, id);
-    const deletedAccount = await this.prisma.accountPay.delete({ where: { id } });
-    this.auditLogService.logDeletion(
-      userId,
-      'AccountPay',
-      deletedAccount.id,
-      deletedAccount.description, // Passando a descrição como entityName
-      `Conta a Pagar ${deletedAccount.description} excluída.`,
-    );
-    return deletedAccount;
+    await this.findOne(organizationId, id); // Garante a posse
+    return this.prisma.accountPay.update({
+      where: { id },
+      data,
+    });
   }
 
   async pay(
-    userId: string,
-    accountId: string,
-    payDto: PayAccountDto,
+    organizationId: string,
+    id: string,
+    data: PayAccountDto,
   ): Promise<AccountPay> {
+    const [accountToPay, settings] = await Promise.all([
+      this.findOne(organizationId, id),
+      this.prisma.userSettings.findFirst({
+        where: { user: { organizationId } },
+        select: { defaultCaixaContaId: true },
+      }),
+    ]);
+
+    if (!settings?.defaultCaixaContaId) {
+      throw new BadRequestException(
+        "Nenhuma conta 'Caixa' padrão configurada.",
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
-      const accountPay = await tx.accountPay.findFirst({
-        where: { id: accountId, userId: userId },
-      });
-      if (!accountPay) {
-        throw new NotFoundException(
-          `Conta a pagar com ID ${accountId} não encontrada.`,
-        );
-      }
-      if (accountPay.paid) {
-        throw new BadRequestException('Esta conta já foi paga.');
-      }
-      const contaCorrente = await tx.contaCorrente.findFirst({
-        where: { id: payDto.contaCorrenteId, userId: userId },
-      });
-      if (!contaCorrente) {
-        throw new NotFoundException(`Conta corrente não encontrada.`);
-      }
-      // A verificação de saldo agora é feita pelo service de conta corrente ou dinamicamente
-      // if (contaCorrente.saldo.toNumber() < accountPay.amount.toNumber()) {
-      //   throw new BadRequestException('Saldo insuficiente.');
-      // }
-      const paidAccount = await tx.accountPay.update({
-        where: { id: accountId },
-        data: { paid: true, paidAt: payDto.paidAt || new Date() },
-      });
-
-      // O bloco que atualizava o saldo foi removido daqui.
-
-      await tx.transacao.create({
+      const newTransaction = await tx.transacao.create({
         data: {
+          organizationId,
+          contaCorrenteId: data.contaCorrenteId,
+          contaContabilId: settings.defaultCaixaContaId!,
           tipo: TipoTransacaoPrisma.DEBITO,
-          valor: accountPay.amount,
+          descricao: `Pagamento de: ${accountToPay.description}`,
+          valor: accountToPay.amount,
           moeda: 'BRL',
-          descricao: `Pagamento: ${accountPay.description}`,
-          contaContabilId: payDto.contaContabilId,
-          contaCorrenteId: payDto.contaCorrenteId,
-          userId: userId,
-          dataHora: payDto.paidAt || new Date(),
+          dataHora: data.paidAt || new Date(),
         },
       });
 
-      return paidAccount;
+      return tx.accountPay.update({
+        where: { id },
+        data: {
+          paid: true,
+          paidAt: data.paidAt || new Date(),
+          transacaoId: newTransaction.id, // <-- Salva o link
+        },
+      });
+    });
+  }
+  async remove(organizationId: string, id: string): Promise<AccountPay> {
+    await this.findOne(organizationId, id); // Garante a posse
+    return this.prisma.accountPay.delete({
+      where: { id },
     });
   }
 
-  // Em AccountsPayService
-  async getSummaryByCategory(userId: string) {
-    // MUDANÇA: Agora buscamos na tabela de Transacao
-    const summary = await this.prisma.transacao.groupBy({
-      by: ['contaContabilId'], // Agrupa pela categoria
+  async getSummaryByCategory(organizationId: string) {
+    return this.prisma.accountPay.groupBy({
+      by: ['contaContabilId'],
+      where: { organizationId, paid: false },
       _sum: {
-        valor: true, // Soma o 'valor' da transação
-      },
-      where: {
-        userId,
-        tipo: 'DEBITO', // Queremos sumarizar apenas os GASTOS (débitos)
-        // Opcional: você pode adicionar um filtro de data aqui depois, se quiser
-        // dataHora: { gte: ..., lte: ... }
+        amount: true,
       },
     });
-
-    if (summary.length === 0) {
-      return [];
-    }
-
-    const categoryIds = summary.map((item) => item.contaContabilId);
-    const categories = await this.prisma.contaContabil.findMany({
-      where: { id: { in: categoryIds } },
-      select: { id: true, nome: true },
-    });
-    const categoryMap = new Map(categories.map((c) => [c.id, c.nome]));
-
-    return summary.map((item) => ({
-      name: categoryMap.get(item.contaContabilId) || 'Sem Categoria',
-      value: item._sum?.valor?.toNumber() || 0,
-    }));
   }
 }

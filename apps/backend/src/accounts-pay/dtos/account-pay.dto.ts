@@ -1,14 +1,13 @@
+// 👇 IMPORTE O PartialType AQUI 👇
 import { PartialType } from '@nestjs/mapped-types';
 import {
+  IsString,
   IsNotEmpty,
   IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-  IsUUID,
   IsDate,
-  IsBoolean, // Adicione este import
-  IsInt, // Adicione este import
+  IsOptional,
+  IsUUID,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -16,10 +15,6 @@ export class CreateAccountPayDto {
   @IsString()
   @IsNotEmpty()
   description: string;
-
-  @IsUUID()
-  @IsOptional()
-  contaContabilId?: string;
 
   @IsNumber()
   @Min(0.01)
@@ -29,21 +24,21 @@ export class CreateAccountPayDto {
   @Type(() => Date)
   dueDate: Date;
 
-  // ADICIONE ESTES DOIS CAMPOS:
-  @IsBoolean()
+  @IsUUID()
   @IsOptional()
-  isInstallment?: boolean;
-
-  @IsInt()
-  @Min(2)
-  @IsOptional()
-  totalInstallments?: number;
+  contaContabilId?: string;
 }
 
+// Agora o PartialType será reconhecido
 export class UpdateAccountPayDto extends PartialType(CreateAccountPayDto) {}
 
 export class PayAccountDto {
-  @IsUUID() @IsNotEmpty() contaCorrenteId: string;
-  @IsUUID() @IsNotEmpty() contaContabilId: string;
-  @IsDate() @IsOptional() @Type(() => Date) paidAt?: Date;
+  @IsUUID()
+  @IsNotEmpty()
+  contaCorrenteId: string;
+
+  @IsDate()
+  @IsOptional()
+  @Type(() => Date)
+  paidAt?: Date;
 }

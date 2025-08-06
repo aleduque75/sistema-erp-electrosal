@@ -7,17 +7,14 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
 } from '@nestjs/common';
 import { ClientsService } from './clients.service';
-// 👇 CORREÇÃO: Importando TODOS os DTOs do arquivo correto 👇
 import {
   CreateClientDto,
   UpdateClientDto,
   CreateBulkClientsDto,
 } from './dtos/create-client.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { AuthRequest } from '../auth/types/auth-request.type';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(AuthGuard('jwt'))
@@ -27,41 +24,54 @@ export class ClientsController {
 
   @Post()
   create(
-    @CurrentUser('id') userId: string,
+    @CurrentUser('organizationId') organizationId: string, // <-- Pega 'orgId' do token
     @Body() createClientDto: CreateClientDto,
   ) {
-    return this.clientsService.create(userId, createClientDto);
+    return this.clientsService.create(organizationId, createClientDto);
   }
 
   @Get()
-  findAll(@CurrentUser('id') userId: string) {
-    return this.clientsService.findAll(userId);
+  findAll(@CurrentUser('organizationId') organizationId: string) {
+    // <-- Pega 'orgId' do token
+    return this.clientsService.findAll(organizationId);
   }
 
   @Get(':id')
-  findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    return this.clientsService.findOne(userId, id);
+  findOne(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    // <-- Pega 'orgId' do token
+    return this.clientsService.findOne(organizationId, id);
   }
 
   @Patch(':id')
   update(
-    @CurrentUser('id') userId: string,
+    @CurrentUser('organizationId') organizationId: string, // <-- Pega 'orgId' do token
     @Param('id') id: string,
     @Body() updateClientDto: UpdateClientDto,
   ) {
-    return this.clientsService.update(userId, id, updateClientDto);
+    return this.clientsService.update(organizationId, id, updateClientDto);
   }
 
   @Delete(':id')
-  remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    return this.clientsService.remove(userId, id);
+  remove(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    // <-- Pega 'orgId' do token
+    return this.clientsService.remove(organizationId, id);
   }
 
   @Post('bulk-create')
   createMany(
-    @CurrentUser('id') userId: string,
+    @CurrentUser('organizationId') organizationId: string, // Pega o orgId do token
     @Body() createBulkDto: CreateBulkClientsDto,
   ) {
-    return this.clientsService.createMany(userId, createBulkDto.clients);
+    // Passa o organizationId para o service
+    return this.clientsService.createMany(
+      organizationId,
+      createBulkDto.clients,
+    );
   }
 }

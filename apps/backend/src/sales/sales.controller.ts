@@ -1,5 +1,3 @@
-// Em: apps/backend/src/sales/sales.controller.ts
-
 import {
   Controller,
   Get,
@@ -9,13 +7,11 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto, UpdateSaleDto } from './dtos/sales.dto';
-import { CreateSaleUseCase } from './use-cases/create-sale.use-case';
 import { AuthGuard } from '@nestjs/passport';
-import { ClientsService } from '../clients/clients.service';
-import { ProductsService } from '../products/products.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(AuthGuard('jwt'))
@@ -23,52 +19,46 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 export class SalesController {
   constructor(
     private readonly salesService: SalesService,
-    private readonly createSaleUseCase: CreateSaleUseCase,
-    private readonly clientsService: ClientsService,
-    private readonly productsService: ProductsService,
   ) {}
 
   @Post()
   create(
-    @CurrentUser('id') userId: string,
+    @CurrentUser('orgId') organizationId: string,
     @Body() createSaleDto: CreateSaleDto,
   ) {
-    return this.createSaleUseCase.execute(userId, createSaleDto);
+    return this.salesService.create(organizationId, createSaleDto);
   }
 
   @Get()
-  findAll(@CurrentUser('id') userId: string) {
-    // <-- CORRIGIDO
-    return this.salesService.findAll(userId);
-  }
-
-  @Get('new')
-  async getNewSaleData(@CurrentUser('id') userId: string) {
-    // <-- CORRIGIDO
-    const [clients, products] = await Promise.all([
-      this.clientsService.findAll(userId),
-      this.productsService.findAll(userId),
-    ]);
-    return { clients, products };
+  findAll(
+    @CurrentUser('orgId') organizationId: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.salesService.findAll(organizationId, limit ? +limit : undefined);
   }
 
   @Get(':id')
-  findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    // <-- CORRIGIDO
-    return this.salesService.findOne(userId, id);
+  findOne(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.salesService.findOne(organizationId, id);
   }
 
   @Patch(':id')
   update(
-    @CurrentUser('id') userId: string,
+    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
     @Body() updateSaleDto: UpdateSaleDto,
   ) {
-    return this.salesService.update(userId, id, updateSaleDto);
+    return this.salesService.update(organizationId, id, updateSaleDto);
   }
 
   @Delete(':id')
-  remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    return this.salesService.remove(userId, id);
+  remove(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.salesService.remove(organizationId, id);
   }
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react"; // Adicionado de volta
+import { useEffect, useState } from "react";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+
 
 // Importações dos novos componentes e tipos de configuração
 import { LandingPageData, SectionConfig, HeroSectionConfig } from "@/config/landing-page";
@@ -22,23 +23,15 @@ export default function HomePage() {
         const response = await api.get("/landing-page");
         const processedData: LandingPageData = { // Explicitamente tipando
           ...response.data,
+          logoImage: response.data.logoImage,
           sections: response.data.sections.map(section => {
             if (section.type === 'hero' && section.content) {
-              const heroContent = section.content as HeroSectionConfig;
-              return {
-                ...section,
-                content: {
-                  ...heroContent,
-                  mainImage: heroContent.mainImage ? `${api.defaults.baseURL}/media/${heroContent.mainImage}` : '',
-                  sideImages: heroContent.sideImages?.map(id => `${api.defaults.baseURL}/media/${id}`) || [],
-                },
-              };
+              return section; // Retorna a seção hero como está, pois os caminhos já vêm prontos
             }
             return section;
           }),
           // Garantir que logoText e logoImage estejam no nível superior
           logoText: response.data.logoText || undefined,
-          logoImage: response.data.logoImage || undefined,
         };
         setLandingPageData(processedData);
       } catch (err: any) {
@@ -69,6 +62,7 @@ export default function HomePage() {
       <PublicNavbar
         logoText={landingPageData.logoText}
         logoImage={landingPageData.logoImage}
+        customThemeName={landingPageData.customThemeName}
       />
 
       <main className="flex-1">

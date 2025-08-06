@@ -21,15 +21,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: string; email: string }) {
-    console.log('--- JwtStrategy.validate called with payload: ', payload); // NOVO LOG
-    const user = await this.usersService.findById(payload.sub);
+  async validate(payload: { sub: string; email: string; orgId: string }) {
+    const user = await this.usersService.findByIdAndOrganization(
+      payload.sub,
+      payload.orgId,
+    );
     if (!user) {
-      console.log('--- User NOT found in JwtStrategy for sub: ', payload.sub); // NOVO LOG
       throw new UnauthorizedException();
     }
-    console.log('--- User FOUND in JwtStrategy: ', user.id); // NOVO LOG
-    const { ...result } = user;
-    return result;
+    // AQUI ESTÁ A CORREÇÃO:
+    // Retornamos um objeto que inclui tanto os dados do usuário do banco
+    // quanto o orgId que veio no payload do token.
+    // Isso garante que o decorador @CurrentUser('orgId') funcione.
+    return { ...user, orgId: payload.orgId };
   }
 }

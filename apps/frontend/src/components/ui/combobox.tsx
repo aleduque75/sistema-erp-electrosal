@@ -19,29 +19,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export interface ComboboxOption {
-  value: string | null;
-  label: string;
-}
-
 interface ComboboxProps {
-  options: ComboboxOption[];
-  value?: string | null;
-  onValueChange: (value: string | null) => void;
+  options: { value: string; label: string }[];
+  value?: string;
+  onValueChange: (value: string) => void;
   placeholder?: string;
-  searchPlaceholder?: string;
-  emptyMessage?: string;
-  disabled?: boolean; // <<< 1. PROPRIEDADE ADICIONADA
 }
 
 export function Combobox({
   options,
   value,
   onValueChange,
-  placeholder = "Selecione uma opção...",
-  searchPlaceholder = "Pesquisar opção...",
-  emptyMessage = "Nenhuma opção encontrada.",
-  disabled = false, // <<< 2. VALOR PADRÃO ADICIONADO
+  placeholder = "Selecione...",
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -52,27 +41,29 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
-          disabled={disabled} // <<< 3. PROPRIEDADE APLICADA AO BOTÃO
+          className="w-full justify-between font-normal"
         >
-          {value
-            ? options.find((option) => option.value === value)?.label
-            : placeholder}
+          {/* 👇 CORREÇÃO APLICADA AQUI 👇 */}
+          <span className="truncate">
+            {value
+              ? options.find((option) => option.value === value)?.label
+              : placeholder}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder="Pesquisar..." />
           <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandEmpty>Nenhum item encontrado.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
-                  key={option.value || "null-key"}
+                  key={option.value}
                   value={option.label}
                   onSelect={() => {
-                    onValueChange(option.value === value ? null : option.value);
+                    onValueChange(option.value);
                     setOpen(false);
                   }}
                 >

@@ -7,10 +7,9 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
+  Query,
   HttpCode,
   HttpStatus,
-  Query,
 } from '@nestjs/common';
 import { ContasCorrentesService } from './contas-correntes.service';
 import {
@@ -18,6 +17,7 @@ import {
   UpdateContaCorrenteDto,
 } from './dtos/contas-correntes.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('contas-correntes')
@@ -26,44 +26,54 @@ export class ContasCorrentesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Request() req, @Body() createDto: CreateContaCorrenteDto) {
-    return this.service.create(req.user.id, createDto);
+  create(
+    @CurrentUser('orgId') organizationId: string,
+    @Body() createDto: CreateContaCorrenteDto,
+  ) {
+    return this.service.create(organizationId, createDto);
   }
 
   @Get()
-  findAll(@Request() req) {
-    return this.service.findAll(req.user.id);
+  findAll(@CurrentUser('orgId') organizationId: string) {
+    return this.service.findAll(organizationId);
   }
 
   @Get(':id/extrato')
   getExtrato(
-    @Request() req,
+    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
     @Query('startDate') startDateString: string,
     @Query('endDate') endDateString: string,
   ) {
-    // Adiciona a hora e o fuso horário para evitar problemas de conversão
-    return this.service.getExtrato(req.user.id, id, startDateString, endDateString);
+    const startDate = new Date(startDateString);
+    const endDate = new Date(endDateString);
+    endDate.setHours(23, 59, 59, 999); // Ajusta para o final do dia
+    return this.service.getExtrato(organizationId, id, startDate, endDate);
   }
 
-  // ✅ ROTA ADICIONADA PARA BUSCAR UMA ÚNICA CONTA
   @Get(':id')
-  findOne(@Request() req, @Param('id') id: string) {
-    return this.service.findOne(req.user.id, id);
+  findOne(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.findOne(organizationId, id);
   }
 
   @Patch(':id')
   update(
-    @Request() req,
+    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
     @Body() updateDto: UpdateContaCorrenteDto,
   ) {
-    return this.service.update(req.user.id, id, updateDto);
+    return this.service.update(organizationId, id, updateDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Request() req, @Param('id') id: string) {
-    return this.service.remove(req.user.id, id);
+  remove(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(organizationId, id);
   }
 }

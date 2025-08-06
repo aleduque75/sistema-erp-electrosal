@@ -11,18 +11,24 @@ export class LandingPageController {
   @Public()
   @Get()
   findOne() {
-    return this.landingPageService.findOne();
+    return this.landingPageService.findOne(true); // Sempre hidratado para o público
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('editor')
+  findOneForEditor() {
+    return this.landingPageService.findOne(false); // Não hidratado para o editor
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Patch()
   update(@Body() updateLandingPageDto: UpdateLandingPageDto) {
-    const { sections, logoText, logoImageId } = updateLandingPageDto; // Extrai os novos campos
+    const { sections, logoText, logoImageId, customThemeName } = updateLandingPageDto; // Extrai os novos campos
 
     const sectionsToUpdate = sections.map(section => ({
       ...section,
       content: JSON.parse(JSON.stringify(section.content)),
     }));
-    return this.landingPageService.update(sectionsToUpdate, logoText, logoImageId); // Passa os novos campos
+    return this.landingPageService.update(sectionsToUpdate, logoText, logoImageId, customThemeName); // Passa os novos campos
   }
 }

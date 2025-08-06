@@ -1,5 +1,5 @@
 import {
-  ConflictException, // <-- Import adicionado
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,31 +9,33 @@ import {
   UpdateClientDto,
   ClientLoteDto,
 } from './dtos/create-client.dto';
-import { Client } from '@prisma/client'; // <-- Import adicionado
+import { Client } from '@prisma/client';
 
 @Injectable()
 export class ClientsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: string, data: CreateClientDto): Promise<Client> {
+  // Recebe organizationId em vez de userId
+  async create(organizationId: string, data: CreateClientDto): Promise<Client> {
     return this.prisma.client.create({
       data: {
         ...data,
-        userId,
+        organization: { connect: { id: organizationId } }, // Conecta à organização existente
       },
     });
   }
 
-  async findAll(userId: string): Promise<Client[]> {
-    return this.prisma.client.findMany({ where: { userId } });
+  // Recebe organizationId em vez de userId
+  async findAll(organizationId: string): Promise<Client[]> {
+    return this.prisma.client.findMany({ where: { organizationId } }); // Usa no 'where'
   }
 
-  async findOne(userId: string, id: string): Promise<Client | null> {
-    // CORRIGIDO: Usa findFirst para checar o 'id' e a posse do 'userId'
+  // Recebe organizationId em vez de userId
+  async findOne(organizationId: string, id: string): Promise<Client> {
     const client = await this.prisma.client.findFirst({
       where: {
         id,
-        userId,
+        organizationId, // Usa no 'where'
       },
     });
 
@@ -43,33 +45,33 @@ export class ClientsService {
     return client;
   }
 
+  // Recebe organizationId em vez de userId
   async update(
-    userId: string,
+    organizationId: string,
     id: string,
     data: UpdateClientDto,
   ): Promise<Client> {
     const { count } = await this.prisma.client.updateMany({
       where: {
         id,
-        userId,
+        organizationId, // Usa no 'where'
       },
       data,
     });
 
     if (count === 0) {
       throw new NotFoundException(
-        `Cliente com ID ${id} não encontrado ou não pertence ao usuário.`,
+        `Cliente com ID ${id} não encontrado ou não pertence à organização.`,
       );
     }
 
-    // CORRIGIDO: Usa findUniqueOrThrow para garantir que o retorno não será nulo
     return this.prisma.client.findUniqueOrThrow({ where: { id } });
   }
 
-  async remove(userId: string, id: string): Promise<Client> {
-    // CORRIGIDO: Usa findFirst para garantir a posse antes de qualquer ação
+  // Recebe organizationId em vez de userId
+  async remove(organizationId: string, id: string): Promise<Client> {
     const client = await this.prisma.client.findFirst({
-      where: { id, userId },
+      where: { id, organizationId }, // Usa no 'where'
     });
 
     if (!client) {
@@ -91,11 +93,13 @@ export class ClientsService {
     });
   }
 
-  async createMany(userId: string, clientsData: ClientLoteDto[]) {
+  // Recebe organizationId em vez de userId
+  async createMany(organizationId: string, clientsData: ClientLoteDto[]) {
     const clientsToCreate = clientsData.map((client) => ({
       ...client,
-      userId,
+      organizationId, // Usa o organizationId recebido
     }));
+
     return this.prisma.client.createMany({
       data: clientsToCreate,
       skipDuplicates: true,

@@ -88,6 +88,11 @@ export class UpdateLandingPageDto {
   @IsString()
   logoImageId?: string;
 
+  @ApiProperty({ description: 'Tema personalizado da landing page (nome)', required: false })
+  @IsOptional()
+  @IsString()
+  customThemeName?: string;
+
   @ApiProperty({ type: [SectionDto], description: 'Array de seções da landing page' })
   @IsArray()
   @ValidateNested({ each: true })

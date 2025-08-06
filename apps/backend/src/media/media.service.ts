@@ -1,18 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Media } from '@prisma/client';
+import sharp from 'sharp';
+import { join } from 'path';
 
 @Injectable()
 export class MediaService {
   constructor(private prisma: PrismaService) {}
 
   async create(file: Express.Multer.File): Promise<Media> {
+    const filePath = join(process.cwd(), file.path);
+    const metadata = await sharp(filePath).metadata();
+
     return this.prisma.media.create({
       data: {
         filename: file.filename,
         mimetype: file.mimetype,
         size: file.size,
         path: `/uploads/${file.filename}`, // Caminho acessível via URL
+        width: metadata.width,
+        height: metadata.height,
       },
     });
   }

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput } from "@/components/ui/date-input";
+import { Input } from "@/components/ui/input";
 
 // Tipagem para os dados que vamos buscar
 interface ContaCorrente {
@@ -26,7 +27,7 @@ interface ContaCorrente {
 }
 interface ContaContabil {
   id: string;
-  descricao: string; // O frontend espera 'descricao', mas o backend envia 'nome'. Corrigiremos isso.
+  nome: string; // CORRIGIDO: O backend envia 'nome'
 }
 
 const formSchema = z.object({
@@ -36,6 +37,7 @@ const formSchema = z.object({
   contaContabilId: z.string({
     required_error: "A conta contábil é obrigatória.",
   }),
+  amount: z.number().optional(), // Adicionado
   paidAt: z.date().optional(),
 });
 
@@ -44,9 +46,10 @@ type FormValues = z.infer<typeof formSchema>;
 interface PayAccountFormProps {
   accountId: string;
   onSave: () => void;
+  initialAmount: number; // Adicionado
 }
 
-export function PayAccountForm({ accountId, onSave }: PayAccountFormProps) {
+export function PayAccountForm({ accountId, onSave, initialAmount }: PayAccountFormProps) {
   const [contasCorrentes, setContasCorrentes] = useState<ContaCorrente[]>([]);
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
 
@@ -54,6 +57,7 @@ export function PayAccountForm({ accountId, onSave }: PayAccountFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       paidAt: new Date(),
+      amount: initialAmount, // Inicializa com o valor da conta
     },
   });
 
@@ -85,6 +89,23 @@ export function PayAccountForm({ accountId, onSave }: PayAccountFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
+          name="amount"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Valor do Pagamento</FormLabel>
+              <Input
+                type="number"
+                step="0.01"
+                {...field}
+                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
           name="contaCorrenteId"
           control={form.control}
           render={({ field }) => (
@@ -115,7 +136,7 @@ export function PayAccountForm({ accountId, onSave }: PayAccountFormProps) {
                 // O seu modelo ContaContabil no backend tem o campo 'nome'.
                 options={contasContabeis.map((conta) => ({
                   value: conta.id,
-                  label: (conta as any).nome || conta.descricao, // Usar 'nome' que vem da API
+                  label: conta.nome, // Usar 'nome' que vem da API
                 }))}
                 value={field.value}
                 onValueChange={field.onChange}

@@ -1,51 +1,34 @@
+import { PartialType } from '@nestjs/mapped-types';
 import {
-  IsNotEmpty,
   IsString,
-  IsOptional,
+  IsNotEmpty,
   IsNumber,
+  IsInt,
+  IsOptional,
   Min,
 } from 'class-validator';
 
 export class CreateProductDto {
-  @IsNotEmpty()
   @IsString()
+  @IsNotEmpty({ message: 'O nome do produto é obrigatório.' })
   name: string;
 
-  @IsOptional()
   @IsString()
+  @IsOptional()
   description?: string;
 
-  @IsNotEmpty()
   @IsNumber()
   @Min(0)
   price: number;
 
-  @IsNotEmpty()
-  @IsNumber()
+  @IsInt()
   @Min(0)
   stock: number;
 }
 
-export class UpdateProductDto {
-  @IsOptional()
-  @IsString()
-  name?: string;
+export class UpdateProductDto extends PartialType(CreateProductDto) {}
 
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  price?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  stock?: number;
-}
-
+// Mantendo os DTOs de importação de XML que você já tinha
 export class ImportXmlDto {
   @IsNotEmpty()
   @IsString()

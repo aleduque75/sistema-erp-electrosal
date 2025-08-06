@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
   HttpCode,
   HttpStatus,
   Query,
@@ -18,52 +17,65 @@ import {
   UpdateContaContabilDto,
 } from './dtos/contas-contabeis.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('contas-contabeis')
 export class ContasContabeisController {
-  // ✅ CORREÇÃO: Altere 'service' para 'contasContabeisService' ou o nome que você usou no construtor
   constructor(
     private readonly contasContabeisService: ContasContabeisService,
   ) {}
 
   @Post()
-  create(@Request() req, @Body() createDto: CreateContaContabilDto) {
-    return this.contasContabeisService.create(req.user.id, createDto);
+  create(
+    @CurrentUser('orgId') organizationId: string,
+    @Body() createDto: CreateContaContabilDto,
+  ) {
+    return this.contasContabeisService.create(organizationId, createDto);
   }
 
   @Get()
   findAll(
-    @Request() req,
-    @Query('tipo') tipo?: 'RECEITA' | 'DESPESA', // <-- ESTA PARTE É A CHAVE
+    @CurrentUser('orgId') organizationId: string,
+    @Query('tipo') tipo?: 'RECEITA' | 'DESPESA',
   ) {
-    // Ela extrai o "?tipo=DESPESA" da URL e o passa para o service
-    return this.contasContabeisService.findAll(req.user.id, tipo);
-  }
-
-  @Get(':id')
-  findOne(@Request() req, @Param('id') id: string) {
-    return this.contasContabeisService.findOne(req.user.id, id);
+    return this.contasContabeisService.findAll(organizationId, tipo);
   }
 
   @Get('proximo-codigo')
-  getNextCodigo(@Request() req, @Query('contaPaiId') contaPaiId?: string) {
-    // ✅ CORREÇÃO: Use this.contasContabeisService
-    return this.contasContabeisService.getNextCodigo(req.user.id, contaPaiId);
+  getNextCodigo(
+    @CurrentUser('orgId') organizationId: string,
+    @Query('contaPaiId') contaPaiId?: string,
+  ) {
+    return this.contasContabeisService.getNextCodigo(
+      organizationId,
+      contaPaiId,
+    );
+  }
+
+  @Get(':id')
+  findOne(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.contasContabeisService.findOne(organizationId, id);
   }
 
   @Patch(':id')
   update(
-    @Request() req,
+    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
     @Body() updateDto: UpdateContaContabilDto,
   ) {
-    return this.contasContabeisService.update(req.user.id, id, updateDto);
+    return this.contasContabeisService.update(organizationId, id, updateDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Request() req, @Param('id') id: string) {
-    return this.contasContabeisService.remove(req.user.id, id);
+  remove(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.contasContabeisService.remove(organizationId, id);
   }
 }

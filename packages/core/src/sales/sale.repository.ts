@@ -7,6 +7,6 @@ export const ISaleRepository = "ISaleRepository";
 
 export interface ISaleRepository {
   create(sale: Sale, tx?: unknown): Promise<void>;
-  findAll(userId: string): Promise<Sale[]>;
+  findAll(): Promise<Sale[]>;
   findById(id: string): Promise<Sale | null>;
 }
