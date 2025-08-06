@@ -30,6 +30,7 @@ Este é um monorepo gerenciado com `pnpm` contendo um sistema de gestão para sa
 - **Upload e Mídia:** O `media.service.ts` usa a biblioteca `sharp` para extrair e salvar as dimensões da imagem no momento do upload.
 - **Servir Arquivos Estáticos:** O `app.module.ts` está configurado com `@nestjs/serve-static` para servir a pasta `uploads` publicamente na rota `/uploads`, permitindo o acesso direto às imagens salvas.
 - **CORS:** A configuração em `main.ts` é dinâmica para aceitar `localhost` e qualquer IP da rede local (`192.168.x.x`), facilitando o desenvolvimento mobile.
+- **Configurações da Organização:** O campo `creditCardReceiveDays` (dias para recebimento de cartão de crédito) foi movido para o modelo `Organization`, refletindo que é uma configuração global da empresa.
 
 ### Frontend (Next.js)
 
@@ -43,6 +44,10 @@ Este é um monorepo gerenciado com `pnpm` contendo um sistema de gestão para sa
   - Existem dois controles de tema: um seletor de paleta principal (no `LandingPageManager`) e um botão de toggle (Sol/Lua) para alternar entre os modos claro/escuro do tema selecionado.
 - **Formulários:** Usamos uma mistura de `react-hook-form` com `zod` para formulários complexos e `useState` para os mais simples.
 - **Comunicação com API:** Um wrapper do Axios (`lib/api.ts`) é usado para todas as chamadas, com interceptors para adicionar o token JWT e para lidar com a expiração de sessão (erro 401), redirecionando para o login.
+- **Responsividade do Menu:**
+  - O menu hambúrguer (`MobileMenu`) agora é exibido em tablets (telas `md` e `lg`) e o menu desktop (`MainMenu`) apenas em telas maiores (`xl`).
+  - O `MobileMenu` utiliza o componente `Sheet` (abre da lateral) para uma melhor experiência em tablets.
+  - Ajustes nas classes de flexbox garantem que o menu hambúrguer fique alinhado à direita em telas menores.
 
 ## Funcionalidades Específicas Implementadas
 
@@ -58,6 +63,10 @@ Este é um monorepo gerenciado com `pnpm` contendo um sistema de gestão para sa
 - **Backup via UI:**
   - Existe uma funcionalidade de backup no painel de Configurações.
   - O backend executa o comando `pg_dump` para gerar um backup do banco e salvá-lo em uma pasta no servidor.
+- **Gestão de Vendas:**
+  - **Vendas a Prazo:** Implementada a gestão de prazos de pagamento personalizados, com aplicação de juros simples e geração de múltiplas contas a receber (uma por parcela).
+  - **Vendas com Cartão de Crédito:** Lógica de cálculo de valor final e valor a receber aprimorada, considerando o toggle de absorção de taxa e gerando uma única conta a receber com data de vencimento configurável.
+  - **Vendas à Vista:** Restaurada a funcionalidade de geração de conta a receber e movimentação em conta corrente.
 
 ## Arquivos a Ignorar
 
@@ -78,6 +87,7 @@ Este é um monorepo gerenciado com `pnpm` contendo um sistema de gestão para sa
 
 ### Histórico de Commits
 
+- **3b5d67c** - feat: Implementa gestão de vendas (à vista, a prazo, cartão) e melhora responsividade do menu
 - **a1b2c3d** - fix: Corrige URLs de imagens que estavam quebradas
 - **3268bde** - deposi vai ser multitenet
 - **978e8d3** - imports funcioanando sistema funcionando
@@ -90,6 +100,8 @@ Este é um monorepo gerenciado com `pnpm` contendo um sistema de gestão para sa
 - **20250708195618_init**
 - **...** (e outras migrações)
 - **20250803123954_add_width_height_to_media**
+- **20250806112628_add_payment_terms** (Adição da tabela PaymentTerm)
+- **(db push)** - move-cc-days-to-org (Movimentação de creditCardReceiveDays para Organization)
 
 </details>
 
