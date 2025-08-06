@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import api from "@/lib/api";
+
 import {
   Dialog,
   DialogContent,
@@ -12,39 +12,80 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useState } from "react";
+import { API_BASE_URL } from "@/lib/api";
+
 
 interface PublicNavbarProps {
   logoText?: string | null;
-  logoImage?: { id: string; path: string; filename: string; } | null;
+  logoImage?: {
+    id: string;
+    path: string;
+    filename: string;
+    width?: number | null;
+    height?: number | null;
+  } | null;
 }
 
 // Componente da Barra de Navegação Pública
 export function PublicNavbar({ logoText, logoImage }: PublicNavbarProps) {
-  const displayedLogoText = logoText || "Sistema Beleza";
-  const displayedLogoImageSrc = logoImage ? `${api.defaults.baseURL}${logoImage.path}` : "/images/logo.png";
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  return (
-    <nav className="flex items-center justify-between p-4 bg-background border-b">
-      <Link href="/" className="flex items-center space-x-2">
-        {displayedLogoImageSrc && (
+  // --- Lógica de Renderização do Logotipo ---
+  const renderLogo = () => {
+    // Caso 1: Tem imagem
+    if (logoImage) {
+      const isSquare =
+        logoImage.width &&
+        logoImage.height &&
+        Math.abs(logoImage.width / logoImage.height - 1) < 0.1;
+      const showTextWithImage = isSquare;
+      const imageSrc = `${API_BASE_URL}${logoImage.path}`;
+
+      return (
+        <>
           <Image
-            src={displayedLogoImageSrc}
-            alt={displayedLogoText || "Logo"}
-            width={logoText ? 32 : 100}
-            height={logoText ? 32 : 32}
-            objectFit={logoText ? "cover" : "contain"}
+            src={imageSrc}
+            alt={logoText || 'Logo'}
+            width={showTextWithImage ? 32 : 160}
+            height={32}
+            className="object-contain"
           />
-        )}
-        {displayedLogoText && (
-          <span className="font-bold text-lg">
-            {displayedLogoText}
-          </span>
-        )}
+          {showTextWithImage && (
+            <span className="font-bold text-lg">{logoText}</span>
+          )}
+        </>
+      );
+    }
+
+    // Caso 2: Não tem imagem, mas tem texto
+    if (logoText) {
+      return <span className="font-bold text-lg">{logoText}</span>;
+    }
+
+    // Caso 3: Fallback (sem imagem e sem texto do backend)
+    return (
+      <>
+        <Image
+          src="/images/logo.png"
+          alt="Sistema Beleza Logo"
+          width={100}
+          height={32}
+        />
+        <span className="font-bold text-lg">Sistema Beleza</span>
+      </>
+    );
+  };
+
+  return (
+    <nav className="flex items-center justify-between p-4 border-b bg-background text-foreground">
+      <Link href="/" className="flex items-center space-x-2">
+        {renderLogo()}
       </Link>
-      <div className="space-x-4">
+      <div className="flex items-center space-x-4">
+        <ThemeSwitcher />
         <Dialog open={isLoginModalOpen} onOpenChange={setIsLoginModalOpen}>
           <DialogTrigger asChild>
             <Button variant="ghost">Login</Button>
@@ -57,20 +98,7 @@ export function PublicNavbar({ logoText, logoImage }: PublicNavbarProps) {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isRegisterModalOpen} onOpenChange={setIsRegisterModalOpen}>
-          <DialogTrigger asChild>
-            <Button>Registrar</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Registrar</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <p>Formulário de registro virá aqui...</p>
-              {/* Aqui você integraria seu componente de formulário de registro */}
-            </div>
-          </DialogContent>
-        </Dialog>
+      
       </div>
     </nav>
   );

@@ -36,6 +36,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { formatInTimeZone } from 'date-fns-tz';
 
 // <<< INTERFACE CORRIGIDA para corresponder ao backend >>>
 interface CreditCard {

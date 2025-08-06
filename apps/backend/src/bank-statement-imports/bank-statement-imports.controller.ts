@@ -22,7 +22,7 @@ export class BankStatementImportsController {
   @Post('preview-ofx') // Rota renomeada para clareza
   @UseInterceptors(FileInterceptor('file'))
   async previewOfx(
-    @CurrentUser('id') userId: string,
+    @CurrentUser('orgId') organizationId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body() body: PreviewBankStatementDto,
   ) {
@@ -30,6 +30,6 @@ export class BankStatementImportsController {
       throw new BadRequestException('Nenhum arquivo enviado.');
     }
     // Chama o novo método do service
-    return this.service.previewOfx(userId, file.buffer, body.contaCorrenteId);
+    return this.service.previewOfx(organizationId, file.buffer, body.contaCorrenteId);
   }
 }

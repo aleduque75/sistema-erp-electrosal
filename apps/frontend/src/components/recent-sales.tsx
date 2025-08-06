@@ -1,0 +1,58 @@
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    value || 0
+  );
+
+export function RecentSales({ data }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Vendas Recentes</CardTitle>
+        <CardDescription>As últimas 5 vendas realizadas.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cliente</TableHead>
+              <TableHead className="text-right">Valor</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data &&
+              data.map((sale) => (
+                <TableRow key={sale.id}>
+                  <TableCell>
+                    <div className="font-medium">{sale.client.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {sale.client.email}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatCurrency(sale.netAmount)}
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}

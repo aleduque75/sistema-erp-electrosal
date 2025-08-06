@@ -20,6 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { Sale } from "@/types/sale";
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value
@@ -39,31 +41,17 @@ const DetailItem = ({ label, value }: { label: string; value?: string }) => (
 );
 
 interface SaleDetailsModalProps {
-  saleId: string | null;
+  sale: Sale | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function SaleDetailsModal({
-  saleId,
+  sale,
   open,
   onOpenChange,
 }: SaleDetailsModalProps) {
-  const [saleDetails, setSaleDetails] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (open && saleId) {
-      setLoading(true);
-      api
-        .get(`/sales/${saleId}`)
-        .then((response) => setSaleDetails(response.data))
-        .catch(() => toast.error("Falha ao buscar detalhes da venda."))
-        .finally(() => setLoading(false));
-    } else {
-      setSaleDetails(null); // Limpa os detalhes quando o modal fecha
-    }
-  }, [open, saleId]);
+  console.log("Sale object in modal:", sale);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -71,23 +59,31 @@ export function SaleDetailsModal({
         <DialogHeader>
           <DialogTitle>Detalhes da Venda</DialogTitle>
         </DialogHeader>
-        {loading ? (
-          <p className="py-8 text-center">Carregando...</p>
-        ) : saleDetails ? (
+        {sale ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
-              <DetailItem label="Cliente" value={saleDetails.client.name} />
+              <DetailItem label="Cliente" value={sale.client.name} />
               <DetailItem
                 label="Data da Venda"
-                value={formatDate(saleDetails.saleDate)}
+                value={formatDate(sale.createdAt)}
               />
               <DetailItem
                 label="Método de Pagamento"
-                value={saleDetails.paymentMethod}
+                value={sale.paymentMethod}
               />
               <DetailItem
                 label="Valor Total"
-                value={formatCurrency(saleDetails.totalAmount)}
+                value={formatCurrency(sale.totalAmount)}
+              />
+              {sale.feeAmount > 0 && (
+                <DetailItem
+                  label="Taxa do Cartão"
+                  value={formatCurrency(sale.feeAmount)}
+                />
+              )}
+              <DetailItem
+                label="Valor Líquido"
+                value={formatCurrency(sale.netAmount)}
               />
             </div>
             <div>
@@ -102,8 +98,8 @@ export function SaleDetailsModal({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {saleDetails.saleItems.map((item: any) => (
-                    <TableRow key={item.id}>
+                  {sale.saleItems.map((item: any) => (
+                    <TableRow key={item.productId}>
                       <TableCell>{item.product.name}</TableCell>
                       <TableCell className="text-center">
                         {item.quantity}

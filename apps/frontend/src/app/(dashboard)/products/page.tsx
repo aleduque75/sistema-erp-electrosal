@@ -142,7 +142,7 @@ export default function ProductsPage() {
   if (loading) return <p>Carregando...</p>;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

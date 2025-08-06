@@ -14,8 +14,19 @@ import { FeaturesSectionEditor } from "@/components/landing-page-editor/Features
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MediaSelector } from "@/components/landing-page-editor/MediaSelector";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useTheme } from "@/contexts/ThemeContext";
+import { themes } from "@/config/themes";
+
 
 export default function LandingPageManagerPage() {
+  const { setTheme } = useTheme(); // Usar o contexto do tema global
   const [landingPageData, setLandingPageData] = useState<LandingPageData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -31,10 +42,44 @@ export default function LandingPageManagerPage() {
     setLandingPageData({ ...landingPageData, logoImageId: imageId as string });
   };
 
+  // Função genérica para lidar com mudanças no customTheme
+  const handleCustomThemeChange = (
+    mode: 'light' | 'dark',
+    section: 'navbar' | 'hero' | 'features', // Adicione outras seções conforme necessário
+    key: string,
+    value: string
+  ) => {
+    if (!landingPageData) return;
+
+    setLandingPageData(prevData => {
+      const newData = { ...prevData! };
+      if (!newData.customTheme) {
+        newData.customTheme = {};
+      }
+      if (!newData.customTheme[mode]) {
+        newData.customTheme[mode] = {};
+      }
+      if (!newData.customTheme[mode]![section]) {
+        newData.customTheme[mode]![section] = {};
+      }
+      // @ts-ignore
+      newData.customTheme[mode]![section][key] = value;
+      return newData;
+    });
+  };
+
+  const handleCustomThemeNameChange = (themeName: string) => {
+    if (!landingPageData) return;
+    // Atualiza o estado local para salvar no banco
+    setLandingPageData({ ...landingPageData, customThemeName: themeName });
+    // Atualiza o tema global da aplicação em tempo real
+    setTheme(themeName);
+  };
+
   useEffect(() => {
     const fetchLandingPageData = async () => {
       try {
-        const response = await api.get("/landing-page");
+        const response = await api.get("/landing-page/editor");
         // Certifica-se de que cada seção tem um ID para manipulação no frontend
         const processedData = {
           ...response.data,
@@ -154,6 +199,7 @@ export default function LandingPageManagerPage() {
         sections: sectionsToSave,
         logoText: landingPageData.logoText,
         logoImageId: landingPageData.logoImageId,
+        customThemeName: landingPageData.customThemeName, // Inclui o customThemeName
       });
       toast.success("Landing Page salva com sucesso!");
     } catch (err) {
@@ -198,6 +244,37 @@ export default function LandingPageManagerPage() {
           />
         </CardContent>
       </Card>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Tema da Aplicação</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="landing-page-theme">Selecionar Tema</Label>
+            <Select
+              value={landingPageData?.customThemeName || ""}
+              onValueChange={handleCustomThemeNameChange}
+            >
+              <SelectTrigger id="landing-page-theme">
+                <SelectValue placeholder="Selecione um tema" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(themes).map(([key, theme]) => (
+                  <SelectItem key={key} value={key}>
+                    {theme.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground mt-2">
+              Esta configuração altera o tema de toda a aplicação.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      
 
       <div className="flex justify-end gap-2 mb-4">
         <Button onClick={() => handleAddSection("hero")}>

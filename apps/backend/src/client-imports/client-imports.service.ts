@@ -9,13 +9,18 @@ import { Prisma } from '@prisma/client';
 export class ClientImportsService {
   constructor(private prisma: PrismaService) {}
 
-  async previewGoogleCsv(userId: string, fileBuffer: Buffer) {
+  async previewGoogleCsv(organizationId: string, fileBuffer: Buffer) {
     try {
+      console.log('Iniciando previewGoogleCsv...');
       const csvContent = fileBuffer.toString('utf-8');
+      console.log('CSV Content (first 500 chars):', csvContent.substring(0, 500));
+
       const parsed = Papa.parse(csvContent, {
         header: true,
         skipEmptyLines: true,
       });
+      console.log('PapaParse errors:', parsed.errors);
+      console.log('Parsed data length:', parsed.data.length);
 
       const allContacts = parsed.data as any[];
 
@@ -34,7 +39,7 @@ export class ClientImportsService {
         .filter((email) => !!email);
 
       const existingClients = await this.prisma.client.findMany({
-        where: { userId, email: { in: emailsFromFile } },
+        where: { organizationId, email: { in: emailsFromFile } },
         select: { email: true },
       });
       const existingEmails = new Set(existingClients.map((c) => c.email));
@@ -69,5 +74,19 @@ export class ClientImportsService {
       console.error('Erro ao processar arquivo CSV:', error);
       throw new BadRequestException('Arquivo CSV inválido ou mal formatado.');
     }
+  }
+
+  async importGoogleCsv(organizationId: string, clients: any[]) {
+    console.log('importGoogleCsv - organizationId recebido:', organizationId);
+    console.log('importGoogleCsv - primeiro cliente recebido:', clients[0]);
+    const clientsToCreate = clients.map(client => ({
+      ...client,
+      organizationId: organizationId, // Garante que o organizationId seja explicitamente definido
+    }));
+
+    return this.prisma.client.createMany({
+      data: clientsToCreate,
+      skipDuplicates: true,
+    });
   }
 }

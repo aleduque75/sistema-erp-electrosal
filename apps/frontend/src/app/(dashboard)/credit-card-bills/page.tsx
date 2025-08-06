@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { CreditCardBillForm } from "./credit-card-bill-form";
 import { PayBillForm } from "./pay-bill-form";
+import { formatInTimeZone } from 'date-fns-tz';
 
 // Interfaces
 interface CreditCardBill {
@@ -65,6 +66,10 @@ export default function CreditCardBillsPage() {
   const { user, loading } = useAuth();
   const [bills, setBills] = useState<CreditCardBill[]>([]);
   const [isFetching, setIsFetching] = useState(true);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [selectedCreditCardId, setSelectedCreditCardId] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   // Estados dos modais
   const [billToPay, setBillToPay] = useState<CreditCardBill | null>(null);
@@ -74,7 +79,18 @@ export default function CreditCardBillsPage() {
   const fetchData = useCallback(async () => {
     setIsFetching(true);
     try {
-      const response = await api.get("/credit-card-bills");
+      const params: { creditCardId?: string; startDate?: string; endDate?: string } = {};
+      if (selectedCreditCardId) {
+        params.creditCardId = selectedCreditCardId;
+      }
+      if (startDate) {
+        params.startDate = startDate.toISOString();
+      }
+      if (endDate) {
+        params.endDate = endDate.toISOString();
+      }
+
+      const response = await api.get("/credit-card-bills", { params });
       setBills(
         response.data.map((b: any) => ({
           ...b,
@@ -86,10 +102,13 @@ export default function CreditCardBillsPage() {
     } finally {
       setIsFetching(false);
     }
-  }, []);
+  }, [selectedCreditCardId, startDate, endDate]);
 
   useEffect(() => {
-    if (user && !loading) fetchData();
+    if (user && !loading) {
+      fetchData();
+      api.get("/credit-cards").then((res) => setCreditCards(res.data));
+    }
   }, [user, loading, fetchData]);
 
   // Handler para fechar modais e atualizar dados

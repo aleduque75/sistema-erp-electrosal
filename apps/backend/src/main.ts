@@ -7,6 +7,7 @@ import { config } from 'dotenv';
 config();
 
 async function bootstrap() {
+  process.env.TZ = 'UTC'; // Garante que o Node.js use UTC
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
@@ -56,6 +57,8 @@ async function bootstrap() {
     credentials: true,
   });
   // ----------------------------------------------------
+
+  app.enableShutdownHooks(); // Adicionado para lidar com o desligamento de forma elegante
 
   await app.listen(3001, '0.0.0.0');
 

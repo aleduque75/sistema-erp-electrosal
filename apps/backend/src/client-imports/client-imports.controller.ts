@@ -5,6 +5,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Body, // Adicionado
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -20,10 +21,18 @@ export class ClientImportsController {
   @Post('preview-google-csv') // Rota renomeada para clareza
   @UseInterceptors(FileInterceptor('file'))
   async previewGoogleCsv(
-    @CurrentUser('id') userId: string,
+    @CurrentUser('organizationId') organizationId: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) throw new BadRequestException('Nenhum arquivo enviado.');
-    return this.service.previewGoogleCsv(userId, file.buffer);
+    return this.service.previewGoogleCsv(organizationId, file.buffer);
+  }
+
+  @Post('import-google-csv')
+  async importGoogleCsv(
+    @CurrentUser('organizationId') organizationId: string,
+    @Body() clients: any[], // Assumindo que o frontend enviará a lista de clientes
+  ) {
+    return this.service.importGoogleCsv(organizationId, clients);
   }
 }

@@ -17,13 +17,13 @@ export class BankStatementImportsService {
   constructor(private prisma: PrismaService) {}
 
   async previewOfx(
-    userId: string,
+    organizationId: string,
     fileBuffer: Buffer,
     contaCorrenteId: string,
   ): Promise<PreviewTransaction[]> {
     // Validação da conta corrente (continua igual)
     const contaCorrente = await this.prisma.contaCorrente.findFirst({
-      where: { id: contaCorrenteId, userId },
+      where: { id: contaCorrenteId, organizationId },
     });
     if (!contaCorrente) {
       throw new BadRequestException('Conta corrente não encontrada.');

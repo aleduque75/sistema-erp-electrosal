@@ -1,9 +1,14 @@
 import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
-import { ThemeProvider } from "../components/theme-provider";
+import { ThemeProvider } from "../contexts/ThemeContext"; // Corrigido para usar o nosso ThemeProvider
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/components/providers/query-provider";
-import { Sidebar } from "@/components/Sidebar";
+
+export const metadata = {
+  title: 'Sistema Beleza',
+  description: 'Sistema de gestão para salões de beleza e clínicas de estética',
+  viewport: 'width=device-width, initial-scale=1',
+};
 
 export default function RootLayout({
   children,
@@ -13,18 +18,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider>
           <QueryProvider>
             <AuthProvider>
-              <div className="flex">
-               
-                <main className="flex-1 p-4">{children}</main>
-              </div>
+              <main className="flex-1 p-4">{children}</main>
             </AuthProvider>
           </QueryProvider>
         </ThemeProvider>

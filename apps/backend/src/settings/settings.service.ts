@@ -28,4 +28,18 @@ export class SettingsService {
       data: updateSettingDto,
     });
   }
+
+  async getOrganizationSettings(organizationId: string) {
+    return this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { absorbCreditCardFee: true },
+    });
+  }
+
+  async updateOrganizationSettings(organizationId: string, absorbCreditCardFee: boolean) {
+    return this.prisma.organization.update({
+      where: { id: organizationId },
+      data: { absorbCreditCardFee },
+    });
+  }
 }

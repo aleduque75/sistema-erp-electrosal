@@ -8,43 +8,57 @@ import {
   CreateContaContabilDto,
   UpdateContaContabilDto,
 } from './dtos/contas-contabeis.dto';
+import { Prisma, TipoContaContabilPrisma } from '@prisma/client'; // Adicionado Prisma
 
 @Injectable()
 export class ContasContabeisService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: string, data: CreateContaContabilDto) {
-    const proximoCodigo = await this.getNextCodigo(userId, data.contaPaiId);
-    const finalData = {
-      ...data,
-      userId,
+  // Recebe organizationId
+  async create(organizationId: string, data: CreateContaContabilDto) {
+    const { contaPaiId, ...restOfData } = data; // Extrai o campo opcional
+    const proximoCodigo = await this.getNextCodigo(organizationId, contaPaiId);
+
+    const createData: Prisma.ContaContabilCreateInput = {
       codigo: proximoCodigo.proximoCodigo,
+      nome: restOfData.nome,
+      tipo: restOfData.tipo,
+      aceitaLancamento: restOfData.aceitaLancamento,
+      organization: { connect: { id: organizationId } },
     };
 
-    return this.prisma.contaContabil.create({ data: finalData });
-  }
-
-  async findAll(userId: string, tipo?: 'RECEITA' | 'DESPESA') {
-    const where: any = { userId };
-    if (tipo) {
-      where.aceitaLancamento = true;
-      if (tipo === 'RECEITA') {
-        where.tipo = { in: ['RECEITA', 'PASSIVO', 'PATRIMONIO_LIQUIDO'] };
-      } else if (tipo === 'DESPESA') {
-        where.tipo = { in: ['DESPESA', 'ATIVO'] };
-      }
+    if (contaPaiId) {
+      createData.contaPai = { connect: { id: contaPaiId } };
     }
 
-    const contas = await this.prisma.contaContabil.findMany({
+    return this.prisma.contaContabil.create({ data: createData });
+  }
+
+  // Recebe organizationId e o filtro 'tipo'
+  async findAll(organizationId: string, tipo?: 'RECEITA' | 'DESPESA') {
+    const where: Prisma.ContaContabilWhereInput = {
+      organizationId,
+    };
+
+    if (tipo === 'RECEITA') {
+      // Para Receitas, a contrapartida é geralmente uma conta de Receita.
+      where.tipo = { in: ['RECEITA'] };
+    } else if (tipo === 'DESPESA') {
+      // 👇 CORREÇÃO AQUI 👇
+      // Para Despesas, a contrapartida pode ser uma Despesa ou um Passivo.
+      where.tipo = { in: ['DESPESA', 'PASSIVO'] };
+    }
+
+    return this.prisma.contaContabil.findMany({
       where,
       orderBy: { codigo: 'asc' },
     });
-
-    return contas;
   }
-  async findOne(userId: string, id: string) {
+
+  // Recebe organizationId
+  async findOne(organizationId: string, id: string) {
     const conta = await this.prisma.contaContabil.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
     });
     if (!conta) {
       throw new NotFoundException(
@@ -54,13 +68,21 @@ export class ContasContabeisService {
     return conta;
   }
 
-  async update(userId: string, id: string, data: UpdateContaContabilDto) {
-    await this.findOne(userId, id);
+  // Recebe organizationId
+  async update(
+    organizationId: string,
+    id: string,
+    data: UpdateContaContabilDto,
+  ) {
+    await this.findOne(organizationId, id); // Garante que a conta pertence à organização
     return this.prisma.contaContabil.update({ where: { id }, data });
   }
 
-  async remove(userId: string, id: string) {
-    await this.findOne(userId, id);
+  // Recebe organizationId
+  async remove(organizationId: string, id: string) {
+    await this.findOne(organizationId, id); // Garante a posse antes de deletar
+
+    // As verificações de integridade continuam as mesmas
     const subContasCount = await this.prisma.contaContabil.count({
       where: { contaPaiId: id },
     });
@@ -79,21 +101,20 @@ export class ContasContabeisService {
     }
     return this.prisma.contaContabil.delete({ where: { id } });
   }
+
+  // Recebe organizationId
   async getNextCodigo(
-    userId: string,
+    organizationId: string,
     contaPaiId?: string,
   ): Promise<{ proximoCodigo: string }> {
     let proximoCodigo: string;
 
     if (contaPaiId) {
       // Lógica para subcontas
-      const contaPai = await this.prisma.contaContabil.findUnique({
-        where: { id: contaPaiId },
-      });
-      if (!contaPai) throw new NotFoundException('Conta pai não encontrada.');
+      const contaPai = await this.findOne(organizationId, contaPaiId); // Já checa a posse
 
       const irmaos = await this.prisma.contaContabil.findMany({
-        where: { userId, contaPaiId },
+        where: { organizationId, contaPaiId },
         select: { codigo: true },
       });
 
@@ -109,7 +130,7 @@ export class ContasContabeisService {
     } else {
       // Lógica para contas raiz
       const contasRaiz = await this.prisma.contaContabil.findMany({
-        where: { userId, contaPaiId: null },
+        where: { organizationId, contaPaiId: null },
         select: { codigo: true },
       });
       if (contasRaiz.length === 0) {
@@ -123,6 +144,6 @@ export class ContasContabeisService {
       }
     }
 
-    return { proximoCodigo }; // Retorna um objeto para consistência
+    return { proximoCodigo };
   }
 }

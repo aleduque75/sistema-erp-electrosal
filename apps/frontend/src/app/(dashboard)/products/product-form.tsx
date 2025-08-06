@@ -91,7 +91,7 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-2">
           <FormField
             control={form.control}
             name="price"

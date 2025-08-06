@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -17,6 +16,7 @@ import {
   UpdateCreditCardDto,
 } from './dtos/credit-card.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('credit-cards')
@@ -25,32 +25,41 @@ export class CreditCardsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Request() req, @Body() createDto: CreateCreditCardDto) {
-    return this.service.create(req.user.id, createDto);
+  create(
+    @CurrentUser('orgId') organizationId: string,
+    @Body() createDto: CreateCreditCardDto,
+  ) {
+    return this.service.create(organizationId, createDto);
   }
 
   @Get()
-  findAll(@Request() req) {
-    return this.service.findAll(req.user.id);
+  findAll(@CurrentUser('orgId') organizationId: string) {
+    return this.service.findAll(organizationId);
   }
 
   @Get(':id')
-  findOne(@Request() req, @Param('id') id: string) {
-    return this.service.findOne(req.user.id, id);
+  findOne(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.findOne(organizationId, id);
   }
 
   @Patch(':id')
   update(
-    @Request() req,
+    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
     @Body() updateDto: UpdateCreditCardDto,
   ) {
-    return this.service.update(req.user.id, id, updateDto);
+    return this.service.update(organizationId, id, updateDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Request() req, @Param('id') id: string) {
-    return this.service.remove(req.user.id, id);
+  remove(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(organizationId, id);
   }
 }

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="54.886333mm"
+   height="13.490416mm"
+   viewBox="0 0 54.886333 13.490416"
+   version="1.1"
+   id="svg5"
+   inkscape:export-filename="bitmap.svg"
+   inkscape:export-xdpi="3.6285713"
+   inkscape:export-ydpi="3.6285713"
+   sodipodi:docname="logoret.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false" />
+  <defs
+     id="defs2">
+    <linearGradient
+       id="linearGradient921"
+       inkscape:swatch="solid">
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="0"
+         id="stop919" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient915"
+       inkscape:swatch="solid">
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="0"
+         id="stop913" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3185"
+       inkscape:swatch="solid">
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="0"
+         id="stop3183" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3175"
+       inkscape:swatch="gradient">
+      <stop
+         style="stop-color:#ff80b2;stop-opacity:1;"
+         offset="0"
+         id="stop3171" />
+      <stop
+         style="stop-color:#ff80b2;stop-opacity:0;"
+         offset="1"
+         id="stop3173" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3130"
+       inkscape:swatch="solid">
+      <stop
+         style="stop-color:#ff80b2;stop-opacity:1;"
+         offset="0"
+         id="stop3128" />
+    </linearGradient>
+  </defs>
+  <g
+     inkscape:label="Camada 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-45.009618,-134.01005)">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:11.2889px;font-family:MathJax_AMS;-inkscape-font-specification:'MathJax_AMS, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:51.4117;fill:#c83771;stroke-width:0.264583"
+       x="45.697041"
+       y="115.6081"
+       id="text113"
+       inkscape:export-filename="sistema-beleza/logoret.png"
+       inkscape:export-xdpi="77.844711"
+       inkscape:export-ydpi="77.844711"
+       transform="matrix(0.84245891,0,0,0.84245891,7.6850732,45.050557)"><tspan
+         x="45.697041"
+         y="115.6081"
+         id="tspan1456"><tspan
+           style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal'"
+           id="tspan1450">Kelly </tspan><tspan
+           style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal'"
+           id="tspan1452">K</tspan><tspan
+           style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal'"
+           id="tspan1454">ay</tspan></tspan></text>
+    <path
+       style="opacity:1;fill:none;stroke:#ff80b2;stroke-width:0.912;stroke-dasharray:none"
+       d="m 46.271765,135.63722 v 9.61894 h 51.388856 v -0.40079"
+       id="path1196" />
+    <circle
+       style="fill:#ff80b2;stroke:#ff80b2;stroke-width:0.912;stroke-dasharray:none"
+       id="path1250-3"
+       cx="95.678001"
+       cy="137.73546"
+       r="1.0449066" />
+    <circle
+       style="fill:#ff80b2;stroke:#ff80b2;stroke-width:0.912;stroke-dasharray:none"
+       id="path1250-6"
+       cx="95.74437"
+       cy="142.3782"
+       r="1.0449066" />
+    <circle
+       style="fill:#ff80b2;stroke:#ff80b2;stroke-width:0.912;stroke-dasharray:none"
+       id="path1250-6-7"
+       cx="91.03524"
+       cy="142.08282"
+       r="1.0449066" />
+  </g>
+</svg>

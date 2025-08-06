@@ -9,38 +9,35 @@ import {
   UpdateAccountRecDto,
   ReceivePaymentDto,
 } from './dtos/account-rec.dto';
-import { TipoTransacaoPrisma } from '@prisma/client';
-import { AuditLogService } from '../common/audit-log.service';
+import { AccountRec, Prisma, TipoTransacaoPrisma } from '@prisma/client';
 
 @Injectable()
 export class AccountsRecService {
-  constructor(private prisma: PrismaService, private auditLogService: AuditLogService) {}
+  constructor(private prisma: PrismaService) {}
 
-  create(userId: string, createDto: CreateAccountRecDto) {
+  async create(
+    organizationId: string,
+    data: CreateAccountRecDto,
+  ): Promise<AccountRec> {
     return this.prisma.accountRec.create({
       data: {
-        ...createDto,
-        userId,
-        received: false,
+        ...data,
+        organizationId,
       },
     });
   }
 
-  findAll(userId: string, search?: string) {
-    const whereClause: any = { userId };
-    if (search) {
-      whereClause.description = { contains: search, mode: 'insensitive' };
-    }
+  async findAll(organizationId: string): Promise<AccountRec[]> {
     return this.prisma.accountRec.findMany({
-      where: whereClause,
+      where: { organizationId },
+      include: { sale: true },
       orderBy: { dueDate: 'asc' },
-      include: { contaCorrente: true },
     });
   }
 
-  async findOne(userId: string, id: string) {
+  async findOne(organizationId: string, id: string): Promise<AccountRec> {
     const account = await this.prisma.accountRec.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
     });
     if (!account) {
       throw new NotFoundException(
@@ -50,68 +47,72 @@ export class AccountsRecService {
     return account;
   }
 
-  async update(userId: string, id: string, updateDto: UpdateAccountRecDto) {
-    await this.findOne(userId, id);
+  async update(
+    organizationId: string,
+    id: string,
+    data: UpdateAccountRecDto,
+  ): Promise<AccountRec> {
+    await this.findOne(organizationId, id);
     return this.prisma.accountRec.update({
       where: { id },
-      data: updateDto,
+      data,
     });
   }
 
-  async receive(userId: string, id: string, dto: ReceivePaymentDto) {
-    return this.prisma.$transaction(async (tx) => {
-      const accountRec = await tx.accountRec.findFirst({
-        where: { id, userId },
-      });
-      if (!accountRec || accountRec.received) {
-        throw new NotFoundException('Conta a receber inválida ou já recebida.');
-      }
+  async receive(
+    organizationId: string,
+    id: string,
+    data: ReceivePaymentDto,
+  ): Promise<any> {
+    const [accountToReceive, settings] = await Promise.all([
+      this.findOne(organizationId, id),
+      this.prisma.userSettings.findFirst({
+        where: { user: { organizationId } },
+        select: { defaultCaixaContaId: true },
+      }),
+    ]);
 
-      const updatedAccount = await tx.accountRec.update({
+    if (!settings?.defaultCaixaContaId) {
+      throw new BadRequestException(
+        "Nenhuma conta 'Caixa' padrão foi configurada para registrar recebimentos.",
+      );
+    }
+
+    const receivedAt = data.receivedAt || new Date();
+    const amountReceived =
+      data.amountReceived || accountToReceive.amount.toNumber();
+
+    return this.prisma.$transaction(async (tx) => {
+      const updatedAccountRec = await tx.accountRec.update({
         where: { id },
         data: {
           received: true,
-          receivedAt: dto.receivedAt || new Date(),
-          contaCorrenteId: dto.contaCorrenteId,
+          receivedAt: receivedAt,
+          contaCorrenteId: data.contaCorrenteId,
         },
       });
-
-      // O bloco que atualizava o saldo foi removido daqui.
-
-      const settings = await tx.userSettings.findUnique({ where: { userId } });
-      if (!settings?.defaultCaixaContaId) {
-        throw new BadRequestException(
-          "Conta 'Caixa Padrão' não definida nas Configurações.",
-        );
-      }
 
       await tx.transacao.create({
         data: {
+          organizationId,
+          contaCorrenteId: data.contaCorrenteId,
+          contaContabilId: settings.defaultCaixaContaId!,
           tipo: TipoTransacaoPrisma.CREDITO,
-          valor: accountRec.amount,
+          descricao: `Recebimento de: ${accountToReceive.description}`,
+          valor: amountReceived,
           moeda: 'BRL',
-          descricao: `Recebimento de: ${accountRec.description}`,
-          contaCorrenteId: dto.contaCorrenteId,
-          contaContabilId: settings.defaultCaixaContaId,
-          userId: userId,
-          dataHora: dto.receivedAt || new Date(),
+          dataHora: receivedAt,
         },
       });
 
-      return updatedAccount;
+      return updatedAccountRec;
     });
-  }
+  } // <-- ESTA CHAVE ESTAVA FALTANDO
 
-  async remove(userId: string, id: string) {
-    await this.findOne(userId, id);
-    const deletedAccount = await this.prisma.accountRec.delete({ where: { id } });
-    this.auditLogService.logDeletion(
-      userId,
-      'AccountRec',
-      deletedAccount.id,
-      deletedAccount.description, // Passando a descrição como entityName
-      `Conta a Receber ${deletedAccount.description} excluída.`,
-    );
-    return deletedAccount;
+  async remove(organizationId: string, id: string): Promise<AccountRec> {
+    await this.findOne(organizationId, id);
+    return this.prisma.accountRec.delete({
+      where: { id },
+    });
   }
 }

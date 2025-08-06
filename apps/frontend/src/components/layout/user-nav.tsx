@@ -68,7 +68,7 @@ export function UserNav() {
               <span>Logs de Auditoria</span>
             </DropdownMenuItem>
           </Link>
-          <Link href="/admin/landing-page-editor" passHref>
+          <Link href="/landing-page-manager" passHref>
             <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" /> {/* Reutilizando Settings, pode mudar para um ícone mais específico se tiver */} 
               <span>Editar Landing Page</span>

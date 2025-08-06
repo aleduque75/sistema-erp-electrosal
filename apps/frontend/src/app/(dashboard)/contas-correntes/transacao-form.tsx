@@ -95,7 +95,6 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
       await api.post("/transacoes", {
         ...data,
         contaCorrenteId,
-        moeda: "BRL",
       });
       toast.success("Lançamento realizado com sucesso!");
       onSave();

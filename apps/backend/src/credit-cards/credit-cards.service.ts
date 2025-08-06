@@ -4,50 +4,72 @@ import {
   CreateCreditCardDto,
   UpdateCreditCardDto,
 } from './dtos/credit-card.dto';
+import { CreditCard, Prisma } from '@prisma/client'; // Adicionado Prisma
 
 @Injectable()
 export class CreditCardsService {
   constructor(private prisma: PrismaService) {}
 
-  create(userId: string, data: CreateCreditCardDto) {
-    return this.prisma.creditCard.create({
-      data: {
-        ...data,
-        userId,
-      },
-    });
+  async create(
+    organizationId: string,
+    data: CreateCreditCardDto,
+  ): Promise<CreditCard> {
+    const { contaContabilPassivoId, ...restOfData } = data; // Extrai o campo opcional
+    const createData: Prisma.CreditCardCreateInput = {
+      name: restOfData.name,
+      flag: restOfData.flag,
+      closingDay: restOfData.closingDay,
+      dueDate: restOfData.dueDate,
+      organization: { connect: { id: organizationId } },
+    };
+
+    if (contaContabilPassivoId !== undefined) {
+      createData.contaContabilPassivo = { connect: { id: contaContabilPassivoId } };
+    }
+
+    return this.prisma.creditCard.create({ data: createData });
   }
 
-  findAll(userId: string) {
+  // Recebe organizationId
+  async findAll(organizationId: string): Promise<CreditCard[]> {
     return this.prisma.creditCard.findMany({
-      where: { userId },
+      where: { organizationId }, // Usa no 'where'
+      include: { contaContabilPassivo: true },
       orderBy: { name: 'asc' },
     });
   }
 
-  async findOne(userId: string, id: string) {
-    const card = await this.prisma.creditCard.findFirst({
-      where: { id, userId },
+  // Recebe organizationId
+  async findOne(organizationId: string, id: string): Promise<CreditCard> {
+    const creditCard = await this.prisma.creditCard.findFirst({
+      where: { id, organizationId }, // Usa no 'where'
+      include: { contaContabilPassivo: true },
     });
-    if (!card) {
+    if (!creditCard) {
       throw new NotFoundException(
         `Cartão de crédito com ID ${id} não encontrado.`,
       );
     }
-    return card;
+    return creditCard;
   }
 
-  async update(userId: string, id: string, data: UpdateCreditCardDto) {
-    await this.findOne(userId, id);
+  // Recebe organizationId
+  async update(
+    organizationId: string,
+    id: string,
+    data: UpdateCreditCardDto,
+  ): Promise<CreditCard> {
+    await this.findOne(organizationId, id); // Garante a posse
     return this.prisma.creditCard.update({
       where: { id },
       data,
     });
   }
 
-  async remove(userId: string, id: string) {
-    await this.findOne(userId, id);
-    // TODO: Adicionar validação para não excluir cartão com transações associadas
+  // Recebe organizationId
+  async remove(organizationId: string, id: string): Promise<CreditCard> {
+    await this.findOne(organizationId, id); // Garante a posse
+    // TODO: Adicionar verificação se o cartão possui transações antes de deletar
     return this.prisma.creditCard.delete({
       where: { id },
     });

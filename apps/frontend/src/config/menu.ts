@@ -4,10 +4,10 @@ import {
   Package,
   ShoppingCart,
   DollarSign,
-  CreditCard, // Ícone que já temos
+  CreditCard,
   FileText,
   Wallet,
-  ArrowRightLeft, // Ícone para transações
+  ArrowRightLeft,
   ListChecks,
   ArrowDownToLine,
   ArrowUpToLine,
@@ -16,6 +16,7 @@ import {
   Upload,
   Settings,
   LayoutPanelLeft,
+  Percent, // <-- 1. Importe o novo ícone
 } from "lucide-react";
 import React from "react";
 
@@ -53,7 +54,6 @@ export const menuConfig: NavItem[] = [
         icon: FileText,
         description: "Organize suas finanças com um plano de contas.",
       },
-      // ✅ NOVO ITEM AQUI
       {
         title: "Meus Cartões",
         href: "/credit-cards",
@@ -79,7 +79,6 @@ export const menuConfig: NavItem[] = [
         icon: ListChecks,
         description: "Acompanhe o histórico de todas as suas vendas.",
       },
-      // ✅ NOVO ITEM AQUI
       {
         title: "Lançar Compra no Cartão",
         href: "/credit-card-transactions",
@@ -113,7 +112,7 @@ export const menuConfig: NavItem[] = [
       },
       {
         title: "Importar Extrato",
-        href: "/imports", // O link para a página que criamos
+        href: "/imports",
         icon: Upload,
         description: "Importe seu extrato bancário (OFX) para conciliação.",
       },
@@ -123,7 +122,6 @@ export const menuConfig: NavItem[] = [
         icon: CreditCard,
         description: "Acompanhe e pague as faturas dos seus cartões.",
       },
-      // ✅ NOVO ITEM ADICIONADO
       {
         title: "Gerar Fatura Manual",
         href: "/credit-card-bills/new",
@@ -142,6 +140,19 @@ export const menuConfig: NavItem[] = [
         href: "/landing-page-manager",
         icon: LayoutPanelLeft,
         description: "Gerencie o conteúdo da página inicial do sistema.",
+      },
+      // 👇 2. NOVO ITEM ADICIONADO AQUI 👇
+      {
+        title: "Taxas de Cartão",
+        href: "/settings/fees",
+        icon: Percent,
+        description: "Configure as taxas para vendas no cartão de crédito.",
+      },
+      {
+        title: "Configurar Prazos",
+        href: "/settings/payment-terms",
+        icon: Settings,
+        description: "Ajuste as configurações gerais do sistema.",
       },
     ],
   },

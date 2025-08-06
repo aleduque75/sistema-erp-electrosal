@@ -9,38 +9,49 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// --- MODELO DE ORGANIZAÇÃO ---
+model Organization {
+  id                      String                @id @default(uuid())
+  name                    String
+  users                   User[]
+  clients                 Client[]
+  products                Product[]
+  sales                   Sale[]
+  accountsPay             AccountPay[]
+  accountsRec             AccountRec[]
+  contasCorrentes         ContaCorrente[]
+  contasContabeis         ContaContabil[]
+  creditCards             CreditCard[]
+  creditCardBills         CreditCardBill[]
+  transactionCategories   TransactionCategory[]
+  xmlImportLogs           XmlImportLog[]
+  landingPages            LandingPage[]
+  media                   Media[]
+  transacoes              Transacao[]
+  CreditCardFee           CreditCardFee[]
+  absorbCreditCardFee     Boolean               @default(false)
+  creditCardReceiveDays   Int?                  @default(30)
+  paymentTerms            PaymentTerm[]
+}
+
 // --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
-
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String?
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  clients               Client[]
-  products              Product[]
-  sales                 Sale[]
-  accountsPay           AccountPay[]
-  accountsRec           AccountRec[]
-  contasCorrentes       ContaCorrente[]
-  contasContabeis       ContaContabil[]
-  settings              UserSettings?
-  XmlImportLog          XmlImportLog[]
-  transacoes            Transacao[]
-  creditCards           CreditCard[] // Relação com cartões
-  transactionCategories TransactionCategory[] // Relação com categorias
-  CreditCardBill        CreditCardBill[]
+  id             String        @id @default(uuid())
+  email          String        @unique
+  password       String
+  name           String?
+  role           Role          @default(USER)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  settings       UserSettings?
 }
 
 enum Role {
   USER
   ADMIN
 }
-
 
 model UserSettings {
   id                    String  @id @default(uuid())
@@ -54,37 +65,34 @@ model UserSettings {
 }
 
 // --- MODELOS DE NEGÓCIO (VENDAS, PRODUTOS, CLIENTES) ---
-
 model Client {
-  id          String    @id @default(uuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  name        String
-  email       String?   @unique
-  phone       String?
-  address     String?
-  birthDate   DateTime?
-  cep         String?
-  logradouro  String?
-  numero      String?
-  complemento String?
-  bairro      String?
-  cidade      String?
-  uf          String?
-
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  name            String
+  email           String?      @unique
+  phone           String?
+  birthDate       DateTime?
+  cep             String?
+  logradouro      String?
+  numero          String?
+  complemento     String?
+  bairro          String?
+  cidade          String?
+  uf              String?
   gender          String?
-  preferences     String?
+  preferences     Json?
   purchaseHistory Json?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
   sales           Sale[]
-  cpf             String?   @unique // <-- ADICIONE ESTA LINHA
+  cpf             String?      @unique
 }
 
 model Product {
   id             String          @id @default(uuid())
-  userId         String
-  user           User            @relation(fields: [userId], references: [id])
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id])
   name           String
   description    String?
   price          Decimal         @db.Decimal(10, 2)
@@ -105,21 +113,39 @@ model StockMovement {
 }
 
 model Sale {
-  id            String            @id @default(uuid())
-  userId        String
-  user          User              @relation(fields: [userId], references: [id])
-  clientId      String
-  client        Client            @relation(fields: [clientId], references: [id])
-  orderNumber   String            @unique
-  totalAmount   Decimal           @db.Decimal(10, 2)
-  feeAmount     Decimal?          @db.Decimal(10, 2)
-  netAmount     Decimal?          @db.Decimal(10, 2)
-  paymentMethod String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  saleItems     SaleItem[]
-  accountsRec   AccountRec[]
-  installments  SaleInstallment[]
+  id             String            @id @default(uuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  clientId       String
+  client         Client            @relation(fields: [clientId], references: [id])
+  orderNumber    String            @unique
+  totalAmount    Decimal           @db.Decimal(10, 2)
+  feeAmount      Decimal?          @db.Decimal(10, 2)
+  netAmount      Decimal?          @db.Decimal(10, 2)
+  paymentMethod  String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  saleItems      SaleItem[]
+  accountsRec    AccountRec[]
+  installments   SaleInstallment[]
+  paymentTermId  String? // Novo campo para o prazo de pagamento
+  paymentTerm    PaymentTerm?      @relation(fields: [paymentTermId], references: [id])
+}
+
+model PaymentTerm {
+  id               String       @id @default(uuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  name             String
+  description      String?
+  installmentsDays Int[]
+  interestRate     Decimal?     @db.Decimal(5, 2)
+  sales            Sale[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([organizationId, name])
+  @@map("payment_terms")
 }
 
 model SaleItem {
@@ -143,21 +169,21 @@ enum SaleInstallmentStatus {
 model SaleInstallment {
   id                String                @id @default(uuid())
   saleId            String
+  sale              Sale                  @relation(fields: [saleId], references: [id])
   amount            Decimal
   dueDate           DateTime
   status            SaleInstallmentStatus
   paidAt            DateTime?
   installmentNumber Int
+  accountRecId      String? // Novo campo para vincular à conta a receber principal
+  accountRec        AccountRec? @relation(fields: [accountRecId], references: [id])
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
-
-  sale Sale @relation(fields: [saleId], references: [id])
 
   @@map("sale_installments")
 }
 
 // --- MODELOS FINANCEIROS ---
-
 enum TipoTransacaoPrisma {
   CREDITO
   DEBITO
@@ -172,30 +198,31 @@ enum TipoContaContabilPrisma {
 }
 
 model AccountPay {
-  id                String    @id @default(uuid())
-  userId            String
-  user              User      @relation(fields: [userId], references: [id])
+  id                String         @id @default(uuid())
+  organizationId    String
+  organization      Organization   @relation(fields: [organizationId], references: [id])
   description       String
-  amount            Decimal   @db.Decimal(10, 2)
-  dueDate           DateTime  @db.Timestamptz
-  paid              Boolean   @default(false)
+  amount            Decimal        @db.Decimal(10, 2)
+  dueDate           DateTime
+  paid              Boolean        @default(false)
   paidAt            DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   isInstallment     Boolean?
   installmentNumber Int?
   totalInstallments Int?
-
-  contaContabilId String? // A chave estrangeira para a categoria/conta contábil
-  contaContabil   ContaContabil? @relation(fields: [contaContabilId], references: [id])
+  contaContabilId   String?
+  contaContabil     ContaContabil? @relation(fields: [contaContabilId], references: [id])
+  transacaoId       String?        @unique
+  transacao         Transacao?     @relation(fields: [transacaoId], references: [id])
 
   @@map("accounts_pay")
 }
 
 model AccountRec {
   id              String         @id @default(uuid())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id])
+  organizationId  String
+  organization    Organization   @relation(fields: [organizationId], references: [id])
   saleId          String?
   sale            Sale?          @relation(fields: [saleId], references: [id])
   description     String
@@ -207,12 +234,15 @@ model AccountRec {
   updatedAt       DateTime       @updatedAt
   contaCorrenteId String?
   contaCorrente   ContaCorrente? @relation(fields: [contaCorrenteId], references: [id])
+  transacaoId     String?        @unique
+  transacao       Transacao?     @relation(fields: [transacaoId], references: [id])
+  saleInstallments SaleInstallment[] // Adicionado para a relação inversa
 }
 
 model ContaContabil {
   id                     String                  @id @default(uuid())
-  userId                 String
-  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId         String
+  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   codigo                 String
   nome                   String
   tipo                   TipoContaContabilPrisma
@@ -225,36 +255,36 @@ model ContaContabil {
   updatedAt              DateTime                @updatedAt
   AccountPay             AccountPay[]
   creditCardTransactions CreditCardTransaction[]
-  CreditCard             CreditCard[]
   cartoesDeCredito       CreditCard[]            @relation("CartaoParaContaPassivo")
 
-  @@unique([userId, codigo])
+  @@unique([organizationId, codigo])
   @@map("contas_contabeis")
 }
 
 model ContaCorrente {
-  id          String       @id @default(uuid())
-  userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  nome        String
-  numeroConta String
-  agencia     String?
-  saldo       Decimal      @db.Decimal(10, 2)
-  moeda       String       @default("BRL")
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  deletedAt   DateTime?
-  transacoes  Transacao[]
-  accountsRec AccountRec[]
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  nome           String
+  numeroConta    String
+  agencia        String?
+  saldo          Decimal      @db.Decimal(10, 2)
+  limite         Decimal      @default(0) @db.Decimal(10, 2) // Adicionado
+  moeda          String       @default("BRL")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+  transacoes     Transacao[]
+  accountsRec    AccountRec[]
 
-  @@unique([userId, numeroConta])
+  @@unique([organizationId, numeroConta])
   @@map("contas_correntes")
 }
 
 model Transacao {
   id              String              @id @default(uuid())
-  userId          String
-  user            User                @relation(fields: [userId], references: [id])
+  organizationId  String
+  organization    Organization        @relation(fields: [organizationId], references: [id])
   tipo            TipoTransacaoPrisma
   valor           Decimal             @db.Decimal(10, 2)
   moeda           String
@@ -267,28 +297,26 @@ model Transacao {
   contaCorrente   ContaCorrente?      @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction)
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
+  AccountPay      AccountPay?
+  AccountRec      AccountRec?
 
   @@unique([contaCorrenteId, fitId])
   @@map("transacoes")
 }
 
 // --- MODELOS DE CARTÃO DE CRÉDITO ---
-
 model CreditCard {
-  id           String                  @id @default(uuid())
-  userId       String
-  user         User                    @relation(fields: [userId], references: [id])
-  name         String
-  flag         String
-  closingDay   Int
-  dueDate      Int
-  transactions CreditCardTransaction[]
-  bills        CreditCardBill[]
-
+  id                     String                  @id @default(uuid())
+  organizationId         String
+  organization           Organization            @relation(fields: [organizationId], references: [id])
+  name                   String
+  flag                   String
+  closingDay             Int
+  dueDate                Int
+  transactions           CreditCardTransaction[]
+  bills                  CreditCardBill[]
   contaContabilPassivoId String?
-  contaContabilPassivo   ContaContabil? @relation("CartaoParaContaPassivo", fields: [contaContabilPassivoId], references: [id])
-  ContaContabil          ContaContabil? @relation(fields: [contaContabilId], references: [id])
-  contaContabilId        String?
+  contaContabilPassivo   ContaContabil?          @relation("CartaoParaContaPassivo", fields: [contaContabilPassivoId], references: [id])
 
   @@map("credit_cards")
 }
@@ -309,92 +337,106 @@ model CreditCardTransaction {
   creditCardBill        CreditCardBill?      @relation(fields: [creditCardBillId], references: [id])
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
-  TransactionCategory   TransactionCategory? @relation(fields: [transactionCategoryId], references: [id])
   transactionCategoryId String?
+  transactionCategory   TransactionCategory? @relation(fields: [transactionCategoryId], references: [id])
 
   @@map("credit_card_transactions")
 }
 
 model CreditCardBill {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  creditCardId String
-  creditCard   CreditCard @relation(fields: [creditCardId], references: [id])
-
-  name        String
-  startDate   DateTime
-  endDate     DateTime
-  dueDate     DateTime
-  totalAmount Decimal   @db.Decimal(10, 2)
-  paid        Boolean   @default(false)
-  paidAt      DateTime?
-
-  transactions CreditCardTransaction[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String                  @id @default(uuid())
+  organizationId String
+  organization   Organization            @relation(fields: [organizationId], references: [id])
+  creditCardId   String
+  creditCard     CreditCard              @relation(fields: [creditCardId], references: [id])
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  dueDate        DateTime
+  totalAmount    Decimal                 @db.Decimal(10, 2)
+  paid           Boolean                 @default(false)
+  paidAt         DateTime?
+  transactions   CreditCardTransaction[]
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
 
   @@map("credit_card_bills")
 }
 
 model TransactionCategory {
   id                     String                  @id @default(uuid())
-  userId                 String
-  user                   User                    @relation(fields: [userId], references: [id])
+  organizationId         String
+  organization           Organization            @relation(fields: [organizationId], references: [id])
   name                   String
   creditCardTransactions CreditCardTransaction[]
 
-  @@unique([userId, name])
+  @@unique([organizationId, name])
   @@map("transaction_categories")
 }
 
 // --- MODELOS AUXILIARES ---
-
 model XmlImportLog {
-  id        String   @id @default(cuid())
-  nfeKey    String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  nfeKey         String       @unique
+  createdAt      DateTime     @default(now())
 }
 
 // --- MODELOS DA LANDING PAGE ---
-
 model LandingPage {
-  id          String    @id @default(uuid())
-  name        String    @unique @default("default") // Apenas uma landing page principal
-  logoText    String?   // Novo campo para o texto do logotipo
-  logoImageId String?   // Novo campo para o ID da imagem do logotipo
-  logoImage   Media?    @relation(fields: [logoImageId], references: [id]) // Relação com o modelo Media
-  sections    Section[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String        @id @default(uuid())
+  name            String        @unique @default("default")
+  logoText        String?
+  logoImageId     String?
+  logoImage       Media?        @relation(fields: [logoImageId], references: [id])
+  customThemeName String? // Novo campo para o nome do tema personalizado
+  sections        Section[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  Organization    Organization? @relation(fields: [organizationId], references: [id])
+  organizationId  String?
 }
 
 model Section {
-  id            String    @id @default(uuid())
+  id            String      @id @default(uuid())
   landingPageId String
   landingPage   LandingPage @relation(fields: [landingPageId], references: [id])
-  order         Int       // Ordem da seção na página
-  type          String    // Tipo da seção (ex: "hero", "features")
-  content       Json      // Conteúdo JSON da seção (títulos, descrições, IDs de mídia)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  order         Int
+  type          String
+  content       Json
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@unique([landingPageId, order])
 }
 
-// --- MODELO PARA MÍDIA (IMAGENS, ETC.) ---
-
 model Media {
-  id        String   @id @default(uuid())
-  filename  String   @unique
-  mimetype  String
-  size      Int
-  path      String   @unique // Caminho relativo ou URL do arquivo
+  id               String        @id @default(uuid())
+  organizationId   String?
+  organization     Organization? @relation(fields: [organizationId], references: [id])
+  filename         String        @unique
+  mimetype         String
+  size             Int
+  path             String        @unique
+  width            Int?
+  height           Int?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  landingPageLogos LandingPage[]
+}
+
+model CreditCardFee {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  installments  Int // Número de parcelas (ex: 1, 2, 3, ...)
+  feePercentage Decimal @db.Decimal(5, 2) // Porcentagem da taxa (ex: 4.99)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  landingPageLogos LandingPage[] // Relação inversa para LandingPage
+
+  @@unique([organizationId, installments]) // Garante que só há uma taxa por nº de parcela
+  @@map("credit_card_fees")
 }

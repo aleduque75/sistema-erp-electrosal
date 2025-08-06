@@ -7,64 +7,71 @@ import {
   Param,
   Delete,
   UseGuards,
-  Req,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { TransacoesService } from './transacoes.service';
-import { CreateTransacaoDto, UpdateTransacaoDto } from './dtos/transacoes.dto';
-// Update the import path below to the correct one based on your project structure.
-// Example using a common alias:
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-// import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { AuthRequest } from '../auth/types/auth-request.type';
-import { CreateBulkTransacoesDto } from './dtos/create-transacao.dto';
+import {
+  CreateTransacaoDto,
+  UpdateTransacaoDto,
+  CreateBulkTransacoesDto,
+} from './dtos/create-transacao.dto';
+import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(AuthGuard('jwt'))
 @Controller('transacoes')
 export class TransacoesController {
   constructor(private readonly transacoesService: TransacoesService) {}
 
   @Post('bulk-create')
   createMany(
-    @CurrentUser('id') userId: string,
+    @CurrentUser('orgId') organizationId: string,
     @Body() createBulkDto: CreateBulkTransacoesDto,
   ) {
-    return this.transacoesService.createMany(userId, createBulkDto);
+    return this.transacoesService.createMany(organizationId, createBulkDto);
   }
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
   create(
-    @Req() req: AuthRequest,
+    @CurrentUser('orgId') organizationId: string,
     @Body() createTransacaoDto: CreateTransacaoDto,
   ) {
-    return this.transacoesService.create(req.user.id, createTransacaoDto);
+    return this.transacoesService.create(createTransacaoDto, organizationId);
   }
 
   @Get()
-  findAll(@Req() req: AuthRequest) {
-    return this.transacoesService.findAll(req.user.id);
+  findAll(@CurrentUser('orgId') organizationId: string) {
+    return this.transacoesService.findAll(organizationId);
   }
 
   @Get(':id')
-  findOne(@Req() req: AuthRequest, @Param('id') id: string) {
-    return this.transacoesService.findOne(req.user.id, id);
+  findOne(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.transacoesService.findOne(organizationId, id);
   }
 
   @Patch(':id')
   update(
-    @Req() req: AuthRequest,
+    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
     @Body() updateTransacaoDto: UpdateTransacaoDto,
   ) {
-    return this.transacoesService.update(req.user.id, id, updateTransacaoDto);
+    return this.transacoesService.update(
+      organizationId,
+      id,
+      updateTransacaoDto,
+    );
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Req() req: AuthRequest, @Param('id') id: string) {
-    return this.transacoesService.remove(req.user.id, id);
+  remove(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.transacoesService.remove(organizationId, id);
   }
 }

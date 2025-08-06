@@ -1,15 +1,14 @@
-import { MainMenu } from "./layout/main-menu";
-import { MobileMenu } from "./layout/mobile-menu";
+import { cn } from "@/lib/utils";
 
-export function Sidebar() {
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+export function Sidebar({ className }: SidebarProps) {
   return (
-    <div className="flex h-16 items-center justify-between px-4 md:px-6 bg-background border-b">
-      <div className="flex items-center gap-4">
-        <MobileMenu />
-        <div className="hidden md:flex">
-          <MainMenu />
-        </div>
-      </div>
+    <div className={cn(
+      "hidden", // Oculta completamente o sidebar
+      className
+    )}>
+      {/* Conteúdo do sidebar removido */}
     </div>
   );
 }

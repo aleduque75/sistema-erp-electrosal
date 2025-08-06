@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditLogService } from './common/audit-log.service';
@@ -28,11 +30,19 @@ import { ClientImportsModule } from './client-imports/client-imports.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { LandingPageModule } from './landing-page/landing-page.module';
 import { MediaModule } from './media/media.module';
+import { BackupsModule } from './backups/backups.module';
+import { CreditCardFeesModule } from './credit-card-fees/credit-card-fees.module';
+import { CreditCardForecastModule } from './credit-card-forecast/credit-card-forecast.module';
+import { PaymentTermsModule } from './payment-terms/payment-terms.module';
 
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads/', // Rota em que os arquivos estarão disponíveis
+    }),
 
     // Registre (ligue) CADA módulo aqui
     AuthModule,
@@ -50,7 +60,7 @@ import { MediaModule } from './media/media.module';
     TransacoesModule,
     PrismaModule,
     AccountsRecModule, // <-- Registre o módulo aqui
-    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, // <-- Registre o módulo aqui
+    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, // <-- Registre o módulo aqui
   ],
   controllers: [AppController],
   providers: [

@@ -7,10 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
   Query,
-  HttpCode,
-  HttpStatus,
 } from '@nestjs/common';
 import { CreditCardTransactionsService } from './credit-card-transactions.service';
 import {
@@ -18,7 +15,7 @@ import {
   UpdateCreditCardTransactionDto,
 } from './dtos/credit-card-transaction.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { AuthRequest } from '../auth/types/auth-request.type';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('credit-card-transactions')
@@ -27,55 +24,42 @@ export class CreditCardTransactionsController {
 
   @Post()
   create(
-    @Request() req: AuthRequest,
+    @CurrentUser('orgId') organizationId: string,
     @Body() createDto: CreateCreditCardTransactionDto,
   ) {
-    // Apenas esta rota de criação é necessária
-    return this.service.create(req.user.id, createDto);
+    return this.service.create(organizationId, createDto);
   }
 
   @Get()
   findAll(
-    @Request() req: AuthRequest,
+    @CurrentUser('orgId') organizationId: string,
     @Query('creditCardId') creditCardId?: string,
-    @Query('status') status?: 'billed' | 'unbilled' | 'all',
-    @Query('startDate') startDateString?: string,
-    @Query('endDate') endDateString?: string,
   ) {
-    // Converte as strings de data para objetos Date antes de chamar o service
-    // Adicionamos T00:00:00 para evitar problemas de fuso horário
-    const startDate = startDateString
-      ? new Date(`${startDateString}T00:00:00`)
-      : undefined;
-    const endDate = endDateString
-      ? new Date(`${endDateString}T00:00:00`)
-      : undefined;
-
-    return this.service.findAll(
-      req.user.id,
-      creditCardId,
-      status,
-      startDate,
-      endDate,
-    );
+    return this.service.findAll(organizationId, creditCardId);
   }
+
   @Get(':id')
-  findOne(@Request() req: AuthRequest, @Param('id') id: string) {
-    return this.service.findOne(req.user.id, id);
+  findOne(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.findOne(organizationId, id);
   }
 
   @Patch(':id')
   update(
-    @Request() req: AuthRequest,
+    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
     @Body() updateDto: UpdateCreditCardTransactionDto,
   ) {
-    return this.service.update(req.user.id, id, updateDto);
+    return this.service.update(organizationId, id, updateDto);
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Request() req: AuthRequest, @Param('id') id: string) {
-    return this.service.remove(req.user.id, id);
+  remove(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(organizationId, id);
   }
 }
