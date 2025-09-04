@@ -4,134 +4,21 @@ import { CreateSaleDto, UpdateSaleDto } from './dtos/sales.dto';
 import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma } from '@prisma/client';
 import { addMonths, addDays } from 'date-fns';
 import { Decimal } from '@prisma/client/runtime/library';
+import { CreateSaleUseCase } from './use-cases/create-sale.use-case'; // Added
 
 @Injectable()
 export class SalesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private createSaleUseCase: CreateSaleUseCase, // Injected
+  ) {}
 
-  async create(organizationId: string, data: CreateSaleDto): Promise<Sale> {
-    const { items, feeAmount, paymentMethod, numberOfInstallments, clientId, contaCorrenteId, paymentTermId } = data;
-
-    const organizationSettings = await this.prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: { absorbCreditCardFee: true, creditCardReceiveDays: true },
-    });
-
-    const creditCardReceiveDays = organizationSettings?.creditCardReceiveDays || 30;
-
-    let totalAmount = new Decimal(0);
-    const saleItemsData: Prisma.SaleItemCreateManySaleInput[] = [];
-    for (const item of items) {
-      const product = await this.prisma.product.findUnique({ where: { id: item.productId, organizationId } });
-      if (!product || product.stock < item.quantity) {
-        throw new NotFoundException(`Produto ${product?.name || item.productId} sem estoque suficiente.`);
-      }
-      totalAmount = totalAmount.add(new Decimal(item.price).mul(item.quantity));
-      saleItemsData.push({ productId: item.productId, quantity: item.quantity, price: item.price });
-    }
-
-    let finalSaleAmount = totalAmount;
-    let finalReceivableAmount = totalAmount;
-    const feeAmountDecimal = new Decimal(feeAmount || 0);
-
-    if (paymentMethod === 'A_PRAZO' && paymentTermId) {
-      const paymentTerm = await this.prisma.paymentTerm.findUnique({ where: { id: paymentTermId } });
-      if (paymentTerm?.interestRate?.isFinite() && paymentTerm.interestRate.greaterThan(0)) {
-        const interest = totalAmount.mul(paymentTerm.interestRate.div(100));
-        finalSaleAmount = totalAmount.add(interest);
-        finalReceivableAmount = finalSaleAmount;
-      }
-    } else if (paymentMethod === 'CREDIT_CARD') {
-      if (organizationSettings?.absorbCreditCardFee) { // Empresa absorve
-        finalSaleAmount = totalAmount;
-        finalReceivableAmount = totalAmount.sub(feeAmountDecimal);
-      } else { // Cliente paga a taxa
-        finalSaleAmount = totalAmount.add(feeAmountDecimal);
-        finalReceivableAmount = finalSaleAmount;
-      }
-    }
-
-    return this.prisma.$transaction(async (prisma) => {
-      const sale = await prisma.sale.create({
-        data: {
-          organization: { connect: { id: organizationId } },
-          client: { connect: { id: clientId } },
-          orderNumber: `VENDA-${Date.now()}`,
-          totalAmount: totalAmount,
-          feeAmount: feeAmountDecimal,
-          netAmount: finalSaleAmount,
-          paymentMethod: paymentMethod,
-          paymentTerm: paymentTermId ? { connect: { id: paymentTermId } } : undefined,
-          saleItems: { createMany: { data: saleItemsData } },
-        },
-      });
-
-      for (const item of items) {
-        await prisma.product.update({ where: { id: item.productId }, data: { stock: { decrement: item.quantity } } });
-      }
-
-      if (paymentMethod === 'A_VISTA') {
-        if (!contaCorrenteId) {
-          throw new BadRequestException('Para vendas à vista, a conta corrente é obrigatória.');
-        }
-        const createdTransaction = await prisma.transacao.create({
-          data: {
-            organizationId,
-            tipo: TipoTransacaoPrisma.CREDITO,
-            valor: finalReceivableAmount,
-            moeda: 'BRL',
-            descricao: `Recebimento Venda ${sale.orderNumber}`,
-            dataHora: sale.createdAt,
-            contaContabilId: (await prisma.contaContabil.findFirstOrThrow({ where: { organizationId, codigo: '1.1.1' } })).id,
-            contaCorrenteId: contaCorrenteId,
-          },
-        });
-
-        await prisma.accountRec.create({
-          data: {
-            organizationId,
-            saleId: sale.id,
-            description: `Venda à Vista ${sale.orderNumber}`,
-            amount: finalReceivableAmount,
-            dueDate: new Date(),
-            received: true,
-            receivedAt: new Date(),
-            contaCorrenteId: contaCorrenteId,
-            transacaoId: createdTransaction.id,
-          },
-        });
-      } else if (paymentMethod === 'A_PRAZO') {
-        const paymentTerm = await prisma.paymentTerm.findUnique({ where: { id: paymentTermId! } });
-        const numInstallments = paymentTerm!.installmentsDays.length;
-        const installmentAmount = finalReceivableAmount.div(numInstallments);
-
-        for (let i = 0; i < numInstallments; i++) {
-          await prisma.accountRec.create({
-            data: {
-              organizationId,
-              saleId: sale.id,
-              description: `Venda ${sale.orderNumber} - Parcela ${i + 1}/${numInstallments}`,
-              amount: installmentAmount,
-              dueDate: addDays(new Date(), paymentTerm!.installmentsDays[i]),
-              received: false,
-            },
-          });
-        }
-      } else if (paymentMethod === 'CREDIT_CARD') {
-        await prisma.accountRec.create({
-          data: {
-            organizationId,
-            saleId: sale.id,
-            description: `Recebimento Cartão de Crédito - Venda ${sale.orderNumber}`,
-            amount: finalReceivableAmount,
-            dueDate: addDays(new Date(), creditCardReceiveDays),
-            received: false,
-          },
-        });
-      }
-
-      return sale;
-    });
+  async create(
+    organizationId: string,
+    userId: string, // Added userId
+    createSaleDto: CreateSaleDto,
+  ): Promise<Sale> {
+    return this.createSaleUseCase.execute(organizationId, userId, createSaleDto);
   }
 
   // Recebe organizationId
@@ -187,7 +74,6 @@ export class SalesService {
     });
   }
 
-  // Recebe organizationId
   async remove(organizationId: string, id: string): Promise<Sale> {
     const sale = await this.prisma.sale.findFirst({
       where: { id, organizationId },

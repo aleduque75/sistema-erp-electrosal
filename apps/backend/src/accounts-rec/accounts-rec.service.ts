@@ -10,10 +10,14 @@ import {
   ReceivePaymentDto,
 } from './dtos/account-rec.dto';
 import { AccountRec, Prisma, TipoTransacaoPrisma } from '@prisma/client';
+import { SettingsService } from '../settings/settings.service'; // Added
 
 @Injectable()
 export class AccountsRecService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private settingsService: SettingsService, // Injected
+  ) {}
 
   async create(
     organizationId: string,
@@ -61,15 +65,13 @@ export class AccountsRecService {
 
   async receive(
     organizationId: string,
+    userId: string, // Added userId
     id: string,
     data: ReceivePaymentDto,
   ): Promise<any> {
     const [accountToReceive, settings] = await Promise.all([
       this.findOne(organizationId, id),
-      this.prisma.userSettings.findFirst({
-        where: { user: { organizationId } },
-        select: { defaultCaixaContaId: true },
-      }),
+      this.settingsService.findOne(userId), // Used SettingsService
     ]);
 
     if (!settings?.defaultCaixaContaId) {

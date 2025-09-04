@@ -2,31 +2,37 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateSettingDto } from './dto/update-setting.dto';
+import { UserSettings } from '@sistema-erp-electrosal/core'; // Added
+import { UserSettingsMapper } from '../users/mappers/user-settings.mapper'; // Added
 
 @Injectable()
 export class SettingsService {
   constructor(private prisma: PrismaService) {}
 
   // Busca as configurações do usuário, ou cria se não existirem
-  async findOne(userId: string) {
-    let settings = await this.prisma.userSettings.findUnique({
+  async findOne(userId: string): Promise<UserSettings> {
+    let prismaSettings = await this.prisma.userSettings.findUnique({
       where: { userId },
     });
-    if (!settings) {
-      settings = await this.prisma.userSettings.create({
-        data: { userId },
+    if (!prismaSettings) {
+      const newSettings = UserSettings.create({ userId });
+      prismaSettings = await this.prisma.userSettings.create({
+        data: UserSettingsMapper.toPersistence(newSettings),
       });
     }
-    return settings;
+    return UserSettingsMapper.toDomain(prismaSettings);
   }
 
   // Atualiza as configurações
-  async update(userId: string, updateSettingDto: UpdateSettingDto) {
-    const settings = await this.findOne(userId); // Garante que as configs existam
-    return this.prisma.userSettings.update({
-      where: { id: settings.id },
-      data: updateSettingDto,
+  async update(userId: string, updateSettingDto: UpdateSettingDto): Promise<UserSettings> {
+    const existingSettings = await this.findOne(userId); // Garante que as configs existam e retorna DDD entity
+    existingSettings.update(updateSettingDto); // Update DDD entity
+    
+    const updatedPrismaSettings = await this.prisma.userSettings.update({
+      where: { id: existingSettings.id.toString() }, // Use id from DDD entity
+      data: UserSettingsMapper.toPersistence(existingSettings), // Convert back to Prisma for persistence
     });
+    return UserSettingsMapper.toDomain(updatedPrismaSettings);
   }
 
   async getOrganizationSettings(organizationId: string) {

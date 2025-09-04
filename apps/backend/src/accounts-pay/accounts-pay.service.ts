@@ -12,10 +12,14 @@ import {
 import { AccountPay, Prisma, TipoTransacaoPrisma } from '@prisma/client';
 import { addMonths } from 'date-fns';
 import { Decimal } from '@prisma/client/runtime/library';
+import { SettingsService } from '../settings/settings.service'; // Added
 
 @Injectable()
 export class AccountsPayService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private settingsService: SettingsService, // Injected
+  ) {}
 
   async create(
     organizationId: string,
@@ -125,15 +129,13 @@ export class AccountsPayService {
 
   async pay(
     organizationId: string,
+    userId: string, // Added userId
     id: string,
     data: PayAccountDto,
   ): Promise<AccountPay> {
     const [accountToPay, settings] = await Promise.all([
       this.findOne(organizationId, id),
-      this.prisma.userSettings.findFirst({
-        where: { user: { organizationId } },
-        select: { defaultCaixaContaId: true },
-      }),
+      this.settingsService.findOne(userId), // Used SettingsService
     ]);
 
     if (!settings?.defaultCaixaContaId) {

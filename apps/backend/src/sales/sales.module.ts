@@ -12,6 +12,7 @@ import { PrismaModule } from '../prisma/prisma.module';
   controllers: [SalesController],
   providers: [
     SalesService,
+    CreateSaleUseCase, // Added
   ],
 })
 export class SalesModule {}
