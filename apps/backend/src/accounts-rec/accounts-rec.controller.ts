@@ -58,10 +58,11 @@ export class AccountsRecController {
   @Patch(':id/receive')
   receive(
     @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('sub') userId: string, // Added userId
     @Param('id') id: string,
     @Body() dto: ReceivePaymentDto,
   ) {
-    return this.service.receive(organizationId, id, dto);
+    return this.service.receive(organizationId, userId, id, dto); // Pass userId
   }
 
   @Delete(':id')

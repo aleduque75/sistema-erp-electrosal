@@ -7,12 +7,16 @@ import { CreateSaleDto } from '../dtos/sales.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { addMonths, addDays } from 'date-fns';
 import { TipoTransacaoPrisma, Prisma } from '@prisma/client'; // <-- 1. Importe o 'Prisma'
+import { SettingsService } from '../../settings/settings.service'; // Added
 
 @Injectable()
 export class CreateSaleUseCase {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private settingsService: SettingsService, // Injected
+  ) {}
 
-  async execute(organizationId: string, createSaleDto: CreateSaleDto) {
+  async execute(organizationId: string, userId: string, createSaleDto: CreateSaleDto) {
     console.log('Dados recebidos no CreateSaleUseCase:', createSaleDto);
 
     const {
@@ -26,9 +30,7 @@ export class CreateSaleUseCase {
 
     const [client, settings] = await Promise.all([
       this.prisma.client.findFirst({ where: { id: clientId, organizationId } }),
-      this.prisma.userSettings.findFirst({
-        where: { user: { organizationId } },
-      }),
+      this.settingsService.findOne(userId), // Used SettingsService
     ]);
 
     if (!client) throw new NotFoundException('Cliente não encontrado.');

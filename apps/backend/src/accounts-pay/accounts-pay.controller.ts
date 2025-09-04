@@ -64,10 +64,11 @@ export class AccountsPayController {
   @Post(':id/pay')
   pay(
     @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('sub') userId: string, // Added userId
     @Param('id') id: string,
     @Body() payDto: PayAccountDto,
   ) {
-    return this.accountsPayService.pay(organizationId, id, payDto);
+    return this.accountsPayService.pay(organizationId, userId, id, payDto); // Pass userId
   }
 
   @Post(':id/split')

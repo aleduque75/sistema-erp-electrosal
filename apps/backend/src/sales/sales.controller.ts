@@ -24,9 +24,10 @@ export class SalesController {
   @Post()
   create(
     @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('sub') userId: string, // Added userId
     @Body() createSaleDto: CreateSaleDto,
   ) {
-    return this.salesService.create(organizationId, createSaleDto);
+    return this.salesService.create(organizationId, userId, createSaleDto); // Pass userId
   }
 
   @Get()
