@@ -31,40 +31,60 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'http',
-        hostname: '192.168.15.6',
-        port: '3001',
-        pathname: '/api/media/**',
-      },
-      {
-        protocol: 'http',
         hostname: 'localhost',
-        port: '3001',
+        port: '3002',
         pathname: '/api/media/**',
       },
       {
         protocol: 'http',
         hostname: '192.168.15.6',
-        port: '3001',
-        pathname: '/uploads/**',
+        port: '3002',
+        pathname: '/api/media/**',
       },
       {
         protocol: 'http',
         hostname: 'localhost',
-        port: '3001',
+        port: '3002',
+        pathname: '/api/media/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '192.168.15.6',
+        port: '3002',
+        pathname: '/api/media/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3002',
         pathname: '/uploads/**',
       },
       {
         protocol: 'http',
         hostname: '192.168.15.6',
-        port: '3001',
+        port: '3002',
+        pathname: '/uploads/**',
+      },
+
+      {
+        protocol: 'http',
+        hostname: '192.168.15.6',
+        port: '3002',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '192.168.15.6',
+        port: '3002',
         pathname: '/api/uploads/**',
       },
       {
         protocol: 'http',
         hostname: 'localhost',
-        port: '3001',
+        port: '3002',
         pathname: '/api/uploads/**',
       },
+      
     ],
   },
 };

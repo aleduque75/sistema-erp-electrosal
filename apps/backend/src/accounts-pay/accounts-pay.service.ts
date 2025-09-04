@@ -9,8 +9,9 @@ import {
   UpdateAccountPayDto,
   PayAccountDto,
 } from './dtos/account-pay.dto';
-import { AccountPay, Prisma } from '@prisma/client'; // Adicionado Prisma
-import { TipoTransacaoPrisma } from '@prisma/client';
+import { AccountPay, Prisma, TipoTransacaoPrisma } from '@prisma/client';
+import { addMonths } from 'date-fns';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class AccountsPayService {
@@ -19,40 +20,82 @@ export class AccountsPayService {
   async create(
     organizationId: string,
     data: CreateAccountPayDto,
-  ): Promise<AccountPay> {
-    const createData: Prisma.AccountPayCreateInput = {
-      description: data.description,
-      amount: data.amount,
-      dueDate: data.dueDate,
-      organization: { connect: { id: organizationId } },
-    };
+  ): Promise<any> {
+    // Se for uma despesa parcelada...
+    if (
+      data.isInstallment &&
+      data.totalInstallments &&
+      data.totalInstallments > 1
+    ) {
+      const {
+        description,
+        amount,
+        dueDate,
+        totalInstallments,
+        contaContabilId,
+      } = data;
+      const installmentValue = new Decimal(amount).div(totalInstallments);
 
-    if (data.contaContabilId !== undefined) {
-      createData.contaContabil = { connect: { id: data.contaContabilId } };
+      const accountsToCreate: Prisma.AccountPayCreateManyInput[] = [];
+
+      for (let i = 0; i < totalInstallments; i++) {
+        accountsToCreate.push({
+          organizationId,
+          description: `${description} (Parcela ${i + 1}/${totalInstallments})`,
+          amount: installmentValue,
+          dueDate: addMonths(dueDate, i),
+          contaContabilId,
+          isInstallment: true,
+          installmentNumber: i + 1,
+          totalInstallments,
+        });
+      }
+
+      return this.prisma.accountPay.createMany({
+        data: accountsToCreate,
+      });
     }
 
-    return this.prisma.accountPay.create({ data: createData });
-  }
+    // 👇 LÓGICA CORRIGIDA: Se for uma despesa única
+    return this.prisma.accountPay.create({
+      data: {
+        ...data,
+        isInstallment: false,
+        organizationId,
+      },
+    });
+  } // <-- Chave de fechamento do método 'create' estava faltando
 
-  async findAll(organizationId: string): Promise<any> {
-    // Retorna any para o objeto complexo
+  async findAll(
+    organizationId: string,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<any> {
+    const where: Prisma.AccountPayWhereInput = {
+      organizationId,
+      dueDate: {
+        gte: startDate,
+        lte: endDate,
+      },
+    };
+
     const accounts = await this.prisma.accountPay.findMany({
-      where: { organizationId },
+      where,
       include: { contaContabil: true },
       orderBy: { dueDate: 'asc' },
     });
 
-    // Calcula o total
-    const total = accounts.reduce((sum, acc) => sum + Number(acc.amount), 0);
+    const totalResult = await this.prisma.accountPay.aggregate({
+      where: { ...where, paid: false },
+      _sum: {
+        amount: true,
+      },
+    });
 
-    // Mapeia para um formato JSON-friendly
-    const formattedAccounts = accounts.map((acc) => ({
-      ...acc,
-      amount: Number(acc.amount),
-    }));
-
-    // Retorna o objeto esperado pelo frontend
-    return { accounts: formattedAccounts, total };
+    return {
+      accounts: accounts.map((acc) => ({ ...acc, amount: Number(acc.amount) })),
+      total: totalResult._sum.amount?.toNumber() || 0,
+    };
   }
 
   async findOne(organizationId: string, id: string): Promise<AccountPay> {
@@ -70,10 +113,13 @@ export class AccountsPayService {
     id: string,
     data: UpdateAccountPayDto,
   ): Promise<AccountPay> {
-    await this.findOne(organizationId, id); // Garante a posse
+    await this.findOne(organizationId, id);
     return this.prisma.accountPay.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        amount: data.amount ? new Decimal(data.amount) : undefined,
+      },
     });
   }
 
@@ -115,25 +161,73 @@ export class AccountsPayService {
         data: {
           paid: true,
           paidAt: data.paidAt || new Date(),
-          transacaoId: newTransaction.id, // <-- Salva o link
+          transacaoId: newTransaction.id,
         },
       });
     });
   }
+
   async remove(organizationId: string, id: string): Promise<AccountPay> {
-    await this.findOne(organizationId, id); // Garante a posse
+    await this.findOne(organizationId, id);
     return this.prisma.accountPay.delete({
       where: { id },
     });
   }
 
+  async splitIntoInstallments(
+    organizationId: string,
+    id: string,
+    numberOfInstallments: number,
+  ): Promise<any> {
+    // Retorna 'any' para o resultado do createMany
+    return this.prisma.$transaction(async (tx) => {
+      const originalAccount = await this.findOne(organizationId, id);
+      if (originalAccount.paid) {
+        throw new BadRequestException(
+          'Não é possível parcelar uma conta já paga.',
+        );
+      }
+
+      await tx.accountPay.delete({ where: { id: originalAccount.id } });
+
+      const installmentAmount = new Decimal(originalAccount.amount).div(
+        numberOfInstallments,
+      );
+      const newAccountsData: Prisma.AccountPayCreateManyInput[] = [];
+
+      for (let i = 0; i < numberOfInstallments; i++) {
+        newAccountsData.push({
+          organizationId,
+          description: `${originalAccount.description} (Parc. ${i + 1}/${numberOfInstallments})`,
+          amount: installmentAmount,
+          dueDate: addMonths(originalAccount.dueDate, i),
+          contaContabilId: originalAccount.contaContabilId,
+          isInstallment: true,
+          installmentNumber: i + 1,
+          totalInstallments: numberOfInstallments,
+        });
+      }
+      return tx.accountPay.createMany({ data: newAccountsData });
+    });
+  }
+
   async getSummaryByCategory(organizationId: string) {
-    return this.prisma.accountPay.groupBy({
+    const summary = await this.prisma.accountPay.groupBy({
       by: ['contaContabilId'],
       where: { organizationId, paid: false },
       _sum: {
         amount: true,
       },
     });
+
+    // Adiciona o nome da conta contábil para o gráfico
+    const contas = await this.prisma.contaContabil.findMany({
+      where: { id: { in: summary.map((s) => s.contaContabilId!) } },
+    });
+
+    return summary.map((item) => ({
+      ...item,
+      contaContabil: contas.find((c) => c.id === item.contaContabilId),
+    }));
   }
 }

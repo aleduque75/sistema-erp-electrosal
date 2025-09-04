@@ -8,6 +8,8 @@ import {
   IsOptional,
   IsUUID,
   Min,
+  IsInt,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -27,6 +29,15 @@ export class CreateAccountPayDto {
   @IsUUID()
   @IsOptional()
   contaContabilId?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isInstallment?: boolean;
+
+  @IsInt()
+  @Min(2)
+  @IsOptional()
+  totalInstallments?: number;
 }
 
 // Agora o PartialType será reconhecido
@@ -41,4 +52,11 @@ export class PayAccountDto {
   @IsOptional()
   @Type(() => Date)
   paidAt?: Date;
+}
+
+export class SplitAccountPayDto {
+  @IsInt()
+  @Min(2)
+  @IsNotEmpty()
+  numberOfInstallments: number;
 }

@@ -36,16 +36,19 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   // --- 👇 SOLUÇÃO DE CORS DEFINITIVA APLICADA AQUI 👇 ---
-  const whitelist = ['http://localhost:3000'];
 
   app.enableCors({
-    origin: function (origin, callback) {
+    origin: function (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void
+    ): void {
       // Permite requisições sem 'origin' (Postman) ou de localhost e IPs de rede privada
       const isAllowed =
         !origin ||
-        origin.startsWith('http://localhost') ||
-        origin.startsWith('http://192.168.') ||
-        origin.startsWith('http://10.');
+        (typeof origin === 'string' &&
+          (origin.startsWith('http://localhost') ||
+            origin.startsWith('http://192.168.') ||
+            origin.startsWith('http://10.')));
 
       if (isAllowed) {
         callback(null, true);
@@ -60,10 +63,10 @@ async function bootstrap() {
 
   app.enableShutdownHooks(); // Adicionado para lidar com o desligamento de forma elegante
 
-  await app.listen(3001, '0.0.0.0');
+  await app.listen(3002, '0.0.0.0');
 
   console.log(
-    `Application successfully started on port ${process.env.PORT || 3001}`,
+    `Application successfully started on port ${process.env.PORT || 3003}`,
   );
   console.log(
     `Swagger documentation is available at: ${await app.getUrl()}/api/docs`,

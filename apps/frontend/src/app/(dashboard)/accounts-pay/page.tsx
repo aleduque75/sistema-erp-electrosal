@@ -11,10 +11,10 @@ import {
   Edit,
   Trash2,
   PlusCircle,
+  GitCommitHorizontal,
 } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { addDays } from "date-fns";
-
 import {
   Card,
   CardHeader,
@@ -44,13 +44,10 @@ import {
 } from "@/components/ui/dialog";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Badge } from "@/components/ui/badge";
-
-// Supondo que estes formulários existam em uma pasta 'components'
-import { AccountPayForm } from "./components/pay-account-form";
-import { PayAccountForm } from "./components/pay-account-form";
+import { AccountPayForm } from "./components/account-pay-form"; // <-- CORRIGIDO AQUI
+import { SplitAccountPayForm } from "./components/split-account-pay-form";
 import { formatInTimeZone } from "date-fns-tz";
 
-// Interface e Funções de Formatação
 interface AccountPay {
   id: string;
   description: string;
@@ -59,21 +56,19 @@ interface AccountPay {
   paid: boolean;
   paidAt?: string | null;
   isInstallment?: boolean;
-  totalInstallments?: number;
 }
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value || 0
   );
-
 const formatDate = (dateString?: string | null) =>
   dateString
     ? formatInTimeZone(new Date(dateString), "UTC", "dd/MM/yyyy")
     : "N/A";
 
-// Componente da Página
 export default function AccountsPayPage() {
+  const { user, loading } = useAuth();
   const [accounts, setAccounts] = useState<AccountPay[]>([]);
   const [total, setTotal] = useState(0);
   const [isFetching, setIsFetching] = useState(true);
@@ -88,16 +83,17 @@ export default function AccountsPayPage() {
     null
   );
   const [accountToPay, setAccountToPay] = useState<AccountPay | null>(null);
+  const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
+  const [accountToSplit, setAccountToSplit] = useState<AccountPay | null>(null);
 
   const fetchAccounts = useCallback(async () => {
     if (!date?.from || !date?.to) return;
-
     setIsFetching(true);
     try {
-      const params = new URLSearchParams();
-      params.append("startDate", date.from.toISOString().split("T")[0]);
-      params.append("endDate", date.to.toISOString().split("T")[0]);
-
+      const params = new URLSearchParams({
+        startDate: date.from.toISOString().split("T")[0],
+        endDate: date.to.toISOString().split("T")[0],
+      });
       const response = await api.get(`/accounts-pay?${params.toString()}`);
       setAccounts(response.data.accounts || []);
       setTotal(response.data.total || 0);
@@ -109,8 +105,10 @@ export default function AccountsPayPage() {
   }, [date]);
 
   useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+    if (user && !loading) {
+      fetchAccounts();
+    }
+  }, [user, loading, fetchAccounts]);
 
   const handleSave = () => {
     setIsFormModalOpen(false);
@@ -123,16 +121,30 @@ export default function AccountsPayPage() {
     fetchAccounts();
   };
 
+  const handleSplitSave = async (numberOfInstallments: number) => {
+    if (!accountToSplit) return;
+    try {
+      await api.post(`/accounts-pay/${accountToSplit.id}/split`, {
+        numberOfInstallments,
+      });
+      toast.success("Conta parcelada com sucesso!");
+      setIsSplitModalOpen(false);
+      setAccountToSplit(null);
+      fetchAccounts();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Falha ao parcelar a conta.");
+    }
+  };
+
   const handleDelete = async () => {
     if (!accountToDelete) return;
     try {
       await api.delete(`/accounts-pay/${accountToDelete.id}`);
       toast.success("Conta excluída com sucesso!");
+      setAccountToDelete(null);
       fetchAccounts();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Falha ao excluir.");
-    } finally {
-      setAccountToDelete(null);
     }
   };
 
@@ -199,6 +211,16 @@ export default function AccountsPayPage() {
                 >
                   <Edit className="mr-2 h-4 w-4" /> Editar
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={account.paid || account.isInstallment}
+                  onClick={() => {
+                    setAccountToSplit(account);
+                    setIsSplitModalOpen(true);
+                  }}
+                >
+                  <GitCommitHorizontal className="mr-2 h-4 w-4" /> Quebrar em
+                  Parcelas
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setAccountToDelete(account)}
@@ -213,6 +235,8 @@ export default function AccountsPayPage() {
       },
     },
   ];
+
+  if (loading) return <p className="text-center p-10">Carregando...</p>;
 
   return (
     <>
@@ -231,7 +255,6 @@ export default function AccountsPayPage() {
             </Button>
           </div>
         </div>
-
         <Card>
           <CardContent className="pt-6">
             <DataTable
@@ -296,6 +319,19 @@ export default function AccountsPayPage() {
               initialAmount={accountToPay.amount}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSplitModalOpen} onOpenChange={setIsSplitModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quebrar Conta em Parcelas</DialogTitle>
+            <DialogDescription>
+              Dividir "{accountToSplit?.description}" (Valor:{" "}
+              {formatCurrency(accountToSplit?.amount)}) em múltiplas parcelas.
+            </DialogDescription>
+          </DialogHeader>
+          {accountToSplit && <SplitAccountPayForm onSave={handleSplitSave} />}
         </DialogContent>
       </Dialog>
     </>

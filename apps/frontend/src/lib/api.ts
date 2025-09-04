@@ -2,7 +2,7 @@ import axios from "axios";
 import { toast } from "sonner";
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://192.168.15.6:3001";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
 
 // ✅ CORREÇÃO FINAL: Garante que a URL base termine com /api
 const resolvedBaseURL = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;

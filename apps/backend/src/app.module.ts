@@ -34,6 +34,7 @@ import { BackupsModule } from './backups/backups.module';
 import { CreditCardFeesModule } from './credit-card-fees/credit-card-fees.module';
 import { CreditCardForecastModule } from './credit-card-forecast/credit-card-forecast.module';
 import { PaymentTermsModule } from './payment-terms/payment-terms.module';
+import { PdfImportModule } from './pdf-import/pdf-import.module';
 
 
 @Module({
@@ -60,7 +61,7 @@ import { PaymentTermsModule } from './payment-terms/payment-terms.module';
     TransacoesModule,
     PrismaModule,
     AccountsRecModule, // <-- Registre o módulo aqui
-    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, // <-- Registre o módulo aqui
+    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, PdfImportModule, // <-- Registre o módulo aqui
   ],
   controllers: [AppController],
   providers: [

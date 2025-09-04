@@ -1,68 +1,47 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { ColumnDef } from "@tanstack/react-table";
-import { format, parse, startOfMonth, endOfMonth } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
+import { format, endOfDay, addMonths } from "date-fns";
 
 import {
   Card,
+  CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardContent,
-  CardFooter,
-  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DataTableWithSelection } from "@/components/ui/data-table-with-selection";
-import { Combobox } from "@/components/ui/combobox";
+import { DataTable } from "@/components/ui/data-table"; // Importa a DataTable
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 
 // Interfaces
+interface Transaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  isInstallment: boolean;
+  currentInstallment?: number;
+}
 interface CreditCard {
   id: string;
   name: string;
+  closingDay: number;
+  dueDate: number;
 }
-interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-}
-
-// Schema do formulário
-const formSchema = z.object({
-  name: z.string().min(3, "O nome da fatura é obrigatório."),
-  endDate: z.date({
-    required_error: "A data de fechamento é obrigatória.",
-  }),
-  dueDate: z.date({ required_error: "A data de vencimento é obrigatória." }),
-});
-type FormValues = z.infer<typeof formSchema>;
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -71,96 +50,69 @@ const formatCurrency = (value: number) =>
 const formatDate = (dateString: string) =>
   new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 
-export default function GenerateBillPage() {
+export default function NewCreditCardBillPage() {
   const router = useRouter();
-  const [cards, setCards] = useState<CreditCard[]>([]);
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [rowSelection, setRowSelection] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isFetchingTransactions, setIsFetchingTransactions] = useState(false);
-
-  const [startDate, setStartDate] = useState(
-    format(startOfMonth(new Date()), "yyyy-MM-dd")
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [selection, setSelection] = useState<Record<string, boolean>>({});
+  const [billName, setBillName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [closingDate, setClosingDate] = useState(
+    new Date().toISOString().split("T")[0]
   );
-  const [endDate, setEndDate] = useState(
-    format(endOfMonth(new Date()), "yyyy-MM-dd")
-  );
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    // ✅ CORREÇÃO PRINCIPAL: Definindo valores padrão para as datas
-    defaultValues: {
-      name: "",
-      endDate: new Date(),
-      dueDate: new Date(),
-    },
-  });
-  const { control, handleSubmit, setValue } = form;
 
   useEffect(() => {
-    api.get("/credit-cards").then((res) => setCards(res.data));
+    api.get("/credit-cards").then((res) => {
+      setCreditCards(res.data);
+      setIsLoading(false);
+    });
   }, []);
 
   useEffect(() => {
-    if (selectedCardId) {
-      setIsFetchingTransactions(true);
+    if (selectedCard) {
+      setIsLoading(true);
       api
-        .get("/credit-card-transactions", {
-          params: {
-            creditCardId: selectedCardId,
-            status: "unbilled",
-            startDate,
-            endDate,
-          },
-        })
+        .get(`/credit-card-transactions?creditCardId=${selectedCard.id}`)
         .then((res) => {
-          setTransactions(
-            res.data.map((t: any) => ({ ...t, amount: parseFloat(t.amount) }))
-          );
+          console.log("Transações recebidas da API:", res.data); // <-- PONTO DE DEBUG
+          setAllTransactions(res.data);
+          setBillName(`Fatura ${format(new Date(), "MMMM/yyyy")}`);
+          setSelection({});
         })
-        .finally(() => setIsFetchingTransactions(false));
-    } else {
-      setTransactions([]);
+        .catch(() => toast.error("Falha ao buscar transações."))
+        .finally(() => setIsLoading(false));
     }
-  }, [selectedCardId, startDate, endDate]);
+  }, [selectedCard]);
 
-  const onGenerateBill = async (formData: FormValues) => {
-    // ✅ CORREÇÃO: Mapeia os índices selecionados para os IDs (UUIDs) corretos
-    const selectedIndices = Object.keys(rowSelection).map(Number);
-    const transactionIds = selectedIndices.map(index => transactions[index].id);
+  const filteredTransactions = useMemo(() => {
+    if (!closingDate) return allTransactions;
+    const endDate = endOfDay(new Date(closingDate));
+    return allTransactions.filter((tx) => new Date(tx.date) <= endDate);
+  }, [allTransactions, closingDate]);
 
-    if (transactionIds.length === 0) {
-      toast.error('Selecione pelo menos uma transação para incluir na fatura.');
-      return;
-    }
-    
-    setIsSubmitting(true);
-    try {
-      await api.post('/credit-card-bills/from-transactions', {
-        name: formData.name,
-        dueDate: formData.dueDate,
-        endDate: formData.endDate,
-        creditCardId: selectedCardId,
-        transactionIds, // Agora envia o array de UUIDs correto
-        startDate: new Date(startDate),
-      });
-      toast.success('Fatura gerada com sucesso!');
-      router.push('/credit-card-bills');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Falha ao gerar a fatura.');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleSelectAll = (checked: boolean) => {
+    const newSelection: Record<string, boolean> = {};
+    filteredTransactions.forEach((tx) => {
+      newSelection[tx.id] = checked;
+    });
+    setSelection(newSelection);
   };
 
-  const totalSelecionado = useMemo(() => {
-    const selectedRowIndices = Object.keys(rowSelection).map(Number);
-    return selectedRowIndices.reduce((sum, index) => {
-      const transaction = transactions[index];
-      return transaction ? sum + transaction.amount : sum;
-    }, 0);
-  }, [rowSelection, transactions]);
+  const selectedTransactionsIds = useMemo(
+    () => Object.keys(selection).filter((id) => selection[id]),
+    [selection]
+  );
+  const totalAmount = useMemo(() => {
+    return filteredTransactions
+      .filter((tx) => selectedTransactionsIds.includes(tx.id))
+      .reduce((sum, tx) => sum + Number(tx.amount), 0);
+  }, [filteredTransactions, selectedTransactionsIds]);
+
+  const handleSaveBill = async () => {
+    /* ... (sua função handleSaveBill) ... */
+  };
 
   const columns: ColumnDef<Transaction>[] = [
     {
@@ -168,202 +120,106 @@ export default function GenerateBillPage() {
       header: ({ table }) => (
         <Checkbox
           checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Selecionar todos"
+          onCheckedChange={(value) => handleSelectAll(!!value)}
         />
       ),
       cell: ({ row }) => (
         <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Selecionar linha"
+          checked={selection[row.original.id] || false}
+          onCheckedChange={(value) =>
+            setSelection((prev) => ({ ...prev, [row.original.id]: !!value }))
+          }
         />
       ),
     },
     {
       accessorKey: "date",
       header: "Data",
-      cell: ({ row }) => formatDate(row.getValue("date")),
+      cell: ({ row }) => formatDate(row.original.date),
     },
     { accessorKey: "description", header: "Descrição" },
     {
       accessorKey: "amount",
-      header: () => <div className="text-right">Valor</div>,
-      cell: ({ row }) => (
-        <div className="text-right">
-          {formatCurrency(row.getValue("amount"))}
-        </div>
-      ),
+      header: "Valor",
+      cell: ({ row }) => formatCurrency(row.original.amount),
     },
   ];
 
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit(onGenerateBill)}>
-        <Card className="my-8">
-          <CardHeader>
-            <CardTitle>Gerar Nova Fatura de Cartão</CardTitle>
-            <CardDescription>
-              Selecione um cartão e um período para ver as transações em aberto
-              e gerar a fatura.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+    <Card>
+      <CardHeader>
+        <CardTitle>Gerar Nova Fatura de Cartão</CardTitle>
+        <CardDescription>
+          Selecione um cartão e os lançamentos para incluir na fatura.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 space-y-2">
+            <Label>Cartão de Crédito</Label>
+            <Select
+              onValueChange={(id) =>
+                setSelectedCard(creditCards.find((c) => c.id === id) || null)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um cartão..." />
+              </SelectTrigger>
+              <SelectContent>
+                {creditCards.map((card) => (
+                  <SelectItem key={card.id} value={card.id}>
+                    {card.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1 space-y-2">
+            <Label>Nome da Fatura</Label>
+            <Input
+              value={billName}
+              onChange={(e) => setBillName(e.target.value)}
+              placeholder="Ex: Fatura Agosto/2025"
+            />
+          </div>
+        </div>
+
+        {selectedCard && (
+          <div>
+            <div className="flex justify-end mb-4">
               <div className="space-y-2">
-                <Label>1. Selecione o Cartão</Label>
-                <Combobox
-                  options={cards.map((c) => ({ value: c.id, label: c.name }))}
-                  value={selectedCardId}
-                  onValueChange={setSelectedCardId}
-                  placeholder="Escolha um cartão..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Período - De</Label>
+                <Label htmlFor="closing-date">
+                  Mostrar lançamentos até a data:
+                </Label>
                 <Input
+                  id="closing-date"
                   type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  disabled={!selectedCardId}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Período - Até</Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  disabled={!selectedCardId}
+                  value={closingDate}
+                  onChange={(e) => setClosingDate(e.target.value)}
                 />
               </div>
             </div>
 
-            {selectedCardId && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-6">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>2. Nome da Fatura</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={`Fatura ${cards.find((c) => c.id === selectedCardId)?.name}`}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="endDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Data de Fechamento</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full justify-start text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? (
-                                  format(field.value, "PPP", { locale: ptBR })
-                                ) : (
-                                  <span>Escolha uma data</span>
-                                )}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="dueDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Data de Vencimento</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full justify-start text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? (
-                                  format(field.value, "PPP", { locale: ptBR })
-                                ) : (
-                                  <span>Escolha uma data</span>
-                                )}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+            <DataTable
+              columns={columns}
+              data={filteredTransactions}
+              isLoading={isLoading}
+              filterColumnId="description"
+            />
 
-                <div className="space-y-2">
-                  <Label>3. Selecione as Transações para Incluir</Label>
-                  {isFetchingTransactions ? (
-                    <p className="text-center p-10">Buscando transações...</p>
-                  ) : (
-                    <>
-                      <DataTableWithSelection
-                        columns={columns}
-                        data={transactions}
-                        rowSelection={rowSelection}
-                        onRowSelectionChange={setRowSelection}
-                      />
-                      <div className="text-right font-bold mt-2">
-                        Total Selecionado: {formatCurrency(totalSelecionado)}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={!selectedCardId || isSubmitting}>
-              {isSubmitting ? "Gerando..." : "Gerar Fatura"}
-            </Button>
-          </CardFooter>
-        </Card>
-      </form>
-    </Form>
+            <div className="text-right mt-4 space-y-2">
+              <p className="text-lg font-semibold">
+                Total Selecionado: {formatCurrency(totalAmount)}
+              </p>
+              <Button onClick={handleSaveBill} disabled={isSaving}>
+                {isSaving
+                  ? "Gerando..."
+                  : `Gerar Fatura com ${selectedTransactionsIds.length} Lançamentos`}
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

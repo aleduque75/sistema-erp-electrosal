@@ -339,6 +339,7 @@ model CreditCardTransaction {
   updatedAt             DateTime             @updatedAt
   transactionCategoryId String?
   transactionCategory   TransactionCategory? @relation(fields: [transactionCategoryId], references: [id])
+  fingerprint           String?              @unique // Campo para detecção de duplicatas
 
   @@map("credit_card_transactions")
 }

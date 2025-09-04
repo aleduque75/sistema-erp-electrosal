@@ -1,5 +1,8 @@
 import { PrismaClient, TipoContaContabilPrisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { config } from 'dotenv';
+
+config();
 
 const prisma = new PrismaClient();
 
