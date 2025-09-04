@@ -6,3 +6,4 @@ export * from './user-settings';
 export * from './client';
 export * from './product';
 export * from './stock-movement';
+export * from './sale-item';
