@@ -23,7 +23,7 @@ model Organization {
   contasContabeis         ContaContabil[]
   creditCards             CreditCard[]
   creditCardBills         CreditCardBill[]
-  transactionCategories   TransactionCategory[]
+  
   xmlImportLogs           XmlImportLog[]
   landingPages            LandingPage[]
   media                   Media[]
@@ -337,8 +337,7 @@ model CreditCardTransaction {
   creditCardBill        CreditCardBill?      @relation(fields: [creditCardBillId], references: [id])
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
-  transactionCategoryId String?
-  transactionCategory   TransactionCategory? @relation(fields: [transactionCategoryId], references: [id])
+  
   fingerprint           String?              @unique // Campo para detecção de duplicatas
 
   @@map("credit_card_transactions")
@@ -364,16 +363,7 @@ model CreditCardBill {
   @@map("credit_card_bills")
 }
 
-model TransactionCategory {
-  id                     String                  @id @default(uuid())
-  organizationId         String
-  organization           Organization            @relation(fields: [organizationId], references: [id])
-  name                   String
-  creditCardTransactions CreditCardTransaction[]
 
-  @@unique([organizationId, name])
-  @@map("transaction_categories")
-}
 
 // --- MODELOS AUXILIARES ---
 model XmlImportLog {
