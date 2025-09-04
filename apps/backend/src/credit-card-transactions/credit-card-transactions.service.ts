@@ -3,9 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateCreditCardTransactionDto,
   UpdateCreditCardTransactionDto,
-} from './dtos/credit-card-transaction.dto';
-import { Prisma } from '@prisma/client';
-import { addMonths } from 'date-fns';
+} from './dtos/credit-card-transaction.dto'; // Corrigido para o nome do arquivo correto
 
 @Injectable()
 export class CreditCardTransactionsService {
@@ -17,38 +15,37 @@ export class CreditCardTransactionsService {
       where: { id: data.creditCardId, organizationId },
     });
 
-    if (data.isInstallment && data.installments && data.installments > 0) {
-      const transactionsToCreate: Prisma.CreditCardTransactionCreateManyInput[] = [];
-      for (let i = 1; i <= data.installments; i++) {
-        const installmentDate = addMonths(new Date(data.date), i - 1);
-        transactionsToCreate.push({
-          ...data,
-          amount: data.amount,
-          isInstallment: true,
-          installments: data.installments,
-          currentInstallment: i,
-          description: `${data.description || ''} (${i}/${data.installments})`,
-          date: installmentDate,
-        });
-      }
+    // O Prisma não aceita o DTO diretamente se ele tiver campos extras (como isInstallment)
+    // que não são usados em uma criação simples. Por isso, montamos o objeto de dados.
+    const transactionData = {
+      description: data.description,
+      amount: data.amount,
+      date: data.date,
+      creditCardId: data.creditCardId,
+      contaContabilId: data.contaContabilId,
+      isInstallment: data.isInstallment,
+      installments: data.installments,
+      currentInstallment: data.isInstallment ? 1 : undefined, // Assume 1 para a primeira parcela
+    };
 
-      return this.prisma.creditCardTransaction.createMany({
-        data: transactionsToCreate,
-      });
-    } else {
-      return this.prisma.creditCardTransaction.create({ data: { ...data, description: data.description || '' } });
-    }
+    return this.prisma.creditCardTransaction.create({ data: transactionData });
   }
 
   async findAll(organizationId: string, creditCardId?: string) {
     return this.prisma.creditCardTransaction.findMany({
       where: {
         creditCard: {
-          organizationId, // Filtra transações de cartões da organização
-          id: creditCardId, // Filtra por um cartão específico, se fornecido
+          organizationId,
+          id: creditCardId,
         },
+        // A MÁGICA ESTÁ AQUI: Busca apenas transações que ainda não
+        // foram associadas a nenhuma fatura (creditCardBillId é nulo).
+        creditCardBillId: null,
       },
-      orderBy: { date: 'desc' },
+      include: {
+        contaContabil: true,
+      },
+      orderBy: { date: 'asc' }, // Ordena da mais antiga para a mais nova
     });
   }
 
@@ -70,15 +67,43 @@ export class CreditCardTransactionsService {
     id: string,
     data: UpdateCreditCardTransactionDto,
   ) {
-    await this.findOne(organizationId, id); // Garante a posse
-    return this.prisma.creditCardTransaction.update({
+    // 1. Garante que a transação existe e pertence à organização
+    const originalTransaction = await this.findOne(organizationId, id);
+
+    // 2. Atualiza a transação que o usuário editou
+    const updatedTransaction = await this.prisma.creditCardTransaction.update({
       where: { id },
       data,
     });
+
+    // 3. Lógica para propagar a categoria para outras parcelas
+    // Se a transação é uma parcela e a categoria foi alterada...
+    if (updatedTransaction.isInstallment && data.contaContabilId) {
+      // Extrai a descrição base, sem o "(Parcela XX/YY)"
+      const baseDescription =
+        originalTransaction.description.split(' (Parcela')[0];
+
+      // Atualiza todas as outras parcelas da mesma compra
+      await this.prisma.creditCardTransaction.updateMany({
+        where: {
+          // Procura por transações que:
+          creditCardId: originalTransaction.creditCardId, // São do mesmo cartão
+          description: { startsWith: baseDescription }, // Têm a mesma descrição base
+          isInstallment: true, // São parcelas
+          id: { not: id }, // E que não sejam a que acabamos de editar
+        },
+        data: {
+          contaContabilId: data.contaContabilId, // Aplica a nova categoria
+        },
+      });
+    }
+
+    return updatedTransaction;
   }
 
   async remove(organizationId: string, id: string) {
-    await this.findOne(organizationId, id); // Garante a posse
+    // Garante que a transação a ser removida pertence à organização
+    await this.findOne(organizationId, id);
     return this.prisma.creditCardTransaction.delete({
       where: { id },
     });

@@ -1,16 +1,16 @@
 services:
   db:
     image: postgres:16
-    container_name: sistema-beleza-db
+    container_name: sistema-electrosal-db
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER:-aleduque}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-testpassword123}
-      POSTGRES_DB: ${DB_NAME:-sistema_beleza_dev}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-electrosal123}
+      POSTGRES_DB: ${DB_NAME:-sistema_electrosal_dev}
     volumes:
       - ./db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432" # Expõe a porta para o seu localhost
+      - "5435:5432" # Expõe a porta para o seu localhost
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s

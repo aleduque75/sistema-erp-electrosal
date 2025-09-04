@@ -117,6 +117,12 @@ export const menuConfig: NavItem[] = [
         description: "Importe seu extrato bancário (OFX) para conciliação.",
       },
       {
+        title: "Importar PDF (Fatura)",
+        href: "/dashboard/pdf-import",
+        icon: Upload,
+        description: "Importe faturas de cartão de crédito em PDF.",
+      },
+      {
         title: "Faturas de Cartão",
         href: "/credit-card-bills",
         icon: CreditCard,

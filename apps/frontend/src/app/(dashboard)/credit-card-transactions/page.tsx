@@ -1,308 +1,185 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
-import { PlusCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
-
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { MoreHorizontal, PlusCircle, Edit, Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
-import { CreditCardTransactionForm } from "./credit-card-transaction-form";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { formatInTimeZone } from 'date-fns-tz';
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+import { CreditCardTransactionForm } from "./credit-card-transaction-form";
 
-// <<< INTERFACE CORRIGIDA para corresponder ao backend >>>
-interface CreditCard {
-  id: string;
-  name: string;
-}
+// Interfaces
 interface CreditCardTransaction {
   id: string;
   description: string;
   amount: number;
-  date: Date;
+  date: string;
   isInstallment: boolean;
-  installments: number;
-  currentInstallment?: number | null;
-  creditCardId: string;
-  contaContabilId?: string | null;
-  creditCard: CreditCard;
-  contaContabil?: { nome: string } | null; // Relação com a categoria
-  creditCardBillId?: string | null;
-  creditCardBill?: { paid: boolean } | null;
+  currentInstallment?: number;
+  installments?: number;
+  contaContabil?: { nome: string };
+  creditCardId: string; // Adicionado para edição
 }
 
-// Funções de formatação
-const formatCurrency = (value?: number) =>
+// Funções de Formatação
+const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value || 0
   );
-const formatDate = (dateString?: string | null) =>
-  dateString
-    ? new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" })
-    : "N/A";
+const formatDate = (dateString: string) =>
+  new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 
+// Componente da Página
 export default function CreditCardTransactionsPage() {
-  const { user, loading } = useAuth();
   const [transactions, setTransactions] = useState<CreditCardTransaction[]>([]);
-  const [isFetching, setIsFetching] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Estados para modais e filtros
+  // Estados para a modal
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] =
     useState<CreditCardTransaction | null>(null);
-  const [transactionToDelete, setTransactionToDelete] =
-    useState<CreditCardTransaction | null>(null);
-  const [cards, setCards] = useState<CreditCard[]>([]);
-  const [selectedCardId, setSelectedCardId] = useState<"all" | string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<
-    "all" | "unbilled" | "billed"
-  >("unbilled");
 
-  // <<< useCallback PARA EVITAR LOOP INFINITO >>>
-  const fetchTransactions = useCallback(async () => {
-    setIsFetching(true);
+  const fetchTransactions = async () => {
+    setIsLoading(true);
     try {
-      const params: any = { status: selectedStatus };
-      if (selectedCardId !== "all") {
-        params.creditCardId = selectedCardId;
-      }
-      const response = await api.get("/credit-card-transactions", { params });
-      setTransactions(
-        response.data.map((t: any) => ({ ...t, amount: parseFloat(t.amount) }))
-      );
+      const response = await api.get("/credit-card-transactions");
+      setTransactions(response.data);
     } catch (err) {
-      toast.error("Falha ao carregar transações.");
+      toast.error("Falha ao buscar transações do cartão.");
     } finally {
-      setIsFetching(false);
+      setIsLoading(false);
     }
-  }, [selectedStatus, selectedCardId]); // A função só é recriada quando os filtros mudam
+  };
 
-  // Busca os cartões para o filtro
   useEffect(() => {
-    if (user && !loading) {
-      api.get("/credit-cards").then((res) => setCards(res.data));
-    }
-  }, [user, loading]);
+    fetchTransactions();
+  }, []);
 
-  // <<< useEffect ATUALIZADO para usar a função memoizada >>>
-  useEffect(() => {
-    if (user && !loading) {
-      fetchTransactions();
-    }
-  }, [user, loading, fetchTransactions]);
-
-  // Funções de ações
   const handleSave = () => {
     setIsFormModalOpen(false);
+    setTransactionToEdit(null);
     fetchTransactions();
   };
+
   const handleOpenNewModal = () => {
     setTransactionToEdit(null);
     setIsFormModalOpen(true);
   };
+
   const handleOpenEditModal = (transaction: CreditCardTransaction) => {
     setTransactionToEdit(transaction);
     setIsFormModalOpen(true);
   };
 
-  // <<< handleDelete MELHORADO para garantir consistência >>>
-  const handleDelete = async () => {
-    if (!transactionToDelete) return;
-    try {
-      await api.delete(`/credit-card-transactions/${transactionToDelete.id}`);
-      toast.success("Transação excluída com sucesso!");
-      fetchTransactions(); // Recarrega a lista da API
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Falha ao excluir.");
-    } finally {
-      setTransactionToDelete(null);
-    }
-  };
-
   const columns: ColumnDef<CreditCardTransaction>[] = [
-    {
-      accessorKey: "description",
-      header: "Descrição",
-      cell: ({ row }) => (
-        <div>
-          <span
-            className={
-              row.original.creditCardBill?.paid
-                ? "line-through text-muted-foreground"
-                : ""
-            }
-          >
-            {row.original.description}
-          </span>
-          {/* <<< COLUNA DE CATEGORIA ADICIONADA >>> */}
-          {row.original.contaContabil && (
-            <Badge variant="outline" className="ml-2 font-normal">
-              {row.original.contaContabil.nome}
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "amount",
-      header: "Valor",
-      cell: ({ row }) => formatCurrency(row.getValue("amount")),
-    },
     {
       accessorKey: "date",
       header: "Data",
-      cell: ({ row }) => formatDate(row.getValue("date")),
+      cell: ({ row }) => formatDate(row.original.date),
     },
-    { accessorKey: "creditCard.name", header: "Cartão" },
     {
-      accessorKey: "installments",
-      header: "Parcela",
+      accessorKey: "description",
+      header: "Descrição",
       cell: ({ row }) => {
-        const t = row.original;
-        return t.isInstallment
-          ? `${t.currentInstallment}/${t.installments}`
-          : "À Vista";
+        const { description, isInstallment, currentInstallment, installments } =
+          row.original;
+        return (
+          <div>
+            {description}
+            {isInstallment && (
+              <span className="text-xs text-muted-foreground ml-2">
+                ({currentInstallment}/{installments})
+              </span>
+            )}
+          </div>
+        );
       },
     },
     {
-      header: "Status",
-      cell: ({ row }) => {
-        const bill = row.original.creditCardBill;
-        if (bill) {
-          return bill.paid ? (
-            <Badge variant="default">Quitada</Badge>
-          ) : (
-            <Badge variant="secondary">Na Fatura</Badge>
-          );
-        }
-        return <Badge variant="outline">Aberta</Badge>;
-      },
+      accessorKey: "contaContabil.nome",
+      header: "Categoria",
+      cell: ({ row }) =>
+        row.original.contaContabil?.nome || (
+          <span className="text-muted-foreground">N/A</span>
+        ),
+    },
+    {
+      accessorKey: "amount",
+      header: () => <div className="text-right">Valor</div>,
+      cell: ({ row }) => (
+        <div className="text-right font-medium text-red-600">
+          {formatCurrency(row.original.amount)}
+        </div>
+      ),
     },
     {
       id: "actions",
       cell: ({ row }) => {
         const transaction = row.original;
-        const isBilled = !!transaction.creditCardBillId;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem
-                disabled={isBilled}
-                onClick={() => handleOpenEditModal(transaction)}
-              >
-                <Edit className="mr-2 h-4 w-4" /> Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={isBilled}
-                onClick={() => setTransactionToDelete(transaction)}
-                className="text-red-600 focus:text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Excluir
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => handleOpenEditModal(transaction)}
+                >
+                  <Edit className="mr-2 h-4 w-4" /> Editar
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-red-600">
+                  <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },
   ];
 
-  if (loading) return <p className="text-center p-10">Carregando...</p>;
-  if (!user)
-    return <p className="text-center p-10">Faça login para continuar.</p>;
-
   return (
-    <div className="space-y-4 my-8">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Lançamentos no Cartão</h1>
+        <Button onClick={handleOpenNewModal}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Novo Lançamento
+        </Button>
+      </div>
+
       <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
-            <CardTitle>Transações de Cartão de Crédito</CardTitle>
-            <div className="flex flex-col md:flex-row items-stretch md:items-center space-y-2 md:space-y-0 md:space-x-2">
-              <Select value={selectedCardId} onValueChange={setSelectedCardId}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder="Filtrar por cartão..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Cartões</SelectItem>
-                  {cards.map((card) => (
-                    <SelectItem key={card.id} value={card.id}>
-                      {card.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={selectedStatus}
-                onValueChange={(value: "all" | "unbilled" | "billed") =>
-                  setSelectedStatus(value)
-                }
-              >
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Filtrar por status..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="unbilled">Não Faturadas</SelectItem>
-                  <SelectItem value="billed">Faturadas</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={handleOpenNewModal} className="w-full md:w-auto">
-                <PlusCircle className="mr-2 h-4 w-4" /> Nova Transação
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isFetching ? (
-            <p className="text-center p-10">Buscando transações...</p>
-          ) : (
-            <DataTable
-              columns={columns}
-              data={transactions}
-              filterColumnId="description"
-              filterPlaceholder="Pesquisar por descrição..."
-            />
-          )}
+        <CardContent className="pt-6">
+          <DataTable
+            columns={columns}
+            data={transactions}
+            isLoading={isLoading}
+            filterColumnId="description"
+            filterPlaceholder="Pesquisar por descrição..."
+          />
         </CardContent>
       </Card>
 
       <ResponsiveDialog
         open={isFormModalOpen}
         onOpenChange={setIsFormModalOpen}
-        title={transactionToEdit ? "Editar Transação" : "Nova Transação"}
+        title={transactionToEdit ? "Editar Lançamento" : "Novo Lançamento"}
         description="Preencha os detalhes da transação."
       >
         <CreditCardTransactionForm
@@ -310,29 +187,6 @@ export default function CreditCardTransactionsPage() {
           onSave={handleSave}
         />
       </ResponsiveDialog>
-
-      <Dialog
-        open={!!transactionToDelete}
-        onOpenChange={(open) => !open && setTransactionToDelete(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir a transação "
-              {transactionToDelete?.description}"?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancelar</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={handleDelete}>
-              Confirmar Exclusão
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

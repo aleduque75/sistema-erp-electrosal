@@ -18,7 +18,7 @@ COPY . .
 RUN pnpm install
 
 # Definir NEXT_PUBLIC_API_URL explicitamente para o build do Next.js
-ENV NEXT_PUBLIC_API_URL=http://localhost:3001 # Para ambiente de desenvolvimento
+ENV NEXT_PUBLIC_API_URL=http://localhost:3001
 
 # Construir o frontend
 RUN pnpm --filter frontend build

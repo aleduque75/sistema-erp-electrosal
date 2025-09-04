@@ -17,93 +17,91 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
 // Interfaces
-interface Transaction {
+interface AccountPay {
   id: string;
   description: string;
   amount: number;
-  date: string;
+  dueDate: string;
   contaContabilId?: string | null;
-  creditCardId: string;
   isInstallment?: boolean;
-  installments?: number;
+  totalInstallments?: number;
 }
 interface ContaContabil {
   id: string;
   nome: string;
   codigo: string;
 }
-interface CreditCard {
-  id: string;
-  name: string;
-}
-interface FormProps {
-  transaction?: Transaction | null;
+interface AccountPayFormProps {
+  account?: AccountPay | null;
   onSave: () => void;
 }
 
 // Schema de validação
-const formSchema = z.object({
-  description: z.string().min(3, "A descrição é obrigatória."),
-  amount: z.coerce.number().positive("O valor deve ser maior que zero."),
-  date: z.string().min(1, "A data é obrigatória."),
-  contaContabilId: z.string().optional().nullable(),
-  creditCardId: z.string().min(1, "O cartão de crédito é obrigatório."),
-  isInstallment: z.boolean().default(false),
-  installments: z.coerce
-    .number()
-    .int()
-    .min(2, "Mínimo de 2 parcelas")
-    .optional(),
-});
+const formSchema = z
+  .object({
+    description: z.string().min(3, "A descrição é obrigatória."),
+    amount: z.coerce.number().positive("O valor deve ser maior que zero."),
+    dueDate: z.string().min(1, "A data de vencimento é obrigatória."),
+    contaContabilId: z.string().optional().nullable(),
+    isInstallment: z.boolean().default(false),
+    totalInstallments: z.coerce
+      .number()
+      .int()
+      .min(2, "Mínimo de 2 parcelas")
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.isInstallment && !data.totalInstallments) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "O número de parcelas é obrigatório.",
+      path: ["totalInstallments"],
+    }
+  );
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
+export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
-  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      description: transaction?.description || "",
-      amount: transaction?.amount || 0,
-      date: transaction
-        ? new Date(transaction.date).toISOString().split("T")[0]
+      description: account?.description || "",
+      amount: account?.amount || 0,
+      dueDate: account
+        ? new Date(account.dueDate).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
-      contaContabilId: transaction?.contaContabilId || null,
-      creditCardId: transaction?.creditCardId || "",
-      isInstallment: transaction?.isInstallment || false,
-      installments: transaction?.installments || 2,
+      contaContabilId: account?.contaContabilId || null,
+      isInstallment: account?.isInstallment || false,
+      totalInstallments: account?.totalInstallments || 2,
     },
   });
 
   const isInstallment = form.watch("isInstallment");
 
   useEffect(() => {
-    // Busca TODAS as contas que aceitam lançamento, sem filtro de tipo
-    api.get("/contas-contabeis").then((res) => setContasContabeis(res.data));
-    api.get("/credit-cards").then((res) => setCreditCards(res.data));
+    // Busca contas de Despesa e Passivo para o Contas a Pagar
+    api
+      .get("/contas-contabeis?tipo=DESPESA")
+      .then((res) => setContasContabeis(res.data));
   }, []);
 
   const onSubmit = async (data: FormValues) => {
     try {
-      const payload = { ...data, date: new Date(data.date) };
-      if (transaction) {
-        await api.patch(`/credit-card-transactions/${transaction.id}`, payload);
-        toast.success("Lançamento atualizado com sucesso!");
+      const payload = { ...data, dueDate: new Date(data.dueDate) };
+      if (account) {
+        await api.patch(`/accounts-pay/${account.id}`, payload);
+        toast.success("Conta atualizada com sucesso!");
       } else {
-        await api.post("/credit-card-transactions", payload);
-        toast.success("Lançamento criado com sucesso!");
+        await api.post("/accounts-pay", payload);
+        toast.success("Conta(s) provisionada(s) com sucesso!");
       }
       onSave();
     } catch (err: any) {
@@ -122,7 +120,7 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
               <FormLabel>Descrição</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="Ex: Almoço, Uber, Assinatura..."
+                  placeholder="Ex: Aluguel, Compra de material"
                   {...field}
                 />
               </FormControl>
@@ -135,7 +133,9 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Valor (R$)</FormLabel>
+              <FormLabel>
+                {isInstallment ? "Valor Total (a ser parcelado)" : "Valor (R$)"}
+              </FormLabel>
               <FormControl>
                 <Input type="number" step="0.01" {...field} />
               </FormControl>
@@ -144,11 +144,15 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
           )}
         />
         <FormField
-          name="date"
+          name="dueDate"
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Data da Compra</FormLabel>
+              <FormLabel>
+                {isInstallment
+                  ? "Data do Primeiro Vencimento"
+                  : "Data de Vencimento"}
+              </FormLabel>
               <FormControl>
                 <Input type="date" {...field} />
               </FormControl>
@@ -175,32 +179,9 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
             </FormItem>
           )}
         />
-        <FormField
-          name="creditCardId"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Cartão de Crédito</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {creditCards.map((card) => (
-                    <SelectItem key={card.id} value={card.id}>
-                      {card.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
-        {!transaction && (
+        {/* Só mostra a opção de parcelar ao CRIAR uma nova conta */}
+        {!account && (
           <>
             <FormField
               control={form.control}
@@ -214,18 +195,19 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>É uma compra parcelada?</FormLabel>
+                    <FormLabel>Provisionar em parcelas?</FormLabel>
                   </div>
                 </FormItem>
               )}
             />
+
             {isInstallment && (
               <FormField
                 control={form.control}
-                name="installments"
+                name="totalInstallments"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Número Total de Parcelas</FormLabel>
+                    <FormLabel>Número de Parcelas</FormLabel>
                     <FormControl>
                       <Input type="number" min="2" {...field} />
                     </FormControl>

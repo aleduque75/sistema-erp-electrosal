@@ -15,6 +15,7 @@ import {
   CreateAccountPayDto,
   UpdateAccountPayDto,
   PayAccountDto,
+  SplitAccountPayDto, // <-- Adicionado
 } from './dtos/account-pay.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -67,6 +68,19 @@ export class AccountsPayController {
     @Body() payDto: PayAccountDto,
   ) {
     return this.accountsPayService.pay(organizationId, id, payDto);
+  }
+
+  @Post(':id/split')
+  splitIntoInstallments(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+    @Body() splitDto: SplitAccountPayDto,
+  ) {
+    return this.accountsPayService.splitIntoInstallments(
+      organizationId,
+      id,
+      splitDto.numberOfInstallments,
+    );
   }
 
   @Delete(':id')

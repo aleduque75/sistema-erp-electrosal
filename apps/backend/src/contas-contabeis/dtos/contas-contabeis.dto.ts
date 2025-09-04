@@ -23,6 +23,7 @@ export class CreateContaContabilDto {
   @IsUUID()
   @IsOptional()
   contaPaiId?: string;
+
 }
 
 // Usar PartialType garante que o UpdateDto tenha a propriedade 'codigo' opcional
