@@ -5,6 +5,8 @@ import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma } from '@prism
 import { addMonths, addDays } from 'date-fns';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case'; // Added
+import { StockMovement } from '@sistema-erp-electrosal/core'; // Added
+import { StockMovementMapper } from '../products/mappers/stock-movement.mapper'; // Added
 
 @Injectable()
 export class SalesService {
@@ -90,6 +92,15 @@ export class SalesService {
         await prisma.product.update({
           where: { id: item.productId },
           data: { stock: { increment: item.quantity } },
+        });
+        // Create StockMovement record
+        const stockMovement = StockMovement.create({
+          productId: item.productId,
+          type: 'ENTRY', // Assuming it's an entry when restoring stock
+          quantity: item.quantity,
+        });
+        await prisma.stockMovement.create({
+          data: StockMovementMapper.toPersistence(stockMovement),
         });
       }
 
