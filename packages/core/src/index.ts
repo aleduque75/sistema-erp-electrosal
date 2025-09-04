@@ -5,3 +5,4 @@ export interface SharedType {
 }
 export * from './_shared';
 export * from './sales';
+export * from './domain';
