@@ -6,7 +6,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto, UpdateProductDto } from './dtos/create-product.dto';
 import { ConfirmImportXmlDto, ImportXmlDto } from './dtos/import-xml.dto';
-import { Product } from '@prisma/client';
+import { Product } from '@sistema-erp-electrosal/core'; // Changed
+import { ProductMapper } from './mappers/product.mapper'; // Added
 import * as xml2js from 'xml2js';
 import { XmlImportLogsService } from '../xml-import-logs/xml-import-logs.service'; // Added
 
@@ -27,20 +28,20 @@ export class ProductsService {
     const nfeKey = nfe.$.Id.replace('NFe', '');
     const productsFromXml = Array.isArray(nfe.det) ? nfe.det : [nfe.det];
 
-    const existingProducts = await this.prisma.product.findMany({
+    const existingProducts = (await this.prisma.product.findMany({
       where: { organizationId },
-    });
+    })).map(ProductMapper.toDomain); // Map to DDD entity
     const analyzedProducts = productsFromXml.map((item) => {
       const prod = item.prod;
       const existingProduct = existingProducts.find(
-        (p) => p.name === prod.xProd || p.id === prod.cProd,
+        (p) => p.name === prod.xProd || p.id.toString() === prod.cProd, // Use id.toString()
       );
       return {
         xmlName: prod.xProd,
         xmlPrice: parseFloat(prod.vUnCom),
         xmlStock: parseFloat(prod.qCom),
         status: existingProduct ? 'ASSOCIADO' : 'NOVO',
-        matchedProductId: existingProduct?.id,
+        matchedProductId: existingProduct?.id.toString(), // Use id.toString()
       };
     });
 
@@ -82,31 +83,35 @@ export class ProductsService {
         let existingProduct: Product | null = null;
 
         if (manualMatchId) {
-          existingProduct = await tx.product.findUnique({
+          const prismaProduct = await tx.product.findUnique({
             where: { id: manualMatchId, organizationId },
           });
+          existingProduct = prismaProduct ? ProductMapper.toDomain(prismaProduct) : null;
         } else {
-          existingProduct = await tx.product.findFirst({
+          const prismaProduct = await tx.product.findFirst({
             where: { name: prod.xProd, organizationId },
           });
+          existingProduct = prismaProduct ? ProductMapper.toDomain(prismaProduct) : null;
         }
 
         if (existingProduct) {
+          existingProduct.update({
+            stock: existingProduct.stock + parseFloat(prod.qCom),
+            price: parseFloat(prod.vUnCom),
+          });
           await tx.product.update({
-            where: { id: existingProduct.id },
-            data: {
-              stock: { increment: parseFloat(prod.qCom) },
-              price: parseFloat(prod.vUnCom),
-            },
+            where: { id: existingProduct.id.toString() },
+            data: ProductMapper.toPersistence(existingProduct),
           });
         } else {
+          const newProduct = Product.create({
+            name: prod.xProd,
+            price: parseFloat(prod.vUnCom),
+            stock: parseFloat(prod.qCom),
+            organizationId,
+          });
           await tx.product.create({
-            data: {
-              name: prod.xProd,
-              price: parseFloat(prod.vUnCom),
-              stock: parseFloat(prod.qCom),
-              organizationId,
-            },
+            data: ProductMapper.toPersistence(newProduct),
           });
         }
       }
@@ -145,20 +150,30 @@ export class ProductsService {
     organizationId: string,
     data: CreateProductDto,
   ): Promise<Product> {
-    return this.prisma.product.create({ data: { ...data, organizationId } });
+    const newProduct = Product.create({
+      ...data,
+      organizationId,
+      price: data.price, // Ensure price is number
+      stock: data.stock, // Ensure stock is number
+    });
+    const prismaProduct = await this.prisma.product.create({
+      data: ProductMapper.toPersistence(newProduct),
+    });
+    return ProductMapper.toDomain(prismaProduct);
   }
 
   async findAll(organizationId: string): Promise<Product[]> {
-    return this.prisma.product.findMany({ where: { organizationId } });
+    const prismaProducts = await this.prisma.product.findMany({ where: { organizationId } });
+    return prismaProducts.map(ProductMapper.toDomain);
   }
 
   async findOne(organizationId: string, id: string): Promise<Product> {
-    const product = await this.prisma.product.findFirst({
+    const prismaProduct = await this.prisma.product.findFirst({
       where: { id, organizationId },
     });
-    if (!product)
+    if (!prismaProduct)
       throw new NotFoundException(`Produto com ID ${id} não encontrado.`);
-    return product;
+    return ProductMapper.toDomain(prismaProduct);
   }
 
   async update(
@@ -166,12 +181,19 @@ export class ProductsService {
     id: string,
     data: UpdateProductDto,
   ): Promise<Product> {
-    await this.findOne(organizationId, id);
-    return this.prisma.product.update({ where: { id }, data });
+    const existingProduct = await this.findOne(organizationId, id); // Returns DDD entity
+    existingProduct.update(data); // Update DDD entity
+    
+    const updatedPrismaProduct = await this.prisma.product.update({
+      where: { id: existingProduct.id.toString() }, // Use id from DDD entity
+      data: ProductMapper.toPersistence(existingProduct), // Convert back to Prisma for persistence
+    });
+    return ProductMapper.toDomain(updatedPrismaProduct); // Convert back to DDD for return
   }
 
   async remove(organizationId: string, id: string): Promise<Product> {
-    await this.findOne(organizationId, id);
-    return this.prisma.product.delete({ where: { id } });
+    const product = await this.findOne(organizationId, id); // Garante que o produto existe e retorna DDD entity
+    const deletedPrismaProduct = await this.prisma.product.delete({ where: { id: product.id.toString() } });
+    return ProductMapper.toDomain(deletedPrismaProduct);
   }
 }
