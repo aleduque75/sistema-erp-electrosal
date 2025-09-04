@@ -2,49 +2,57 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePaymentTermDto } from './dto/create-payment-term.dto';
 import { UpdatePaymentTermDto } from './dto/update-payment-term.dto';
+import { PaymentTerm } from '@sistema-erp-electrosal/core'; // Added
+import { PaymentTermMapper } from './mappers/payment-term.mapper'; // Added
 
 @Injectable()
 export class PaymentTermsService {
   constructor(private prisma: PrismaService) {}
 
-  create(organizationId: string, createPaymentTermDto: CreatePaymentTermDto) {
-    return this.prisma.paymentTerm.create({
-      data: {
-        ...createPaymentTermDto,
-        organizationId,
-      },
+  async create(organizationId: string, createPaymentTermDto: CreatePaymentTermDto): Promise<PaymentTerm> {
+    const newPaymentTerm = PaymentTerm.create({
+      ...createPaymentTermDto,
+      organizationId,
     });
+    const prismaPaymentTerm = await this.prisma.paymentTerm.create({
+      data: PaymentTermMapper.toPersistence(newPaymentTerm),
+    });
+    return PaymentTermMapper.toDomain(prismaPaymentTerm);
   }
 
-  findAll(organizationId: string) {
-    return this.prisma.paymentTerm.findMany({
+  async findAll(organizationId: string): Promise<PaymentTerm[]> {
+    const prismaPaymentTerms = await this.prisma.paymentTerm.findMany({
       where: { organizationId },
       orderBy: { name: 'asc' },
     });
+    return prismaPaymentTerms.map(PaymentTermMapper.toDomain);
   }
 
-  async findOne(organizationId: string, id: string) {
-    const paymentTerm = await this.prisma.paymentTerm.findFirst({
+  async findOne(organizationId: string, id: string): Promise<PaymentTerm> {
+    const prismaPaymentTerm = await this.prisma.paymentTerm.findFirst({
       where: { id, organizationId },
     });
-    if (!paymentTerm) {
+    if (!prismaPaymentTerm) {
       throw new NotFoundException(`Payment term with ID ${id} not found`);
     }
-    return paymentTerm;
+    return PaymentTermMapper.toDomain(prismaPaymentTerm);
   }
 
-  async update(organizationId: string, id: string, updatePaymentTermDto: UpdatePaymentTermDto) {
-    await this.findOne(organizationId, id);
-    return this.prisma.paymentTerm.update({
+  async update(organizationId: string, id: string, updatePaymentTermDto: UpdatePaymentTermDto): Promise<PaymentTerm> {
+    const existingPaymentTerm = await this.findOne(organizationId, id); // Returns DDD entity
+    existingPaymentTerm.update(updatePaymentTermDto); // Update DDD entity
+    
+    const updatedPrismaPaymentTerm = await this.prisma.paymentTerm.update({
       where: { id },
-      data: updatePaymentTermDto,
+      data: PaymentTermMapper.toPersistence(existingPaymentTerm), // Convert back to Prisma for persistence
     });
+    return PaymentTermMapper.toDomain(updatedPrismaPaymentTerm); // Convert back to DDD for return
   }
 
-  async remove(organizationId: string, id: string) {
+  async remove(organizationId: string, id: string): Promise<void> {
     await this.findOne(organizationId, id);
     // TODO: Adicionar verificação se o prazo está sendo usado em alguma venda
-    return this.prisma.paymentTerm.delete({
+    await this.prisma.paymentTerm.delete({
       where: { id },
     });
   }
