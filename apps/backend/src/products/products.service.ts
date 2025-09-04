@@ -8,10 +8,14 @@ import { CreateProductDto, UpdateProductDto } from './dtos/create-product.dto';
 import { ConfirmImportXmlDto, ImportXmlDto } from './dtos/import-xml.dto';
 import { Product } from '@prisma/client';
 import * as xml2js from 'xml2js';
+import { XmlImportLogsService } from '../xml-import-logs/xml-import-logs.service'; // Added
 
 @Injectable()
 export class ProductsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private xmlImportLogsService: XmlImportLogsService, // Injected
+  ) {}
 
   async importXmlAnalyze(organizationId: string, importXmlDto: ImportXmlDto) {
     const parser = new xml2js.Parser({ explicitArray: false });
@@ -57,9 +61,7 @@ export class ProductsService {
     const nfe = nfeProc.NFe.infNFe;
     const nfeKey = nfe.$.Id.replace('NFe', '');
 
-    const existingLog = await this.prisma.xmlImportLog.findUnique({
-      where: { nfeKey },
-    });
+    const existingLog = await this.xmlImportLogsService.findByNfeKey(organizationId, nfeKey);
     if (existingLog) {
       throw new BadRequestException(
         'Este arquivo XML (NF-e) já foi importado.',
@@ -134,7 +136,7 @@ export class ProductsService {
         }
       }
 
-      await tx.xmlImportLog.create({ data: { nfeKey, organizationId } });
+      await this.xmlImportLogsService.create(organizationId, { nfeKey });
       return { message: 'Importação concluída com sucesso!' };
     });
   }
