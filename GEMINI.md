@@ -112,3 +112,175 @@ Este é um monorepo gerenciado com `pnpm` contendo um sistema de gestão para sa
 - [ ] **Relatórios Avançados:** Criar uma seção de relatórios com gráficos detalhados.
 - [ ] **Integração com Google Drive:** Finalizar a funcionalidade de backup para salvar os arquivos na nuvem.
 - [ ] **Validação e Máscara de CPF/CNPJ:** Adicionar validação e máscaras de formatação no frontend.
+
+
+
+## Desafio integrar 
+
+GEMINI.md - Documentação do Projeto Conta Corrente
+
+Persona
+Você é Gemini, um assistente de programação especialista em full-stack com TypeScript. Seu foco é em NestJS para o backend e Next.js com Tailwind CSS e shadcn/ui para o frontend. Forneça respostas claras, didáticas e em Português do Brasil, sempre priorizando as melhores práticas.
+
+Contexto do Projeto
+Este é um monorepo gerenciado com pnpm contendo um sistema de gestão. O projeto é o resultado da fusão do sistema-electrosal (uma base de gestão mais completa) com o conta-corrente (que continha funcionalidades específicas de análise química).
+
+Backend: apps/backend (NestJS, Prisma, PostgreSQL)
+
+Frontend: apps/frontend (Next.js App Router, shadcn/ui, Tailwind CSS)
+
+Core/Domain: packages/core (Contém entidades de domínio puras)
+
+Arquitetura e Decisões
+Padrão de Domínio (DDD): As entidades de negócio (AnaliseQuimica, OrdemDeRecuperacao, etc.) são modeladas como AggregateRoots, mantendo seu estado no objeto props. Isso garante encapsulamento e consistência.
+
+Fronteiras de Camadas: Foi estabelecida uma regra clara para a comunicação entre as camadas da aplicação:
+
+Entrada para o Domínio: Métodos estáticos (criar, reconstituir) nas entidades são os únicos portões de entrada. Eles recebem dados primitivos (como string para IDs) e os convertem para Value Objects (UniqueEntityID, NumeroAnaliseVO).
+
+Saída do Domínio: Ao passar dados do domínio para a camada de infraestrutura (ex: repositórios Prisma), os Value Objects são convertidos de volta para tipos primitivos (ex: id.toString()).
+
+Mapeamento (Mappers): A conversão entre os modelos do Prisma e as entidades de Domínio é centralizada em classes Mapper dedicadas, que respeitam as fronteiras de camadas. Para interações com o Prisma, os mappers geram objetos com a sintaxe de connect para gerenciar as relações.
+
+Regra de Negócio Central: Para fins de relatório e consolidação, todos os metais (Prata, Ródio, etc.) podem ser convertidos para seu equivalente em Ouro (Au), que serve como a unidade de medida principal do sistema.
+
+Histórico de Alterações Recentes
+Resolução de Inconsistências de Tipo e Refatoração de Entidades (Ciclo de Debug Assistido)
+Um ciclo intensivo de depuração e refatoração foi realizado para resolver uma cascata de erros de compilação e de execução que surgiram após a integração de funcionalidades e a importação de dados legados. O que começou como um simples erro de 401 Unauthorized ao salvar uma análise evoluiu para uma reestruturação fundamental das entidades de domínio.
+
+Sintoma Inicial: O fluxo de "Lançar Resultado" de uma Análise Química estava falhando. Os erros iniciais eram variados e enganosos:
+
+'error' is of type 'unknown' no controller.
+
+401 Unauthorized no use case, mesmo com o usuário autenticado.
+
+PrismaClientValidationError no repositório.
+
+Investigação e Diagnóstico:
+
+A investigação começou no controller, tratando o erro de tipo unknown.
+
+Ao analisar o erro 401, percebeu-se que a comparação de organizationId estava falhando, não por permissão, mas por uma possível inconsistência de tipo ou formato.
+
+A análise do PrismaClientValidationError foi o ponto chave. O erro Unknown argument 'clienteId'. Did you mean 'cliente'? revelou que o mapper estava enviando um campo clienteId primitivo, enquanto o schema.prisma esperava um objeto de relação (cliente: { connect: { id: '...' } }).
+
+Ao tentar corrigir o mapper, uma avalanche de erros de tipo (Type 'UniqueEntityID' is not assignable to type 'string', Property 'toValue' does not exist on type 'string') expôs a causa raiz: não havia um padrão consistente para lidar com IDs. Partes do código tratavam IDs como string, e outras como o Value Object UniqueEntityID.
+
+Solução Estrutural: A Refatoração das Entidades:
+
+A causa da inconsistência de tipos estava no design das próprias entidades (AnaliseQuimica, OrdemDeRecuperacao). Elas gerenciavam seu estado de forma mista, usando propriedades privadas (_propriedade) e o objeto props herdado do AggregateRoot, com tipos conflitantes entre eles.
+
+Ação Corretiva: As entidades foram completamente refatoradas para usar o objeto this.props como a única fonte da verdade para seu estado. Todas as propriedades privadas foram removidas e os getters/métodos de negócio foram reescritos para ler e modificar this.props.
+
+Definição de Contratos: Métodos estáticos como criar e reconstituir foram padronizados para servirem como "portões" do domínio. criar agora aceita IDs como string e os converte para UniqueEntityID internamente, enquanto reconstituir recebe as props e o id separadamente para recriar a entidade a partir do banco de dados.
+
+Correções em Cascata:
+
+Com as entidades corrigidas, o compilador passou a apontar todos os arquivos do backend que violavam os novos contratos.
+
+Use Cases: Foram ajustados para usar entidade.id.toString() ao chamar repositórios e para fornecer todas as propriedades obrigatórias (como data em MovimentoMetal.criar).
+
+Repositórios e Mappers: Foram corrigidos para usar new UniqueEntityID() ao receber dados do Prisma e para passar o id corretamente para o reconstituir.
+
+DTOs e Enums: Foram alinhados para garantir que os nomes de propriedades e valores de enums (CREDITO_ANALISE, etc.) correspondessem exatamente ao que o domínio esperava.
+
+Resultado: Após a refatoração completa e as correções em cascata, a base de código do domínio (@conta-corrente/core) tornou-se consistente e livre de erros. Todos os erros de compilação no backend foram resolvidos, e o fluxo de salvar a análise química passou a funcionar corretamente.
+
+Correções no Fluxo de Autenticação, Menus e Gestão de Pessoas
+(Seções anteriores do histórico foram mantidas aqui)
+
+Implementação do Novo Fluxo de Análise Química
+(Seções anteriores do histórico foram mantidas aqui)
+
+Importação de Dados Legados
+Para popular o sistema, foram criados scripts de seed no Prisma para importar dados de arquivos JSON exportados do sistema legado.
+
+Pessoas (Empresas/Clientes): (seed-empresas.ts)
+
+Contas Correntes: (seed-contas-correntes.ts)
+
+Movimentos (Transações): (seed-movimentos.ts)
+
+Vendas (Pedidos) e Itens de Venda: (seed-vendas.ts, seed-itens-venda.ts)
+
+Próximos Passos (Novas Funcionalidades)
+Com base nas novas discussões, os próximos passos focam em expandir as funcionalidades de Venda, Reação Química e Relatórios.
+
+1. Novo Fluxo de Cotação e Venda de Metais
+Tela de Cotação de Venda:
+
+Criar uma interface que permita ao usuário simular o preço de venda de metais.
+
+A cotação do dia deve ser carregada como padrão, mas o valor deve ser editável.
+
+Cálculo de Mão de Obra por Faixa:
+
+Implementar uma regra de negócio para calcular a taxa de serviço (% Mão de Obra) com base na quantidade (em gramas de Au) vendida:
+
+1 a 9g: 20%
+
+10 a 19g: 10%
+
+20g ou mais: 20%
+
+Flexibilidade de Unidade (Au vs. Sal 68%):
+
+No formulário de venda, permitir que o usuário insira a quantidade desejada tanto em gramas de Ouro (Au) quanto em gramas de Sal 68%.
+
+O sistema deve realizar a conversão automaticamente (usando o fator 1,47) para exibir o valor em ambas as unidades e dar baixa no estoque corretamente (que é em Sal).
+
+2. Implementação do Módulo de Reação Química
+Objetivo: Controlar o processo de produção de Aurocianeto de Potássio (Sal 68%).
+
+Entradas (Inputs) da Reação:
+
+Metal: Ouro proveniente de múltiplas fontes (saldo de recuperação, pagamento de clientes em metal, compra de fornecedores).
+
+Em vendas o cliente pode pagar em metal, e pode pagar em uma conta minha, ou para o fornecedor de metal ou cheque, em metal vai para uma conta e ai na reação agente seleciona e beleza.
+
+Fornecedor, eu tenho um conta corrente com ele, que confiorme o cliente vai pagaendo eu coloco o valor e a cotação, ai com o fornecedor eu tenho na realidade um controle em metal au , tipo cliente paga R$ 10.000 cotação 586 = 17,065 gr , ai vai somando de tempos em tempo pego uma quantidade com o fornecedor , por exemplo 500 gr, ai fica um saldo e as vezes pega o amis com o fornecedor e fico devendo para ele.
+
+Matéria-Prima: Cianeto de Potássio (KCN), calculado pela fórmula: Qtd KCN = Qtd Au * 0.899.
+
+Processo e Saídas (Outputs):
+
+O processo converte o Ouro em Sal 68% (fator 1g Au = 1,47g Sal).
+
+Gera subprodutos/sobras que são pesados e reutilizados em reações futuras:
+
+Sobra de Cesto
+
+Sobra de Destilado
+
+Fluxo de Status da Reação:
+
+Iniciada -> Processando -> Aguardando Teor -> Finalizada.
+
+Controle de Lote: Para vendas de Sal 68%, adicionar a capacidade de anotar de qual lote de reação o produto foi retirado.
+
+3. Pagamentos e Relatórios
+Pagamento de Despesas em Metal: Implementar a funcionalidade de pagar despesas, onde o valor em Reais é convertido para Ouro e debitado de uma conta de metal.
+
+Relatórios Consolidados: Desenvolver uma seção de relatórios que consolide todas as movimentações de metais, convertendo Prata, Ródio, etc., para seu equivalente em Ouro para uma visão unificada.
+
+Deixa eu explicar como quero que as coisas , funcionem, ai voce traduz para entidade e classes, e tudo o resto:
+
+# Resumo do ERP
+
+Cadastro de Clientes, Fornecedores, Funcionarios, transportadora, terceiros
+
+Cadastro de Produtos, o que vai vir de reação e produtos de revenda
+
+vendas, que ao vender da a baixa no estoque se tiver um lote seria melhor, vai gerar um financeiro, em reais e em au (ouro) de acordo com a cotação do dia, recebo em metal, cheque, deposito em conta, pode ser minha ou a do fornecedor.
+
+Cadastro de cotação, que vai ser em au, e pode ser 2 valores cheque e pix, na conversão das vendas pode usar uma media.
+
+Financeiro, vai ter contas bancarias e contas de fornecedor de metal e outras por exemplo, tudo vinculado a um plano de contas. Ao lançar uma despesa ou receita, valor em real e convertido cotação dia e tambem valor em au.
+
+Ai vai ter analises quimicas, que agente ja fez, gera credito cliente, vira recuperação, se sobra vira residuo , o metal puro vira  material para a reação.
+
+Reação tem tambem suas peculiaridades tem sobra em cesto e sobra em destilado, e produto acabado Aurocianeto de potassio 68% para estoque.Podemos considerar valeres em reais e valores em au, para calcular os custos. 
+
+Acho que o coração do ERP seria isso, deve ter outras coisinhas ma o coração é isso.
+
+Ter a opção de ver as contas correntes com as movimentações, isso tambem ja estava pronto no outro sistema.
