@@ -31,7 +31,7 @@
     "@nestjs/serve-static": "^5.0.3",
     "@nestjs/swagger": "^11.2.0",
     "@prisma/client": "^6.11.0",
-    "@sistema-beleza/core": "workspace:*",
+    "@sistema-erp-electrosal/core": "workspace:*",
     "@types/passport-local": "^1.0.38",
     "@types/pdfjs-dist": "^2.10.378",
     "bcrypt": "^5.1.1",
