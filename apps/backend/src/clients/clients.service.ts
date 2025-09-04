@@ -9,7 +9,8 @@ import {
   UpdateClientDto,
   ClientLoteDto,
 } from './dtos/create-client.dto';
-import { Client } from '@prisma/client';
+import { Client } from '@sistema-erp-electrosal/core'; // Changed
+import { ClientMapper } from './mappers/client.mapper'; // Added
 
 @Injectable()
 export class ClientsService {
@@ -17,32 +18,35 @@ export class ClientsService {
 
   // Recebe organizationId em vez de userId
   async create(organizationId: string, data: CreateClientDto): Promise<Client> {
-    return this.prisma.client.create({
-      data: {
-        ...data,
-        organization: { connect: { id: organizationId } }, // Conecta à organização existente
-      },
+    const newClient = Client.create({
+      ...data,
+      organizationId,
     });
+    const prismaClient = await this.prisma.client.create({
+      data: ClientMapper.toPersistence(newClient),
+    });
+    return ClientMapper.toDomain(prismaClient);
   }
 
   // Recebe organizationId em vez de userId
   async findAll(organizationId: string): Promise<Client[]> {
-    return this.prisma.client.findMany({ where: { organizationId } }); // Usa no 'where'
+    const prismaClients = await this.prisma.client.findMany({ where: { organizationId } }); // Usa no 'where'
+    return prismaClients.map(ClientMapper.toDomain);
   }
 
   // Recebe organizationId em vez de userId
   async findOne(organizationId: string, id: string): Promise<Client> {
-    const client = await this.prisma.client.findFirst({
+    const prismaClient = await this.prisma.client.findFirst({
       where: {
         id,
         organizationId, // Usa no 'where'
       },
     });
 
-    if (!client) {
+    if (!prismaClient) {
       throw new NotFoundException(`Cliente com ID ${id} não encontrado.`);
     }
-    return client;
+    return ClientMapper.toDomain(prismaClient);
   }
 
   // Recebe organizationId em vez de userId
@@ -51,35 +55,23 @@ export class ClientsService {
     id: string,
     data: UpdateClientDto,
   ): Promise<Client> {
-    const { count } = await this.prisma.client.updateMany({
-      where: {
-        id,
-        organizationId, // Usa no 'where'
-      },
-      data,
+    const existingClient = await this.findOne(organizationId, id); // Returns DDD entity
+    existingClient.update(data); // Update DDD entity
+
+    const updatedPrismaClient = await this.prisma.client.update({
+      where: { id: existingClient.id.toString() }, // Use id from DDD entity
+      data: ClientMapper.toPersistence(existingClient), // Convert back to Prisma for persistence
     });
 
-    if (count === 0) {
-      throw new NotFoundException(
-        `Cliente com ID ${id} não encontrado ou não pertence à organização.`,
-      );
-    }
-
-    return this.prisma.client.findUniqueOrThrow({ where: { id } });
+    return ClientMapper.toDomain(updatedPrismaClient); // Convert back to DDD for return
   }
 
   // Recebe organizationId em vez de userId
   async remove(organizationId: string, id: string): Promise<Client> {
-    const client = await this.prisma.client.findFirst({
-      where: { id, organizationId }, // Usa no 'where'
-    });
-
-    if (!client) {
-      throw new NotFoundException(`Cliente com ID ${id} não encontrado.`);
-    }
+    const client = await this.findOne(organizationId, id); // Garante que o cliente existe e retorna DDD entity
 
     const saleCount = await this.prisma.sale.count({
-      where: { clientId: id },
+      where: { clientId: client.id.toString() }, // Use id from DDD entity
     });
 
     if (saleCount > 0) {
@@ -88,21 +80,26 @@ export class ClientsService {
       );
     }
 
-    return this.prisma.client.delete({
-      where: { id },
+    const deletedPrismaClient = await this.prisma.client.delete({
+      where: { id: client.id.toString() }, // Use id from DDD entity
     });
+    return ClientMapper.toDomain(deletedPrismaClient);
   }
 
   // Recebe organizationId em vez de userId
-  async createMany(organizationId: string, clientsData: ClientLoteDto[]) {
-    const clientsToCreate = clientsData.map((client) => ({
-      ...client,
-      organizationId, // Usa o organizationId recebido
-    }));
+  async createMany(organizationId: string, clientsData: ClientLoteDto[]): Promise<number> {
+    const clientsToCreate = clientsData.map((clientData) => {
+      const newClient = Client.create({
+        ...clientData,
+        organizationId,
+      });
+      return ClientMapper.toPersistence(newClient);
+    });
 
-    return this.prisma.client.createMany({
+    const { count } = await this.prisma.client.createMany({
       data: clientsToCreate,
       skipDuplicates: true,
     });
+    return count;
   }
 }
