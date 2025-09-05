@@ -279,11 +279,10 @@ async function main() {
   await prisma.accountRec.deleteMany();
   await prisma.accountPay.deleteMany();
   await prisma.sale.deleteMany();
-  await prisma.client.deleteMany();
+  await prisma.pessoa.deleteMany();
   await prisma.product.deleteMany();
   await prisma.stockMovement.deleteMany();
   await prisma.xmlImportLog.deleteMany();
-  await prisma.transactionCategory.deleteMany();
   await prisma.creditCard.deleteMany();
   await prisma.contaContabil.deleteMany();
   await prisma.contaCorrente.deleteMany();

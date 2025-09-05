@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSaleDto, UpdateSaleDto } from './dtos/sales.dto';
-import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma } from '@prisma/client';
+import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma } from '@prisma/client'; // Keep Sale for now, will refactor later
 import { addMonths, addDays } from 'date-fns';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case'; // Added
-import { StockMovement } from '@sistema-erp-electrosal/core'; // Added
+import { StockMovement, SaleItem } from '@sistema-erp-electrosal/core'; // Added SaleItem
 import { StockMovementMapper } from '../products/mappers/stock-movement.mapper'; // Added
+import { SaleItemMapper } from './mappers/sale-item.mapper'; // Added
 
 @Injectable()
 export class SalesService {
@@ -25,10 +26,10 @@ export class SalesService {
 
   // Recebe organizationId
   async findAll(organizationId: string, limit?: number): Promise<Sale[]> {
-    return this.prisma.sale.findMany({
+    const prismaSales = await this.prisma.sale.findMany({
       where: { organizationId }, // Usa no 'where'
       include: {
-        client: true, // Inclui o nome do cliente na listagem
+        pessoa: true, // Inclui o nome do cliente na listagem
         saleItems: {
           include: {
             product: true, // Inclui detalhes do produto em cada item
@@ -40,14 +41,19 @@ export class SalesService {
       },
       take: limit,
     });
+    // Map SaleItems to DDD entities
+    return prismaSales.map(sale => ({
+      ...sale,
+      saleItems: sale.saleItems.map(SaleItemMapper.toDomain),
+    }));
   }
 
   // Recebe organizationId
   async findOne(organizationId: string, id: string): Promise<Sale> {
-    const sale = await this.prisma.sale.findFirst({
+    const prismaSale = await this.prisma.sale.findFirst({
       where: { id, organizationId },
       include: {
-        client: true, // Inclui os dados do cliente
+        pessoa: true, // Inclui os dados do cliente
         saleItems: {
           // Inclui os itens da venda
           include: {
@@ -57,10 +63,14 @@ export class SalesService {
       },
     });
 
-    if (!sale) {
+    if (!prismaSale) {
       throw new NotFoundException(`Venda com ID ${id} não encontrada.`);
     }
-    return sale;
+    // Map SaleItems to DDD entities
+    return {
+      ...prismaSale,
+      saleItems: prismaSale.saleItems.map(SaleItemMapper.toDomain),
+    };
   }
 
   // Recebe organizationId

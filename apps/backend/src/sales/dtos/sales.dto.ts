@@ -19,7 +19,7 @@ class SaleItemDto {
 }
 
 export class CreateSaleDto {
-  @IsUUID() @IsNotEmpty() clientId: string;
+  @IsUUID() @IsNotEmpty() pessoaId: string;
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => SaleItemDto)
