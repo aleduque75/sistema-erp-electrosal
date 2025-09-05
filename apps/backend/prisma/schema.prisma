@@ -32,7 +32,8 @@ model Organization {
   absorbCreditCardFee   Boolean         @default(false)
   creditCardReceiveDays Int?            @default(30)
   paymentTerms          PaymentTerm[]
-  Client                Client[]
+  clients               Client[]
+  fornecedores          Fornecedor[]
 }
 
 // --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
@@ -101,8 +102,9 @@ model Pessoa {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sales  Sale[]
-  Client Client[]
+  sales      Sale[]
+  client     Client?     // Relação com o papel de Cliente
+  fornecedor Fornecedor? // Relação com o papel de Fornecedor
 
   @@map("pessoas")
 }
@@ -114,13 +116,23 @@ model Client {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  // Campos específicos do cliente que podem ser adicionados no futuro
-  // ex: creditLimit   Decimal?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("clients")
+}
+
+model Fornecedor {
+  pessoaId String @id
+  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fornecedores")
 }
 
 model Product {
