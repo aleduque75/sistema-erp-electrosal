@@ -3,7 +3,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as Papa from 'papaparse';
-import { Prisma } from '@prisma/client';
+import { Prisma, PessoaType } from '@prisma/client';
+import { PessoaLoteDto } from '../pessoa/dtos/create-pessoa.dto';
 
 @Injectable()
 export class ClientImportsService {
@@ -39,10 +40,21 @@ export class ClientImportsService {
         .filter((email) => !!email);
 
       const existingClients = await this.prisma.client.findMany({
-        where: { organizationId, email: { in: emailsFromFile } },
-        select: { email: true },
+        where: {
+          organizationId,
+          pessoa: {
+            email: { in: emailsFromFile },
+          },
+        },
+        select: {
+          pessoa: {
+            select: {
+              email: true,
+            },
+          },
+        },
       });
-      const existingEmails = new Set(existingClients.map((c) => c.email));
+      const existingEmails = new Set(existingClients.map((c) => c.pessoa.email));
 
       const previewList = contactsWithAnyName.map((contact: any) => {
         const email = contact['E-mail 1 - Value'] || null;
@@ -66,6 +78,18 @@ export class ClientImportsService {
           email: email,
           phone: contact['Phone 1 - Value'] || null, // <-- Usa o cabeçalho em inglês
           status: status,
+          // Adicionando campos da Pessoa
+          cpf: contact['CPF'] || null,
+          birthDate: contact['Birth Date'] || null,
+          gender: contact['Gender'] || null,
+          cep: contact['CEP'] || null,
+          logradouro: contact['Street Address'] || null,
+          numero: contact['Street Address 2'] || null,
+          complemento: contact['Address 2 - Type'] || null,
+          bairro: contact['Neighborhood'] || null,
+          cidade: contact['City'] || null,
+          uf: contact['Region'] || null,
+          type: PessoaType.FISICA, // Default to FISICA
         };
       });
 
@@ -76,17 +100,38 @@ export class ClientImportsService {
     }
   }
 
-  async importGoogleCsv(organizationId: string, clients: any[]) {
+  async importGoogleCsv(organizationId: string, clients: PessoaLoteDto[]) {
     console.log('importGoogleCsv - organizationId recebido:', organizationId);
     console.log('importGoogleCsv - primeiro cliente recebido:', clients[0]);
-    const clientsToCreate = clients.map(client => ({
-      ...client,
-      organizationId: organizationId, // Garante que o organizationId seja explicitamente definido
-    }));
-
-    return this.prisma.client.createMany({
-      data: clientsToCreate,
-      skipDuplicates: true,
-    });
+    const createdClients: Prisma.ClientGetPayload<{ include: { pessoa: true } }>[] = [];
+    for (const clientData of clients) {
+      const createdClient = await this.prisma.client.create({
+        data: {
+          organization: { connect: { id: organizationId } },
+          pessoa: {
+            create: {
+              name: clientData.name,
+              email: clientData.email,
+              phone: clientData.phone,
+              cpf: clientData.cpf,
+              birthDate: clientData.birthDate,
+              gender: clientData.gender,
+              cep: clientData.cep,
+              logradouro: clientData.logradouro,
+              numero: clientData.numero,
+              complemento: clientData.complemento,
+              bairro: clientData.bairro,
+              cidade: clientData.cidade,
+              uf: clientData.uf,
+              type: clientData.type, // Use the type from the DTO
+              organization: { connect: { id: organizationId } },
+            },
+          },
+        },
+        include: { pessoa: true }, // Include pessoa relation in the returned object
+      });
+      createdClients.push(createdClient);
+    }
+    return createdClients;
   }
 }

@@ -1,4 +1,4 @@
-import { SaleItem } from '@sistema-erp-electrosal/core';
+import { SaleItem } from '@sistema-beleza/core';
 import { SaleItem as PrismaSaleItem } from '@prisma/client';
 
 export class SaleItemMapper {

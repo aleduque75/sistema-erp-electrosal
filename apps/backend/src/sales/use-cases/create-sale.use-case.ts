@@ -31,7 +31,7 @@ export class CreateSaleUseCase {
     } = createSaleDto;
 
     const [client, settings] = await Promise.all([
-      this.prisma.client.findFirst({ where: { id: clientId, organizationId } }),
+      this.prisma.client.findFirst({ where: { pessoaId, organizationId } }),
       this.settingsService.findOne(userId), // Used SettingsService
     ]);
 

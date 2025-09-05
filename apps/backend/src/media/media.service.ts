@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Media } from '@sistema-erp-electrosal/core'; // Changed
+import { Media } from '@sistema-beleza/core'; // Changed
 import { MediaMapper } from './mappers/media.mapper'; // Added
 import sharp from 'sharp';
 import { join } from 'path';
@@ -37,7 +37,7 @@ export class MediaService {
     const prismaMedia = await this.prisma.media.findUnique({ where: { id } });
     if (!prismaMedia) {
       throw new NotFoundException(`Mídia com ID ${id} não encontrada.`);
-    n}
+    }
     return MediaMapper.toDomain(prismaMedia);
   }
 

@@ -9,9 +9,10 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
+import { PessoaType } from '@prisma/client';
 
-// --- DTO para criar ou atualizar UM cliente ---
-export class CreateClientDto {
+// --- DTO para criar ou atualizar UMA pessoa ---
+export class CreatePessoaDto {
   @IsString()
   @IsNotEmpty({ message: 'O nome é obrigatório.' })
   name: string;
@@ -37,20 +38,41 @@ export class CreateClientDto {
   @IsString() @IsOptional() bairro?: string;
   @IsString() @IsOptional() cidade?: string;
   @IsString() @IsOptional() uf?: string;
+
+  // Additional fields from Pessoa model
+  @IsString() @IsOptional() birthDate?: string;
+  @IsString() @IsOptional() gender?: string;
+  @IsOptional() preferences?: object;
+  @IsOptional() purchaseHistory?: object;
 }
 
-export class UpdateClientDto extends PartialType(CreateClientDto) {}
+export class UpdatePessoaDto extends PartialType(CreatePessoaDto) {}
 
 // --- DTOs para importação em lote (já existentes) ---
-export class ClientLoteDto {
+export class PessoaLoteDto {
   @IsString() @IsNotEmpty() name: string;
   @IsEmail() @IsOptional() email?: string | null;
   @IsString() @IsOptional() phone?: string;
+
+  // Additional fields from Pessoa model
+  @IsString() @IsOptional() birthDate?: string;
+  @IsString() @IsOptional() gender?: string;
+  @IsOptional() preferences?: object;
+  @IsOptional() purchaseHistory?: object;
+  @IsString() @IsOptional() cpf?: string | null;
+  @IsString() @IsOptional() cep?: string;
+  @IsString() @IsOptional() logradouro?: string;
+  @IsString() @IsOptional() numero?: string;
+  @IsString() @IsOptional() complemento?: string;
+  @IsString() @IsOptional() bairro?: string;
+  @IsString() @IsOptional() cidade?: string;
+  @IsString() @IsOptional() uf?: string;
+  type: PessoaType; // Add PessoaType
 }
 
-export class CreateBulkClientsDto {
+export class CreateBulkPessoasDto {
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ClientLoteDto)
-  clients: ClientLoteDto[];
+  @Type(() => PessoaLoteDto)
+  pessoas: PessoaLoteDto[];
 }

@@ -2,7 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateSettingDto } from './dto/update-setting.dto';
-import { UserSettings } from '@sistema-erp-electrosal/core'; // Added
+import { UserSettings } from '@sistema-beleza/core'; // Added
 import { UserSettingsMapper } from '../users/mappers/user-settings.mapper'; // Added
 
 @Injectable()

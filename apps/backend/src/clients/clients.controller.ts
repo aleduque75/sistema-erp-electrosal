@@ -10,10 +10,10 @@ import {
 } from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import {
-  CreateClientDto,
-  UpdateClientDto,
-  CreateBulkClientsDto,
-} from './dtos/create-client.dto';
+  CreatePessoaDto as CreateClientDto,
+  UpdatePessoaDto as UpdateClientDto,
+  CreateBulkPessoasDto as CreateBulkClientsDto,
+} from '../pessoa/dtos/create-pessoa.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -71,7 +71,7 @@ export class ClientsController {
     // Passa o organizationId para o service
     return this.clientsService.createMany(
       organizationId,
-      createBulkDto.clients,
+      createBulkDto.pessoas,
     );
   }
 }

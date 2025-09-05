@@ -30,12 +30,36 @@ interface PreviewClient {
   email: string | null;
   phone?: string | null;
   status: "new" | "duplicate";
+  // Adicionando campos da Pessoa
+  cpf?: string | null;
+  birthDate?: string | null;
+  gender?: string | null;
+  cep?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
+  type?: "FISICA" | "JURIDICA"; // Assuming PessoaType enum values
 }
 interface SelectionState {
   selected: boolean;
   name: string;
   email: string | null;
   phone?: string | null;
+  // Adicionando campos da Pessoa
+  cpf?: string | null;
+  birthDate?: string | null;
+  gender?: string | null;
+  cep?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
+  type?: "FISICA" | "JURIDICA";
 }
 
 export default function ImportClientsPage() {
@@ -68,6 +92,17 @@ export default function ImportClientsPage() {
           name: client.name,
           email: client.email,
           phone: client.phone,
+          cpf: client.cpf,
+          birthDate: client.birthDate,
+          gender: client.gender,
+          cep: client.cep,
+          logradouro: client.logradouro,
+          numero: client.numero,
+          complemento: client.complemento,
+          bairro: client.bairro,
+          cidade: client.cidade,
+          uf: client.uf,
+          type: client.type,
         };
         return acc;
       }, {});
@@ -86,6 +121,17 @@ export default function ImportClientsPage() {
         email: data.email,
         name: data.name,
         phone: data.phone,
+        cpf: data.cpf,
+        birthDate: data.birthDate,
+        gender: data.gender,
+        cep: data.cep,
+        logradouro: data.logradouro,
+        numero: data.numero,
+        complemento: data.complemento,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        uf: data.uf,
+        type: data.type,
       }));
 
     if (clientsToImport.length === 0) {
@@ -171,6 +217,17 @@ export default function ImportClientsPage() {
                 <TableHead>Nome (Editável)</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Telefone (Editável)</TableHead>
+                <TableHead>CPF (Editável)</TableHead>
+                <TableHead>Data Nasc. (Editável)</TableHead>
+                <TableHead>Gênero (Editável)</TableHead>
+                <TableHead>CEP (Editável)</TableHead>
+                <TableHead>Logradouro (Editável)</TableHead>
+                <TableHead>Número (Editável)</TableHead>
+                <TableHead>Complemento (Editável)</TableHead>
+                <TableHead>Bairro (Editável)</TableHead>
+                <TableHead>Cidade (Editável)</TableHead>
+                <TableHead>UF (Editável)</TableHead>
+                <TableHead>Tipo (Editável)</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -204,6 +261,109 @@ export default function ImportClientsPage() {
                       }
                       disabled={client.status === "duplicate"}
                     />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      defaultValue={client.cpf || ""}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "cpf", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      defaultValue={client.birthDate || ""}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "birthDate", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      defaultValue={client.gender || ""}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "gender", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      defaultValue={client.cep || ""}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "cep", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      defaultValue={client.logradouro || ""}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "logradouro", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      defaultValue={client.numero || ""}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "numero", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      defaultValue={client.complemento || ""}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "complemento", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      defaultValue={client.bairro || ""}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "bairro", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      defaultValue={client.cidade || ""}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "cidade", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      defaultValue={client.uf || ""}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "uf", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <select
+                      defaultValue={client.type || "FISICA"}
+                      onBlur={(e) =>
+                        handleSelectionChange(index, "type", e.target.value)
+                      }
+                      disabled={client.status === "duplicate"}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="FISICA">Pessoa Física</option>
+                      <option value="JURIDICA">Pessoa Jurídica</option>
+                    </select>
                   </TableCell>
                   <TableCell>
                     <Badge

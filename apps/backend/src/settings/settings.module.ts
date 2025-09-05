@@ -7,5 +7,6 @@ import { PrismaModule } from '../prisma/prisma.module'; // ✅ 1. Importar o Pri
   imports: [PrismaModule], // ✅ 2. Adicionar o PrismaModule aos imports
   controllers: [SettingsController],
   providers: [SettingsService],
+  exports: [SettingsService],
 })
 export class SettingsModule {}

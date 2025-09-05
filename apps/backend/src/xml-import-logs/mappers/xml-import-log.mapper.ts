@@ -1,4 +1,4 @@
-import { XmlImportLog } from '@sistema-erp-electrosal/core';
+import { XmlImportLog } from '@sistema-beleza/core';
 import { XmlImportLog as PrismaXmlImportLog } from '@prisma/client';
 
 export class XmlImportLogMapper {
@@ -8,7 +8,6 @@ export class XmlImportLogMapper {
         organizationId: raw.organizationId,
         nfeKey: raw.nfeKey,
         createdAt: raw.createdAt,
-        updatedAt: raw.updatedAt,
       },
       raw.id,
     );
@@ -20,7 +19,6 @@ export class XmlImportLogMapper {
       organizationId: xmlImportLog.organizationId,
       nfeKey: xmlImportLog.nfeKey,
       createdAt: xmlImportLog.createdAt,
-      updatedAt: xmlImportLog.updatedAt,
     } as PrismaXmlImportLog; // Cast to PrismaXmlImportLog to satisfy type checking
   }
 }

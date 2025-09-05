@@ -21,7 +21,7 @@ export class PrismaSaleRepository implements ISaleRepository {
       data: {
         id: sale.id,
         organization: { connect: { id: organizationId } }, // Conecta à organização existente
-        client: { connect: { id: sale.clientId } }, // Conecta o cliente
+        pessoa: { connect: { id: sale.pessoaId } }, // Conecta o cliente
         orderNumber: sale.orderNumber,
         totalAmount: sale.totalAmount,
         paymentMethod: sale.paymentMethod,

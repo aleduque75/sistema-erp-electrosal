@@ -4,5 +4,5 @@ export interface SharedType {
   name: string;
 }
 export * from './_shared';
-export * from './sales';
+export * from './domain/sales';
 export * from './domain';
