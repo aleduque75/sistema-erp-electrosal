@@ -7,3 +7,4 @@ export * from './pessoa';
 export * from './product';
 export * from './stock-movement';
 export * from './sale-item';
+export * from './client';

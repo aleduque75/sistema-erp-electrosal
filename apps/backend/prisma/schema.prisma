@@ -11,27 +11,28 @@ datasource db {
 
 // --- MODELO DE ORGANIZAÇÃO ---
 model Organization {
-  id                      String                @id @default(uuid())
-  name                    String
-  users                   User[]
-  pessoas                 Pessoa[]
-  products                Product[]
-  sales                   Sale[]
-  accountsPay             AccountPay[]
-  accountsRec             AccountRec[]
-  contasCorrentes         ContaCorrente[]
-  contasContabeis         ContaContabil[]
-  creditCards             CreditCard[]
-  creditCardBills         CreditCardBill[]
-  
-  xmlImportLogs           XmlImportLog[]
-  landingPages            LandingPage[]
-  media                   Media[]
-  transacoes              Transacao[]
-  CreditCardFee           CreditCardFee[]
-  absorbCreditCardFee     Boolean               @default(false)
-  creditCardReceiveDays   Int?                  @default(30)
-  paymentTerms            PaymentTerm[]
+  id              String           @id @default(uuid())
+  name            String
+  users           User[]
+  pessoas         Pessoa[]
+  products        Product[]
+  sales           Sale[]
+  accountsPay     AccountPay[]
+  accountsRec     AccountRec[]
+  contasCorrentes ContaCorrente[]
+  contasContabeis ContaContabil[]
+  creditCards     CreditCard[]
+  creditCardBills CreditCardBill[]
+
+  xmlImportLogs         XmlImportLog[]
+  landingPages          LandingPage[]
+  media                 Media[]
+  transacoes            Transacao[]
+  CreditCardFee         CreditCardFee[]
+  absorbCreditCardFee   Boolean         @default(false)
+  creditCardReceiveDays Int?            @default(30)
+  paymentTerms          PaymentTerm[]
+  Client                Client[]
 }
 
 // --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
@@ -71,38 +72,55 @@ enum PessoaType {
 }
 
 model Pessoa {
-  id              String       @id @default(uuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  
-  type            PessoaType
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  name            String // Nome (Física) ou Nome Fantasia (Jurídica)
-  razaoSocial     String? // Apenas para Jurídica
-  
-  email           String?      @unique
-  phone           String?
+  type PessoaType
 
-  cpf             String?      @unique // Apenas para Física
-  cnpj            String?      @unique // Apenas para Jurídica
-  
-  birthDate       DateTime?
-  gender          String?
+  name        String // Nome (Física) ou Nome Fantasia (Jurídica)
+  razaoSocial String? // Apenas para Jurídica
 
-  cep             String?
-  logradouro      String?
-  numero          String?
-  complemento     String?
-  bairro          String?
-  cidade          String?
-  uf              String?
+  email String? @unique
+  phone String?
 
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  
-  sales           Sale[]
+  cpf  String? @unique // Apenas para Física
+  cnpj String? @unique // Apenas para Jurídica
+
+  birthDate DateTime?
+  gender    String?
+
+  cep         String?
+  logradouro  String?
+  numero      String?
+  complemento String?
+  bairro      String?
+  cidade      String?
+  uf          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales  Sale[]
+  Client Client[]
 
   @@map("pessoas")
+}
+
+model Client {
+  pessoaId String @id
+  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  // Campos específicos do cliente que podem ser adicionados no futuro
+  // ex: creditLimit   Decimal?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("clients")
 }
 
 model Product {
@@ -192,7 +210,7 @@ model SaleInstallment {
   paidAt            DateTime?
   installmentNumber Int
   accountRecId      String? // Novo campo para vincular à conta a receber principal
-  accountRec        AccountRec? @relation(fields: [accountRecId], references: [id])
+  accountRec        AccountRec?           @relation(fields: [accountRecId], references: [id])
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
@@ -236,22 +254,22 @@ model AccountPay {
 }
 
 model AccountRec {
-  id              String         @id @default(uuid())
-  organizationId  String
-  organization    Organization   @relation(fields: [organizationId], references: [id])
-  saleId          String?
-  sale            Sale?          @relation(fields: [saleId], references: [id])
-  description     String
-  amount          Decimal        @db.Decimal(10, 2)
-  dueDate         DateTime
-  received        Boolean        @default(false)
-  receivedAt      DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  contaCorrenteId String?
-  contaCorrente   ContaCorrente? @relation(fields: [contaCorrenteId], references: [id])
-  transacaoId     String?        @unique
-  transacao       Transacao?     @relation(fields: [transacaoId], references: [id])
+  id               String            @id @default(uuid())
+  organizationId   String
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  saleId           String?
+  sale             Sale?             @relation(fields: [saleId], references: [id])
+  description      String
+  amount           Decimal           @db.Decimal(10, 2)
+  dueDate          DateTime
+  received         Boolean           @default(false)
+  receivedAt       DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  contaCorrenteId  String?
+  contaCorrente    ContaCorrente?    @relation(fields: [contaCorrenteId], references: [id])
+  transacaoId      String?           @unique
+  transacao        Transacao?        @relation(fields: [transacaoId], references: [id])
   saleInstallments SaleInstallment[] // Adicionado para a relação inversa
 }
 
@@ -338,23 +356,23 @@ model CreditCard {
 }
 
 model CreditCardTransaction {
-  id                    String               @id @default(uuid())
-  creditCardId          String
-  creditCard            CreditCard           @relation(fields: [creditCardId], references: [id])
-  description           String
-  amount                Decimal              @db.Decimal(10, 2)
-  date                  DateTime
-  isInstallment         Boolean              @default(false)
-  installments          Int?
-  currentInstallment    Int?
-  contaContabilId       String?
-  contaContabil         ContaContabil?       @relation(fields: [contaContabilId], references: [id])
-  creditCardBillId      String?
-  creditCardBill        CreditCardBill?      @relation(fields: [creditCardBillId], references: [id])
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  
-  fingerprint           String?              @unique // Campo para detecção de duplicatas
+  id                 String          @id @default(uuid())
+  creditCardId       String
+  creditCard         CreditCard      @relation(fields: [creditCardId], references: [id])
+  description        String
+  amount             Decimal         @db.Decimal(10, 2)
+  date               DateTime
+  isInstallment      Boolean         @default(false)
+  installments       Int?
+  currentInstallment Int?
+  contaContabilId    String?
+  contaContabil      ContaContabil?  @relation(fields: [contaContabilId], references: [id])
+  creditCardBillId   String?
+  creditCardBill     CreditCardBill? @relation(fields: [creditCardBillId], references: [id])
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  fingerprint String? @unique // Campo para detecção de duplicatas
 
   @@map("credit_card_transactions")
 }
@@ -378,8 +396,6 @@ model CreditCardBill {
 
   @@map("credit_card_bills")
 }
-
-
 
 // --- MODELOS AUXILIARES ---
 model XmlImportLog {
