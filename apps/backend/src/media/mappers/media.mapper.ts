@@ -1,4 +1,4 @@
-import { Media } from '@sistema-erp-electrosal/core';
+import { Media } from '@sistema-beleza/core';
 import { Media as PrismaMedia } from '@prisma/client';
 
 export class MediaMapper {

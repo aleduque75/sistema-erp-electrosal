@@ -1,4 +1,4 @@
-import { StockMovement } from '@sistema-erp-electrosal/core';
+import { StockMovement } from '@sistema-beleza/core';
 import { StockMovement as PrismaStockMovement } from '@prisma/client';
 
 export class StockMovementMapper {
@@ -9,7 +9,6 @@ export class StockMovementMapper {
         type: raw.type,
         quantity: raw.quantity,
         createdAt: raw.createdAt,
-        updatedAt: raw.updatedAt,
       },
       raw.id,
     );
@@ -22,7 +21,6 @@ export class StockMovementMapper {
       type: stockMovement.type,
       quantity: stockMovement.quantity,
       createdAt: stockMovement.createdAt,
-      updatedAt: stockMovement.updatedAt,
     } as PrismaStockMovement; // Cast to PrismaStockMovement to satisfy type checking
   }
 }

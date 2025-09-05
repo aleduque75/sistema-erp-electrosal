@@ -1,9 +1,9 @@
-import { Product } from '@sistema-erp-electrosal/core';
+import { Product } from '@sistema-beleza/core';
 import { Product as PrismaProduct } from '@prisma/client';
 
 export class ProductMapper {
   static toDomain(raw: PrismaProduct): Product {
-    return Product.create(
+    const product = Product.create(
       {
         organizationId: raw.organizationId,
         name: raw.name,
@@ -15,6 +15,8 @@ export class ProductMapper {
       },
       raw.id,
     );
+    console.log('Produto mapeado para domínio:', product);
+    return product;
   }
 
   static toPersistence(product: Product): PrismaProduct {

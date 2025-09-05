@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCreditCardFeeDto } from './dtos/create-credit-card-fee.dto';
-import { CreditCardFee } from '@sistema-erp-electrosal/core'; // Added
+import { CreditCardFee } from '@sistema-beleza/core'; // Added
 import { CreditCardFeeMapper } from './mappers/credit-card-fee.mapper'; // Added
 
 @Injectable()
