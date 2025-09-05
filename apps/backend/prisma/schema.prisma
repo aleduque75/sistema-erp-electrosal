@@ -14,7 +14,7 @@ model Organization {
   id                      String                @id @default(uuid())
   name                    String
   users                   User[]
-  clients                 Client[]
+  pessoas                 Pessoa[]
   products                Product[]
   sales                   Sale[]
   accountsPay             AccountPay[]
@@ -64,15 +64,31 @@ model UserSettings {
   @@map("user_settings")
 }
 
-// --- MODELOS DE NEGÓCIO (VENDAS, PRODUTOS, CLIENTES) ---
-model Client {
+// --- MODELOS DE NEGÓCIO (VENDAS, PRODUTOS, PESSOAS) ---
+enum PessoaType {
+  FISICA
+  JURIDICA
+}
+
+model Pessoa {
   id              String       @id @default(uuid())
   organizationId  String
   organization    Organization @relation(fields: [organizationId], references: [id])
-  name            String
+  
+  type            PessoaType
+
+  name            String // Nome (Física) ou Nome Fantasia (Jurídica)
+  razaoSocial     String? // Apenas para Jurídica
+  
   email           String?      @unique
   phone           String?
+
+  cpf             String?      @unique // Apenas para Física
+  cnpj            String?      @unique // Apenas para Jurídica
+  
   birthDate       DateTime?
+  gender          String?
+
   cep             String?
   logradouro      String?
   numero          String?
@@ -80,13 +96,13 @@ model Client {
   bairro          String?
   cidade          String?
   uf              String?
-  gender          String?
-  preferences     Json?
-  purchaseHistory Json?
+
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+  
   sales           Sale[]
-  cpf             String?      @unique
+
+  @@map("pessoas")
 }
 
 model Product {
@@ -116,8 +132,8 @@ model Sale {
   id             String            @id @default(uuid())
   organizationId String
   organization   Organization      @relation(fields: [organizationId], references: [id])
-  clientId       String
-  client         Client            @relation(fields: [clientId], references: [id])
+  pessoaId       String
+  pessoa         Pessoa            @relation(fields: [pessoaId], references: [id])
   orderNumber    String            @unique
   totalAmount    Decimal           @db.Decimal(10, 2)
   feeAmount      Decimal?          @db.Decimal(10, 2)

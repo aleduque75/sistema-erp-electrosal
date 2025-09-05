@@ -1,12 +1,25 @@
 import { Entity } from '../../_shared/domain/entity';
 import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
 
-export interface ClientProps {
+export type PessoaType = 'FISICA' | 'JURIDICA';
+
+export interface PessoaProps {
   organizationId: string;
-  name: string;
+  name: string; // Nome da pessoa ou Nome Fantasia da empresa
+  type: PessoaType;
+
+  // Campos Pessoa Física
+  cpf?: string;
+  birthDate?: Date;
+  gender?: string;
+
+  // Campos Pessoa Jurídica
+  cnpj?: string;
+  razaoSocial?: string; // Razão Social
+
+  // Contato e Endereço (Comuns)
   email?: string;
   phone?: string;
-  birthDate?: Date;
   cep?: string;
   logradouro?: string;
   numero?: string;
@@ -14,21 +27,18 @@ export interface ClientProps {
   bairro?: string;
   cidade?: string;
   uf?: string;
-  gender?: string;
-  preferences?: object; // Prisma Json type maps to object in TypeScript
-  purchaseHistory?: object; // Prisma Json type maps to object in TypeScript
-  cpf?: string;
+
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export class Client extends Entity<ClientProps> {
-  private constructor(props: ClientProps, id?: UniqueEntityID) {
+export class Pessoa extends Entity<PessoaProps> {
+  private constructor(props: PessoaProps, id?: UniqueEntityID) {
     super(props, id);
   }
 
-  static create(props: ClientProps, id?: UniqueEntityID): Client {
-    const client = new Client(
+  static create(props: PessoaProps, id?: UniqueEntityID): Pessoa {
+    const pessoa = new Pessoa(
       {
         ...props,
         createdAt: props.createdAt ?? new Date(),
@@ -36,83 +46,74 @@ export class Client extends Entity<ClientProps> {
       },
       id,
     );
-    return client;
+    return pessoa;
   }
 
   get organizationId(): string {
     return this.props.organizationId;
   }
-
   get name(): string {
     return this.props.name;
   }
-
-  get email(): string | undefined {
-    return this.props.email;
+  get type(): PessoaType {
+    return this.props.type;
   }
-
-  get phone(): string | undefined {
-    return this.props.phone;
-  }
-
-  get birthDate(): Date | undefined {
-    return this.props.birthDate;
-  }
-
-  get cep(): string | undefined {
-    return this.props.cep;
-  }
-
-  get logradouro(): string | undefined {
-    return this.props.logradouro;
-  }
-
-  get numero(): string | undefined {
-    return this.props.numero;
-  }
-
-  get complemento(): string | undefined {
-    return this.props.complemento;
-  }
-
-  get bairro(): string | undefined {
-    return this.props.bairro;
-  }
-
-  get cidade(): string | undefined {
-    return this.props.cidade;
-  }
-
-  get uf(): string | undefined {
-    return this.props.uf;
-  }
-
-  get gender(): string | undefined {
-    return this.props.gender;
-  }
-
-  get preferences(): object | undefined {
-    return this.props.preferences;
-  }
-
-  get purchaseHistory(): object | undefined {
-    return this.props.purchaseHistory;
-  }
-
   get cpf(): string | undefined {
     return this.props.cpf;
   }
-
+  get birthDate(): Date | undefined {
+    return this.props.birthDate;
+  }
+  get gender(): string | undefined {
+    return this.props.gender;
+  }
+  get cnpj(): string | undefined {
+    return this.props.cnpj;
+  }
+  get razaoSocial(): string | undefined {
+    return this.props.razaoSocial;
+  }
+  get email(): string | undefined {
+    return this.props.email;
+  }
+  get phone(): string | undefined {
+    return this.props.phone;
+  }
+  get cep(): string | undefined {
+    return this.props.cep;
+  }
+  get logradouro(): string | undefined {
+    return this.props.logradouro;
+  }
+  get numero(): string | undefined {
+    return this.props.numero;
+  }
+  get complemento(): string | undefined {
+    return this.props.complemento;
+  }
+  get bairro(): string | undefined {
+    return this.props.bairro;
+  }
+  get cidade(): string | undefined {
+    return this.props.cidade;
+  }
+  get uf(): string | undefined {
+    return this.props.uf;
+  }
   get createdAt(): Date {
     return this.props.createdAt!;
   }
-
   get updatedAt(): Date {
     return this.props.updatedAt!;
   }
 
-  update(props: Partial<ClientProps>) {
-    Object.assign(this.props, props);
+  update(props: Partial<PessoaProps>) {
+    // Prevent changing the type after creation
+    const { type, ...otherProps } = props;
+    if (type && type !== this.props.type) {
+      throw new Error('Changing the type of a Pessoa is not allowed.');
+    }
+    Object.assign(this.props, otherProps);
     this.props.updatedAt = new Date();
   }
 }

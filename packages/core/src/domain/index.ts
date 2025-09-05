@@ -3,7 +3,7 @@ export * from './xml-import-log';
 export * from './credit-card-fee';
 export * from './media';
 export * from './user-settings';
-export * from './client';
+export * from './pessoa';
 export * from './product';
 export * from './stock-movement';
 export * from './sale-item';

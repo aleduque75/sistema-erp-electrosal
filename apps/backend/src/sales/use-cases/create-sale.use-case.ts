@@ -8,6 +8,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { addMonths, addDays } from 'date-fns';
 import { TipoTransacaoPrisma, Prisma } from '@prisma/client'; // <-- 1. Importe o 'Prisma'
 import { SettingsService } from '../../settings/settings.service'; // Added
+import { SaleItemMapper } from '../mappers/sale-item.mapper'; // Added
+import { ProductMapper } from '../../products/mappers/product.mapper'; // Added
 
 @Injectable()
 export class CreateSaleUseCase {
@@ -20,7 +22,7 @@ export class CreateSaleUseCase {
     console.log('Dados recebidos no CreateSaleUseCase:', createSaleDto);
 
     const {
-      clientId,
+      pessoaId,
       items,
       paymentMethod,
       numberOfInstallments, // Nome corrigido
@@ -40,23 +42,23 @@ export class CreateSaleUseCase {
       );
 
     const productIds = items.map((item) => item.productId);
-    const productsInDb = await this.prisma.product.findMany({
+    const productsInDb = (await this.prisma.product.findMany({
       where: { id: { in: productIds }, organizationId },
-    });
+    })).map(ProductMapper.toDomain); // Map to DDD entity
 
     let totalAmount = 0;
     const saleItemsData = items.map((item) => {
-      const product = productsInDb.find((p) => p.id === item.productId);
+      const product = productsInDb.find((p) => p.id.toString() === item.productId); // Use id.toString()
       if (!product || product.stock < item.quantity) {
         throw new BadRequestException(
           `Estoque insuficiente para o produto "${product?.name}".`,
         );
       }
-      totalAmount += product.price.toNumber() * item.quantity;
+      totalAmount += product.price * item.quantity; // Use product.price directly
       return {
-        productId: product.id,
+        productId: product.id.toString(), // Use id.toString()
         quantity: item.quantity,
-        price: product.price,
+        price: product.price, // Use product.price directly
       };
     });
 
@@ -67,13 +69,13 @@ export class CreateSaleUseCase {
       const sale = await tx.sale.create({
         data: {
           organizationId,
-          clientId,
+          pessoaId,
           orderNumber: `VENDA-${Date.now()}`,
           totalAmount,
           feeAmount: finalFeeAmount,
           netAmount,
           paymentMethod,
-          saleItems: { create: saleItemsData },
+          saleItems: { create: saleItemsData.map(SaleItemMapper.toPersistence) }, // Map to persistence
         },
       });
 
