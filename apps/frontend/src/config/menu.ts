@@ -43,8 +43,8 @@ export const menuConfig: NavItem[] = [
         description: "Gerencie seus produtos, estoque e preços.",
       },
       {
-        title: "Clientes",
-        href: "/clients",
+        title: "Cadastros Empresa",
+        href: "/pessoas",
         icon: Users,
         description: "Cadastre e gerencie seus clientes.",
       },

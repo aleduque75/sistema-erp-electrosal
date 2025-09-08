@@ -34,44 +34,67 @@ export class ClientImportsService {
         return [];
       }
 
-      // 👇 CORREÇÃO: Procura por 'E-mail 1 - Value' (padrão inglês)
-      const emailsFromFile = contactsWithAnyName
-        .map((c) => c['E-mail 1 - Value'])
-        .filter((email) => !!email);
-
-      const existingClients = await this.prisma.client.findMany({
-        where: {
-          organizationId,
-          pessoa: {
-            email: { in: emailsFromFile },
-          },
-        },
+      // Busca todas as pessoas da organização para checagem local
+      const allPessoasInOrg = await this.prisma.pessoa.findMany({
+        where: { organizationId },
         select: {
-          pessoa: {
-            select: {
-              email: true,
-            },
-          },
+          id: true,
+          email: true,
+          name: true,
+          client: { select: { pessoaId: true } },
+          fornecedor: { select: { pessoaId: true } },
+          funcionario: { select: { pessoaId: true } },
         },
       });
-      const existingEmails = new Set(existingClients.map((c) => c.pessoa.email));
+
+      const existingEmailsMap = new Map<string, { id: string; roles: string[] }>();
+      const existingNamesMap = new Map<string, { id: string; roles: string[] }>();
+
+      allPessoasInOrg.forEach((p) => {
+        const roles: string[] = [];
+        if (p.client) roles.push('CLIENT');
+        if (p.fornecedor) roles.push('FORNECEDOR');
+        if (p.funcionario) roles.push('FUNCIONARIO');
+
+        if (p.email) {
+          existingEmailsMap.set(p.email.toLowerCase(), { id: p.id, roles });
+        }
+        if (p.name) {
+          existingNamesMap.set(p.name.toLowerCase(), { id: p.id, roles });
+        }
+      });
 
       const previewList = contactsWithAnyName.map((contact: any) => {
         const email = contact['E-mail 1 - Value'] || null;
-        let status: 'new' | 'duplicate' = 'new';
-
-        if (email && existingEmails.has(email)) {
-          status = 'duplicate';
-        }
-
-        // 👇 CORREÇÃO: Constrói o nome completo a partir das colunas em inglês
         const fullName = [
           contact['First Name'],
           contact['Middle Name'],
           contact['Last Name'],
         ]
-          .filter(Boolean) // Remove partes vazias
-          .join(' ');
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+
+        let status: 'new' | 'duplicate' = 'new';
+        let existingPessoaId: string | null = null;
+        let existingRoles: string[] = [];
+
+        let pessoaInfo: { id: string; roles: string[] } | undefined;
+
+        if (email) {
+          pessoaInfo = existingEmailsMap.get(email.toLowerCase());
+        }
+        
+        // Se não encontrou por email, tenta por nome
+        if (!pessoaInfo && fullName) {
+            pessoaInfo = existingNamesMap.get(fullName.toLowerCase());
+        }
+
+        if (pessoaInfo) {
+          status = 'duplicate';
+          existingPessoaId = pessoaInfo.id;
+          existingRoles = pessoaInfo.roles;
+        }
 
         return {
           name: fullName,
@@ -89,7 +112,10 @@ export class ClientImportsService {
           bairro: contact['Neighborhood'] || null,
           cidade: contact['City'] || null,
           uf: contact['Region'] || null,
+          role: 'CLIENT', // Default role
           type: PessoaType.FISICA, // Default to FISICA
+          existingPessoaId: existingPessoaId, // Add existing Pessoa ID
+          existingRoles: existingRoles, // Add existing roles
         };
       });
 
@@ -103,35 +129,95 @@ export class ClientImportsService {
   async importGoogleCsv(organizationId: string, clients: PessoaLoteDto[]) {
     console.log('importGoogleCsv - organizationId recebido:', organizationId);
     console.log('importGoogleCsv - primeiro cliente recebido:', clients[0]);
-    const createdClients: Prisma.ClientGetPayload<{ include: { pessoa: true } }>[] = [];
+    const createdPessoas: Prisma.PessoaGetPayload<{}>[] = []; // Changed to PessoaGetPayload
+
     for (const clientData of clients) {
-      const createdClient = await this.prisma.client.create({
-        data: {
-          organization: { connect: { id: organizationId } },
-          pessoa: {
-            create: {
-              name: clientData.name,
-              email: clientData.email,
-              phone: clientData.phone,
-              cpf: clientData.cpf,
-              birthDate: clientData.birthDate,
-              gender: clientData.gender,
-              cep: clientData.cep,
-              logradouro: clientData.logradouro,
-              numero: clientData.numero,
-              complemento: clientData.complemento,
-              bairro: clientData.bairro,
-              cidade: clientData.cidade,
-              uf: clientData.uf,
-              type: clientData.type, // Use the type from the DTO
+      let pessoaIdToUse: string;
+      let existingPessoa:
+        | (Prisma.PessoaGetPayload<{
+            include: { client: true; fornecedor: true; funcionario: true };
+          }> & { id: string })
+        | null = null;
+
+      // Checa duplicidade por email ou nome
+      if (clientData.email) {
+        existingPessoa = await this.prisma.pessoa.findUnique({
+          where: { email: clientData.email, organizationId },
+          include: { client: true, fornecedor: true, funcionario: true },
+        });
+      }
+
+      if (!existingPessoa && clientData.name) {
+        existingPessoa = await this.prisma.pessoa.findFirst({
+          where: {
+            name: { equals: clientData.name, mode: 'insensitive' },
+            organizationId,
+          },
+          include: { client: true, fornecedor: true, funcionario: true },
+        });
+      }
+
+      if (existingPessoa) {
+        pessoaIdToUse = existingPessoa.id;
+      } else {
+        // Create new Pessoa if not exists
+        const newPessoa = await this.prisma.pessoa.create({
+          data: {
+            name: clientData.name,
+            email: clientData.email,
+            phone: clientData.phone,
+            cpf: clientData.cpf,
+            birthDate: clientData.birthDate,
+            gender: clientData.gender,
+            cep: clientData.cep,
+            logradouro: clientData.logradouro,
+            numero: clientData.numero,
+            complemento: clientData.complemento,
+            bairro: clientData.bairro,
+            cidade: clientData.cidade,
+            uf: clientData.uf,
+            type: clientData.type, // Use the type from the DTO
+            organization: { connect: { id: organizationId } },
+          },
+        });
+        pessoaIdToUse = newPessoa.id;
+        createdPessoas.push(newPessoa);
+      }
+
+      // Create role-specific entry if it doesn't exist
+      // This logic is now outside the existingPessoa check, so it always runs
+      // for the determined pessoaIdToUse
+      if (clientData.role === 'CLIENT') {
+        if (!existingPessoa?.client) {
+          await this.prisma.client.create({
+            data: {
+              pessoa: { connect: { id: pessoaIdToUse } },
               organization: { connect: { id: organizationId } },
             },
-          },
-        },
-        include: { pessoa: true }, // Include pessoa relation in the returned object
-      });
-      createdClients.push(createdClient);
+          });
+        }
+      } else if (clientData.role === 'FORNECEDOR') {
+        if (!existingPessoa?.fornecedor) {
+          await this.prisma.fornecedor.create({
+            data: {
+              pessoa: { connect: { id: pessoaIdToUse } },
+              organization: { connect: { id: organizationId } },
+            },
+          });
+        }
+      } else if (clientData.role === 'FUNCIONARIO') {
+        if (!existingPessoa?.funcionario) {
+          await this.prisma.funcionario.create({
+            data: {
+              pessoa: { connect: { id: pessoaIdToUse } },
+              organization: { connect: { id: organizationId } },
+              hireDate: new Date(), // Default hire date
+              position: 'N/A', // Default position
+            },
+          });
+        }
+      }
     }
-    return createdClients;
+    return createdPessoas;
   }
 }

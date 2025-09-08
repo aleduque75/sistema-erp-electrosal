@@ -10,7 +10,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 // Importe CADA módulo de funcionalidade que você criou
 import { AuthModule } from './auth/auth.module';
-import { ClientsModule } from './clients/clients.module';
+import { PessoaModule } from './pessoa/pessoa.module';
 import { ContasContabeisModule } from './contas-contabeis/contas-contabeis.module';
 import { ContasCorrentesModule } from './contas-correntes/contas-correntes.module';
 import { CreditCardBillsModule } from './credit-card-bills/credit-card-bills.module';
@@ -35,6 +35,7 @@ import { CreditCardFeesModule } from './credit-card-fees/credit-card-fees.module
 import { CreditCardForecastModule } from './credit-card-forecast/credit-card-forecast.module';
 import { PaymentTermsModule } from './payment-terms/payment-terms.module';
 import { PdfImportModule } from './pdf-import/pdf-import.module';
+import { JsonImportsModule } from './json-imports/json-imports.module';
 
 
 @Module({
@@ -48,7 +49,7 @@ import { PdfImportModule } from './pdf-import/pdf-import.module';
     // Registre (ligue) CADA módulo aqui
     AuthModule,
     UsersModule, // O AuthModule geralmente depende do UsersModule, então é bom ele vir antes
-    ClientsModule,
+    PessoaModule,
     ContasContabeisModule,
     ContasCorrentesModule,
     CreditCardBillsModule,
@@ -61,7 +62,7 @@ import { PdfImportModule } from './pdf-import/pdf-import.module';
     TransacoesModule,
     PrismaModule,
     AccountsRecModule, // <-- Registre o módulo aqui
-    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, PdfImportModule, // <-- Registre o módulo aqui
+    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, PdfImportModule, JsonImportsModule, // <-- Registre o módulo aqui
   ],
   controllers: [AppController],
   providers: [
