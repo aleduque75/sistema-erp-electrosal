@@ -87,6 +87,8 @@ export default function ImportPage() {
   const [newCategoryType, setNewCategoryType] =
     useState<TipoContaContabilPrisma>(TipoContaContabilPrisma.DESPESA);
 
+  const [isJsonImporting, setIsJsonImporting] = useState(false);
+
   const fetchContas = async () => {
     try {
       const [resReceitas, resDespesas] = await Promise.all([
@@ -97,6 +99,21 @@ export default function ImportPage() {
       setContasDeSaida(resDespesas.data);
     } catch {
       toast.error("Erro ao recarregar o plano de contas.");
+    }
+  };
+
+  const handleImportEmpresas = async () => {
+    setIsJsonImporting(true);
+    toast.info("Iniciando importação de empresas do arquivo JSON...");
+    try {
+      const response = await api.post("/json-imports/empresas");
+      toast.success(response.data.message);
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Falha ao importar empresas."
+      );
+    } finally {
+      setIsJsonImporting(false);
     }
   };
 
@@ -250,53 +267,78 @@ export default function ImportPage() {
   // Etapa 1: Formulário de Upload
   if (previewData.length === 0) {
     return (
-      <Card className="mx-auto my-8 max-w-lg">
-        <CardHeader>
-          <CardTitle>Importar Extrato Bancário (.ofx)</CardTitle>
-          <CardDescription>
-            Selecione a conta de destino e o arquivo OFX para conciliar as
-            transações.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePreview} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Importar Para Qual Conta Corrente?</Label>
-              <Select
-                value={selectedContaCorrenteId}
-                onValueChange={setSelectedContaCorrenteId}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma conta..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {contasCorrentes.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ofx-file">Arquivo .ofx</Label>
-              <Input
-                id="ofx-file"
-                type="file"
-                accept=".ofx, .OFX"
-                onChange={(e) =>
-                  setSelectedFile(e.target.files ? e.target.files[0] : null)
-                }
-                required
-              />
-            </div>
-            <Button type="submit" disabled={isUploading} className="w-full">
-              {isUploading ? "Analisando..." : "Analisar Arquivo"}
+      <div className="flex flex-wrap gap-8 justify-center items-start">
+        {/* Card de Importação de Extrato */}
+        <Card className="w-full max-w-lg">
+          <CardHeader>
+            <CardTitle>Importar Extrato Bancário (.ofx)</CardTitle>
+            <CardDescription>
+              Selecione a conta de destino e o arquivo OFX para conciliar as
+              transações.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePreview} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Importar Para Qual Conta Corrente?</Label>
+                <Select
+                  value={selectedContaCorrenteId}
+                  onValueChange={setSelectedContaCorrenteId}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma conta..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contasCorrentes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ofx-file">Arquivo .ofx</Label>
+                <Input
+                  id="ofx-file"
+                  type="file"
+                  accept=".ofx, .OFX"
+                  onChange={(e) =>
+                    setSelectedFile(e.target.files ? e.target.files[0] : null)
+                  }
+                  required
+                />
+              </div>
+              <Button type="submit" disabled={isUploading} className="w-full">
+                {isUploading ? "Analisando..." : "Analisar Arquivo"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Card de Importação de Empresas JSON */}
+        <Card className="w-full max-w-lg">
+          <CardHeader>
+            <CardTitle>Importar Dados Legados (JSON)</CardTitle>
+            <CardDescription>
+              Importe empresas a partir do arquivo <code>Empresa.json</code>.
+              Esta ação verifica por <code>externalId</code> e não duplicará registros.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={handleImportEmpresas}
+              disabled={isJsonImporting}
+              className="w-full"
+            >
+              {isJsonImporting
+                ? "Importando Empresas..."
+                : "Iniciar Importação de Empresas"}
             </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 

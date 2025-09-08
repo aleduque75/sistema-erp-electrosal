@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   ValidateNested,
+  IsEnum,
 } from 'class-validator';
 import { PessoaType } from '@prisma/client';
 
@@ -19,6 +20,7 @@ export class CreatePessoaDto {
 
   @IsEmail({}, { message: 'Formato de email inválido.' })
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
   email?: string;
 
   @Transform(({ value }) => (value === '' ? null : value))
@@ -44,6 +46,11 @@ export class CreatePessoaDto {
   @IsString() @IsOptional() gender?: string;
   @IsOptional() preferences?: object;
   @IsOptional() purchaseHistory?: object;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  roles?: string[];
 }
 
 export class UpdatePessoaDto extends PartialType(CreatePessoaDto) {}
@@ -67,6 +74,10 @@ export class PessoaLoteDto {
   @IsString() @IsOptional() bairro?: string;
   @IsString() @IsOptional() cidade?: string;
   @IsString() @IsOptional() uf?: string;
+  @IsString()
+  @IsNotEmpty({ message: 'O papel da pessoa é obrigatório.' })
+  role: string; // Add role
+  @IsEnum(PessoaType)
   type: PessoaType; // Add PessoaType
 }
 

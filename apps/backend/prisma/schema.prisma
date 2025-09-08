@@ -103,6 +103,8 @@ model Pessoa {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  externalId String? @unique // Para importação de dados legados
+
   sales       Sale[]
   client      Client?      // Relação com o papel de Cliente
   fornecedor  Fornecedor?  // Relação com o papel de Fornecedor
