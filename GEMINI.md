@@ -68,6 +68,14 @@ Este é um monorepo gerenciado com `pnpm` contendo um sistema de gestão para sa
   - **Vendas com Cartão de Crédito:** Lógica de cálculo de valor final e valor a receber aprimorada, considerando o toggle de absorção de taxa e gerando uma única conta a receber com data de vencimento configurável.
   - **Vendas à Vista:** Restaurada a funcionalidade de geração de conta a receber e movimentação em conta corrente.
 
+- **Rastreamento de Custo e Lote (FIFO):**
+  - Implementado um sistema para rastrear o preço de custo dos produtos e gerenciar o estoque por lotes, utilizando o método FIFO (First-In, First-Out).
+  - O modelo `Product` agora inclui um campo `costPrice` para registrar o custo de aquisição.
+  - Um novo modelo `InventoryLot` foi criado para representar lotes específicos de produtos recebidos (via pedido de compra) ou produzidos (via reação, futura implementação).
+  - Cada `InventoryLot` armazena o `costPrice`, `quantity` (quantidade total do lote), `remainingQuantity` (quantidade disponível), `sourceType` (tipo de origem, ex: `PURCHASE_ORDER`), `sourceId` (ID do pedido/reação) e `receivedDate`.
+  - Ao receber um pedido de compra, são criados registros `InventoryLot` para cada item, e o `Product.stock` é implicitamente gerenciado pela soma das `remainingQuantity` dos lotes.
+  - Na venda, a baixa do estoque é feita dos lotes mais antigos primeiro (FIFO), e o `SaleItem` registra o `inventoryLotId` e o `costPriceAtSale` para rastreamento de custo.
+
 ## Arquivos a Ignorar
 
 - `node_modules`
