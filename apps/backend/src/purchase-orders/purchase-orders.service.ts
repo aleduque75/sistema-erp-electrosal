@@ -62,7 +62,7 @@ export class PurchaseOrdersService {
   }
 
   async update(organizationId: string, id: string, data: UpdatePurchaseOrderDto): Promise<PurchaseOrder> {
-    const { items, fornecedorId, ...orderData } = data;
+    const { items, fornecedorId, paymentTermId, ...orderData } = data;
 
     return this.prisma.$transaction(async (tx) => {
       const existingOrder = await this.findOne(organizationId, id) as PurchaseOrderWithItems;
@@ -80,6 +80,7 @@ export class PurchaseOrdersService {
         data: {
           ...orderData,
           fornecedor: fornecedorId ? { connect: { pessoaId: fornecedorId } } : undefined,
+          paymentTerm: paymentTermId !== undefined ? (paymentTermId === null ? { disconnect: true } : { connect: { id: paymentTermId } }) : undefined,
           totalAmount: finalTotalAmount, // Add this line
         },
       });
@@ -187,7 +188,7 @@ export class PurchaseOrdersService {
       // 2. Create accounts payable
       const today = new Date();
       const totalAmount = new Decimal(order.totalAmount);
-      const installmentsDays = order.paymentTerm.installmentsDays;
+      const installmentsDays = order.paymentTerm!.installmentsDays;
       const numInstallments = installmentsDays.length;
       const installmentAmount = totalAmount.dividedBy(numInstallments).toDecimalPlaces(2);
 
