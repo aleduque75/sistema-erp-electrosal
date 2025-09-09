@@ -1,4 +1,4 @@
-import { Client } from '@sistema-beleza/core';
+import { Client } from '@sistema-erp-electrosal/core';
 import { Client as PrismaClient } from '@prisma/client';
 
 export class ClientMapper {

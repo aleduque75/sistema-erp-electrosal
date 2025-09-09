@@ -24,6 +24,7 @@ interface ComboboxProps {
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
+  disabled?: boolean; // Added disabled prop
 }
 
 export function Combobox({
@@ -31,6 +32,7 @@ export function Combobox({
   value,
   onValueChange,
   placeholder = "Selecione...",
+  disabled, // Added disabled prop
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -42,6 +44,7 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between font-normal"
+          disabled={disabled} // Pass disabled prop to Button
         >
           {/* 👇 CORREÇÃO APLICADA AQUI 👇 */}
           <span className="truncate">

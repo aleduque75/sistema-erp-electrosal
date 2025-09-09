@@ -46,6 +46,7 @@ import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Badge } from "@/components/ui/badge";
 import { AccountPayForm } from "./components/account-pay-form"; // <-- CORRIGIDO AQUI
 import { SplitAccountPayForm } from "./components/split-account-pay-form";
+import { PayAccountForm } from "./components/pay-account-form"; // Added
 import { formatInTimeZone } from "date-fns-tz";
 
 interface AccountPay {

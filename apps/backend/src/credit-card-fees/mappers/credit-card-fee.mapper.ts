@@ -1,4 +1,4 @@
-import { CreditCardFee } from '@sistema-beleza/core';
+import { CreditCardFee } from '@sistema-erp-electrosal/core';
 import { CreditCardFee as PrismaCreditCardFee } from '@prisma/client';
 
 export class CreditCardFeeMapper {

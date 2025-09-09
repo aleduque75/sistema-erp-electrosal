@@ -1,4 +1,4 @@
-import { Product } from '@sistema-beleza/core';
+import { Product } from '@sistema-erp-electrosal/core';
 import { Product as PrismaProduct } from '@prisma/client';
 
 export class ProductMapper {

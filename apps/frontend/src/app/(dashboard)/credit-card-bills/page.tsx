@@ -52,6 +52,12 @@ interface CreditCardBill {
   _count: { transactions: number };
 }
 
+interface CreditCard {
+  id: string;
+  name: string;
+  // Add other properties as needed based on the API response
+}
+
 // Funções de formatação
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(

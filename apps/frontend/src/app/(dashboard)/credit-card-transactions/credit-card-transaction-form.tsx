@@ -167,7 +167,7 @@ export function CreditCardTransactionForm({ transaction, onSave }: FormProps) {
                   value: c.id,
                   label: `${c.codigo} - ${c.nome}`,
                 }))}
-                value={field.value}
+                value={field.value ?? undefined}
                 onValueChange={field.onChange}
                 placeholder="Selecione uma categoria..."
               />

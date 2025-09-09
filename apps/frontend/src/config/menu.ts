@@ -80,6 +80,12 @@ export const menuConfig: NavItem[] = [
         description: "Acompanhe o histórico de todas as suas vendas.",
       },
       {
+        title: "Pedidos de Compra",
+        href: "/purchase-orders",
+        icon: ShoppingCart,
+        description: "Gerencie seus pedidos de compra de fornecedores.",
+      },
+      {
         title: "Lançar Compra no Cartão",
         href: "/credit-card-transactions",
         icon: ArrowRightLeft,

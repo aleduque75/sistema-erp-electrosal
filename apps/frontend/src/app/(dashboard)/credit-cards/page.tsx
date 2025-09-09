@@ -145,7 +145,7 @@ export default function CreditCardsPage() {
           {/* Renderiza o formulário dentro da modal */}
           <CreditCardForm
             // Se modalState for um cartão, passa como initialData. Se for 'new', passa undefined.
-            initialData={modalState !== "new" ? modalState : undefined}
+            initialData={modalState !== "new" && modalState !== null ? modalState : undefined}
             onSave={handleSave}
           />
         </DialogContent>

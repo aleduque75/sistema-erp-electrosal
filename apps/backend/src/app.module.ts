@@ -36,6 +36,7 @@ import { CreditCardForecastModule } from './credit-card-forecast/credit-card-for
 import { PaymentTermsModule } from './payment-terms/payment-terms.module';
 import { PdfImportModule } from './pdf-import/pdf-import.module';
 import { JsonImportsModule } from './json-imports/json-imports.module';
+import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 
 
 @Module({
@@ -62,7 +63,7 @@ import { JsonImportsModule } from './json-imports/json-imports.module';
     TransacoesModule,
     PrismaModule,
     AccountsRecModule, // <-- Registre o módulo aqui
-    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, PdfImportModule, JsonImportsModule, // <-- Registre o módulo aqui
+    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, PdfImportModule, JsonImportsModule, PurchaseOrdersModule, // <-- Registre o módulo aqui
   ],
   controllers: [AppController],
   providers: [

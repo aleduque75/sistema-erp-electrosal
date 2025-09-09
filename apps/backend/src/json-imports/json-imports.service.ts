@@ -48,7 +48,7 @@ export class JsonImportsService {
 
         // Limpa e determina o tipo de documento
         const cpfCnpj = (empresa.cpfCnpj || '').replace(/\D/g, '');
-        let type = PessoaType.JURIDICA;
+        let type: PessoaType = PessoaType.JURIDICA;
         let cpf = null;
         let cnpj = null;
 

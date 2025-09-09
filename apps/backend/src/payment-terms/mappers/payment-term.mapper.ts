@@ -1,4 +1,4 @@
-import { PaymentTerm } from '@sistema-beleza/core';
+import { PaymentTerm } from '@sistema-erp-electrosal/core';
 import { PaymentTerm as PrismaPaymentTerm } from '@prisma/client';
 
 export class PaymentTermMapper {

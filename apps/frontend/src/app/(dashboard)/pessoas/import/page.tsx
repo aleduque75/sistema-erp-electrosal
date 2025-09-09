@@ -92,7 +92,7 @@ export default function ImportClientsPage() {
         formData
       );
       setPreviewData(response.data);
-      const initialSelections = response.data.reduce((acc, client, index) => {
+      const initialSelections = response.data.reduce((acc: Record<number, SelectionState>, client: PreviewClient, index: number) => {
         acc[index] = {
           selected: client.status === "new",
           name: client.name,

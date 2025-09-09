@@ -29,6 +29,21 @@ export type FeaturesSectionConfig = {
 
 export type SectionConfig = HeroSectionConfig | FeaturesSectionConfig; // | OutrosTiposDeSecao
 
+interface CustomThemeConfig {
+  light?: {
+    navbar?: Record<string, string>;
+    hero?: Record<string, string>;
+    features?: Record<string, string>;
+    // Add other sections as needed
+  };
+  dark?: {
+    navbar?: Record<string, string>;
+    hero?: Record<string, string>;
+    features?: Record<string, string>;
+    // Add other sections as needed
+  };
+}
+
 export interface LandingPageData {
   id: string;
   name: string;
@@ -36,8 +51,9 @@ export interface LandingPageData {
   logoImageId?: string; // Novo campo para o ID da imagem do logotipo
   logoImage?: { id: string; path: string; filename: string; }; // Detalhes da imagem do logotipo
   customThemeName?: string; // Novo campo para o nome do tema personalizado
+  customTheme?: CustomThemeConfig; // Added customTheme
   sections: { // As seções virão com o ID do banco de dados
-    id: string;
+    id?: string; // Make id optional for new sections
     order: number;
     type: string;
     content: any; // O conteúdo JSON será mapeado para os tipos de seção acima

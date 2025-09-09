@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Media } from '@sistema-beleza/core'; // Changed
+import { Media } from '@sistema-erp-electrosal/core'; // Changed // Changed
 import { MediaMapper } from './mappers/media.mapper'; // Added
 import sharp from 'sharp';
 import { join } from 'path';
