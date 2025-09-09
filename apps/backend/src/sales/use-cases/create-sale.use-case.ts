@@ -1,11 +1,11 @@
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { CreateSaleDto } from '../dtos/sales.dto';
-import { PrismaService } '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { addMonths, addDays } from 'date-fns';
 import { TipoTransacaoPrisma, Prisma } from '@prisma/client';
 import { SettingsService } from '../../settings/settings.service';

@@ -36,6 +36,7 @@ model Organization {
   fornecedores          Fornecedor[]
   funcionarios          Funcionario[]
   purchaseOrders        PurchaseOrder[] // Nova relação
+  inventoryLots         InventoryLot[] // Relação com lotes de estoque
 }
 
 // --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
@@ -189,6 +190,7 @@ model InventoryLot {
   receivedDate      DateTime  @default(now())
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  saleItems         SaleItem[] // Relação com itens de venda
 
   @@map("inventory_lots")
 }

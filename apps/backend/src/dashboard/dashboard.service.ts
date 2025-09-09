@@ -7,27 +7,31 @@ export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   async getDashboardSummary(organizationId: string) {
-    const [products, accountsPay, accountsRec, totalSales] = await Promise.all([
+    const [products, accountsPay, accountsRec, totalSales, inventoryLots] = await Promise.all([
       this.prisma.product.findMany({
-        where: { organizationId }, // Usa organizationId
-        select: { price: true, stock: true },
+        where: { organizationId },
+        select: { id: true, price: true },
       }),
       this.prisma.accountPay.aggregate({
-        where: { organizationId, paid: false }, // Usa organizationId
+        where: { organizationId, paid: false },
         _sum: { amount: true },
       }),
       this.prisma.accountRec.aggregate({
-        where: { organizationId, received: false }, // Usa organizationId
+        where: { organizationId, received: false },
         _sum: { amount: true },
       }),
       this.prisma.sale.aggregate({
         where: { organizationId },
         _sum: { totalAmount: true },
       }),
+      this.prisma.inventoryLot.findMany({
+        where: { organizationId, remainingQuantity: { gt: 0 } },
+        select: { productId: true, remainingQuantity: true, costPrice: true },
+      }),
     ]);
 
-    const totalStockValue = products.reduce((sum, product) => {
-      return sum + product.price.toNumber() * product.stock;
+    const totalStockValue = inventoryLots.reduce((sum, lot) => {
+      return sum + lot.remainingQuantity * lot.costPrice.toNumber();
     }, 0);
 
     return {
