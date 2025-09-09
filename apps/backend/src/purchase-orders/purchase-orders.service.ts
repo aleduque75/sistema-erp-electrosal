@@ -14,7 +14,7 @@ export class PurchaseOrdersService {
   constructor(private prisma: PrismaService) {}
 
   async create(organizationId: string, data: CreatePurchaseOrderDto): Promise<PurchaseOrder> {
-    const { items, fornecedorId, ...orderData } = data;
+    const { items, fornecedorId, paymentTermId, ...orderData } = data;
 
     return this.prisma.$transaction(async (tx) => {
       const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
@@ -25,6 +25,7 @@ export class PurchaseOrdersService {
           totalAmount: totalAmount,
           organization: { connect: { id: organizationId } },
           fornecedor: { connect: { pessoaId: fornecedorId } },
+          paymentTerm: paymentTermId ? { connect: { id: paymentTermId } } : undefined,
           items: {
             createMany: {
               data: items.map((item) => ({
