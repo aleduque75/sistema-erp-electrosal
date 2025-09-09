@@ -37,6 +37,8 @@ import { PaymentTermsModule } from './payment-terms/payment-terms.module';
 import { PdfImportModule } from './pdf-import/pdf-import.module';
 import { JsonImportsModule } from './json-imports/json-imports.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
+import { AnalisesQuimicasModule } from './analises-quimicas';
+import { RecuperacoesModule } from './recuperacoes';
 
 
 @Module({
@@ -64,6 +66,8 @@ import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
     PrismaModule,
     AccountsRecModule, // <-- Registre o módulo aqui
     AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, PdfImportModule, JsonImportsModule, PurchaseOrdersModule, // <-- Registre o módulo aqui
+  AnalisesQuimicasModule,
+  RecuperacoesModule,
   ],
   controllers: [AppController],
   providers: [

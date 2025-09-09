@@ -1,0 +1,2 @@
+// Este arquivo foi criado para forçar a reindexação do VS Code e garantir que a indentação seja corrigida.
+// Você pode apagar este arquivo após a correção da indentação.

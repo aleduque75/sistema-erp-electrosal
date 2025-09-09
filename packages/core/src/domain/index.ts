@@ -1,3 +1,4 @@
+export * from './recuperacoes';
 export * from './payment-term';
 export * from './xml-import-log';
 export * from './credit-card-fee';
@@ -10,3 +11,4 @@ export * from './stock-movement';
 export * from './client';
 export * from './fornecedor';
 export * from './funcionario';
+export * from './analises-quimicas';
