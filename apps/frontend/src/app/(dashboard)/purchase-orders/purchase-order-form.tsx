@@ -36,6 +36,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -106,6 +107,7 @@ type FormValues = z.infer<typeof formSchema>;
 export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProps) {
   const [fornecedores, setFornecedores] = useState<FornecedorOption[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [items, setItems] = useState<PurchaseOrderItem[]>(initialData?.items || []);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
@@ -139,7 +141,14 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
     });
 
     api.get("/products").then((res) => {
-      setProducts(res.data);
+      const mappedProducts = res.data.map((p: any) => ({
+        id: p._id,
+        name: p.props.name,
+        price: p.props.price,
+      }));
+      setProducts(mappedProducts);
+    }).finally(() => {
+      setIsLoadingProducts(false);
     });
   }, []); // Executa apenas uma vez
 
@@ -194,7 +203,8 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
     try {
       const payload = {
         ...data,
-        totalAmount: totalAmount, // Envia o totalAmount calculado
+        orderDate: new Date(data.orderDate).toISOString(),
+        expectedDeliveryDate: data.expectedDeliveryDate ? new Date(data.expectedDeliveryDate).toISOString() : null,
         items: items.map(item => ({ productId: item.productId, quantity: item.quantity, price: item.price }))
       };
 
@@ -357,8 +367,13 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
             </TableBody>
           </Table>
           <div className="flex justify-end mt-4">
-            <Button type="button" onClick={() => setIsItemModalOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
+            <Button
+              type="button"
+              onClick={() => setIsItemModalOpen(true)}
+              disabled={isLoadingProducts}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              {isLoadingProducts ? "Carregando..." : "Adicionar Item"}
             </Button>
           </div>
           <div className="text-right text-lg font-bold mt-4">
@@ -378,9 +393,13 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingItemIndex !== null ? "Editar Item" : "Adicionar Novo Item"}</DialogTitle>
+            <DialogDescription>
+              Selecione um produto e defina a quantidade e o preço.
+            </DialogDescription>
           </DialogHeader>
           <ItemForm
             products={products}
+            isLoading={isLoadingProducts}
             onSave={editingItemIndex !== null ? handleEditItem.bind(null, editingItemIndex) : handleAddItem}
             initialData={editingItemIndex !== null ? items[editingItemIndex] : undefined}
             onCancel={() => {
@@ -397,12 +416,13 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
 // Componente de Formulário de Item (interno)
 interface ItemFormProps {
   products: Product[];
+  isLoading: boolean;
   onSave: (item: PurchaseOrderItem) => void;
   onCancel: () => void;
   initialData?: PurchaseOrderItem;
 }
 
-function ItemForm({ products, onSave, onCancel, initialData }: ItemFormProps) {
+function ItemForm({ products, isLoading, onSave, onCancel, initialData }: ItemFormProps) {
   const form = useForm<z.infer<typeof itemSchema>>({
     resolver: zodResolver(itemSchema),
     defaultValues: initialData || { productId: "", quantity: 1, price: 0 },
@@ -432,11 +452,21 @@ function ItemForm({ products, onSave, onCancel, initialData }: ItemFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
+                  {isLoading ? (
+                    <SelectItem value="loading" disabled>
+                      Carregando...
                     </SelectItem>
-                  ))}
+                  ) : products.length === 0 ? (
+                    <SelectItem value="empty" disabled>
+                      Nenhum produto encontrado.
+                    </SelectItem>
+                  ) : (
+                    products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
