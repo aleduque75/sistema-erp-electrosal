@@ -129,7 +129,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
   const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
 
   useEffect(() => {
-    // Buscar fornecedores
+    // Buscar fornecedores e produtos na montagem do componente
     api.get("/pessoas?role=FORNECEDOR").then((res) => {
       setFornecedores(res.data.filter((p: any) => p.fornecedor).map((p: any) => ({
         id: p.id,
@@ -138,25 +138,30 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
       })));
     });
 
-    // Buscar produtos
     api.get("/products").then((res) => {
-      console.log("Produtos carregados:", res.data); // DEBUG
       setProducts(res.data);
     });
+  }, []); // Executa apenas uma vez
 
+  useEffect(() => {
+    // Reage a mudanças nos dados iniciais ou quando os produtos são carregados
     if (initialData) {
       reset({
         ...initialData,
         orderDate: initialData.orderDate ? new Date(initialData.orderDate).toISOString().split("T")[0] : "",
         expectedDeliveryDate: initialData.expectedDeliveryDate ? new Date(initialData.expectedDeliveryDate).toISOString().split("T")[0] : "",
       });
-      // Popula os itens com os nomes dos produtos para exibição
-      setItems(initialData.items.map(item => ({
-        ...item,
-        productName: products.find(p => p.id === item.productId)?.name || "Produto Desconhecido"
-      })));
+
+      // Popula os itens com os nomes dos produtos para exibição,
+      // somente se os produtos já foram carregados.
+      if (products.length > 0) {
+        setItems(initialData.items.map(item => ({
+          ...item,
+          productName: products.find(p => p.id === item.productId)?.name || "Produto Desconhecido"
+        })));
+      }
     }
-  }, [initialData, reset, products]);
+  }, [initialData, products, reset]); // Depende de initialData, products e reset
 
   const handleAddItem = (item: PurchaseOrderItem) => {
     setItems((prev) => {
