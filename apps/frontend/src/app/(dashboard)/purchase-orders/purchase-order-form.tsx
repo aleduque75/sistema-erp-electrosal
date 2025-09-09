@@ -281,14 +281,17 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
           render={({ field }) => (
             <FormItem>
               <FormLabel>Prazo de Pagamento</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value ?? ''}>
+              <Select
+                onValueChange={(value) => field.onChange(value === 'null' ? null : value)}
+                defaultValue={field.value ?? 'null'}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um prazo de pagamento" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem> 
+                  <SelectItem value="null">Nenhum</SelectItem>
                   {paymentTerms.map((term) => (
                     <SelectItem key={term.id} value={term.id}>
                       {term.name}

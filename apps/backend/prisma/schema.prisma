@@ -211,6 +211,7 @@ model PaymentTerm {
   installmentsDays Int[]
   interestRate     Decimal?     @db.Decimal(5, 2)
   sales            Sale[]
+  purchaseOrders   PurchaseOrder[]
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 

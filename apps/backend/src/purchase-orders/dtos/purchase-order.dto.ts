@@ -28,6 +28,10 @@ export class CreatePurchaseOrderDto {
   @IsNotEmpty({ message: 'Fornecedor é obrigatório.' })
   fornecedorId: string;
 
+  @IsString()
+  @IsOptional()
+  paymentTermId?: string | null;
+
   @IsEnum(PurchaseOrderStatus)
   @IsOptional()
   status?: PurchaseOrderStatus;
