@@ -1,4 +1,4 @@
-import { UserSettings } from '@sistema-beleza/core';
+import { UserSettings } from '@sistema-erp-electrosal/core';
 import { UserSettings as PrismaUserSettings } from '@prisma/client';
 
 export class UserSettingsMapper {

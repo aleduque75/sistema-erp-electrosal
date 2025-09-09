@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto, UpdateProductDto } from './dtos/create-product.dto';
 import { ConfirmImportXmlDto, ImportXmlDto } from './dtos/import-xml.dto';
-import { Product } from '@sistema-beleza/core'; // Changed
+import { Product } from '@sistema-erp-electrosal/core'; // Changed
 import { ProductMapper } from './mappers/product.mapper'; // Added
 import * as xml2js from 'xml2js';
 import { XmlImportLogsService } from '../xml-import-logs/xml-import-logs.service'; // Added

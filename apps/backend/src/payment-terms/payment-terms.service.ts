@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePaymentTermDto } from './dto/create-payment-term.dto';
 import { UpdatePaymentTermDto } from './dto/update-payment-term.dto';
-import { PaymentTerm } from '@sistema-beleza/core'; // Added
+import { PaymentTerm } from '@sistema-erp-electrosal/core'; // Added
 import { PaymentTermMapper } from './mappers/payment-term.mapper'; // Added
 
 @Injectable()

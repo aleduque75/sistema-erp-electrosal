@@ -121,6 +121,7 @@ export default function LandingPageManagerPage() {
     // Inicializa o conteúdo com base no tipo
     if (type === "hero") {
       newSection.content = {
+        type: "hero", // Added missing type property
         title: "Novo Título Hero",
         description: "Nova Descrição Hero",
         mainImage: "",
@@ -132,6 +133,7 @@ export default function LandingPageManagerPage() {
       } as HeroSectionConfig;
     } else if (type === "features") {
       newSection.content = {
+        type: "features", // Added missing type property
         title: "Novas Funcionalidades",
         description: "Descrição das novas funcionalidades",
         items: [
@@ -320,7 +322,7 @@ export default function LandingPageManagerPage() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => handleRemoveSection(section.id)}
+                    onClick={() => section.id && handleRemoveSection(section.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ISaleRepository, Sale } from '@sistema-beleza/core';
+import { ISaleRepository, Sale } from '@sistema-erp-electrosal/core';
 import { Prisma } from '@prisma/client';
 
 type PrismaTransaction = Prisma.TransactionClient;

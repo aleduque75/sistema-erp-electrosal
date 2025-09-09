@@ -1,24 +1,4 @@
 
-
 > @sistema-erp-electrosal/core@1.0.0 build /home/aleduque/Documentos/cursos/sistema-erp-electrosal/packages/core
-> tsc
+> tsc && tsc-alias
 
-[96msrc/_shared/index.ts[0m:[93m1[0m:[93m15[0m - [91merror[0m[90m TS2307: [0mCannot find module './identifier' or its corresponding type declarations.
-
-[7m1[0m export * from './identifier';
-[7m [0m [91m              ~~~~~~~~~~~~~~[0m
-
-[96msrc/_shared/index.ts[0m:[93m2[0m:[93m15[0m - [91merror[0m[90m TS2307: [0mCannot find module './unique-entity-id' or its corresponding type declarations.
-
-[7m2[0m export * from './unique-entity-id';
-[7m [0m [91m              ~~~~~~~~~~~~~~~~~~~~[0m
-
-[96msrc/_shared/index.ts[0m:[93m4[0m:[93m15[0m - [91merror[0m[90m TS2307: [0mCannot find module './aggregate-root' or its corresponding type declarations.
-
-[7m4[0m export * from './aggregate-root';
-[7m [0m [91m              ~~~~~~~~~~~~~~~~~~[0m
-
-
-Found 3 errors in the same file, starting at: src/_shared/index.ts[90m:1[0m
-
-[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 2.[39m

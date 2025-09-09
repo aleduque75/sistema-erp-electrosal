@@ -132,11 +132,11 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
               <FormLabel>Conta Pai (Opcional)</FormLabel>
               <FormControl>
                 <Combobox
-                  value={field.value}
+                  value={field.value ?? undefined}
                   onValueChange={field.onChange}
                   placeholder="Selecione a conta pai..."
                   options={[
-                    { value: null, label: "Nenhuma (Conta Raiz)" },
+                    { value: "", label: "Nenhuma (Conta Raiz)" },
                     ...contasPai.map((pai) => ({
                       value: pai.id,
                       label: `${pai.codigo} - ${pai.nome}`,

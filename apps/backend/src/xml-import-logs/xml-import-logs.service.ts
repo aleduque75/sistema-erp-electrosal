@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateXmlImportLogDto } from './dto/create-xml-import-log.dto';
 import { UpdateXmlImportLogDto } from './dto/update-xml-import-log.dto';
-import { XmlImportLog } from '@sistema-beleza/core';
+import { XmlImportLog } from '@sistema-erp-electrosal/core';
 import { XmlImportLogMapper } from './mappers/xml-import-log.mapper';
 
 @Injectable()

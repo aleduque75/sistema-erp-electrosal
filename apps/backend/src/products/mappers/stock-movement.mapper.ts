@@ -1,4 +1,4 @@
-import { StockMovement } from '@sistema-beleza/core';
+import { StockMovement } from '@sistema-erp-electrosal/core';
 import { StockMovement as PrismaStockMovement } from '@prisma/client';
 
 export class StockMovementMapper {

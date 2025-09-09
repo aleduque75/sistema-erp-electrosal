@@ -5,7 +5,7 @@ import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma } from '@prism
 import { addMonths, addDays } from 'date-fns';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case'; // Added
-import { StockMovement, SaleItem } from '@sistema-beleza/core'; // Added SaleItem
+import { StockMovement, SaleItem } from '@sistema-erp-electrosal/core'; // Added SaleItem
 import { StockMovementMapper } from '../products/mappers/stock-movement.mapper'; // Added
 import { SaleItemMapper } from './mappers/sale-item.mapper'; // Added
 

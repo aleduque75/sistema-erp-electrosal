@@ -47,10 +47,7 @@ interface PessoaFormProps {
 // Schema de validação com papéis
 const formSchema = z.object({
   name: z.string().min(2, "O nome é obrigatório."),
-  email: z.preprocess(
-    (val) => (val === null || val === "" ? undefined : val),
-    z.string().email("Formato de email inválido.").optional(),
-  ),
+  email: z.string().email("Formato de email inválido.").optional().nullable(),
   cpf: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   cep: z.string().optional().nullable(),
@@ -79,7 +76,7 @@ export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      email: "",
+      email: initialData?.email ?? undefined,
       cpf: "",
       phone: "",
       cep: "",
@@ -173,7 +170,7 @@ export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="email@exemplo.com" {...field} />
+                <Input placeholder="email@exemplo.com" {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>

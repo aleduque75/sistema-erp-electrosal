@@ -12,8 +12,8 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@sistema-beleza/core": ["../../packages/core/dist"],
-      "@sistema-beleza/core/*": ["../../packages/core/dist/*"],
+      "@sistema-erp-electrosal/core": ["../../packages/core/dist"],
+      "@sistema-erp-electrosal/core/*": ["../../packages/core/dist/*"],
       "@prisma/client": ["./node_modules/@prisma/client"],
       "@auth/*": ["src/auth/*"],
       "@dtos/*": ["src/dtos/*"],

@@ -1,4 +1,4 @@
-import { XmlImportLog } from '@sistema-beleza/core';
+import { XmlImportLog } from '@sistema-erp-electrosal/core';
 import { XmlImportLog as PrismaXmlImportLog } from '@prisma/client';
 
 export class XmlImportLogMapper {

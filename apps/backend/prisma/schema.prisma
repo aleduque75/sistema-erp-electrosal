@@ -35,6 +35,7 @@ model Organization {
   clients               Client[]
   fornecedores          Fornecedor[]
   funcionarios          Funcionario[]
+  purchaseOrders        PurchaseOrder[] // Nova relação
 }
 
 // --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
@@ -136,6 +137,8 @@ model Fornecedor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  purchaseOrders PurchaseOrder[] // Nova relação
+
   @@map("fornecedores")
 }
 
@@ -167,6 +170,7 @@ model Product {
   updatedAt      DateTime        @updatedAt
   saleItems      SaleItem[]
   stockMovements StockMovement[]
+  purchaseOrderItems PurchaseOrderItem[] // Nova relação
 }
 
 model StockMovement {
@@ -494,4 +498,43 @@ model CreditCardFee {
 
   @@unique([organizationId, installments]) // Garante que só há uma taxa por nº de parcela
   @@map("credit_card_fees")
+}
+
+// --- MODELOS DE PEDIDOS DE COMPRA ---
+enum PurchaseOrderStatus {
+  PENDING
+  RECEIVED
+  CANCELED
+}
+
+model PurchaseOrder {
+  id                   String                @id @default(uuid())
+  organizationId       String
+  organization         Organization          @relation(fields: [organizationId], references: [id])
+  fornecedorId         String
+  fornecedor           Fornecedor            @relation(fields: [fornecedorId], references: [pessoaId])
+  orderNumber          String                @unique
+  totalAmount          Decimal               @db.Decimal(10, 2)
+  status               PurchaseOrderStatus   @default(PENDING)
+  orderDate            DateTime              @default(now())
+  expectedDeliveryDate DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  items                PurchaseOrderItem[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Int
+  price           Decimal       @db.Decimal(10, 2)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("purchase_order_items")
 }

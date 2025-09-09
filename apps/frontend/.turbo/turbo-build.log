@@ -1,9 +1,26 @@
 
-
 > frontend@0.1.0 build /home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/frontend
 > next build
 
-  [1m[38;2;173;127;168m▲ Next.js 14.2.5[39m[22m
+  ▲ Next.js 14.2.5
   - Environments: .env.local
 
- [37m[1m [22m[39m Creating an optimized production build ...
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./src/app/(dashboard)/purchase-orders/purchase-order-form.tsx:296:18
+Type error: Type '{ onChange: (...event: any[]) => void; onBlur: Noop; value: string | null | undefined; disabled?: boolean | undefined; name: "expectedDeliveryDate"; ref: RefCallBack; type: "date"; }' is not assignable to type 'Omit<DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>, "ref">'.
+  Types of property 'value' are incompatible.
+    Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+      Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+
+[0m [90m 294 |[39m               [33m<[39m[33mFormLabel[39m[33m>[39m[33mData[39m de [33mEntrega[39m [33mPrevista[39m[33m<[39m[33m/[39m[33mFormLabel[39m[33m>[39m[0m
+[0m [90m 295 |[39m               [33m<[39m[33mFormControl[39m[33m>[39m[0m
+[0m[31m[1m>[22m[39m[90m 296 |[39m                 [33m<[39m[33mInput[39m type[33m=[39m[32m"date"[39m {[33m...[39mfield} [33m/[39m[33m>[39m[0m
+[0m [90m     |[39m                  [31m[1m^[22m[39m[0m
+[0m [90m 297 |[39m               [33m<[39m[33m/[39m[33mFormControl[39m[33m>[39m[0m
+[0m [90m 298 |[39m               [33m<[39m[33mFormMessage[39m [33m/[39m[33m>[39m[0m
+[0m [90m 299 |[39m             [33m<[39m[33m/[39m[33mFormItem[39m[33m>[39m[0m
+ ELIFECYCLE  Command failed with exit code 1.

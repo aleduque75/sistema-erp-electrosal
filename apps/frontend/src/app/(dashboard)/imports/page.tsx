@@ -142,7 +142,7 @@ export default function ImportPage() {
         }
       );
       setPreviewData(response.data);
-      const initialSelections = response.data.reduce((acc, t) => {
+      const initialSelections = response.data.reduce((acc: Record<string, SelectionState>, t: PreviewTransaction) => {
         acc[t.fitId] = {
           selected: t.status === "new",
           contaContabilId: undefined,

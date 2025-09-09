@@ -67,13 +67,19 @@ export default function ContasContabeisPage() {
     try {
       const response = await api.get("/contas-contabeis");
 
-      const contasMap = new Map(
-        response.data.map((c) => [c.id, { ...c, subContas: [] }])
+      const contasMap = new Map<string, Conta>(
+        response.data.map((c: Conta) => [c.id, { ...c, subContas: [] } as Conta])
       );
       const tree: Conta[] = [];
-      response.data.forEach((c) => {
+      response.data.forEach((c: Conta) => {
         if (c.contaPaiId && contasMap.has(c.contaPaiId)) {
-          contasMap.get(c.contaPaiId)?.subContas.push(contasMap.get(c.id)!);
+          const parentConta = contasMap.get(c.contaPaiId);
+          if (parentConta) {
+            if (!parentConta.subContas) {
+              parentConta.subContas = [];
+            }
+            parentConta.subContas.push(contasMap.get(c.id)!);
+          }
         } else {
           tree.push(contasMap.get(c.id)!);
         }
