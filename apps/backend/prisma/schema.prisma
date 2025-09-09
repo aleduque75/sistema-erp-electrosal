@@ -37,6 +37,8 @@ model Organization {
   funcionarios          Funcionario[]
   purchaseOrders        PurchaseOrder[] // Nova relação
   inventoryLots         InventoryLot[] // Relação com lotes de estoque
+  analisesQuimicas      AnaliseQuimica[]
+  recuperacoes          Recuperacao[]
 }
 
 // --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
@@ -111,6 +113,7 @@ model Pessoa {
   client      Client?      // Relação com o papel de Cliente
   fornecedor  Fornecedor?  // Relação com o papel de Fornecedor
   funcionario Funcionario? // Relação com o papel de Funcionário
+  analisesQuimicasComoCliente AnaliseQuimica[] @relation("PessoaAnalisesQuimicas")
 
   @@map("pessoas")
 }
@@ -280,17 +283,20 @@ model SaleInstallment {
 }
 
 // --- MODELOS FINANCEIROS ---
-enum TipoTransacaoPrisma {
-  CREDITO
-  DEBITO
-}
 
+
+// --- ENUMS FINANCEIROS ---
 enum TipoContaContabilPrisma {
   ATIVO
   PASSIVO
   PATRIMONIO_LIQUIDO
   RECEITA
   DESPESA
+}
+
+enum TipoTransacaoPrisma {
+  CREDITO
+  DEBITO
 }
 
 model AccountPay {
@@ -527,6 +533,88 @@ model CreditCardFee {
 }
 
 // --- MODELOS DE PEDIDOS DE COMPRA ---
+
+// --- ENUM E MODELO DE ANÁLISE QUÍMICA ---
+enum StatusAnaliseQuimicaPrisma {
+  RECEBIDO
+  EM_ANALISE
+  ANALISADO_AGUARDANDO_APROVACAO
+  APROVADO_PARA_RECUPERACAO
+  RECUSADO_PELO_CLIENTE
+  EM_RECUPERACAO
+  FINALIZADO_RECUPERADO
+  CANCELADO
+}
+
+// --- ENUM E MODELO DE RECUPERAÇÃO ---
+enum StatusRecuperacaoPrisma {
+  PENDENTE
+  EM_ANDAMENTO
+  FINALIZADA
+  CANCELADA
+}
+
+model Recuperacao {
+  id              String                  @id @default(uuid())
+  organizationId  String
+  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  analiseQuimicaId String
+  analiseQuimica  AnaliseQuimica         @relation(fields: [analiseQuimicaId], references: [id], onDelete: Cascade)
+  status              StatusRecuperacaoPrisma @default(PENDENTE)
+  dataInicio          DateTime                @default(now())
+  dataFim             DateTime?
+  descricaoProcesso   String?
+  volumeProcessado    Float?
+  unidadeProcessada   String?
+  resultadoFinal      Float?
+  unidadeResultado    String?
+  observacoes         String?
+  dataCriacao         DateTime @default(now())
+  dataAtualizacao     DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("recuperacoes")
+}
+
+model AnaliseQuimica {
+  id        String @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clienteId String
+  cliente   Pessoa @relation("PessoaAnalisesQuimicas", fields: [clienteId], references: [id], onDelete: Cascade)
+
+  numeroAnalise       String   @unique
+  dataEntrada         DateTime
+  descricaoMaterial   String
+  volumeOuPesoEntrada Float
+  unidadeEntrada      String
+
+  resultadoAnaliseValor       Float?
+  unidadeResultado            String?
+  percentualQuebra            Float?
+  taxaServicoPercentual       Float?
+  teorRecuperavel             Float?
+  auEstimadoBrutoGramas       Float?
+  auEstimadoRecuperavelGramas Float?
+  taxaServicoEmGramas         Float?
+  auLiquidoParaClienteGramas  Float?
+
+  status                     StatusAnaliseQuimicaPrisma @default(RECEBIDO)
+  dataAnaliseConcluida       DateTime?
+  dataAprovacaoCliente       DateTime?
+  dataFinalizacaoRecuperacao DateTime?
+  observacoes                String?
+
+  ordemDeRecuperacaoId String?
+  //ordemDeRecuperacao   OrdemDeRecuperacao? @relation(fields: [ordemDeRecuperacaoId], references: [id])
+
+  dataCriacao     DateTime @default(now())
+  dataAtualizacao DateTime @updatedAt
+
+  recuperacoes          Recuperacao[]
+  @@map("analises_quimicas")
+}
 enum PurchaseOrderStatus {
   PENDING
   RECEIVED

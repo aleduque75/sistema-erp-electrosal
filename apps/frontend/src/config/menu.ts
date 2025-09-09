@@ -16,7 +16,8 @@ import {
   Upload,
   Settings,
   LayoutPanelLeft,
-  Percent, // <-- 1. Importe o novo ícone
+  Percent,
+  FlaskConical, // Ícone para Análise Química
 } from "lucide-react";
 import React from "react";
 
@@ -84,6 +85,12 @@ export const menuConfig: NavItem[] = [
         href: "/purchase-orders",
         icon: ShoppingCart,
         description: "Gerencie seus pedidos de compra de fornecedores.",
+      },
+      {
+        title: "Análises Químicas",
+        href: "/analises-quimicas",
+        icon: FlaskConical,
+        description: "Controle e lance resultados de análises químicas.",
       },
       {
         title: "Lançar Compra no Cartão",
