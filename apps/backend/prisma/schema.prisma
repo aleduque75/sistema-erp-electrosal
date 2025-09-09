@@ -247,6 +247,9 @@ model SaleItem {
   product   Product  @relation(fields: [productId], references: [id])
   quantity  Int
   price     Decimal  @db.Decimal(10, 2)
+  inventoryLotId    String?
+  inventoryLot      InventoryLot? @relation(fields: [inventoryLotId], references: [id])
+  costPriceAtSale   Decimal?      @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

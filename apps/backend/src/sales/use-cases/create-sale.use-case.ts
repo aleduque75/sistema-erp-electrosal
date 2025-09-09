@@ -1,21 +1,22 @@
+import { Decimal } from 'decimal.js';
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { CreateSaleDto } from '../dtos/sales.dto';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } '../../prisma/prisma.service';
 import { addMonths, addDays } from 'date-fns';
-import { TipoTransacaoPrisma, Prisma } from '@prisma/client'; // <-- 1. Importe o 'Prisma'
-import { SettingsService } from '../../settings/settings.service'; // Added
-import { SaleItemMapper } from '../mappers/sale-item.mapper'; // Added
-import { ProductMapper } from '../../products/mappers/product.mapper'; // Added
+import { TipoTransacaoPrisma, Prisma } from '@prisma/client';
+import { SettingsService } from '../../settings/settings.service';
+import { SaleItemMapper } from '../mappers/sale-item.mapper';
+import { ProductMapper } from '../../products/mappers/product.mapper';
 
 @Injectable()
 export class CreateSaleUseCase {
   constructor(
     private prisma: PrismaService,
-    private settingsService: SettingsService, // Injected
+    private settingsService: SettingsService,
   ) {}
 
   async execute(organizationId: string, userId: string, createSaleDto: CreateSaleDto) {
@@ -25,14 +26,14 @@ export class CreateSaleUseCase {
       pessoaId,
       items,
       paymentMethod,
-      numberOfInstallments, // Nome corrigido
+      numberOfInstallments,
       feeAmount,
       contaCorrenteId,
     } = createSaleDto;
 
     const [client, settings] = await Promise.all([
       this.prisma.client.findFirst({ where: { pessoaId, organizationId } }),
-      this.settingsService.findOne(userId), // Used SettingsService
+      this.settingsService.findOne(userId),
     ]);
 
     if (!client) throw new NotFoundException('Cliente não encontrado.');
@@ -44,28 +45,93 @@ export class CreateSaleUseCase {
     const productIds = items.map((item) => item.productId);
     const productsInDb = (await this.prisma.product.findMany({
       where: { id: { in: productIds }, organizationId },
-    })).map(ProductMapper.toDomain); // Map to DDD entity
+    })).map(ProductMapper.toDomain);
+
+    // Fetch all relevant inventory lots, ordered by receivedDate (FIFO)
+    const inventoryLots = await this.prisma.inventoryLot.findMany({
+      where: {
+        productId: { in: productIds },
+        organizationId,
+        remainingQuantity: { gt: 0 },
+      },
+      orderBy: { receivedDate: 'asc' },
+    });
 
     let totalAmount = 0;
-    const saleItemsData = items.map((item) => {
-      const product = productsInDb.find((p) => p.id.toString() === item.productId); // Use id.toString()
-      if (!product || product.stock < item.quantity) {
-        throw new BadRequestException(
-          `Estoque insuficiente para o produto "${product?.name}".`,
-        );
+    const saleItemsToCreate: Prisma.SaleItemCreateManySaleInput[] = [];
+    const allLotDeductions: { lotId: string; quantity: number }[] = [];
+
+    for (const item of items) {
+      const product = productsInDb.find((p) => p.id.toString() === item.productId);
+      if (!product) {
+        throw new NotFoundException(`Produto com ID ${item.productId} não encontrado.`);
       }
-      totalAmount += product.price * item.quantity; // Use product.price directly
-      return {
-        productId: product.id.toString(), // Use id.toString()
+
+      let quantityToDeduct = item.quantity;
+      let currentCostPrice = new Decimal(0);
+      let deductedQuantity = 0;
+
+      const productLots = inventoryLots
+        .filter((lot) => lot.productId === item.productId)
+        .sort((a, b) => a.receivedDate.getTime() - b.receivedDate.getTime());
+
+      if (productLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0) < item.quantity) {
+        throw new BadRequestException(`Estoque insuficiente para o produto "${product.name}".`);
+      }
+
+      const lotsUsedForThisSaleItem: { lotId: string; quantity: number; costPrice: Decimal }[] = [];
+
+      for (const lot of productLots) {
+        if (quantityToDeduct === 0) break;
+
+        const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+
+        lotsUsedForThisSaleItem.push({
+          lotId: lot.id,
+          quantity: quantityFromThisLot,
+          costPrice: lot.costPrice,
+        });
+
+        allLotDeductions.push({ lotId: lot.id, quantity: quantityFromThisLot });
+
+        currentCostPrice = currentCostPrice.plus(lot.costPrice.times(quantityFromThisLot));
+        deductedQuantity += quantityFromThisLot;
+        quantityToDeduct -= quantityFromThisLot;
+      }
+
+      if (deductedQuantity !== item.quantity) {
+        throw new BadRequestException(`Erro interno: Não foi possível deduzir a quantidade correta para o produto "${product.name}".`);
+      }
+
+      const finalCostPriceAtSale = currentCostPrice.dividedBy(item.quantity).toDecimalPlaces(2);
+
+      totalAmount += product.price * item.quantity;
+
+      saleItemsToCreate.push({
+        productId: product.id.toString(),
         quantity: item.quantity,
-        price: product.price, // Use product.price directly
-      };
-    });
+        price: product.price,
+        inventoryLotId: lotsUsedForThisSaleItem[0]?.lotId, // Link to the first lot used
+        costPriceAtSale: finalCostPriceAtSale,
+      });
+    }
 
     const finalFeeAmount = feeAmount || 0;
     const netAmount = totalAmount + finalFeeAmount;
 
     return this.prisma.$transaction(async (tx) => {
+      // Update remainingQuantity for used lots
+      for (const deduction of allLotDeductions) {
+        await tx.inventoryLot.update({
+          where: { id: deduction.lotId },
+          data: {
+            remainingQuantity: {
+              decrement: deduction.quantity,
+            },
+          },
+        });
+      }
+
       const sale = await tx.sale.create({
         data: {
           organizationId,
@@ -75,17 +141,11 @@ export class CreateSaleUseCase {
           feeAmount: finalFeeAmount,
           netAmount,
           paymentMethod,
-          saleItems: { create: saleItemsData.map(SaleItemMapper.toPersistence) }, // Map to persistence
+          saleItems: { create: saleItemsToCreate.map(SaleItemMapper.toPersistence) },
         },
       });
 
-      for (const item of items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
-      }
-
+      // ... rest of the transaction (payment methods)
       if (paymentMethod === 'A_VISTA') {
         if (!contaCorrenteId)
           throw new BadRequestException(
@@ -121,7 +181,6 @@ export class CreateSaleUseCase {
 
         const installmentValue = netAmount / finalInstallmentsCount;
 
-        // 👇 2. CORREÇÃO: Defina o tipo do array aqui
         const accountRecsToCreate: Prisma.AccountRecCreateManyInput[] = [];
 
         for (let i = 1; i <= finalInstallmentsCount; i++) {

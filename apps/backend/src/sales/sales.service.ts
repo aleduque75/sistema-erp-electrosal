@@ -89,7 +89,13 @@ export class SalesService {
   async remove(organizationId: string, id: string): Promise<Sale> {
     const sale = await this.prisma.sale.findFirst({
       where: { id, organizationId },
-      include: { saleItems: true }, // Inclui saleItems para restaurar o estoque
+      include: {
+        saleItems: {
+          include: {
+            inventoryLot: true, // Include inventoryLot to restore stock
+          },
+        },
+      },
     });
 
     if (!sale) {
@@ -97,21 +103,25 @@ export class SalesService {
     }
 
     return this.prisma.$transaction(async (prisma) => {
-      // 1. Restaurar estoque dos produtos
+      // 1. Restaurar estoque dos produtos (agora via lotes)
       for (const item of sale.saleItems) {
-        await prisma.product.update({
-          where: { id: item.productId },
-          data: { stock: { increment: item.quantity } },
-        });
-        // Create StockMovement record
-        const stockMovement = StockMovement.create({
-          productId: item.productId,
-          type: 'ENTRY', // Assuming it's an entry when restoring stock
-          quantity: item.quantity,
-        });
-        await prisma.stockMovement.create({
-          data: StockMovementMapper.toPersistence(stockMovement),
-        });
+        if (item.inventoryLotId) { // Only restore if it was linked to a lot
+          await prisma.inventoryLot.update({
+            where: { id: item.inventoryLotId },
+            data: {
+              remainingQuantity: {
+                increment: item.quantity,
+              },
+            },
+          });
+        } else {
+          // Fallback for old sales or if inventoryLotId was null
+          // This should ideally not happen if all sales are linked to lots
+          await prisma.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
       }
 
       // 2. Deletar SaleInstallments relacionados
