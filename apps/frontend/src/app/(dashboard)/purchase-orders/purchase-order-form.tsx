@@ -55,6 +55,11 @@ interface Product {
   price: number;
 }
 
+interface PaymentTerm {
+  id: string;
+  name: string;
+}
+
 interface PurchaseOrderItem {
   productId: string;
   quantity: number;
@@ -96,6 +101,7 @@ const itemSchema = z.object({
 const formSchema = z.object({
   orderNumber: z.string().min(1, "Número do pedido é obrigatório."),
   fornecedorId: z.string().min(1, "Fornecedor é obrigatório."),
+  paymentTermId: z.string().optional().nullable(),
   status: z.enum(["PENDING", "RECEIVED", "CANCELED"]),
   orderDate: z.string().min(1, "Data do pedido é obrigatória."),
   expectedDeliveryDate: z.string().optional().nullable(),
@@ -107,6 +113,7 @@ type FormValues = z.infer<typeof formSchema>;
 export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProps) {
   const [fornecedores, setFornecedores] = useState<FornecedorOption[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [items, setItems] = useState<PurchaseOrderItem[]>(initialData?.items || []);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -149,6 +156,10 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
       setProducts(mappedProducts);
     }).finally(() => {
       setIsLoadingProducts(false);
+    });
+
+    api.get('/payment-terms').then((res) => {
+      setPaymentTerms(res.data);
     });
   }, []); // Executa apenas uma vez
 
@@ -255,6 +266,32 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
                   {fornecedores.map((fornecedor) => (
                     <SelectItem key={fornecedor.id} value={fornecedor.id}>
                       {fornecedor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="paymentTermId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Prazo de Pagamento</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value ?? ''}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um prazo de pagamento" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem> 
+                  {paymentTerms.map((term) => (
+                    <SelectItem key={term.id} value={term.id}>
+                      {term.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

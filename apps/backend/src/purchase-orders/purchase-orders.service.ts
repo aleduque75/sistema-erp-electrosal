@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Decimal } from 'decimal.js';
 import { Prisma, PurchaseOrder, PurchaseOrderStatus } from '@prisma/client';
 import { CreatePurchaseOrderDto, UpdatePurchaseOrderDto } from './dtos/purchase-order.dto';
+import { addDays } from 'date-fns';
 
 type PurchaseOrderWithItems = Prisma.PurchaseOrderGetPayload<{
   include: { items: true };
@@ -137,6 +138,92 @@ export class PurchaseOrdersService {
     // A exclusão em cascata dos itens é configurada no schema.prisma
     return this.prisma.purchaseOrder.delete({
       where: { id: existingOrder.id },
+    });
+  }
+
+  async receive(organizationId: string, id: string): Promise<PurchaseOrder> {
+    const order = await this.prisma.purchaseOrder.findFirst({
+      where: { id, organizationId },
+      include: {
+        items: { include: { product: true } },
+        paymentTerm: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Pedido de Compra com ID ${id} não encontrado.`);
+    }
+
+    if (order.status !== PurchaseOrderStatus.PENDING) {
+      throw new BadRequestException('Este pedido de compra não está com status PENDENTE.');
+    }
+
+    if (!order.paymentTerm) {
+      throw new BadRequestException('O prazo de pagamento não foi definido para este pedido.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Update product stock and create stock movements
+      for (const item of order.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              increment: item.quantity,
+            },
+          },
+        });
+
+        await tx.stockMovement.create({
+          data: {
+            productId: item.productId,
+            quantity: item.quantity,
+            type: 'ENTRADA_COMPRA',
+          },
+        });
+      }
+
+      // 2. Create accounts payable
+      const today = new Date();
+      const totalAmount = new Decimal(order.totalAmount);
+      const installmentsDays = order.paymentTerm.installmentsDays;
+      const numInstallments = installmentsDays.length;
+      const installmentAmount = totalAmount.dividedBy(numInstallments).toDecimalPlaces(2);
+
+      for (let i = 0; i < numInstallments; i++) {
+        const dueDate = addDays(today, installmentsDays[i]);
+        // Adjust last installment for rounding differences
+        const amount = (i === numInstallments - 1) 
+          ? totalAmount.minus(installmentAmount.times(numInstallments - 1))
+          : installmentAmount;
+
+        await tx.accountPay.create({
+          data: {
+            organizationId,
+            description: `Parcela ${i + 1}/${numInstallments} do Pedido de Compra #${order.orderNumber}`,
+            amount: amount,
+            dueDate: dueDate,
+            isInstallment: true,
+            installmentNumber: i + 1,
+            totalInstallments: numInstallments,
+            // TODO: Link to a 'contaContabil' for purchases
+          },
+        });
+      }
+
+      // 3. Update purchase order status
+      const updatedOrder = await tx.purchaseOrder.update({
+        where: { id },
+        data: {
+          status: PurchaseOrderStatus.RECEIVED,
+        },
+        include: {
+          fornecedor: { include: { pessoa: true } },
+          items: { include: { product: true } },
+        },
+      });
+
+      return updatedOrder;
     });
   }
 }

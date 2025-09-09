@@ -40,6 +40,14 @@ export class PurchaseOrdersController {
     return this.purchaseOrdersService.update(organizationId, id, updatePurchaseOrderDto);
   }
 
+  @Post(':id/receive')
+  receive(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.purchaseOrdersService.receive(organizationId, id);
+  }
+
   @Delete(':id')
   remove(
     @CurrentUser('organizationId') organizationId: string,
