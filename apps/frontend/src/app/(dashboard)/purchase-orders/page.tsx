@@ -60,6 +60,7 @@ export default function PurchaseOrdersPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<PurchaseOrder | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
+  const [orderToReceive, setOrderToReceive] = useState<PurchaseOrder | null>(null);
 
   const fetchPurchaseOrders = useCallback(async () => {
     if (!user) return;
@@ -103,6 +104,19 @@ export default function PurchaseOrdersPage() {
     }
   };
 
+  const handleReceive = async () => {
+    if (!orderToReceive) return;
+    try {
+      await api.post(`/purchase-orders/${orderToReceive.id}/receive`);
+      toast.success("Mercadoria recebida com sucesso!");
+      setOrderToReceive(null);
+      fetchPurchaseOrders();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Falha ao receber mercadoria.");
+      setOrderToReceive(null);
+    }
+  };
+
   const columns: ColumnDef<PurchaseOrder>[] = [
     { accessorKey: "orderNumber", header: "Número do Pedido" },
     { accessorKey: "fornecedor.pessoa.name", header: "Fornecedor" },
@@ -141,6 +155,11 @@ export default function PurchaseOrdersPage() {
               <DropdownMenuItem onClick={() => handleOpenEditModal(order)}>
                 Editar
               </DropdownMenuItem>
+              {order.status === 'PENDING' && (
+                <DropdownMenuItem onClick={() => setOrderToReceive(order)}>
+                  Receber Mercadoria
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => setOrderToDelete(order)}
@@ -199,6 +218,29 @@ export default function PurchaseOrdersPage() {
             </DialogClose>
             <Button variant="destructive" onClick={handleDelete}>
               Confirmar Exclusão
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!orderToReceive}
+        onOpenChange={(isOpen) => !isOpen && setOrderToReceive(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Recebimento</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja confirmar o recebimento da mercadoria para o pedido "{orderToReceive?.orderNumber}"?
+              Esta ação irá atualizar o estoque e gerar as contas a pagar.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancelar</Button>
+            </DialogClose>
+            <Button onClick={handleReceive}>
+              Confirmar Recebimento
             </Button>
           </DialogFooter>
         </DialogContent>

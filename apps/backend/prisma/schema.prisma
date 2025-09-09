@@ -521,6 +521,8 @@ model PurchaseOrder {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   items                PurchaseOrderItem[]
+  paymentTermId        String? // Adicionado para o prazo de pagamento
+  paymentTerm          PaymentTerm?          @relation(fields: [paymentTermId], references: [id])
 
   @@map("purchase_orders")
 }
