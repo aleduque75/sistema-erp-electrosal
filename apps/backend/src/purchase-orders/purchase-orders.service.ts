@@ -165,22 +165,18 @@ export class PurchaseOrdersService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Update product stock and create stock movements
+      // 1. Create inventory lots
       for (const item of order.items) {
-        await tx.product.update({
-          where: { id: item.productId },
+        await tx.inventoryLot.create({
           data: {
-            stock: {
-              increment: item.quantity,
-            },
-          },
-        });
-
-        await tx.stockMovement.create({
-          data: {
+            organizationId: organizationId,
             productId: item.productId,
+            costPrice: item.price, // Cost price from purchase order item
             quantity: item.quantity,
-            type: 'ENTRADA_COMPRA',
+            remainingQuantity: item.quantity,
+            sourceType: 'PURCHASE_ORDER',
+            sourceId: order.id,
+            receivedDate: new Date(), // Current date
           },
         });
       }

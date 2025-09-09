@@ -25,6 +25,7 @@ interface Product {
   name: string;
   description?: string | null;
   price: number;
+  costPrice?: number; // Adicionado para rastreamento de custo
   stock: number;
 }
 
@@ -32,6 +33,7 @@ interface Product {
 const formSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
   price: z.coerce.number().positive("O preço deve ser um número positivo."),
+  costPrice: z.coerce.number().positive("O preço de custo deve ser um número positivo.").optional(),
   stock: z.coerce
     .number()
     .int()
@@ -52,6 +54,7 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
     defaultValues: {
       name: product?.name || "",
       price: product?.price || 0,
+      costPrice: product?.costPrice || 0,
       stock: product?.stock || 0,
       description: product?.description || "",
     },
@@ -97,7 +100,7 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Preço (R$)</FormLabel>
+                <FormLabel>Preço de Venda (R$)</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" {...field} />
                 </FormControl>
@@ -105,6 +108,20 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="costPrice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preço de Custo (R$)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
           <FormField
             control={form.control}
             name="stock"
