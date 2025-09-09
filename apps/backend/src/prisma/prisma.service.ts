@@ -1,38 +1,25 @@
-import {
-  INestApplication,
-  Injectable,
-  OnModuleInit,
-  // Remova o ConfigService, pois não precisamos dele para ler a URL completa
-} from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit {
-  // ✅ Remova o ConfigService do construtor
-  constructor() {
-    // ✅ Use process.env.DATABASE_URL DIRETAMENTE
-    const databaseUrl = process.env.DATABASE_URL;
-
-    if (!databaseUrl) {
-      throw new Error('DATABASE_URL não está definida no ambiente.');
-    }
-
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  constructor(private configService: ConfigService) {
     super({
       datasources: {
         db: {
-          url: databaseUrl, // ✅ Usa a URL completa e funcional
+          url: configService.get<string>('DATABASE_URL'),
         },
       },
     });
+    console.log('PrismaService using DATABASE_URL:', this.configService.get<string>('DATABASE_URL'));
   }
 
   async onModuleInit() {
     await this.$connect();
   }
 
-  async enableShutdownHooks(app: INestApplication) {
-    process.on('beforeExit', async () => {
-      await app.close();
-    });
+  async onModuleDestroy() {
+    await this.$disconnect();
   }
 }
