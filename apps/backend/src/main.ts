@@ -63,10 +63,11 @@ async function bootstrap() {
 
   app.enableShutdownHooks(); // Adicionado para lidar com o desligamento de forma elegante
 
-  await app.listen(3002, '0.0.0.0');
+  const port = process.env.PORT || 3001;
+  await app.listen(port, '0.0.0.0');
 
   console.log(
-    `Application successfully started on port ${process.env.PORT || 3003}`,
+    `Application successfully started on port ${port}`,
   );
   console.log(
     `Swagger documentation is available at: ${await app.getUrl()}/api/docs`,

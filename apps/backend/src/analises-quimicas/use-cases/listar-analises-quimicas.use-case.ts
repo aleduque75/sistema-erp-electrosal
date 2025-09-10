@@ -12,8 +12,15 @@ export class ListarAnalisesQuimicasUseCase {
     private readonly analiseRepo: IAnaliseQuimicaRepository,
   ) {}
 
-  async execute(filtros?: FiltrosAnaliseQuimica) {
-    const analises = await this.analiseRepo.findAll(filtros);
+  async execute(command: {
+    filtros?: FiltrosAnaliseQuimica;
+    organizationId: string;
+  }) {
+    const { filtros, organizationId } = command;
+    const analises = await this.analiseRepo.findAll({
+      ...filtros,
+      organizationId,
+    });
     return AnaliseQuimicaResponseDto.fromDomainArray(analises);
   }
 }

@@ -25,6 +25,16 @@ const nextConfig = {
 
   reactStrictMode: true,
   swcMinify: true,
+
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `http://localhost:3002/:path*`,
+      },
+    ];
+  },
+
   images: {
     dangerouslyAllowSVG: true, // Permite o uso de SVG
     contentDispositionType: 'attachment', // Garante que o navegador não tente baixar o SVG

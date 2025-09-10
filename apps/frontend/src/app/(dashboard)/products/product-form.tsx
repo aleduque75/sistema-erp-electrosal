@@ -121,7 +121,7 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
               </FormItem>
             )}
           />
-        </div>
+
           <FormField
             control={form.control}
             name="stock"
@@ -136,6 +136,7 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
             )}
           />
         </div>
+
         <FormField
           control={form.control}
           name="description"

@@ -11,14 +11,7 @@ export class JsonImportsService {
   constructor(private prisma: PrismaService) {}
 
   async importEmpresas(organizationId: string) {
-    const filePath = path.join(
-      __dirname, // Diretório do arquivo atual (dist/json-imports)
-      '..', // Volta para dist
-      '..', // Volta para backend
-      '..', // Volta para a raiz do monorepo
-      'json-imports',
-      'Empresa.json',
-    );
+    const filePath = path.join(process.cwd(), '..', '..', 'json-imports', 'Empresa.json');
     this.logger.log(`Lendo arquivo de: ${filePath}`);
 
     try {
@@ -86,6 +79,7 @@ export class JsonImportsService {
         }
         if (roles.includes('Fornecedor')) {
             await this.prisma.fornecedor.create({ data: { pessoaId: newPessoa.id, organizationId } });
+            this.logger.log(`Fornecedor ${newPessoa.name} (${newPessoa.id}) criado para a organização ${organizationId}`);
         }
 
         createdCount++;

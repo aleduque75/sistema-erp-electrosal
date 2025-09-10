@@ -18,7 +18,8 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
 
   private mapToDomain(dbData: PrismaAnalise | null): AnaliseQuimica | null {
     if (!dbData) return null;
-    return AnaliseQuimica.reconstituir(dbData as any);
+    const { id, ...props } = dbData;
+    return AnaliseQuimica.reconstituir(props, id);
   }
 
   public mapToPrismaPayload(

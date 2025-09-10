@@ -24,6 +24,11 @@ export class CreateProductDto {
   @IsInt()
   @Min(0)
   stock: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  costPrice?: number;
 }
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {}

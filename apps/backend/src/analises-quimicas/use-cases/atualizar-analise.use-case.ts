@@ -1,5 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { IAnaliseQuimicaRepository } from 'domain/analises-quimicas';
+import { AnaliseQuimica, AnaliseQuimicaProps } from '@sistema-erp-electrosal/core';
 import { AtualizarAnaliseDto } from '../dtos/atualizar-analise.dto';
 
 @Injectable()
@@ -15,15 +16,8 @@ export class AtualizarAnaliseUseCase {
       throw new NotFoundException(`Análise com ID ${id} não encontrada.`);
     }
 
-    if (dto.dataEntrada) analise.alterarDataEntrada(dto.dataEntrada);
-    if (dto.descricaoMaterial)
-      analise.alterarDescricaoMaterial(dto.descricaoMaterial);
-    if (dto.volumeOuPesoEntrada !== undefined)
-      analise.alterarVolumeOuPesoEntrada(dto.volumeOuPesoEntrada);
-    if (dto.unidadeEntrada) analise.alterarUnidadeEntrada(dto.unidadeEntrada);
-    if (dto.observacoes !== undefined)
-      analise.adicionarOuAlterarObservacoes(dto.observacoes);
+    analise.update(dto);
 
-  return this.analiseRepo.save(analise, organizationId);
+    return this.analiseRepo.save(analise, organizationId);
   }
 }

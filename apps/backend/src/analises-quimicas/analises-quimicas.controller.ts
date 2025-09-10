@@ -52,9 +52,13 @@ export class AnalisesQuimicasController {
 	@Get()
 	async listarAnalises(
 		@Query() filtros: FiltrosAnaliseQuimica,
+		@Req() req,
 	): Promise<AnaliseQuimicaResponseDto[]> {
-		const analises = await this.listarAnalisesQuimicasUseCase.execute(filtros);
-		// O erro estava aqui: o DTO já retorna o array mapeado.
+		const command = {
+			filtros,
+			organizationId: req.user.orgId,
+		};
+		const analises = await this.listarAnalisesQuimicasUseCase.execute(command);
 		return analises;
 	}
 

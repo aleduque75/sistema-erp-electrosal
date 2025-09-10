@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, Paperclip, FlaskConical, CheckCircle } from "lucide-react";
 import { LancarResultadoModal } from "./LancarResultadoModal";
-import { AnaliseQuimica } from "@/types/analise-quimica"; // Criaremos este tipo
+import { AnaliseQuimica } from "@/types/analise-quimica";
 import { format } from 'date-fns';
 
 interface AnalisesQuimicasTableProps {
@@ -29,16 +29,25 @@ interface AnalisesQuimicasTableProps {
   onAnaliseUpdated: () => void;
 }
 
-const StatusBadge = ({ status }: { status: string }) => {
-  const statusVariant = {
+type Status = AnaliseQuimica['status'];
+
+const statusText: Record<Status, string> = {
+  PENDENTE: 'Pendente',
+  EM_ANALISE: 'Em Análise',
+  CONCLUIDA: 'Concluída',
+  APROVADA: 'Aprovada',
+};
+
+const StatusBadge = ({ status }: { status: Status }) => {
+  const statusVariant: Record<Status, "default" | "secondary" | "success" | "destructive"> = {
     PENDENTE: "default",
     EM_ANALISE: "secondary",
     CONCLUIDA: "success",
-    APROVADA: "destructive", // Aprovada deveria ser 'success' também, mas para diferenciar...
+    APROVADA: "destructive", // Mantendo 'destructive' para Aprovada como exemplo
   };
 
   return (
-    <Badge variant={statusVariant[status] || "default"}>{status}</Badge>
+    <Badge variant={statusVariant[status] || "default"}>{statusText[status]}</Badge>
   );
 };
 
