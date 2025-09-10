@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Decimal } from 'decimal.js';
 import { Prisma, PurchaseOrder, PurchaseOrderStatus } from '@prisma/client';
@@ -11,6 +11,7 @@ type PurchaseOrderWithItems = Prisma.PurchaseOrderGetPayload<{
 
 @Injectable()
 export class PurchaseOrdersService {
+  private readonly logger = new Logger(PurchaseOrdersService.name);
   constructor(private prisma: PrismaService) {}
 
   async create(organizationId: string, data: CreatePurchaseOrderDto): Promise<PurchaseOrder> {
@@ -179,6 +180,23 @@ export class PurchaseOrdersService {
             receivedDate: new Date(), // Current date
           },
         });
+
+        // 2. Update product stock
+        this.logger.log(`Atualizando estoque do produto ${item.productId}. Quantidade: ${item.quantity}`);
+        const productBeforeUpdate = await tx.product.findUnique({ where: { id: item.productId } });
+        this.logger.log(`Estoque antes: ${productBeforeUpdate?.stock}`);
+
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              increment: item.quantity,
+            },
+          },
+        });
+
+        const productAfterUpdate = await tx.product.findUnique({ where: { id: item.productId } });
+        this.logger.log(`Estoque depois: ${productAfterUpdate?.stock}`);
       }
 
       // 2. Create accounts payable

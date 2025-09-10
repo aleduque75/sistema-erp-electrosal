@@ -1,6 +1,7 @@
 // Define uma classe base para suas raízes de agregado, se desejar seguir este padrão.
 // Se não, você pode remover esta dependência das suas entidades.
-export abstract class AggregateRoot {
+export abstract class AggregateRoot<T> {
+    protected props: T;
     private _domainEvents: any[] = [];
 
     get domainEvents(): any[] {

@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Select,
   SelectContent,
@@ -140,11 +141,12 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
   useEffect(() => {
     // Buscar fornecedores e produtos na montagem do componente
     api.get("/pessoas?role=FORNECEDOR").then((res) => {
-      setFornecedores(res.data.filter((p: any) => p.fornecedor).map((p: any) => ({
+      const mappedFornecedores = res.data.map((p: any) => ({
         id: p.id,
         name: p.name,
-        fornecedor: p.fornecedor
-      })));
+      }));
+      console.log("Fornecedores recebidos e mapeados:", mappedFornecedores);
+      setFornecedores(mappedFornecedores);
     });
 
     api.get("/products").then((res) => {
@@ -256,20 +258,16 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
           render={({ field }) => (
             <FormItem>
               <FormLabel>Fornecedor</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um fornecedor" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {fornecedores.map((fornecedor) => (
-                    <SelectItem key={fornecedor.id} value={fornecedor.id}>
-                      {fornecedor.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <Combobox
+                  options={fornecedores.map(fornecedor => ({ value: fornecedor.id, label: fornecedor.name }))}
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Selecione um fornecedor"
+                  searchPlaceholder="Buscar fornecedor..."
+                  emptyText="Nenhum fornecedor encontrado."
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -281,24 +279,14 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
           render={({ field }) => (
             <FormItem>
               <FormLabel>Prazo de Pagamento</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(value === 'null' ? null : value)}
-                defaultValue={field.value ?? 'null'}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um prazo de pagamento" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="null">Nenhum</SelectItem>
-                  {paymentTerms.map((term) => (
-                    <SelectItem key={term.id} value={term.id}>
-                      {term.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={paymentTerms.map(term => ({ value: term.id, label: term.name }))}
+                value={field.value ?? ''}
+                onChange={(value) => field.onChange(value === 'null' ? null : value)}
+                placeholder="Selecione um prazo de pagamento"
+                searchPlaceholder="Buscar prazo..."
+                emptyText="Nenhum prazo encontrado."
+              />
               <FormMessage />
             </FormItem>
           )}

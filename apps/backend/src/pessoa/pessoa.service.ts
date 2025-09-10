@@ -15,35 +15,47 @@ const pessoaWithRoles = Prisma.validator<Prisma.PessoaDefaultArgs>()({
 });
 type PessoaWithRoles = Prisma.PessoaGetPayload<typeof pessoaWithRoles>;
 
+import { Logger } from '@nestjs/common';
+
 @Injectable()
 export class PessoaService {
+  private readonly logger = new Logger(PessoaService.name);
   constructor(private prisma: PrismaService) {}
 
   async findAll(
     organizationId: string,
     role?: 'CLIENT' | 'FORNECEDOR' | 'FUNCIONARIO',
   ): Promise<Pessoa[]> {
-    const where: Prisma.PessoaWhereInput = {
-      organizationId,
-    };
-
-    if (role) {
-      if (role === 'CLIENT') {
-        where.client = { isNot: null };
-      } else if (role === 'FORNECEDOR') {
-        where.fornecedor = { isNot: null };
-      } else if (role === 'FUNCIONARIO') {
-        where.funcionario = { isNot: null };
-      }
+    if (role === 'CLIENT') {
+      const clients = await this.prisma.client.findMany({
+        where: { organizationId },
+        include: { pessoa: true },
+        orderBy: { pessoa: { name: 'asc' } },
+      });
+      return clients.map((c) => c.pessoa);
+    }
+    if (role === 'FORNECEDOR') {
+      this.logger.log(`Buscando fornecedores para a organização: ${organizationId}`);
+      const fornecedores = await this.prisma.fornecedor.findMany({
+        where: { organizationId },
+        include: { pessoa: true },
+        orderBy: { pessoa: { name: 'asc' } },
+      });
+      this.logger.log(`Encontrados ${fornecedores.length} fornecedores.`);
+      return fornecedores.map((f) => f.pessoa);
+    }
+    if (role === 'FUNCIONARIO') {
+      const funcionarios = await this.prisma.funcionario.findMany({
+        where: { organizationId },
+        include: { pessoa: true },
+        orderBy: { pessoa: { name: 'asc' } },
+      });
+      return funcionarios.map((f) => f.pessoa);
     }
 
+    // Fallback para buscar todas as pessoas se nenhum role for especificado
     return this.prisma.pessoa.findMany({
-      where,
-      include: {
-        client: true,
-        fornecedor: true,
-        funcionario: true,
-      },
+      where: { organizationId },
       orderBy: {
         name: 'asc',
       },
