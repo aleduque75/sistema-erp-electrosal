@@ -1,9 +1,10 @@
-import { AggregateRoot } from "../../ddd/aggregate-root";
+import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
+import { AggregateRoot } from "../../_shared/domain/aggregate-root";
 import { StatusAnaliseQuimica } from "./status-analise-quimica.enum";
 import { nanoid } from 'nanoid';
 
 export interface AnaliseQuimicaProps {
-  id: string;
+  id?: string;
   clienteId: string;
   numeroAnalise: string;
   dataEntrada: Date;
@@ -30,29 +31,29 @@ export interface AnaliseQuimicaProps {
 }
 
 export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
-  private constructor(props: AnaliseQuimicaProps) {
-    super();
-    this.props = props;
+  private constructor(props: AnaliseQuimicaProps, id?: UniqueEntityID) {
+    super(props, id);
   }
 
   public static criar(
     props: Omit<AnaliseQuimicaProps, 'id' | 'dataCriacao' | 'dataAtualizacao'>,
   ): AnaliseQuimica {
     const now = new Date();
-    const analise = new AnaliseQuimica({
-      ...props,
-      id: nanoid(),
-      dataCriacao: now,
-      dataAtualizacao: now,
-    });
+    const analise = new AnaliseQuimica(
+      {
+        ...props,
+        dataCriacao: now,
+        dataAtualizacao: now,
+      },
+      UniqueEntityID.create(),
+    );
     return analise;
   }
 
-  public static reconstituir(props: AnaliseQuimicaProps): AnaliseQuimica {
-    return new AnaliseQuimica(props);
+  public static reconstituir(props: AnaliseQuimicaProps, id: UniqueEntityID): AnaliseQuimica {
+    return new AnaliseQuimica(props, id);
   }
 
-  get id(): string { return this.props.id; }
   get clienteId(): string { return this.props.clienteId; }
   get numeroAnalise(): string { return this.props.numeroAnalise; }
   get dataEntrada(): Date { return this.props.dataEntrada; }

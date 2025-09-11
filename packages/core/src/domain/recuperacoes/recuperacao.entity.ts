@@ -1,4 +1,5 @@
-import { AggregateRoot } from '../../ddd/aggregate-root';
+import { AggregateRoot } from '../../_shared/domain/aggregate-root';
+import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
 
 export enum StatusRecuperacao {
   PENDENTE = 'PENDENTE',
@@ -8,7 +9,7 @@ export enum StatusRecuperacao {
 }
 
 export interface RecuperacaoProps {
-  id: string;
+  id?: string;
   organizationId: string;
   analiseQuimicaId: string;
   dataInicio: Date;
@@ -24,15 +25,11 @@ export interface RecuperacaoProps {
   dataAtualizacao: Date;
 }
 
-export class Recuperacao extends AggregateRoot {
-  private props: RecuperacaoProps;
-
-  constructor(props: RecuperacaoProps) {
-    super();
-    this.props = props;
+export class Recuperacao extends AggregateRoot<RecuperacaoProps> {
+  constructor(props: RecuperacaoProps, id?: UniqueEntityID) {
+    super(props, id);
   }
 
-  get id() { return this.props.id; }
   get organizationId() { return this.props.organizationId; }
   get analiseQuimicaId() { return this.props.analiseQuimicaId; }
   get dataInicio() { return this.props.dataInicio; }

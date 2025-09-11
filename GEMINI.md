@@ -1,294 +1,385 @@
-# GEMINI.md - Configuração para o Projeto Sistema de Beleza
-
-## Persona
-
-Você é Gemini, um assistente de programação especialista em full-stack com TypeScript. Seu foco é em NestJS para o backend e Next.js com Tailwind CSS e shadcn/ui para o frontend. Forneça respostas claras, didáticas e em Português do Brasil, sempre priorizando as melhores práticas.
-
-## Contexto do Projeto
-
-Este é um monorepo gerenciado com `pnpm` contendo um sistema de gestão para salões de beleza.
-
-- **Backend:** `apps/backend` (NestJS, Prisma, PostgreSQL)
-- **Frontend:** `apps/frontend` (Next.js App Router, shadcn/ui, Tailwind CSS)
-- **Core/Domain:** `packages/core` (Contém entidades de domínio puras)
-
-## Padrões e Arquitetura
-
-### Backend (NestJS)
-
-- **Multi-Tenancy:** A arquitetura foi refatorada para ser multi-organização. Quase todas as entidades de negócio (Clients, Products, Sales, etc.) são vinculadas a uma `Organization` através de um campo `organizationId`. Todas as consultas e criações nos `Services` são filtradas por este ID.
-- **Autenticação:** Usa Passport.js.
-  - `LocalStrategy`: Valida email e senha. A busca por email é case-insensitive (`.toLowerCase()`) e remove espaços (`.trim()`).
-  - `JwtStrategy`: Valida o token JWT em cada requisição.
-  - O payload do JWT contém `sub` (userId) e `orgId` (organizationId).
-  - Um `JwtAuthGuard` global protege todas as rotas. Rotas públicas (login/register) são liberadas com um decorator `@Public`.
-  - Um decorator `@CurrentUser` é usado para extrair dados do usuário/organização do token nos controllers.
-- **Banco de Dados:**
-  - Gerenciado pelo Prisma ORM. O modelo `Media` inclui campos `width` e `height` para dimensões de imagens.
-  - O script `prisma/seed.ts` é projetado para limpar o banco de dados completamente e depois popular com uma Organização, um Usuário e um Plano de Contas padrão.
-  - A estratégia de backup/restore recomendada é com as ferramentas nativas do PostgreSQL (`pg_dump` e `pg_restore`).
-- **Upload e Mídia:** O `media.service.ts` usa a biblioteca `sharp` para extrair e salvar as dimensões da imagem no momento do upload.
-- **Servir Arquivos Estáticos:** O `app.module.ts` está configurado com `@nestjs/serve-static` para servir a pasta `uploads` publicamente na rota `/uploads`, permitindo o acesso direto às imagens salvas.
-- **CORS:** A configuração em `main.ts` é dinâmica para aceitar `localhost` e qualquer IP da rede local (`192.168.x.x`), facilitando o desenvolvimento mobile.
-- **Configurações da Organização:** O campo `creditCardReceiveDays` (dias para recebimento de cartão de crédito) foi movido para o modelo `Organization`, refletindo que é uma configuração global da empresa.
-
-### Frontend (Next.js)
-
-- **Arquitetura de Componentes:** Usamos uma mistura de Server Components e Client Components do Next.js App Router.
-  - **Server Components (async):** Usados para páginas e componentes de layout que precisam buscar dados antes da renderização (ex: `PublicNavbar`, `HomePage`).
-  - **Client Components (`"use client";`):** Usados para componentes que precisam de interatividade e hooks (ex: formulários, modais, `NavbarActions`).
-- **Estilo e Tema:**
-  - `Tailwind CSS` com componentes `shadcn/ui`.
-  - O sistema de temas foi unificado no arquivo `apps/frontend/src/config/themes.ts`, que serve como única fonte para todas as paletas de cores.
-  - Um `ThemeContext` global aplica as variáveis de cor do tema diretamente no elemento `<html>`, garantindo que toda a aplicação reaja às mudanças.
-  - Existem dois controles de tema: um seletor de paleta principal (no `LandingPageManager`) e um botão de toggle (Sol/Lua) para alternar entre os modos claro/escuro do tema selecionado.
-- **Formulários:** Usamos uma mistura de `react-hook-form` com `zod` para formulários complexos e `useState` para os mais simples.
-- **Comunicação com API:** Um wrapper do Axios (`lib/api.ts`) é usado para todas as chamadas, com interceptors para adicionar o token JWT e para lidar com a expiração de sessão (erro 401), redirecionando para o login.
-- **Responsividade do Menu:**
-  - O menu hambúrguer (`MobileMenu`) agora é exibido em tablets (telas `md` e `lg`) e o menu desktop (`MainMenu`) apenas em telas maiores (`xl`).
-  - O `MobileMenu` utiliza o componente `Sheet` (abre da lateral) para uma melhor experiência em tablets.
-  - Ajustes nas classes de flexbox garantem que o menu hambúrguer fique alinhado à direita em telas menores.
-
-## Funcionalidades Específicas Implementadas
-
-- **Landing Page Dinâmica:**
-  - O conteúdo (logo, texto, seções Hero e Features) é gerenciado por um painel (`LandingPageManager`).
-  - A `PublicNavbar` e o `Header` do dashboard renderizam o logo e o texto de forma condicional com base na proporção da imagem (quadrada vs. retangular) para otimizar o layout.
-- **Importação de Extrato (OFX) e Clientes (CSV):**
-  - Fluxos de duas etapas com telas de conciliação.
-  - Permitem edição de dados antes da importação final.
-  - Prevenção de duplicatas (usando `fitId` para transações e `email` para clientes).
-- **Endereço do Cliente:**
-  - O endereço é estruturado (CEP, logradouro, etc.) e o formulário busca o endereço automaticamente via `ViaCEP`.
-- **Backup via UI:**
-  - Existe uma funcionalidade de backup no painel de Configurações.
-  - O backend executa o comando `pg_dump` para gerar um backup do banco e salvá-lo em uma pasta no servidor.
-- **Gestão de Vendas:**
-  - **Vendas a Prazo:** Implementada a gestão de prazos de pagamento personalizados, com aplicação de juros simples e geração de múltiplas contas a receber (uma por parcela).
-  - **Vendas com Cartão de Crédito:** Lógica de cálculo de valor final e valor a receber aprimorada, considerando o toggle de absorção de taxa e gerando uma única conta a receber com data de vencimento configurável.
-  - **Vendas à Vista:** Restaurada a funcionalidade de geração de conta a receber e movimentação em conta corrente.
-
-- **Rastreamento de Custo e Lote (FIFO):**
-  - Implementado um sistema para rastrear o preço de custo dos produtos e gerenciar o estoque por lotes, utilizando o método FIFO (First-In, First-Out).
-  - O modelo `Product` agora inclui um campo `costPrice` para registrar o custo de aquisição.
-  - Um novo modelo `InventoryLot` foi criado para representar lotes específicos de produtos recebidos (via pedido de compra) ou produzidos (via reação, futura implementação).
-  - Cada `InventoryLot` armazena o `costPrice`, `quantity` (quantidade total do lote), `remainingQuantity` (quantidade disponível), `sourceType` (tipo de origem, ex: `PURCHASE_ORDER`), `sourceId` (ID do pedido/reação) e `receivedDate`.
-  - Ao receber um pedido de compra, são criados registros `InventoryLot` para cada item, e o `Product.stock` é implicitamente gerenciado pela soma das `remainingQuantity` dos lotes.
-  - Na venda, a baixa do estoque é feita dos lotes mais antigos primeiro (FIFO), e o `SaleItem` registra o `inventoryLotId` e o `costPriceAtSale` para rastreamento de custo.
-
-## Arquivos a Ignorar
-
-- `node_modules`
-- `.next`
-- `dist`
-- `coverage`
-- `pnpm-lock.yaml`
-- `*.log`
-- `backup.dump`
-
----
-
-## Histórico de Alterações (Referência)
-
-<details>
-<summary><strong>Ver Histórico de Commits e Migrações</strong></summary>
-
-### Histórico de Commits
-
-- **3b5d67c** - feat: Implementa gestão de vendas (à vista, a prazo, cartão) e melhora responsividade do menu
-- **a1b2c3d** - fix: Corrige URLs de imagens que estavam quebradas
-- **3268bde** - deposi vai ser multitenet
-- **978e8d3** - imports funcioanando sistema funcionando
-- **3bf6bcd** - Fix: Atualiza versao dotenv-expand no backend
-- **76f221f** - feat: up
-- **...** (e outros commits)
-
-### Histórico de Migrações do Banco de Dados
-
-- **20250708195618_init**
-- **...** (e outras migrações)
-- **20250803123954_add_width_height_to_media**
-- **20250806112628_add_payment_terms** (Adição da tabela PaymentTerm)
-- **(db push)** - move-cc-days-to-org (Movimentação de creditCardReceiveDays para Organization)
-
-</details>
-
-## Roadmap de Futuras Funcionalidades
-
-- [ ] **Módulo de Agendamento:** Criar a funcionalidade de agendamento de serviços.
-- [ ] **Permissões de Usuário (Roles):** Diferenciar o que um `ADMIN` pode fazer versus um `USER`.
-- [ ] **Relatórios Avançados:** Criar uma seção de relatórios com gráficos detalhados.
-- [ ] **Integração com Google Drive:** Finalizar a funcionalidade de backup para salvar os arquivos na nuvem.
-- [ ] **Validação e Máscara de CPF/CNPJ:** Adicionar validação e máscaras de formatação no frontend.
-
-
-
-## Desafio integrar 
-
-GEMINI.md - Documentação do Projeto Conta Corrente
-
 Persona
 Você é Gemini, um assistente de programação especialista em full-stack com TypeScript. Seu foco é em NestJS para o backend e Next.js com Tailwind CSS e shadcn/ui para o frontend. Forneça respostas claras, didáticas e em Português do Brasil, sempre priorizando as melhores práticas.
 
 Contexto do Projeto
-Este é um monorepo gerenciado com pnpm contendo um sistema de gestão. O projeto é o resultado da fusão do sistema-electrosal (uma base de gestão mais completa) com o conta-corrente (que continha funcionalidades específicas de análise química).
+Este é um monorepo (pnpm) de um ERP focado na gestão completa do ciclo de vida de metais preciosos, desde a análise química até a produção e venda, integrado com módulos financeiros e de cadastro tradicionais.
 
 Backend: apps/backend (NestJS, Prisma, PostgreSQL)
 
 Frontend: apps/frontend (Next.js App Router, shadcn/ui, Tailwind CSS)
 
-Core/Domain: packages/core (Contém entidades de domínio puras)
+Core/Domain: packages/core (Entidades de domínio, Value Objects, etc.)
 
-Arquitetura e Decisões
-Padrão de Domínio (DDD): As entidades de negócio (AnaliseQuimica, OrdemDeRecuperacao, etc.) são modeladas como AggregateRoots, mantendo seu estado no objeto props. Isso garante encapsulamento e consistência.
+Visão Geral do Sistema (O Coração do ERP)
+O sistema centraliza todas as operações em torno de uma unidade de medida principal: o Ouro (Au). Todas as transações financeiras e movimentações de estoque, mesmo que realizadas em outras moedas ou metais (Prata, Ródio), são convertidas e rastreadas em seu equivalente em Ouro, com base na Cotação do Dia. Isso permite uma visão consolidada e estratégica do negócio.
 
-Fronteiras de Camadas: Foi estabelecida uma regra clara para a comunicação entre as camadas da aplicação:
+Módulos Principais e Fluxos de Negócio
+Aqui está a organização das suas ideias em módulos funcionais, com suas respectivas entidades e fluxos.
 
-Entrada para o Domínio: Métodos estáticos (criar, reconstituir) nas entidades são os únicos portões de entrada. Eles recebem dados primitivos (como string para IDs) e os convertem para Value Objects (UniqueEntityID, NumeroAnaliseVO).
+1. Módulo de Cadastros (Entidades Base)
+A fundação do sistema, contendo as entidades primárias.
 
-Saída do Domínio: Ao passar dados do domínio para a camada de infraestrutura (ex: repositórios Prisma), os Value Objects são convertidos de volta para tipos primitivos (ex: id.toString()).
+Pessoas: Entidade base que pode ser Cliente, Fornecedor, Funcionário, Transportadora, Terceiro. Contém dados como nome, contatos e endereço.
 
-Mapeamento (Mappers): A conversão entre os modelos do Prisma e as entidades de Domínio é centralizada em classes Mapper dedicadas, que respeitam as fronteiras de camadas. Para interações com o Prisma, os mappers geram objetos com a sintaxe de connect para gerenciar as relações.
+Produtos:
 
-Regra de Negócio Central: Para fins de relatório e consolidação, todos os metais (Prata, Ródio, etc.) podem ser convertidos para seu equivalente em Ouro (Au), que serve como a unidade de medida principal do sistema.
+Produtos de Revenda: Itens comprados e revendidos sem transformação.
 
-Histórico de Alterações Recentes
-Resolução de Inconsistências de Tipo e Refatoração de Entidades (Ciclo de Debug Assistido)
-Um ciclo intensivo de depuração e refatoração foi realizado para resolver uma cascata de erros de compilação e de execução que surgiram após a integração de funcionalidades e a importação de dados legados. O que começou como um simples erro de 401 Unauthorized ao salvar uma análise evoluiu para uma reestruturação fundamental das entidades de domínio.
+Produtos Produzidos: Itens resultantes do processo de Reação Química (ex: Aurocianeto de Potássio 68%).
 
-Sintoma Inicial: O fluxo de "Lançar Resultado" de uma Análise Química estava falhando. Os erros iniciais eram variados e enganosos:
+Plano de Contas: Estrutura contábil para categorizar todas as receitas e despesas.
 
-'error' is of type 'unknown' no controller.
+Contas:
 
-401 Unauthorized no use case, mesmo com o usuário autenticado.
+Contas Bancárias (R$): Contas financeiras tradicionais.
 
-PrismaClientValidationError no repositório.
+Contas de Metal (Au): Contas correntes para controlar o saldo de metal (ex: "Metal para Reação", "Conta Corrente com Fornecedor X").
 
-Investigação e Diagnóstico:
+Cotação: Registro diário dos valores de compra/venda dos metais (Au, Ag, etc.), podendo diferenciar por tipo de pagamento (ex: PIX, Cheque).
 
-A investigação começou no controller, tratando o erro de tipo unknown.
+2. Módulo de Análise Química
+O ponto de entrada para o metal do cliente no sistema.
 
-Ao analisar o erro 401, percebeu-se que a comparação de organizationId estava falhando, não por permissão, mas por uma possível inconsistência de tipo ou formato.
+Entidades: AnaliseQuimica
 
-A análise do PrismaClientValidationError foi o ponto chave. O erro Unknown argument 'clienteId'. Did you mean 'cliente'? revelou que o mapper estava enviando um campo clienteId primitivo, enquanto o schema.prisma esperava um objeto de relação (cliente: { connect: { id: '...' } }).
+Fluxo:
 
-Ao tentar corrigir o mapper, uma avalanche de erros de tipo (Type 'UniqueEntityID' is not assignable to type 'string', Property 'toValue' does not exist on type 'string') expôs a causa raiz: não havia um padrão consistente para lidar com IDs. Partes do código tratavam IDs como string, e outras como o Value Object UniqueEntityID.
+Criação: Uma nova análise é registrada com status RECEBIDO.
 
-Solução Estrutural: A Refatoração das Entidades:
+Aprovação: Após a análise, o status muda para AGUARDANDO_APROVACAO.
 
-A causa da inconsistência de tipos estava no design das próprias entidades (AnaliseQuimica, OrdemDeRecuperacao). Elas gerenciavam seu estado de forma mista, usando propriedades privadas (_propriedade) e o objeto props herdado do AggregateRoot, com tipos conflitantes entre eles.
+Resultado: Ao ser aprovada pelo cliente (APROVADO_PARA_RECUPERACAO), a análise gera duas saídas distintas:
 
-Ação Corretiva: As entidades foram completamente refatoradas para usar o objeto this.props como a única fonte da verdade para seu estado. Todas as propriedades privadas foram removidas e os getters/métodos de negócio foram reescritos para ler e modificar this.props.
+Crédito de Metal (CreditoCliente): Um registro é criado na conta corrente de metal do cliente (ex: +10g de Au, +5g de Ag). Importante: Isso NÃO é um Contas a Receber financeiro, mas sim um saldo de metal que o cliente possui com a empresa.
 
-Definição de Contratos: Métodos estáticos como criar e reconstituir foram padronizados para servirem como "portões" do domínio. criar agora aceita IDs como string e os converte para UniqueEntityID internamente, enquanto reconstituir recebe as props e o id separadamente para recriar a entidade a partir do banco de dados.
+Material a Recuperar (MetalARecuperar): O metal bruto resultante da análise fica disponível para ser processado no próximo módulo.
 
-Correções em Cascata:
+3. Módulo de Recuperação de Metais
+Processa o material bruto das análises para obter o metal puro.
 
-Com as entidades corrigidas, o compilador passou a apontar todos os arquivos do backend que violavam os novos contratos.
+Entidades: OrdemDeRecuperacao
 
-Use Cases: Foram ajustados para usar entidade.id.toString() ao chamar repositórios e para fornecer todas as propriedades obrigatórias (como data em MovimentoMetal.criar).
+Fluxo:
 
-Repositórios e Mappers: Foram corrigidos para usar new UniqueEntityID() ao receber dados do Prisma e para passar o id corretamente para o reconstituir.
+Criação: Uma ou mais AnaliseQuimica aprovadas (do mesmo tipo de metal) são agrupadas em uma OrdemDeRecuperacao com status PLANEJADA.
 
-DTOs e Enums: Foram alinhados para garantir que os nomes de propriedades e valores de enums (CREDITO_ANALISE, etc.) correspondessem exatamente ao que o domínio esperava.
+Processamento: A ordem passa pelos status EM_PROCESSAMENTO -> AGUARDANDO_TEOR_FINAL.
 
-Resultado: Após a refatoração completa e as correções em cascata, a base de código do domínio (@conta-corrente/core) tornou-se consistente e livre de erros. Todos os erros de compilação no backend foram resolvidos, e o fluxo de salvar a análise química passou a funcionar corretamente.
+Finalização: O teorDoRecuperado é registrado. O sistema calcula:
 
-Correções no Fluxo de Autenticação, Menus e Gestão de Pessoas
-(Seções anteriores do histórico foram mantidas aqui)
+Metal Puro: A quantidade de metal puro obtida (auPuroRecuperadoGramas). Esse valor é transferido para uma conta de metal específica (ex: "Estoque de Metal para Reação").
 
-Implementação do Novo Fluxo de Análise Química
-(Seções anteriores do histórico foram mantidas aqui)
+Resíduo/Sobra: A diferença entre o material que entrou e o metal puro que saiu gera uma nova AnaliseQuimica interna do tipo RESIDUO, reiniciando o ciclo.
 
-Importação de Dados Legados
-Para popular o sistema, foram criados scripts de seed no Prisma para importar dados de arquivos JSON exportados do sistema legado.
+4. Módulo de Reação Química (Produção)
+Transforma o metal puro em produtos vendáveis.
 
-Pessoas (Empresas/Clientes): (seed-empresas.ts)
+Entidades: ReacaoQuimica, LoteDeProducao
 
-Contas Correntes: (seed-contas-correntes.ts)
+Fluxo:
 
-Movimentos (Transações): (seed-movimentos.ts)
+Início: Uma nova ReacaoQuimica é criada. O usuário seleciona os insumos:
 
-Vendas (Pedidos) e Itens de Venda: (seed-vendas.ts, seed-itens-venda.ts)
+Metal (Au): Originário de diversas fontes (saldo da Recuperação, pagamento de clientes em metal, compra de fornecedores).
 
-Próximos Passos (Novas Funcionalidades)
-Com base nas novas discussões, os próximos passos focam em expandir as funcionalidades de Venda, Reação Química e Relatórios.
+Matéria-Prima (ex: KCN): Calculada com base na quantidade de metal (ex: Qtd KCN = Qtd Au * 0.899).
 
-1. Novo Fluxo de Cotação e Venda de Metais
-Tela de Cotação de Venda:
+Sobras de Reações Anteriores: SobraDeCesto e SobraDeDestilado são adicionadas ao processo.
 
-Criar uma interface que permita ao usuário simular o preço de venda de metais.
+Processamento: A reação passa pelos status INICIADA -> PROCESSANDO -> AGUARDANDO_TEOR.
 
-A cotação do dia deve ser carregada como padrão, mas o valor deve ser editável.
+Finalização: Ao finalizar, a reação gera as saídas:
 
-Cálculo de Mão de Obra por Faixa:
+Produto Acabado: Cria um LoteDeProducao do produto (ex: 1099,56g de Sal 68%, com base na fórmula Qtd Au * 1,47). Este lote é adicionado ao estoque.
 
-Implementar uma regra de negócio para calcular a taxa de serviço (% Mão de Obra) com base na quantidade (em gramas de Au) vendida:
+Novas Sobras: SobraDeCesto e SobraDeDestilado são pesadas e registradas para serem usadas em futuras reações.
 
-1 a 9g: 20%
+5. Módulo de Vendas
+Converte o estoque em receita.
 
-10 a 19g: 10%
+Entidades: PedidoDeVenda, ItemDeVenda
 
-20g ou mais: 20%
+Fluxo:
 
-Flexibilidade de Unidade (Au vs. Sal 68%):
+Criação do Pedido: O pedido é criado com status ABERTO.
 
-No formulário de venda, permitir que o usuário insira a quantidade desejada tanto em gramas de Ouro (Au) quanto em gramas de Sal 68%.
+Itens do Pedido:
 
-O sistema deve realizar a conversão automaticamente (usando o fator 1,47) para exibir o valor em ambas as unidades e dar baixa no estoque corretamente (que é em Sal).
+Se o item for um produto de reação (ex: Sal 68%), o usuário seleciona o LoteDeProducao de onde o produto sairá. O sistema valida o saldo do lote.
 
-2. Implementação do Módulo de Reação Química
-Objetivo: Controlar o processo de produção de Aurocianeto de Potássio (Sal 68%).
+Se for um produto de revenda, a baixa é feita do estoque geral.
 
-Entradas (Inputs) da Reação:
+Efetivação: O pedido é efetivado. Neste momento:
 
-Metal: Ouro proveniente de múltiplas fontes (saldo de recuperação, pagamento de clientes em metal, compra de fornecedores).
+O estoque é baixado (do lote ou do produto).
 
-Em vendas o cliente pode pagar em metal, e pode pagar em uma conta minha, ou para o fornecedor de metal ou cheque, em metal vai para uma conta e ai na reação agente seleciona e beleza.
+Um ContasAReceber é gerado, com parcelas e vencimentos definidos.
 
-Fornecedor, eu tenho um conta corrente com ele, que confiorme o cliente vai pagaendo eu coloco o valor e a cotação, ai com o fornecedor eu tenho na realidade um controle em metal au , tipo cliente paga R$ 10.000 cotação 586 = 17,065 gr , ai vai somando de tempos em tempo pego uma quantidade com o fornecedor , por exemplo 500 gr, ai fica um saldo e as vezes pega o amis com o fornecedor e fico devendo para ele.
+O lançamento financeiro é criado, registrando o valor em R$ e o valor equivalente em Au.
 
-Matéria-Prima: Cianeto de Potássio (KCN), calculado pela fórmula: Qtd KCN = Qtd Au * 0.899.
+Formas de Recebimento:
 
-Processo e Saídas (Outputs):
+Dinheiro/Cheque/Depósito: Credita uma Conta Bancária da empresa.
 
-O processo converte o Ouro em Sal 68% (fator 1g Au = 1,47g Sal).
+Metal: Credita uma Conta de Metal da empresa (o cliente está pagando com metal).
 
-Gera subprodutos/sobras que são pesados e reutilizados em reações futuras:
+Depósito para Fornecedor: O sistema debita o ContasAReceber do cliente e gera um crédito na Conta Corrente de Metal do fornecedor.
 
-Sobra de Cesto
+6. Módulo Financeiro
+Gerencia todo o fluxo de caixa e de metais.
 
-Sobra de Destilado
+Entidades: ContasAPagar, ContasAReceber, LancamentoFinanceiro
 
-Fluxo de Status da Reação:
+Visualização Dual: Todas as telas de contas correntes (bancárias ou de metal) devem permitir ao usuário alternar a visualização dos valores entre Reais (R$) e Ouro (Au).
 
-Iniciada -> Processando -> Aguardando Teor -> Finalizada.
+Pagamento de Despesas: Ao lançar uma despesa, o valor em R$ é registrado e sua contrapartida em Au (baseada na cotação do dia) também é salva, debitando a Conta correspondente.
 
-Controle de Lote: Para vendas de Sal 68%, adicionar a capacidade de anotar de qual lote de reação o produto foi retirado.
+Respostas a Dúvidas Pontuais e Sugestões
+AccountRec na Análise Química:
 
-3. Pagamentos e Relatórios
-Pagamento de Despesas em Metal: Implementar a funcionalidade de pagar despesas, onde o valor em Reais é convertido para Ouro e debitado de uma conta de metal.
+Problema: A análise aprovada estava gerando um Contas a Receber, o que é conceitualmente incorreto.
 
-Relatórios Consolidados: Desenvolver uma seção de relatórios que consolide todas as movimentações de metais, convertendo Prata, Ródio, etc., para seu equivalente em Ouro para uma visão unificada.
+Solução Racionalizada: Conforme descrito acima, a análise deve gerar um CreditoCliente em uma conta de metal. O cliente pode usar esse crédito posteriormente para:
 
-Deixa eu explicar como quero que as coisas , funcionem, ai voce traduz para entidade e classes, e tudo o resto:
+Abater no valor de uma compra.
 
-# Resumo do ERP
+Vender o metal de volta para a empresa (o que geraria um Contas a Pagar para a empresa no momento da venda, com base na cotação do dia).
 
-Cadastro de Clientes, Fornecedores, Funcionarios, transportadora, terceiros
+Badges e Status da Análise Química:
 
-Cadastro de Produtos, o que vai vir de reação e produtos de revenda
+Problema: O enum de status sumiu e não há feedback visual.
 
-vendas, que ao vender da a baixa no estoque se tiver um lote seria melhor, vai gerar um financeiro, em reais e em au (ouro) de acordo com a cotação do dia, recebo em metal, cheque, deposito em conta, pode ser minha ou a do fornecedor.
+Solução:
 
-Cadastro de cotação, que vai ser em au, e pode ser 2 valores cheque e pix, na conversão das vendas pode usar uma media.
+Restaurar o Enum: Garanta que o enum StatusAnaliseQuimica exista no packages/core e no schema.prisma.
 
-Financeiro, vai ter contas bancarias e contas de fornecedor de metal e outras por exemplo, tudo vinculado a um plano de contas. Ao lançar uma despesa ou receita, valor em real e convertido cotação dia e tambem valor em au.
+Criar Legenda e Cores no Frontend:
 
-Ai vai ter analises quimicas, que agente ja fez, gera credito cliente, vira recuperação, se sobra vira residuo , o metal puro vira  material para a reação.
+RECEBIDO: Amarelo (bg-yellow-100 text-yellow-800)
 
-Reação tem tambem suas peculiaridades tem sobra em cesto e sobra em destilado, e produto acabado Aurocianeto de potassio 68% para estoque.Podemos considerar valeres em reais e valores em au, para calcular os custos. 
+AGUARDANDO_APROVACAO: Laranja (bg-orange-100 text-orange-800)
 
-Acho que o coração do ERP seria isso, deve ter outras coisinhas ma o coração é isso.
+APROVADO_PARA_RECUPERACAO: Verde (bg-green-100 text-green-800)
 
-Ter a opção de ver as contas correntes com as movimentações, isso tambem ja estava pronto no outro sistema.
+Crie um componente no frontend que receba o status como prop e renderize o badge com a cor e o texto corretos.
+
+unique-entity-id.ts vs. uuid:
+
+Problema: Inconsistência no uso de IDs, causando problemas de tipo.
+
+Análise: crypto.randomUUID() é uma API nativa do Node.js (disponível em versões mais recentes), enquanto uuid é uma biblioteca externa. Ambos geram UUIDs v4 válidos. O problema não é qual usar, mas a falta de padronização.
+
+Solução: Padronize! A abordagem de ter uma classe UniqueEntityID (Value Object) é a melhor prática em DDD.
+
+Escolha uma fonte: crypto.randomUUID() é uma ótima escolha, pois é nativo e não requer dependências.
+
+Centralize a criação: O único lugar que deve chamar crypto.randomUUID() é dentro do construtor ou de um método estático da sua classe UniqueEntityID.
+
+Reforce a Regra:
+
+Fora do Domínio -> Dentro do Domínio: Sempre receba IDs como string nos métodos criar das entidades e converta para new UniqueEntityID(string) internamente.
+
+Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório Prisma, sempre use id.toString() ou id.toValue().
+
+Essa disciplina resolverá os problemas de tipo em cascata.
+
+Este documento agora serve como um guia claro e estruturado para o desenvolvimento contínuo do seu ERP. Ele organiza as regras de negócio complexas em módulos lógicos, define fluxos claros e aborda diretamente os pontos de dor que você identificou.
+
+
+
+
+
+
+
+etm como colocar as entidades em ingles e mandar de novo
+
+
+
+Mostrar raciocínio
+Com certeza! Mantendo toda a lógica racionalizada e as explicações em Português do Brasil, conforme a nossa persona, aqui está a versão atualizada do documento com todos os nomes de entidades, módulos e conceitos de domínio traduzidos para o inglês.
+
+Isso facilita a implementação no código, seguindo as convenções de nomenclatura em inglês, ao mesmo tempo que mantém a documentação de negócio clara para a equipe.
+
+GEMINI.md - ERP for Precious Metals Management
+Persona
+Você é Gemini, um assistente de programação especialista em full-stack com TypeScript. Seu foco é em NestJS para o backend e Next.js com Tailwind CSS e shadcn/ui para o frontend. Forneça respostas claras, didáticas e em Português do Brasil, sempre priorizando as melhores práticas.
+
+Contexto do Projeto
+Este é um monorepo (pnpm) de um ERP focado na gestão completa do ciclo de vida de metais preciosos, desde a análise química até a produção e venda, integrado com módulos financeiros e de cadastro tradicionais. Os nomes das entidades de domínio estão em inglês para seguir as convenções de codificação.
+
+Backend: apps/backend (NestJS, Prisma, PostgreSQL)
+
+Frontend: apps/frontend (Next.js App Router, shadcn/ui, Tailwind CSS)
+
+Core/Domain: packages/core (Domain entities, Value Objects, etc.)
+
+Visão Geral do Sistema (O Coração do ERP)
+O sistema centraliza todas as operações em torno de uma unidade de medida principal: o Ouro (Au). Todas as transações financeiras e movimentações de estoque, mesmo que realizadas em outras moedas ou metais (Prata, Ródio), são convertidas e rastreadas em seu equivalente em Ouro, com base na Cotação do Dia (Quotation). Isso permite uma visão consolidada e estratégica do negócio.
+
+Módulos Principais e Fluxos de Negócio (Main Modules & Business Flows)
+Aqui está a organização das suas ideias em módulos funcionais, com suas respectivas entidades em inglês.
+
+1. Módulo de Cadastros (Core Entities Module)
+A fundação do sistema, contendo as entidades primárias.
+
+Person: Entidade base que pode ser Customer, Supplier, Employee, Carrier, ThirdParty. Contém dados como nome, contatos e endereço.
+
+Product:
+
+Produtos de Revenda (Resale Products): Itens comprados e revendidos sem transformação.
+
+Produtos Produzidos (Manufactured Products): Itens resultantes do processo de ChemicalReaction (ex: Aurocyanide Potassium 68%).
+
+ChartOfAccounts: Estrutura contábil para categorizar todas as receitas e despesas.
+
+Account:
+
+BankAccount (R$): Contas financeiras tradicionais.
+
+MetalAccount (Au): Contas correntes para controlar o saldo de metal (ex: "Metal for Reaction", "Current Account with Supplier X").
+
+Quotation: Registro diário dos valores de compra/venda dos metais (Au, Ag, etc.), podendo diferenciar por tipo de pagamento (ex: PIX, Cheque).
+
+2. Módulo de Análise Química (Chemical Analysis Module)
+O ponto de entrada para o metal do cliente no sistema.
+
+Entidades: ChemicalAnalysis
+
+Fluxo:
+
+Criação: Uma nova análise é registrada com status RECEIVED.
+
+Aprovação: Após a análise, o status muda para PENDING_APPROVAL.
+
+Resultado: Ao ser aprovada pelo cliente (APPROVED_FOR_RECOVERY), a análise gera duas saídas distintas:
+
+MetalCredit: Um registro é criado na conta de metal do cliente (ex: +10g de Au, +5g de Ag). Importante: Isso NÃO é um AccountsReceivable financeiro, mas sim um saldo de metal que o cliente possui com a empresa.
+
+MaterialToRecover: O metal bruto resultante da análise fica disponível para ser processado no próximo módulo.
+
+3. Módulo de Recuperação de Metais (Metal Recovery Module)
+Processa o material bruto das análises para obter o metal puro.
+
+Entidades: RecoveryOrder
+
+Fluxo:
+
+Criação: Uma ou mais ChemicalAnalysis aprovadas (do mesmo tipo de metal) são agrupadas em uma RecoveryOrder com status PLANNED.
+
+Processamento: A ordem passa pelos status PROCESSING -> PENDING_FINAL_PURITY.
+
+Finalização: O teor (purity) é registrado. O sistema calcula:
+
+PureMetal: A quantidade de metal puro obtida. Esse valor é transferido para uma MetalAccount específica (ex: "Metal Stock for Reaction").
+
+Residue: A diferença entre o material que entrou e o metal puro que saiu gera uma nova ChemicalAnalysis interna do tipo RESIDUE, reiniciando o ciclo.
+
+4. Módulo de Reação Química (Chemical Reaction / Production Module)
+Transforma o metal puro em produtos vendáveis.
+
+Entidades: ChemicalReaction, ProductionBatch
+
+Fluxo:
+
+Início: Uma nova ChemicalReaction é criada. O usuário seleciona os Inputs:
+
+Metal (Au): Originário de diversas fontes (saldo da RecoveryOrder, pagamento de clientes em metal, compra de fornecedores).
+
+RawMaterial (ex: KCN): Calculada com base na quantidade de metal (ex: KCN_Qty = Au_Qty * 0.899).
+
+Sobras de Reações Anteriores (Leftovers): BasketLeftover e DistillateLeftover são adicionadas ao processo.
+
+Processamento: A reação passa pelos status STARTED -> PROCESSING -> PENDING_PURITY.
+
+Finalização: Ao finalizar, a reação gera as saídas (Outputs):
+
+FinishedProduct: Cria um ProductionBatch do produto (ex: 1099,56g de Sal 68%, com base na fórmula Au_Qty * 1.47). Este lote é adicionado ao estoque.
+
+Novas Sobras (New Leftovers): BasketLeftover e DistillateLeftover são pesadas e registradas para serem usadas em futuras reações.
+
+5. Módulo de Vendas (Sales Module)
+Converte o estoque em receita.
+
+Entidades: SalesOrder, SalesOrderItem
+
+Fluxo:
+
+Criação do Pedido: O pedido é criado com status OPEN.
+
+Itens do Pedido:
+
+Se o item for um produto de reação (ex: Sal 68%), o usuário seleciona o ProductionBatch de onde o produto sairá. O sistema valida o saldo do lote.
+
+Se for um produto de revenda, a baixa é feita do estoque geral.
+
+Efetivação (Confirmation): O pedido é efetivado. Neste momento:
+
+O estoque é baixado (do lote ou do produto).
+
+Um AccountsReceivable é gerado, com parcelas e vencimentos definidos.
+
+Um FinancialTransaction é criado, registrando o valor em R$ e o valor equivalente em Au.
+
+Formas de Recebimento (Payment Methods):
+
+Dinheiro/Cheque/Depósito: Credita uma BankAccount da empresa.
+
+Metal: Credita uma MetalAccount da empresa (o cliente está pagando com metal).
+
+Depósito para Fornecedor: O sistema debita o AccountsReceivable do cliente e gera um crédito na MetalAccount do fornecedor.
+
+6. Módulo Financeiro (Financial Module)
+Gerencia todo o fluxo de caixa e de metais.
+
+Entidades: AccountsPayable, AccountsReceivable, FinancialTransaction
+
+Visualização Dual: Todas as telas de contas correntes (BankAccount ou MetalAccount) devem permitir ao usuário alternar a visualização dos valores entre Reais (R$) e Ouro (Au).
+
+Pagamento de Despesas: Ao lançar uma despesa, o valor em R$ é registrado e sua contrapartida em Au (baseada na Quotation do dia) também é salva, debitando a Account correspondente.
+
+Respostas a Dúvidas Pontuais e Sugestões
+AccountsReceivable na Análise Química:
+
+Problema: A análise aprovada estava gerando um Contas a Receber, o que é conceitualmente incorreto.
+
+Solução Racionalizada: A análise deve gerar um MetalCredit em uma MetalAccount do cliente. O cliente pode usar esse crédito posteriormente para:
+
+Abater no valor de uma compra.
+
+Vender o metal de volta para a empresa (o que geraria um AccountsPayable para a empresa no momento da venda, com base na Quotation do dia).
+
+Badges e Status da Análise Química:
+
+Problema: O enum de status sumiu e não há feedback visual.
+
+Solução:
+
+Restaurar o Enum: Garanta que o enum ChemicalAnalysisStatus exista no packages/core e no schema.prisma.
+
+Criar Legenda e Cores no Frontend:
+
+RECEIVED: Amarelo (bg-yellow-100 text-yellow-800)
+
+PENDING_APPROVAL: Laranja (bg-orange-100 text-orange-800)
+
+APPROVED_FOR_RECOVERY: Verde (bg-green-100 text-green-800)
+
+Crie um componente no frontend que receba o status como prop e renderize o badge com a cor e o texto corretos.
+
+unique-entity-id.ts vs. uuid:
+
+Problema: Inconsistência no uso de IDs, causando problemas de tipo.
+
+Análise: crypto.randomUUID() é uma API nativa do Node.js. uuid é uma biblioteca externa. O problema não é qual usar, mas a falta de padronização.
+
+Solução: Padronize! A abordagem de ter uma classe UniqueEntityID (Value Object) é a melhor prática em DDD.
+
+Escolha uma fonte: crypto.randomUUID() é a escolha recomendada.
+
+Centralize a criação: O único lugar que deve chamar crypto.randomUUID() é dentro do construtor ou de um método estático da sua classe UniqueEntityID.
+
+Reforce a Regra:
+
+Fora do Domínio -> Dentro do Domínio: Receba IDs como string e converta para new UniqueEntityID(string) internamente.
+
+Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, sempre use id.toString() ou id.toValue().
