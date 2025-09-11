@@ -143,7 +143,13 @@ export function AnalisesQuimicasTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => setAnaliseParaLancar(analise)}>
+                      <DropdownMenuItem onClick={() => {
+                        console.log("Analise original (Lançar Resultado):", analise);
+                        console.log("Analise ID (Lançar Resultado):", analise.id);
+                        const analiseWithId = { ...analise, id: analise.id || 'missing-id' }; // Ensure id is present
+                        console.log("Analise com ID garantido (Lançar Resultado):", analiseWithId);
+                        setAnaliseParaLancar(analiseWithId);
+                      }}>
                         <FlaskConical className="mr-2 h-4 w-4" />
                         Lançar Resultado
                       </DropdownMenuItem>

@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { Identifier } from './identifier';
 
 /**
@@ -13,8 +13,8 @@ export class UniqueEntityID extends Identifier<string> {
    */
   private constructor(id?: string) {
     // Se um ID não for fornecido, gera um novo UUID v4.
-    // `randomUUID` é o padrão moderno e seguro no Node.js.
-    super(id || randomUUID());
+    // `uuidv4` é o padrão moderno e seguro.
+    super(id || uuidv4());
   }
 
   /**
