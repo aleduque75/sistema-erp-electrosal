@@ -1,18 +1,1 @@
-[
-  {
-    "timestamp": "2025-07-31T21:36:54.126Z",
-    "userId": "f7c0fa3a-977d-4e00-8625-3210d09473dd",
-    "entityType": "Product",
-    "entityId": "0c6e8fce-2bfe-471c-a7ca-00e7dd5fa1c8",
-    "description": "Produto Mr. Kim Parisian excluído."
-  },
-  {
-    "timestamp": "2025-07-31T21:47:11.916Z",
-    "userId": "f7c0fa3a-977d-4e00-8625-3210d09473dd",
-    "userName": "Kelly Cerqueira de Almeida",
-    "entityType": "Product",
-    "entityId": "30df6acb-fff6-4ecd-886f-f8d9ebe9156f",
-    "entityName": "Kelly Cerqueira de Almeida",
-    "description": "Produto Kelly Cerqueira de Almeida excluído."
-  }
-]
+[]

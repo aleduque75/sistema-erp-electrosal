@@ -1,7 +1,5 @@
 
+
 > @sistema-erp-electrosal/core@1.0.0 build /home/aleduque/Documentos/cursos/sistema-erp-electrosal/packages/core
 > tsc && tsc-alias -p tsconfig.json
 
-src/ddd/aggregate-root.ts(4,15): error TS2564: Property 'props' has no initializer and is not definitely assigned in the constructor.
-src/domain/recuperacoes/recuperacao.entity.ts(27,34): error TS2314: Generic type 'AggregateRoot<T>' requires 1 type argument(s).
- ELIFECYCLE  Command failed with exit code 2.

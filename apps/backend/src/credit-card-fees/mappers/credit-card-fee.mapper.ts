@@ -1,5 +1,5 @@
-import { CreditCardFee } from '@sistema-erp-electrosal/core';
-import { CreditCardFee as PrismaCreditCardFee } from '@prisma/client';
+import { CreditCardFee, UniqueEntityID } from '@sistema-erp-electrosal/core';
+import { CreditCardFee as PrismaCreditCardFee, Prisma } from '@prisma/client';
 
 export class CreditCardFeeMapper {
   static toDomain(raw: PrismaCreditCardFee): CreditCardFee {
@@ -11,7 +11,7 @@ export class CreditCardFeeMapper {
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
       },
-      raw.id,
+      raw.id ? UniqueEntityID.create(raw.id) : undefined,
     );
   }
 
@@ -20,7 +20,7 @@ export class CreditCardFeeMapper {
       id: creditCardFee.id.toString(),
       organizationId: creditCardFee.organizationId,
       installments: creditCardFee.installments,
-      feePercentage: creditCardFee.feePercentage,
+      feePercentage: new Prisma.Decimal(creditCardFee.feePercentage),
       createdAt: creditCardFee.createdAt,
       updatedAt: creditCardFee.updatedAt,
     } as PrismaCreditCardFee; // Cast to PrismaCreditCardFee to satisfy type checking

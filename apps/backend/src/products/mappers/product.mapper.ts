@@ -1,5 +1,5 @@
-import { Product } from '@sistema-erp-electrosal/core';
-import { Product as PrismaProduct } from '@prisma/client';
+import { Product, UniqueEntityID } from '@sistema-erp-electrosal/core';
+import { Product as PrismaProduct, Prisma } from '@prisma/client';
 
 export class ProductMapper {
   static toDomain(raw: PrismaProduct): Product {
@@ -9,11 +9,12 @@ export class ProductMapper {
         name: raw.name,
         description: raw.description ?? undefined,
         price: raw.price.toNumber(),
-        stock: raw.stock,
+        costPrice: raw.costPrice?.toNumber() ?? undefined,
+        stock: raw.stock ?? 0,
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
       },
-      raw.id,
+      raw.id ? UniqueEntityID.create(raw.id) : undefined,
     );
     console.log('Produto mapeado para domínio:', product);
     return product;
@@ -25,7 +26,8 @@ export class ProductMapper {
       organizationId: product.organizationId,
       name: product.name,
       description: product.description ?? null,
-      price: product.price,
+      price: new Prisma.Decimal(product.price),
+      costPrice: product.costPrice ? new Prisma.Decimal(product.costPrice) : null,
       stock: product.stock,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,

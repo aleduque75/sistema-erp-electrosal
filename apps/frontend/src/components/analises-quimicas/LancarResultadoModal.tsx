@@ -67,19 +67,44 @@ export function LancarResultadoModal({
     resolver: zodResolver(lancarResultadoSchema),
     defaultValues: {
       resultadoAnaliseValor: undefined,
-      unidadeResultado: "g/L Au",
+      unidadeResultado: "g/kg", // Unidade padrão mais comum
       percentualQuebra: 0.05,
       taxaServicoPercentual: 0.2,
-      observacoes: "",
+      observacoes: analise?.observacoes || "",
     },
   });
+
+  // --- Lógica para cálculo e exibição do resumo ---
+  const watchedValues = form.watch();
+
+  const getCalculationSummary = () => {
+    const { resultadoAnaliseValor, percentualQuebra, taxaServicoPercentual } = watchedValues;
+    const volumeEntrada = analise?.volumeOuPesoEntrada || 0;
+
+    if (!resultadoAnaliseValor || !volumeEntrada) return null;
+
+    const auEstimadoBrutoGramas = volumeEntrada * resultadoAnaliseValor;
+    const auEstimadoRecuperavelGramas = auEstimadoBrutoGramas * (1 - percentualQuebra);
+    const taxaServicoEmGramas = auEstimadoRecuperavelGramas * taxaServicoPercentual;
+    const auLiquidoParaClienteGramas = auEstimadoRecuperavelGramas - taxaServicoEmGramas;
+
+    return {
+      auEstimadoBrutoGramas: auEstimadoBrutoGramas.toFixed(4),
+      auEstimadoRecuperavelGramas: auEstimadoRecuperavelGramas.toFixed(4),
+      taxaServicoEmGramas: taxaServicoEmGramas.toFixed(4),
+      auLiquidoParaClienteGramas: auLiquidoParaClienteGramas.toFixed(4),
+    };
+  };
+
+  const summary = getCalculationSummary();
+  // --- Fim da lógica de cálculo ---
 
   if (!analise) return null;
 
   const onSubmit = async (data: LancarResultadoFormData) => {
     setIsSubmitting(true);
     try {
-      await lancarResultadoAnaliseApi(analise.id, data);
+      await lancarResultadoAnaliseApi(analise.id.value, data);
       toast.success("Resultado lançado com sucesso!");
       onSuccess();
       onOpenChange(false);
@@ -168,6 +193,28 @@ export function LancarResultadoModal({
                 </FormItem>
               )}
             />
+
+            {/* --- Seção de Resumo do Cálculo --- */}
+            {summary && (
+              <div className="space-y-2 rounded-md border bg-muted/50 p-4">
+                <h4 className="font-medium text-sm">Resumo do Cálculo</h4>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  <p className="text-muted-foreground">Au Bruto Estimado (g)</p>
+                  <p className="text-right font-mono">{summary.auEstimadoBrutoGramas}</p>
+                  
+                  <p className="text-muted-foreground">Au Recuperável Estimado (g)</p>
+                  <p className="text-right font-mono">{summary.auEstimadoRecuperavelGramas}</p>
+
+                  <p className="text-muted-foreground">Taxa de Serviço (g)</p>
+                  <p className="text-right font-mono text-destructive">- {summary.taxaServicoEmGramas}</p>
+
+                  <p className="font-semibold">Au Líquido p/ Cliente (g)</p>
+                  <p className="text-right font-mono font-semibold">{summary.auLiquidoParaClienteGramas}</p>
+                </div>
+              </div>
+            )}
+            {/* --- Fim da Seção de Resumo --- */}
+
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

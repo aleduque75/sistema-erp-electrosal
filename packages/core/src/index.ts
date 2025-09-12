@@ -6,3 +6,4 @@ export interface SharedType {
 export * from './_shared';
 export * from './domain/sales';
 export * from './domain';
+export * from './value-objects';

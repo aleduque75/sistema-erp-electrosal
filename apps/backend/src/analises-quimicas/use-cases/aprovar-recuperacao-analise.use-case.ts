@@ -5,8 +5,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import {
-  IAnaliseQuimicaRepository,
   AnaliseQuimica,
+  ContaMetal,
+  IAnaliseQuimicaRepository,
+  IContaMetalRepository,
+  TipoMetal,
 } from '@sistema-erp-electrosal/core';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Decimal } from 'decimal.js';
@@ -17,6 +20,8 @@ export class AprovarRecuperacaoAnaliseUseCase {
     private readonly prisma: PrismaService,
     @Inject('IAnaliseQuimicaRepository')
     private readonly analiseRepo: IAnaliseQuimicaRepository,
+    @Inject('IContaMetalRepository')
+    private readonly contaMetalRepo: IContaMetalRepository,
   ) {}
 
   async execute(command: { id: string, organizationId: string }): Promise<AnaliseQuimica> {
@@ -34,18 +39,19 @@ export class AprovarRecuperacaoAnaliseUseCase {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      // 1. Creditar conta de metal (lógica existente) - TEMPORARILY COMMENTED OUT
-      /*
+      // Lógica correta: Credita o metal na conta de metal do cliente
       let contaCliente = await this.contaMetalRepo.findByPessoaIdAndMetal(
         analise.clienteId,
         TipoMetal.OURO,
+        command.organizationId,
         tx,
       );
 
       if (!contaCliente) {
-        contaCliente = ContaMetal.criar({
+        contaCliente = ContaMetal.create({
           pessoaId: analise.clienteId,
           tipoMetal: TipoMetal.OURO,
+          organizationId: command.organizationId,
         });
         await this.contaMetalRepo.create(contaCliente, tx);
       }
@@ -53,27 +59,11 @@ export class AprovarRecuperacaoAnaliseUseCase {
       contaCliente.creditar({
         data: new Date(),
         gramas: valorACreditar,
-        origemId: analise.id,
+        origemId: analise.id.toString(),
         origemTipo: 'AnaliseQuimica',
         observacao: `Crédito da Análise Nº ${analise.numeroAnalise}`,
       });
       await this.contaMetalRepo.save(contaCliente, tx);
-      */
-
-      // 2. Criar registro de Contas a Receber (AccountRec)
-      await tx.accountRec.create({
-        data: {
-          organizationId: command.organizationId,
-          saleId: null, // Não é uma venda direta
-          description: `Crédito de Análise Química Nº ${analise.numeroAnalise}`,
-          amount: new Decimal(valorACreditar).toDecimalPlaces(2), // Converter gramas para valor financeiro (assumindo 1g Au = 1 unidade monetária por enquanto)
-          dueDate: new Date(), // Vencimento hoje
-          received: false, // Ainda não foi recebido/utilizado
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          // TODO: Definir conta corrente ou conta contábil se aplicável
-        },
-      });
     });
 
     return this.analiseRepo.save(analise, command.organizationId);

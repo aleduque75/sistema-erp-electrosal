@@ -14,6 +14,7 @@
     "paths": {
       "@sistema-erp-electrosal/core": ["../../packages/core/dist"],
       "@sistema-erp-electrosal/core/*": ["../../packages/core/dist/*"],
+      "domain/*": ["../../packages/core/src/domain/*"],
       "@prisma/client": ["./node_modules/@prisma/client"],
       "@auth/*": ["src/auth/*"],
       "@dtos/*": ["src/dtos/*"],
@@ -34,7 +35,7 @@
       "@nestjs/mapped-types": ["./node_modules/@nestjs/mapped-types"],
       "bcryptjs": ["./node_modules/bcryptjs"],
       "@shared/*": ["../../packages/core/dist/_shared/*"],
-      "domain/*": ["../../packages/core/src/domain/*"]
+      
     },
     "incremental": true,
     "skipLibCheck": true,

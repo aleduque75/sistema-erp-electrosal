@@ -25,10 +25,10 @@ export class AnaliseQuimicaResponseDto {
   ordemDeRecuperacaoId!: string | null;
   dataCriacao!: Date;
   dataAtualizacao!: Date;
+  cliente?: { name: string };
 
   static fromDomain(analise: AnaliseQuimica): AnaliseQuimicaResponseDto {
-    // Mapeamento explícito usando os getters da entidade
-    return {
+    const dto: AnaliseQuimicaResponseDto = {
       id: analise.id,
       clienteId: analise.clienteId,
       numeroAnalise: analise.numeroAnalise,
@@ -54,6 +54,12 @@ export class AnaliseQuimicaResponseDto {
       dataCriacao: analise.dataCriacao,
       dataAtualizacao: analise.dataAtualizacao,
     };
+
+    if ((analise as any).cliente) {
+      dto.cliente = { name: (analise as any).cliente.name };
+    }
+
+    return dto;
   }
 
   static fromDomainArray(

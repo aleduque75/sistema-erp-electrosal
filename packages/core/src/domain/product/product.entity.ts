@@ -6,6 +6,7 @@ export interface ProductProps {
   name: string;
   description?: string;
   price: number; // Decimal in Prisma, number in TS
+  costPrice?: number | null;
   stock: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -42,6 +43,10 @@ export class Product extends Entity<ProductProps> {
 
   get price(): number {
     return this.props.price;
+  }
+
+  get costPrice(): number | null | undefined {
+    return this.props.costPrice;
   }
 
   get stock(): number {

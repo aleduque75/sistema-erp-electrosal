@@ -1,4 +1,4 @@
-import { UserSettings } from '@sistema-erp-electrosal/core';
+import { UserSettings, UniqueEntityID } from '@sistema-erp-electrosal/core';
 import { UserSettings as PrismaUserSettings } from '@prisma/client';
 
 export class UserSettingsMapper {
@@ -12,7 +12,7 @@ export class UserSettingsMapper {
         // createdAt and updatedAt are not in Prisma model for UserSettings,
         // but are in our DDD entity. We can omit them or add default values if needed.
       },
-      raw.id,
+      raw.id ? UniqueEntityID.create(raw.id) : undefined,
     );
   }
 

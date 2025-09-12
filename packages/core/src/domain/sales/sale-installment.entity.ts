@@ -1,4 +1,4 @@
-import { Entity } from "@shared/entity";
+import { Entity } from "../../_shared/entity";
 import { SaleInstallmentStatus } from "./enums/sale-installment-status.enum"; // 👈 Importe o Enum
 
 export interface SaleInstallmentProps {

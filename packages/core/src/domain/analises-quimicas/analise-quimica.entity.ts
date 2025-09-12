@@ -44,6 +44,7 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
         ...props,
         dataCriacao: now,
         dataAtualizacao: now,
+        status: StatusAnaliseQuimica.EM_ANALISE, // Define o status inicial como EM_ANALISE
       },
       UniqueEntityID.create(),
     );
@@ -78,9 +79,40 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
   get dataCriacao(): Date { return this.props.dataCriacao; }
   get dataAtualizacao(): Date { return this.props.dataAtualizacao; }
 
-  public lancarResultado(dto: { resultadoAnaliseValor: number, unidadeResultado: string }) {
+  public lancarResultado(dto: {
+    resultadoAnaliseValor: number;
+    unidadeResultado: string;
+    percentualQuebra: number;
+    taxaServicoPercentual: number;
+    observacoes?: string;
+  }) {
+    // --- Atualiza as propriedades diretas do DTO ---
     this.props.resultadoAnaliseValor = dto.resultadoAnaliseValor;
     this.props.unidadeResultado = dto.unidadeResultado;
+    this.props.percentualQuebra = dto.percentualQuebra;
+    this.props.taxaServicoPercentual = dto.taxaServicoPercentual;
+    if (dto.observacoes) {
+      this.props.observacoes = dto.observacoes;
+    }
+
+    // --- Realiza os cálculos de negócio ---
+    // Assume que resultadoAnaliseValor é em g/kg e volumeOuPesoEntrada é em kg
+    const auEstimadoBrutoGramas = this.props.volumeOuPesoEntrada * this.props.resultadoAnaliseValor;
+    this.props.auEstimadoBrutoGramas = auEstimadoBrutoGramas;
+
+    const teorRecuperavel = this.props.resultadoAnaliseValor * (1 - this.props.percentualQuebra);
+    this.props.teorRecuperavel = teorRecuperavel;
+
+    const auEstimadoRecuperavelGramas = auEstimadoBrutoGramas * (1 - this.props.percentualQuebra);
+    this.props.auEstimadoRecuperavelGramas = auEstimadoRecuperavelGramas;
+
+    const taxaServicoEmGramas = auEstimadoRecuperavelGramas * this.props.taxaServicoPercentual;
+    this.props.taxaServicoEmGramas = taxaServicoEmGramas;
+
+    const auLiquidoParaClienteGramas = auEstimadoRecuperavelGramas - taxaServicoEmGramas;
+    this.props.auLiquidoParaClienteGramas = auLiquidoParaClienteGramas;
+
+    // --- Atualiza status e datas ---
     this.props.status = StatusAnaliseQuimica.ANALISADO_AGUARDANDO_APROVACAO;
     this.props.dataAnaliseConcluida = new Date();
     this.props.dataAtualizacao = new Date();
