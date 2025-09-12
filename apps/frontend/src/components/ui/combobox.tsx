@@ -60,15 +60,18 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandEmpty>{emptyText}</CommandEmpty>
           <CommandList>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue)
-                    setOpen(false)
+                  value={option.label} // Usar o label para busca
+                  onSelect={(currentLabel) => {
+                    const selectedValue = options.find(opt => opt.label.toLowerCase() === currentLabel.toLowerCase())?.value || "";
+                    onChange(selectedValue === value ? "" : selectedValue);
+                    setOpen(false);
                   }}
                 >
                   <Check

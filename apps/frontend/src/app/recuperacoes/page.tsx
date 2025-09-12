@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
 import { RecuperacaoDto } from '@/types/recuperacao';
 import { getRecuperacoes, createRecuperacao, updateRecuperacao, deleteRecuperacao } from './recuperacao.api';

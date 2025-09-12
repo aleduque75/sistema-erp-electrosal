@@ -1,4 +1,4 @@
-import { XmlImportLog } from '@sistema-erp-electrosal/core';
+import { XmlImportLog, UniqueEntityID } from '@sistema-erp-electrosal/core';
 import { XmlImportLog as PrismaXmlImportLog } from '@prisma/client';
 
 export class XmlImportLogMapper {
@@ -9,7 +9,7 @@ export class XmlImportLogMapper {
         nfeKey: raw.nfeKey,
         createdAt: raw.createdAt,
       },
-      raw.id,
+      raw.id ? UniqueEntityID.create(raw.id) : undefined,
     );
   }
 

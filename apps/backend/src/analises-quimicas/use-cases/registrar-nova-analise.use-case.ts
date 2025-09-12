@@ -37,7 +37,7 @@ export class RegistrarNovaAnaliseUseCase {
       descricaoMaterial: dto.descricaoMaterial,
       volumeOuPesoEntrada: dto.volumeOuPesoEntrada,
       unidadeEntrada: dto.unidadeEntrada,
-      status: StatusAnaliseQuimica.RECEBIDO,
+      
       observacoes: dto.observacoes ?? null,
       resultadoAnaliseValor: null,
       unidadeResultado: null,

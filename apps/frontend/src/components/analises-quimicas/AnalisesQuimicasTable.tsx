@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Paperclip, FlaskConical, CheckCircle } from "lucide-react";
+import { MoreHorizontal, Paperclip, FlaskConical, CheckCircle, XCircle, ThumbsDown, RotateCw } from "lucide-react";
 import { LancarResultadoModal } from "./LancarResultadoModal";
 import { AnaliseQuimica } from "@/types/analise-quimica";
 import { format } from 'date-fns';
@@ -29,28 +29,35 @@ interface AnalisesQuimicasTableProps {
   onAnaliseUpdated: () => void;
 }
 
-type Status = AnaliseQuimica['status'];
+import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
+import { ChemicalAnalysisStatusBadge } from "@/components/ui/chemical-analysis-status-badge";
 
-const statusText: Record<Status, string> = {
-  PENDENTE: 'Pendente',
-  EM_ANALISE: 'Em Análise',
-  CONCLUIDA: 'Concluída',
-  APROVADA: 'Aprovada',
-};
-
-const StatusBadge = ({ status }: { status: Status }) => {
-  const statusVariant: Record<Status, "default" | "secondary" | "success" | "destructive"> = {
-    PENDENTE: "default",
-    EM_ANALISE: "secondary",
-    CONCLUIDA: "success",
-    APROVADA: "destructive", // Mantendo 'destructive' para Aprovada como exemplo
-  };
-
-  return (
-    <Badge variant={statusVariant[status] || "default"}>{statusText[status]}</Badge>
-  );
-};
-
+// Componente de Legenda
+const StatusLegend = () => (
+  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4 bg-gray-50 rounded-md border mb-4">
+    <p className="font-semibold text-sm">Legenda:</p>
+    <div className="flex items-center gap-2">
+      <ChemicalAnalysisStatusBadge status={StatusAnaliseQuimica.EM_ANALISE} />
+      <span className="text-xs text-muted-foreground">Em Análise</span>
+    </div>
+    <div className="flex items-center gap-2">
+      <ChemicalAnalysisStatusBadge status={StatusAnaliseQuimica.ANALISADO_AGUARDANDO_APROVACAO} />
+      <span className="text-xs text-muted-foreground">Aguard. Aprovação</span>
+    </div>
+    <div className="flex items-center gap-2">
+      <ChemicalAnalysisStatusBadge status={StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO} />
+      <span className="text-xs text-muted-foreground">Aprovado</span>
+    </div>
+    <div className="flex items-center gap-2">
+      <ChemicalAnalysisStatusBadge status={StatusAnaliseQuimica.RECUSADO_PELO_CLIENTE} />
+      <span className="text-xs text-muted-foreground">Recusado</span>
+    </div>
+    <div className="flex items-center gap-2">
+      <ChemicalAnalysisStatusBadge status={StatusAnaliseQuimica.FINALIZADO_RECUPERADO} />
+      <span className="text-xs text-muted-foreground">Finalizado</span>
+    </div>
+  </div>
+);
 
 export function AnalisesQuimicasTable({
   analises,
@@ -111,6 +118,7 @@ export function AnalisesQuimicasTable({
 
   return (
     <>
+      <StatusLegend />
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -127,11 +135,11 @@ export function AnalisesQuimicasTable({
             {analises.map((analise) => (
               <TableRow key={analise.id}>
                 <TableCell className="font-medium">{analise.numeroAnalise}</TableCell>
-                <TableCell>{analise.cliente?.nome || 'N/A'}</TableCell>
+                <TableCell>{analise.cliente?.name || 'N/A'}</TableCell>
                 <TableCell>{format(new Date(analise.dataEntrada), 'dd/MM/yyyy')}</TableCell>
                 <TableCell>{analise.descricaoMaterial}</TableCell>
                 <TableCell>
-                  <StatusBadge status={analise.status} />
+                  <ChemicalAnalysisStatusBadge status={analise.status} />
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
@@ -143,24 +151,48 @@ export function AnalisesQuimicasTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => {
-                        console.log("Analise original (Lançar Resultado):", analise);
-                        console.log("Analise ID (Lançar Resultado):", analise.id);
-                        const analiseWithId = { ...analise, id: analise.id || 'missing-id' }; // Ensure id is present
-                        console.log("Analise com ID garantido (Lançar Resultado):", analiseWithId);
-                        setAnaliseParaLancar(analiseWithId);
-                      }}>
-                        <FlaskConical className="mr-2 h-4 w-4" />
-                        Lançar Resultado
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Paperclip className="mr-2 h-4 w-4" />
-                        Ver PDF
-                      </DropdownMenuItem>
-                       <DropdownMenuItem>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Aprovar
-                      </DropdownMenuItem>
+                      {analise.status === StatusAnaliseQuimica.EM_ANALISE && (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => setAnaliseParaLancar(analise)}
+                          >
+                            <FlaskConical className="mr-2 h-4 w-4" />
+                            Lançar Resultado
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Cancelar
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {analise.status ===
+                        StatusAnaliseQuimica.ANALISADO_AGUARDANDO_APROVACAO && (
+                        <>
+                          <DropdownMenuItem>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Aprovar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <ThumbsDown className="mr-2 h-4 w-4" />
+                            Reprovar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <RotateCw className="mr-2 h-4 w-4" />
+                            Refazer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Paperclip className="mr-2 h-4 w-4" />
+                            Ver PDF
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {analise.status ===
+                        StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO && (
+                        <DropdownMenuItem>
+                          <Paperclip className="mr-2 h-4 w-4" />
+                          Ver PDF
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

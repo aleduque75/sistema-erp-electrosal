@@ -5,6 +5,7 @@ import {
   IAnaliseQuimicaRepository,
   AnaliseQuimicaProps,
   FiltrosAnaliseQuimica,
+  UniqueEntityID,
 } from '@sistema-erp-electrosal/core';
 import {
   AnaliseQuimica as PrismaAnalise,
@@ -16,10 +17,21 @@ import {
 export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository {
   constructor(private prisma: PrismaService) {}
 
-  private mapToDomain(dbData: PrismaAnalise | null): AnaliseQuimica | null {
+  private mapToDomain(
+    dbData: (PrismaAnalise & { cliente?: { name: string } | null }) | null,
+  ): AnaliseQuimica | null {
     if (!dbData) return null;
-    const { id, ...props } = dbData;
-    return AnaliseQuimica.reconstituir(props, id);
+    const { id, cliente, ...props } = dbData;
+    const domainAnalise = AnaliseQuimica.reconstituir(
+      props as any,
+      UniqueEntityID.create(id),
+    );
+
+    if (cliente) {
+      (domainAnalise as any).cliente = { name: cliente.name };
+    }
+
+    return domainAnalise;
   }
 
   public mapToPrismaPayload(
@@ -27,7 +39,7 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     organizationId: string,
   ): Prisma.AnaliseQuimicaUncheckedCreateInput {
     return {
-      id: analise.id,
+      id: analise.id.toString(),
       organizationId,
       clienteId: analise.clienteId,
       numeroAnalise: analise.numeroAnalise,
@@ -119,11 +131,25 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     }
     const dbAnalises = await this.prisma.analiseQuimica.findMany({
       where: whereClause,
+      include: {
+        cliente: {
+          select: {
+            name: true,
+          },
+        },
+      },
       orderBy: { dataCriacao: 'desc' },
     });
-    return dbAnalises
-      .map((db) => this.mapToDomain(db))
-      .filter((a): a is AnaliseQuimica => a !== null);
+
+    // Mapeamento manual para garantir que o nome do cliente seja anexado
+    return dbAnalises.map(dbAnalise => {
+      const { cliente, ...analiseProps } = dbAnalise;
+      const domainAnalise = AnaliseQuimica.reconstituir(analiseProps as any, UniqueEntityID.create(dbAnalise.id));
+      if (cliente) {
+        (domainAnalise as any).cliente = { name: cliente.name };
+      }
+      return domainAnalise;
+    }).filter((a): a is AnaliseQuimica => a !== null);
   }
 
   async create(analise: AnaliseQuimica, organizationId: string): Promise<AnaliseQuimica> {
@@ -135,9 +161,10 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
   async save(analise: AnaliseQuimica, organizationId: string): Promise<AnaliseQuimica> {
     const { id, clienteId, numeroAnalise, ...updatePayload } =
       this.mapToPrismaPayload(analise, organizationId);
+    console.log("Update Payload being sent to Prisma:", updatePayload);
     return this.mapToDomain(
       await this.prisma.analiseQuimica.update({
-        where: { id: analise.id },
+        where: { id: analise.id.toString() },
         data: updatePayload,
       }),
     )!;
