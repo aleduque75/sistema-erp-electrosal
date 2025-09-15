@@ -1,6 +1,6 @@
 # Ignorar dados do banco de dados
 db_data/
-
+ 
 # Ignorar dependências e builds
 node_modules/
 **/node_modules/
@@ -8,6 +8,7 @@ node_modules/
 **/.next/
 dist/
 **/dist/
+app-electrosal/
 
 # Ignorar arquivos de log e sistema
 npm-debug.log
