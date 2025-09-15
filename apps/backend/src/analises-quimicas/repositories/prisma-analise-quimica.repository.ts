@@ -23,13 +23,12 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     if (!dbData) return null;
     const { id, cliente, ...props } = dbData;
     const domainAnalise = AnaliseQuimica.reconstituir(
-      props as any,
+      {
+        ...props,
+        cliente: cliente || undefined,
+      } as any,
       UniqueEntityID.create(id),
     );
-
-    if (cliente) {
-      (domainAnalise as any).cliente = { name: cliente.name };
-    }
 
     return domainAnalise;
   }
@@ -73,6 +72,13 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
       where: {
         id,
         organizationId,
+      },
+      include: {
+        cliente: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
     return this.mapToDomain(dbAnalise);
@@ -144,10 +150,13 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     // Mapeamento manual para garantir que o nome do cliente seja anexado
     return dbAnalises.map(dbAnalise => {
       const { cliente, ...analiseProps } = dbAnalise;
-      const domainAnalise = AnaliseQuimica.reconstituir(analiseProps as any, UniqueEntityID.create(dbAnalise.id));
-      if (cliente) {
-        (domainAnalise as any).cliente = { name: cliente.name };
-      }
+      const domainAnalise = AnaliseQuimica.reconstituir(
+        {
+          ...analiseProps,
+          cliente: cliente || undefined,
+        } as any,
+        UniqueEntityID.create(dbAnalise.id),
+      );
       return domainAnalise;
     }).filter((a): a is AnaliseQuimica => a !== null);
   }

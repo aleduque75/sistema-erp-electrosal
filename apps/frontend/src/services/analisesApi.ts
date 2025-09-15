@@ -51,6 +51,14 @@ export const aprovarAnaliseQuimica = async (
   return response.data;
 };
 
+export const reprovarAnaliseQuimica = async (id: string): Promise<void> => {
+  await apiClient.patch(`/analises-quimicas/${id}/reprovar`);
+};
+
+export const refazerAnaliseQuimica = async (id: string): Promise<void> => {
+  await apiClient.patch(`/analises-quimicas/${id}/refazer`);
+};
+
 export const getAnaliseQuimicaPdf = async (id: string): Promise<Blob> => {
   const response = await apiClient.get(`/analises-quimicas/${id}/pdf`, {
     responseType: 'blob',

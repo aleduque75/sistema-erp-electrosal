@@ -6,10 +6,21 @@ export interface AnaliseQuimica {
   dataEntrada: string;
   descricaoMaterial: string;
   status: StatusAnaliseQuimica;
+  volumeOuPesoEntrada: number;
+  unidadeEntrada: string;
+  resultadoAnaliseValor?: number;
+  unidadeResultado?: string;
+  percentualQuebra?: number;
+  taxaServicoPercentual?: number;
+  teorRecuperavel?: number;
+  auEstimadoBrutoGramas?: number;
+  auEstimadoRecuperavelGramas?: number;
+  taxaServicoEmGramas?: number;
+  auLiquidoParaClienteGramas?: number;
+  observacoes?: string;
   cliente?: {
     name: string;
   };
-  // Adicione outros campos que possam ser úteis
-  resultado?: any; // Pode ser um objeto mais complexo
+  resultado?: any; // Manter por enquanto, mas idealmente refinar
   pdfUrl?: string;
 }

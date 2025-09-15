@@ -29,7 +29,7 @@ export class AnaliseQuimicaResponseDto {
 
   static fromDomain(analise: AnaliseQuimica): AnaliseQuimicaResponseDto {
     const dto: AnaliseQuimicaResponseDto = {
-      id: analise.id,
+      id: analise.id.toString(),
       clienteId: analise.clienteId,
       numeroAnalise: analise.numeroAnalise,
       dataEntrada: analise.dataEntrada,

@@ -17,20 +17,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, Paperclip, FlaskConical, CheckCircle, XCircle, ThumbsDown, RotateCw } from "lucide-react";
 import { LancarResultadoModal } from "./LancarResultadoModal";
+import { VisualizarAnaliseModal } from "./VisualizarAnaliseModal";
 import { AnaliseQuimica } from "@/types/analise-quimica";
 import { format } from 'date-fns';
-
-interface AnalisesQuimicasTableProps {
-  analises: AnaliseQuimica[];
-  isLoading: boolean;
-  onAnaliseUpdated: () => void;
-}
-
 import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
 import { ChemicalAnalysisStatusBadge } from "@/components/ui/chemical-analysis-status-badge";
+import api from "@/lib/api";
+import { toast } from "sonner";
+import { aprovarAnaliseQuimica, reprovarAnaliseQuimica, refazerAnaliseQuimica } from "@/services/analisesApi";
 
 // Componente de Legenda
 const StatusLegend = () => (
@@ -59,16 +55,90 @@ const StatusLegend = () => (
   </div>
 );
 
+interface AnalisesQuimicasTableProps {
+  analises: AnaliseQuimica[];
+  isLoading: boolean;
+  onAnaliseUpdated: () => void;
+}
+
 export function AnalisesQuimicasTable({
   analises,
   isLoading,
   onAnaliseUpdated,
 }: AnalisesQuimicasTableProps) {
   const [analiseParaLancar, setAnaliseParaLancar] = useState<AnaliseQuimica | null>(null);
+  const [analiseParaVisualizar, setAnaliseParaVisualizar] = useState<AnaliseQuimica | null>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<string | null>(null); // Armazena o ID da análise sendo baixada
 
   const handleLancarResultadoSuccess = () => {
     setAnaliseParaLancar(null);
     onAnaliseUpdated();
+  };
+
+  const handleDownloadPdf = async (analiseId: string) => {
+    const token = localStorage.getItem("accessToken");
+    console.log("Tentando baixar PDF. Token de acesso encontrado:", token ? 'Sim' : 'Não');
+
+    setIsDownloadingPdf(analiseId);
+    try {
+      const response = await api.get(`/analises-quimicas/${analiseId}/pdf`, {
+        responseType: 'blob', // Importante para obter a resposta como um blob binário
+      });
+
+      // Cria uma URL para o blob
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `analise_${analiseId}.pdf`);
+      
+      // Adiciona ao html, clica e remove
+      document.body.appendChild(link);
+      link.click();
+      
+      if(link.parentNode) {
+        link.parentNode.removeChild(link);
+      }
+
+      // Limpa a URL do blob
+      window.URL.revokeObjectURL(url);
+      toast.success("Download do PDF iniciado.");
+
+    } catch (error) {
+      console.error("Falha ao baixar o PDF:", error);
+      toast.error("Falha ao baixar o PDF. Tente novamente.");
+    } finally {
+      setIsDownloadingPdf(null);
+    }
+  };
+
+  const handleAprovarAnalise = async (analiseId: string) => {
+    try {
+      await aprovarAnaliseQuimica(analiseId);
+      toast.success("Análise aprovada com sucesso!");
+      onAnaliseUpdated();
+    } catch (error: any) {
+      toast.error("Erro ao aprovar análise", { description: error.message });
+    }
+  };
+
+  const handleReprovarAnalise = async (analiseId: string) => {
+    try {
+      await reprovarAnaliseQuimica(analiseId);
+      toast.success("Análise reprovada com sucesso!");
+      onAnaliseUpdated();
+    } catch (error: any) {
+      toast.error("Erro ao reprovar análise", { description: error.message });
+    }
+  };
+
+  const handleRefazerAnalise = async (analiseId: string) => {
+    try {
+      await refazerAnaliseQuimica(analiseId);
+      toast.success("Análise refeita com sucesso!");
+      onAnaliseUpdated();
+    } catch (error: any) {
+      toast.error("Erro ao refazer análise", { description: error.message });
+    }
   };
 
   if (isLoading) {
@@ -168,30 +238,49 @@ export function AnalisesQuimicasTable({
                       {analise.status ===
                         StatusAnaliseQuimica.ANALISADO_AGUARDANDO_APROVACAO && (
                         <>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleAprovarAnalise(analise.id)}
+                          >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Aprovar
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleReprovarAnalise(analise.id)}
+                          >
                             <ThumbsDown className="mr-2 h-4 w-4" />
                             Reprovar
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleRefazerAnalise(analise.id)}
+                          >
                             <RotateCw className="mr-2 h-4 w-4" />
                             Refazer
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setAnaliseParaVisualizar(analise)}
+                          >
                             <Paperclip className="mr-2 h-4 w-4" />
-                            Ver PDF
+                            Visualizar Análise
                           </DropdownMenuItem>
                         </>
                       )}
                       {analise.status ===
                         StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO && (
-                        <DropdownMenuItem>
-                          <Paperclip className="mr-2 h-4 w-4" />
-                          Ver PDF
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => handleDownloadPdf(analise.id)}
+                            disabled={isDownloadingPdf === analise.id}
+                          >
+                            <Paperclip className="mr-2 h-4 w-4" />
+                            {isDownloadingPdf === analise.id ? 'Baixando...' : 'Imprimir PDF'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setAnaliseParaVisualizar(analise)}
+                          >
+                            <Paperclip className="mr-2 h-4 w-4" />
+                            Visualizar Análise
+                          </DropdownMenuItem>
+                        </>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -206,6 +295,12 @@ export function AnalisesQuimicasTable({
         onOpenChange={(open) => !open && setAnaliseParaLancar(null)}
         analise={analiseParaLancar}
         onSuccess={handleLancarResultadoSuccess}
+      />
+
+      <VisualizarAnaliseModal
+        isOpen={!!analiseParaVisualizar}
+        onOpenChange={(open) => !open && setAnaliseParaVisualizar(null)}
+        analise={analiseParaVisualizar}
       />
     </>
   );

@@ -6,6 +6,7 @@ import { nanoid } from 'nanoid';
 export interface AnaliseQuimicaProps {
   id?: string;
   clienteId: string;
+  cliente?: { name: string };
   numeroAnalise: string;
   dataEntrada: Date;
   descricaoMaterial: string;
@@ -56,6 +57,7 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
   }
 
   get clienteId(): string { return this.props.clienteId; }
+  get cliente(): { name: string } | undefined { return this.props.cliente; }
   get numeroAnalise(): string { return this.props.numeroAnalise; }
   get dataEntrada(): Date { return this.props.dataEntrada; }
   get descricaoMaterial(): string { return this.props.descricaoMaterial; }
@@ -124,8 +126,26 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
       this.props.dataAtualizacao = new Date();
   }
 
+  public reprovar() {
+      this.props.status = StatusAnaliseQuimica.RECUSADO_PELO_CLIENTE;
+      this.props.dataAtualizacao = new Date();
+  }
+
+  public refazer() {
+      this.props.status = StatusAnaliseQuimica.EM_ANALISE;
+      this.props.dataAtualizacao = new Date();
+  }
+
   public update(dto: Partial<AnaliseQuimicaProps>) {
     Object.assign(this.props, dto);
     this.props.dataAtualizacao = new Date();
+  }
+
+  public toObject(): AnaliseQuimicaProps & { id: string } {
+    return {
+      id: this.id.toValue(), // Assuming id is a UniqueEntityID
+      ...this.props,
+      cliente: this.props.cliente,
+    };
   }
 }

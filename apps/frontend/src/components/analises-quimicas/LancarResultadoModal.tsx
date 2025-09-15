@@ -104,7 +104,7 @@ export function LancarResultadoModal({
   const onSubmit = async (data: LancarResultadoFormData) => {
     setIsSubmitting(true);
     try {
-      await lancarResultadoAnaliseApi(analise.id.value, data);
+      await lancarResultadoAnaliseApi(analise.id, data);
       toast.success("Resultado lançado com sucesso!");
       onSuccess();
       onOpenChange(false);

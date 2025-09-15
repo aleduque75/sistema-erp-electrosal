@@ -7,16 +7,18 @@
   - Environments: .env.local
 
  [37m[1m [22m[39m Creating an optimized production build ...
-[31mFailed to compile.
+ [32m[1m✓[22m[39m Compiled successfully
+[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[31mFailed to compile.
 [39m
-./src/components/recuperacoes/RecuperacaoForm.tsx
-[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/ui/separator[39m'
+[36m./src/app/(dashboard)/accounts-pay/components/account-pay-form.tsx[39m:[33m175[39m:[33m17[39m
+[31m[1mType error[22m[39m: Type '{ options: { value: string; label: string; }[]; value: string | undefined; onValueChange: (...event: any[]) => void; placeholder: string; }' is not assignable to type 'IntrinsicAttributes & ComboboxProps'.
+  Property 'onValueChange' does not exist on type 'IntrinsicAttributes & ComboboxProps'.
 
-https://nextjs.org/docs/messages/module-not-found
-
-Import trace for requested module:
-./src/app/recuperacoes/page.tsx
-
-
-> Build failed because of webpack errors
-[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m
+[0m [90m 173 |[39m                 }))}[0m
+[0m [90m 174 |[39m                 value[33m=[39m{field[33m.[39mvalue [33m?[39m[33m?[39m undefined}[0m
+[0m[31m[1m>[22m[39m[90m 175 |[39m                 onValueChange[33m=[39m{field[33m.[39monChange}[0m
+[0m [90m     |[39m                 [31m[1m^[22m[39m[0m
+[0m [90m 176 |[39m                 placeholder[33m=[39m[32m"Selecione uma categoria..."[39m[0m
+[0m [90m 177 |[39m               [33m/[39m[33m>[39m[0m
+[0m [90m 178 |[39m               [33m<[39m[33mFormMessage[39m [33m/[39m[33m>[39m[0m
+[?25h[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m
