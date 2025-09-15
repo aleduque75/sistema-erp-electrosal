@@ -18,8 +18,13 @@ import { AprovarRecuperacaoAnaliseUseCase } from './use-cases/aprovar-recuperaca
 import { GerarPdfAnaliseUseCase } from './use-cases/gerar-pdf-analise.use-case';
 import { AtualizarAnaliseUseCase } from './use-cases/atualizar-analise.use-case';
 
+import { MetalCreditsModule } from '../metal-credits/metal-credits.module';
+import { AprovarAnaliseUseCase } from './use-cases/aprovar-analise.use-case';
+import { ReprovarAnaliseUseCase } from './use-cases/reprovar-analise.use-case';
+import { RefazerAnaliseUseCase } from './use-cases/refazer-analise.use-case';
+
 @Module({
-	imports: [PrismaModule, PessoaModule],
+	imports: [PrismaModule, PessoaModule, MetalCreditsModule],
 	controllers: [AnalisesQuimicasController],
 	providers: [
 		// --- Adicionando TODOS os use cases aos providers ---
@@ -30,6 +35,9 @@ import { AtualizarAnaliseUseCase } from './use-cases/atualizar-analise.use-case'
 		AprovarRecuperacaoAnaliseUseCase,
 		GerarPdfAnaliseUseCase,
 		AtualizarAnaliseUseCase,
+		AprovarAnaliseUseCase,
+		ReprovarAnaliseUseCase,
+		RefazerAnaliseUseCase,
 		{
 			provide: 'IAnaliseQuimicaRepository',
 			useClass: PrismaAnaliseQuimicaRepository,

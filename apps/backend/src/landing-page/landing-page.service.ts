@@ -90,7 +90,11 @@ export class LandingPageService {
 
     // Hidratar caminhos de imagem para seções Hero, se solicitado
     if (hydrate && landingPage && landingPage.sections) {
-      for (const section of landingPage.sections) {
+      // Create a deep copy to avoid modifying the original Prisma object and prevent circular references
+      const hydratedLandingPage = JSON.parse(JSON.stringify(landingPage)) as LandingPageWithRelations;
+
+      /*
+      for (const section of hydratedLandingPage.sections) {
         if (section.type === 'hero' && section.content) {
           const heroContent = section.content as any; // Usar any para acessar propriedades dinamicamente
           if (heroContent.mainImage) {
@@ -108,6 +112,8 @@ export class LandingPageService {
           }
         }
       }
+      */
+      return hydratedLandingPage;
     }
 
     return landingPage as LandingPageWithRelations; // Cast para o tipo correto

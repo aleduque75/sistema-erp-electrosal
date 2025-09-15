@@ -39,6 +39,7 @@ model Organization {
   inventoryLots         InventoryLot[] // Relação com lotes de estoque
   analisesQuimicas      AnaliseQuimica[]
   recuperacoes          Recuperacao[]
+  metalCredits          MetalCredit[]
 }
 
 // --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
@@ -114,6 +115,7 @@ model Pessoa {
   fornecedor  Fornecedor?  // Relação com o papel de Fornecedor
   funcionario Funcionario? // Relação com o papel de Funcionário
   analisesQuimicasComoCliente AnaliseQuimica[] @relation("PessoaAnalisesQuimicas")
+  metalCredits MetalCredit[]
 
   @@map("pessoas")
 }
@@ -613,8 +615,28 @@ model AnaliseQuimica {
   dataAtualizacao DateTime @updatedAt
 
   recuperacoes          Recuperacao[]
+  metalCredit           MetalCredit?
+
   @@map("analises_quimicas")
 }
+
+model MetalCredit {
+  id                 String   @id @default(uuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id])
+  clientId           String
+  client             Pessoa   @relation(fields: [clientId], references: [id])
+  chemicalAnalysisId String   @unique
+  chemicalAnalysis   AnaliseQuimica @relation(fields: [chemicalAnalysisId], references: [id])
+  metal              String
+  grams              Float
+  date               DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("metal_credits")
+}
+
 enum PurchaseOrderStatus {
   PENDING
   RECEIVED

@@ -7,3 +7,4 @@ export * from './_shared';
 export * from './domain/sales';
 export * from './domain';
 export * from './value-objects';
+export * from './domain/metal-credits';

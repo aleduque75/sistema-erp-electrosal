@@ -27,6 +27,9 @@ import { AprovarRecuperacaoAnaliseUseCase } from './use-cases/aprovar-recuperaca
 import { FiltrosAnaliseQuimica } from 'domain/analises-quimicas/analise-quimica.repository.interface';
 import { BuscarAnaliseQuimicaPorIdUseCase } from './use-cases/buscar-analise-quimica-por-id.use-case';
 import { GerarPdfAnaliseUseCase } from './use-cases/gerar-pdf-analise.use-case';
+import { AprovarAnaliseUseCase } from './use-cases/aprovar-analise.use-case';
+import { ReprovarAnaliseUseCase } from './use-cases/reprovar-analise.use-case';
+import { RefazerAnaliseUseCase } from './use-cases/refazer-analise.use-case';
 
 
 @UseGuards(JwtAuthGuard)
@@ -39,6 +42,9 @@ export class AnalisesQuimicasController {
 			private readonly lancarResultadoAnaliseUseCase: LancarResultadoAnaliseUseCase,
 			private readonly aprovarRecuperacaoAnaliseUseCase: AprovarRecuperacaoAnaliseUseCase,
 			private readonly gerarPdfAnaliseUseCase: GerarPdfAnaliseUseCase,
+			private readonly aprovarAnaliseUseCase: AprovarAnaliseUseCase,
+			private readonly reprovarAnaliseUseCase: ReprovarAnaliseUseCase,
+			private readonly refazerAnaliseUseCase: RefazerAnaliseUseCase,
 		) {}
 
 		@Post()
@@ -72,9 +78,12 @@ export class AnalisesQuimicasController {
 	async gerarPdf(
 		@Param('id', new ParseUUIDPipe()) id: string,
 		@Res() res: Response,
+		@Req() req,
 	) {
+		const organizationId = req.user?.orgId;
 		const pdfBuffer = await this.gerarPdfAnaliseUseCase.execute({
 			analiseId: id,
+			organizationId,
 		});
 		res.set({
 			'Content-Type': 'application/pdf',
@@ -96,12 +105,33 @@ export class AnalisesQuimicasController {
 			return AnaliseQuimicaResponseDto.fromDomain(analise);
 		}
 
-		@Patch(':id/aprovar')
-		async aprovarRecuperacao(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
+		@Patch(':id/aprovar-recuperacao')
+		async aprovarRecuperacaoAnalise(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
 			const organizationId = req.user?.orgId;
 			const command = { id, organizationId };
 			const analise =
 				await this.aprovarRecuperacaoAnaliseUseCase.execute(command);
 			return AnaliseQuimicaResponseDto.fromDomain(analise);
+		}
+
+		@Patch(':id/aprovar')
+		async aprovarAnalise(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
+			const organizationId = req.user?.orgId;
+			const command = { analiseId: id, organizationId };
+			await this.aprovarAnaliseUseCase.execute(command);
+		}
+
+		@Patch(':id/reprovar')
+		async reprovarAnalise(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
+			const organizationId = req.user?.orgId;
+			const command = { analiseId: id, organizationId };
+			await this.reprovarAnaliseUseCase.execute(command);
+		}
+
+		@Patch(':id/refazer')
+		async refazerAnalise(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
+			const organizationId = req.user?.orgId;
+			const command = { analiseId: id, organizationId };
+			await this.refazerAnaliseUseCase.execute(command);
 		}
 }

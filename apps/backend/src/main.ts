@@ -63,7 +63,7 @@ async function bootstrap() {
 
   app.enableShutdownHooks(); // Adicionado para lidar com o desligamento de forma elegante
 
-  const port = process.env.PORT || 3001;
+  const port = process.env.PORT || 3002;
   await app.listen(port, '0.0.0.0');
 
   console.log(

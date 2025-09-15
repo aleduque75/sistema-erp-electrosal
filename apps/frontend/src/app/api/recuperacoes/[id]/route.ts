@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_BASE = process.env.BACKEND_URL || 'http://localhost:3001';
+const API_BASE = process.env.BACKEND_URL || 'http://localhost:3002';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const res = await fetch(`${API_BASE}/recuperacoes/${params.id}`);

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Laudo de Análise Química - {{numeroAnalise}}</title>
+    <style>
+      /* Adicionando uma fonte do Google para um visual mais limpo */
+      @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        margin: 0;
+        /* Margens controladas pelo Puppeteer, o padding aqui é um bônus */
+        font-size: 10pt;
+        color: #333;
+        background-color: #fff; /* Garante fundo branco */
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+      }
+      .logo img {
+        max-height: 60px;
+        max-width: 200px;
+      }
+      .empresa-info {
+        text-align: right;
+        font-size: 8pt;
+        line-height: 1.4;
+      }
+      .empresa-info h1 {
+        margin: 0 0 5px 0;
+        font-size: 16pt;
+        color: #000;
+      }
+      .titulo-relatorio {
+        text-align: center;
+        font-size: 16pt;
+        font-weight: bold;
+        margin-bottom: 25px;
+        text-transform: uppercase;
+      }
+      .content-section {
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        page-break-inside: avoid; /* Tenta evitar que a seção quebre entre páginas */
+        overflow: hidden; /* Garante que o background-color fique dentro das bordas arredondadas */
+      }
+      .section-title {
+        font-size: 12pt;
+        font-weight: bold;
+        background-color: #f2f2f2;
+        padding: 8px 12px;
+        border-bottom: 1px solid #ddd;
+      }
+      .section-content {
+        padding: 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Duas colunas */
+        gap: 10px 20px; /* Espaçamento vertical e horizontal */
+      }
+      .item {
+        display: flex;
+        flex-direction: column;
+      }
+      .item .label {
+        font-size: 8pt;
+        color: #666;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+      }
+      .item .value {
+        font-size: 11pt;
+        font-weight: bold;
+      }
+      .item-full-width {
+        grid-column: span 2;
+      }
+      .observacoes {
+        padding: 12px;
+        font-style: italic;
+        font-size: 9pt;
+        color: #555;
+        background-color: #fafafa;
+      }
+      .signatures {
+        margin-top: 60px;
+        display: flex;
+        justify-content: space-around;
+        text-align: center;
+        font-size: 10pt;
+      }
+      .signature-box {
+        border-top: 1px solid #000;
+        padding-top: 5px;
+        width: 250px;
+      }
+      .footer {
+        text-align: center;
+        font-size: 8pt;
+        color: #777;
+        position: fixed; /* Tenta fixar no rodapé da página impressa */
+        bottom: 10mm;
+        left: 15mm;
+        right: 15mm;
+      }
+      /* Para garantir que o Puppeteer imprima cores e fundos */
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="logo">
+        <img src="%%LOGO_PLACEHOLDER%%" alt="Logotipo" />
+      </div>
+      <!-- <div class="empresa-info">
+        <h1>Nome da Sua Empresa</h1>
+        <p>Seu Endereço Completo, Cidade - UF, CEP</p>
+        <p>Telefone: (XX) XXXX-XXXX | Email: contato@suaempresa.com</p>
+        <p>CNPJ: XX.XXX.XXX/XXXX-XX</p>
+      </div> -->
+    </header>
+
+    <main>
+      <div class="titulo-relatorio">
+        LAUDO DE ANÁLISE QUÍMICA Nº: {{numeroAnalise}}
+      </div>
+
+      <section class="content-section">
+        <div class="section-title">DADOS DO CLIENTE E AMOSTRA</div>
+        <div class="section-content">
+          <div class="item">
+            <span class="label">Cliente</span
+            ><span class="value">{{cliente.name}}</span>
+          </div>
+          <div class="item">
+            <span class="label">Data de Entrada</span
+            ><span class="value">{{formatarData dataEntrada}}</span>
+          </div>
+          <div class="item item-full-width">
+            <span class="label">Material Recebido</span
+            ><span class="value">{{descricaoMaterial}}</span>
+          </div>
+          <div class="item">
+            <span class="label">Volume/Peso Recebido</span
+            ><span class="value"
+              >{{volumeOuPesoEntrada}} {{unidadeEntrada}}</span
+            >
+          </div>
+          <div class="item">
+            <span class="label">Status</span
+            ><span class="value">{{statusAnalise}}</span>
+          </div>
+        </div>
+      </section>
+
+      {{#if dataAnaliseConcluida}}
+      <section class="content-section">
+        <div class="section-title">RESULTADOS DA ANÁLISE PARA O CLIENTE</div>
+        <div class="section-content">
+          <div class="item item-full-width">
+            <span class="label">Data da Análise</span
+            ><span class="value">{{formatarData dataAnaliseConcluida}}</span>
+          </div>
+
+          <div class="item item-full-width">
+            <span class="label"
+              >Teor Analisado </span
+            >
+            <span class="value" style="font-size: 12pt"
+              >Teor Analisado: {{formatarNumero teorRecuperavel 3}} {{unidadeResultado}}</span
+            >
+          </div>
+
+          <div
+            class="item item-full-width"
+            style="
+              margin-top: 10px;
+              border-top: 1px dashed #ccc;
+              padding-top: 10px;
+            "
+          >
+            <span class="label"
+              >Total de Au Recuperável Estimado (Base de Cálculo)</span
+            >
+            <span class="value"
+              >{{formatarNumero auEstimadoRecuperavelGramas 3}} g</span
+            >
+          </div>
+
+          <div class="item">
+            <span class="label"
+              >Taxa de Serviço ({{formatarPercentual
+              taxaServicoPercentual}})</span
+            >
+            <span class="value" style="color: #c00"
+              >- {{formatarNumero taxaServicoEmGramas 3}} g</span
+            >
+          </div>
+
+          <div class="item item-full-width" style="margin-top: 15px; padding: 10px; background-color: #e6ffe6; border-radius: 5px;">
+            <span class="label">Au Líquido para o Cliente</span>
+            <span class="value" style="color: #008000; font-size: 18pt"
+              >{{formatarNumero auLiquidoParaClienteGramas 3}} g</span
+            >
+          </div>
+        </div>
+      </section>
+      {{/if}}
+    </main>
+
+    <footer class="footer">
+      Documento gerado em {{formatarData dataEmissaoPdf}}.
+    </footer>
+  </body>
+</html>

@@ -116,4 +116,11 @@ export class Pessoa extends Entity<PessoaProps> {
     Object.assign(this.props, otherProps);
     this.props.updatedAt = new Date();
   }
+
+  public toObject(): PessoaProps & { id: string } {
+    return {
+      id: this.id.toValue(),
+      ...this.props,
+    };
+  }
 }
