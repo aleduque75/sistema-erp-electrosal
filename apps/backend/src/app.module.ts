@@ -40,6 +40,7 @@ import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { AnalisesQuimicasModule } from './analises-quimicas';
 import { RecuperacoesModule } from './recuperacoes';
 import { RecoveryOrdersModule } from './recovery-orders/recovery-orders.module';
+import { ContasMetaisModule } from './contas-metais/contas-metais.module';
 
 
 @Module({
@@ -70,6 +71,7 @@ import { RecoveryOrdersModule } from './recovery-orders/recovery-orders.module';
   AnalisesQuimicasModule,
   RecuperacoesModule,
   RecoveryOrdersModule,
+  ContasMetaisModule,
   ],
   controllers: [AppController],
   providers: [

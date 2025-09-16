@@ -11,6 +11,13 @@ import {
   RecoveryOrderStatus,
   AnaliseQuimica,
 } from '@sistema-erp-electrosal/core';
+import {
+  IContaMetalRepository,
+  TipoMetal,
+  ContaMetal,
+} from '@sistema-erp-electrosal/core';
+import { UpdateContaMetalBalanceUseCase } from '../../contas-metais/use-cases/update-conta-metal-balance.use-case'; // Adicionado
+import { FindContaMetalByNameAndMetalTypeUseCase } from '../../contas-metais/use-cases/find-conta-metal-by-name-and-metal-type.use-case'; // Adicionado
 
 export interface FinalizeRecoveryOrderCommand {
   recoveryOrderId: string;
@@ -19,19 +26,23 @@ export interface FinalizeRecoveryOrderCommand {
 }
 
 @Injectable()
-export class ProcessRecoveryFinalizationUseCase { // Filename is kept, but logic is for finalization
+export class ProcessRecoveryFinalizationUseCase {
   constructor(
     @Inject('IRecoveryOrderRepository')
     private readonly recoveryOrderRepository: IRecoveryOrderRepository,
     @Inject('IAnaliseQuimicaRepository')
     private readonly analiseRepository: IAnaliseQuimicaRepository,
+    @Inject('IContaMetalRepository') // Adicionado
+    private readonly contaMetalRepository: IContaMetalRepository, // Adicionado
+    private readonly updateContaMetalBalanceUseCase: UpdateContaMetalBalanceUseCase, // Adicionado
+    private readonly findContaMetalByNameAndMetalTypeUseCase: FindContaMetalByNameAndMetalTypeUseCase, // Adicionado
   ) {}
 
   async execute(command: FinalizeRecoveryOrderCommand): Promise<void> {
     const { recoveryOrderId, organizationId, teorFinal } = command;
 
     if (teorFinal <= 0 || teorFinal > 1) {
-        throw new BadRequestException('O teor final deve ser um valor entre 0 e 1.');
+      throw new BadRequestException('O teor final deve ser um valor entre 0 e 1.');
     }
 
     const recoveryOrder = await this.recoveryOrderRepository.findById(
@@ -52,9 +63,9 @@ export class ProcessRecoveryFinalizationUseCase { // Filename is kept, but logic
     }
 
     if (!recoveryOrder.resultadoProcessamentoGramas) {
-        throw new ConflictException(
-            'Não é possível finalizar a ordem de recuperação sem o resultado do processamento.',
-        );
+      throw new ConflictException(
+        'Não é possível finalizar a ordem de recuperação sem o resultado do processamento.',
+      );
     }
 
     // --- Calculations ---
@@ -86,9 +97,36 @@ export class ProcessRecoveryFinalizationUseCase { // Filename is kept, but logic
         observacoes: 'Análise de resíduo gerada automaticamente.',
         ordemDeRecuperacaoId: null,
       });
-      
+
       const createdResidue = await this.analiseRepository.create(residueAnalysis, organizationId);
       residueAnalysisId = createdResidue.id.toString();
+    }
+
+    // --- Credit auPuroRecuperadoGramas to Metal Account ---
+    if (auPuroRecuperadoGramas > 0) {
+      let estoqueMetalAccount = await this.findContaMetalByNameAndMetalTypeUseCase.execute({
+        name: 'Estoque de Metal para Reação', // Nome da conta de estoque
+        metalType: TipoMetal.AU, // Tipo de metal
+        organizationId,
+      }).catch(() => null); // Captura NotFoundException se a conta não existir
+
+      if (!estoqueMetalAccount) {
+        // Se a conta não existe, cria uma
+        estoqueMetalAccount = await this.contaMetalRepository.create(
+          ContaMetal.create({
+            organizationId,
+            name: 'Estoque de Metal para Reação',
+            metalType: TipoMetal.AU,
+          }),
+        );
+      }
+
+      await this.updateContaMetalBalanceUseCase.execute({
+        id: estoqueMetalAccount.id.toString(),
+        organizationId,
+        amount: auPuroRecuperadoGramas,
+        type: 'credit',
+      });
     }
 
     // --- Update Recovery Order ---
