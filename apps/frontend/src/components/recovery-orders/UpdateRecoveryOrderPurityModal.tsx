@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,7 +20,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,54 +27,58 @@ import { toast } from "sonner";
 import { RecoveryOrder } from "@/types/recovery-order";
 import { updateRecoveryOrderPurity } from "@/services/recoveryOrdersApi";
 
-const updatePuritySchema = z.object({
-  resultadoFinal: z.coerce.number().positive("O resultado final deve ser um número positivo."),
-  unidadeResultado: z.string().min(1, "Unidade é obrigatória.").max(20),
-  volumeProcessado: z.coerce.number().positive("O volume processado deve ser um número positivo."),
-  unidadeProcessada: z.string().min(1, "Unidade é obrigatória.").max(20),
+const enterResultSchema = z.object({
+  resultadoProcessamentoGramas: z.coerce.number().positive("O resultado deve ser um número positivo."),
   observacoes: z.string().max(1000).optional(),
 });
 
-type UpdatePurityFormData = z.infer<typeof updatePuritySchema>;
+type EnterResultFormData = z.infer<typeof enterResultSchema>;
 
-interface UpdateRecoveryOrderPurityModalProps {
+interface EnterResultModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   recoveryOrder: RecoveryOrder | null;
   onSuccess: () => void;
 }
 
-export function UpdateRecoveryOrderPurityModal({
+export function UpdateRecoveryOrderPurityModal({ // Filename is kept, but this is now the "Enter Result" modal
   isOpen,
   onOpenChange,
   recoveryOrder,
   onSuccess,
-}: UpdateRecoveryOrderPurityModalProps) {
+}: EnterResultModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<UpdatePurityFormData>({
-    resolver: zodResolver(updatePuritySchema),
+  const form = useForm<EnterResultFormData>({
+    resolver: zodResolver(enterResultSchema),
     defaultValues: {
-      resultadoFinal: recoveryOrder?.resultadoFinal || undefined,
-      unidadeResultado: recoveryOrder?.unidadeResultado || "g",
-      volumeProcessado: recoveryOrder?.volumeProcessado || undefined,
-      unidadeProcessada: recoveryOrder?.unidadeProcessada || "g",
-      observacoes: recoveryOrder?.observacoes || "",
+      resultadoProcessamentoGramas: undefined,
+      observacoes: "",
     },
   });
 
+  useEffect(() => {
+    if (recoveryOrder) {
+      form.reset({
+        resultadoProcessamentoGramas: recoveryOrder.resultadoProcessamentoGramas || undefined,
+        observacoes: recoveryOrder.observacoes || "",
+      });
+    }
+  }, [recoveryOrder, form]);
+
+
   if (!recoveryOrder) return null;
 
-  const onSubmit = async (data: UpdatePurityFormData) => {
+  const onSubmit = async (data: EnterResultFormData) => {
     setIsSubmitting(true);
     try {
       await updateRecoveryOrderPurity(recoveryOrder.id, data);
-      toast.success("Resultado final da recuperação lançado com sucesso!");
+      toast.success("Resultado do processamento lançado com sucesso!");
       onSuccess();
       onOpenChange(false);
       form.reset();
     } catch (err: any) {
-      toast.error("Erro ao lançar resultado final da recuperação", { description: err.message });
+      toast.error("Erro ao lançar resultado", { description: err.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -85,66 +88,32 @@ export function UpdateRecoveryOrderPurityModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Lançar Resultado Final da Recuperação</DialogTitle>
+          <DialogTitle>Lançar Resultado do Processamento</DialogTitle>
           <DialogDescription>
-            Informe o resultado final do processo de recuperação para a ordem ID:{" "}
+            Informe o peso bruto recuperado (antes de aplicar o teor) para a ordem ID:{" "}
             <strong>{recoveryOrder.id}</strong>.
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Total Bruto Estimado que entrou na ordem: {recoveryOrder.totalBrutoEstimadoGramas}g
+            </span>
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
             <FormField
               control={form.control}
-              name="resultadoFinal"
+              name="resultadoProcessamentoGramas"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Resultado Final (g)</FormLabel>
+                  <FormLabel>Resultado do Processamento (g)</FormLabel>
                   <FormControl>
-                    <Input type="number" step="any" {...field} />
+                    <Input type="number" step="any" placeholder="Ex: 56.5" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="unidadeResultado"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Unidade</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="volumeProcessado"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Volume Processado</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="any" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="unidadeProcessada"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Unidade Processada</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            
             <FormField
               control={form.control}
               name="observacoes"

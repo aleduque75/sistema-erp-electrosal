@@ -547,6 +547,7 @@ enum StatusAnaliseQuimicaPrisma {
   EM_RECUPERACAO
   FINALIZADO_RECUPERADO
   CANCELADO
+  RESIDUO
 }
 
 // --- ENUM E MODELO DE RECUPERAÇÃO ---
@@ -617,6 +618,7 @@ model AnaliseQuimica {
 
   recuperacoes          Recuperacao[]
   metalCredit           MetalCredit?
+  recoveryOrderAsResidue RecoveryOrder? @relation("ResidueOfRecovery")
 
   @@map("analises_quimicas")
 }
@@ -681,26 +683,42 @@ model PurchaseOrderItem {
 enum RecoveryOrderStatusPrisma {
   PENDENTE
   EM_ANDAMENTO
+  AGUARDANDO_RESULTADO // Aguardando o peso bruto recuperado (ex: 56g)
+  AGUARDANDO_TEOR      // Aguardando o teor de pureza (ex: 0.995)
   FINALIZADA
   CANCELADA
 }
 
 model RecoveryOrder {
-  id                 String   @id @default(uuid())
-  organizationId     String
-  organization       Organization @relation(fields: [organizationId], references: [id])
-  chemicalAnalysisIds String[]
-  status             RecoveryOrderStatusPrisma @default(PENDENTE)
-  dataInicio         DateTime @default(now())
-  dataFim            DateTime?
-  descricaoProcesso  String?
-  volumeProcessado   Float?
-  unidadeProcessada  String?
-  resultadoFinal     Float?
-  unidadeResultado   String?
-  observacoes        String?
-  dataCriacao        DateTime @default(now())
-  dataAtualizacao    DateTime @updatedAt
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  // --- INPUT ---
+  chemicalAnalysisIds      String[] // IDs das análises que originaram a ordem
+  totalBrutoEstimadoGramas Float    // Soma dos 'auEstimadoBrutoGramas' das análises de origem (Ex: 85g)
+
+  // --- PROCESSAMENTO ---
+  resultadoProcessamentoGramas Float? // Resultado do processamento (peso antes de aplicar o teor). Ex: 56g
+  teorFinal                    Float? // Teor de pureza informado. Ex: 0.995
+
+  // --- OUTPUT (Calculado) ---
+  auPuroRecuperadoGramas Float? // Calculado: resultadoProcessamentoGramas * teorFinal. Ex: 55.72g
+  residuoGramas          Float? // Calculado: totalBrutoEstimadoGramas - auPuroRecuperadoGramas. Ex: 29.28g
+
+  // --- VÍNCULO COM RESÍDUO ---
+  // Relação com a nova análise de resíduo gerada ao finalizar a ordem
+  residueAnalysisId String?         @unique
+  residueAnalysis   AnaliseQuimica? @relation("ResidueOfRecovery", fields: [residueAnalysisId], references: [id])
+
+  // --- CONTROLE ---
+  status          RecoveryOrderStatusPrisma @default(PENDENTE)
+  descricao       String?
+  observacoes     String?
+  dataInicio      DateTime                  @default(now())
+  dataFim         DateTime?
+  dataCriacao     DateTime                  @default(now())
+  dataAtualizacao DateTime                  @updatedAt
 
   @@map("recovery_orders")
 }

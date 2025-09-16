@@ -144,7 +144,7 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
         clienteId: 'SYSTEM_RESIDUE', // A specific client ID for residue
         numeroAnalise: `RESIDUO-${nanoid(8)}`, // Generate a unique number for residue analysis
         dataEntrada: now,
-        status: StatusAnaliseQuimica.RESIDUO, // A new status for residue
+        status: StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO, // A new status for residue
         dataCriacao: now,
         dataAtualizacao: now,
       },

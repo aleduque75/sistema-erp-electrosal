@@ -271,22 +271,43 @@ async function main() {
 
   // --- SEÇÃO DE LIMPEZA COMPLETA ---
   console.log('Limpando dados antigos...');
+  // Nível mais alto de dependência
   await prisma.creditCardTransaction.deleteMany();
-  await prisma.creditCardBill.deleteMany();
-  await prisma.transacao.deleteMany();
   await prisma.saleInstallment.deleteMany();
   await prisma.saleItem.deleteMany();
-  await prisma.accountRec.deleteMany();
-  await prisma.accountPay.deleteMany();
-  await prisma.sale.deleteMany();
-  await prisma.pessoa.deleteMany();
-  await prisma.product.deleteMany();
+  await prisma.purchaseOrderItem.deleteMany();
   await prisma.stockMovement.deleteMany();
-  await prisma.xmlImportLog.deleteMany();
+
+  // Nível intermediário (dependem de Pessoas, Produtos, etc.)
+  await prisma.creditCardBill.deleteMany();
+  await prisma.accountPay.deleteMany();
+  await prisma.accountRec.deleteMany();
+  await prisma.transacao.deleteMany();
+  await prisma.inventoryLot.deleteMany();
+  await prisma.recuperacao.deleteMany();
+  await prisma.recoveryOrder.deleteMany(); // Depende de AnaliseQuimica
+  await prisma.metalCredit.deleteMany(); // Depende de AnaliseQuimica e Pessoa
+  await prisma.analiseQuimica.deleteMany(); // Depende de Pessoa
+  await prisma.sale.deleteMany();
+  await prisma.purchaseOrder.deleteMany();
+
+  // Nível base (entidades principais)
   await prisma.creditCard.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.client.deleteMany();
+  await prisma.fornecedor.deleteMany();
+  await prisma.funcionario.deleteMany();
+  await prisma.pessoa.deleteMany();
   await prisma.contaContabil.deleteMany();
   await prisma.contaCorrente.deleteMany();
+  await prisma.paymentTerm.deleteMany();
   await prisma.creditCardFee.deleteMany();
+  await prisma.xmlImportLog.deleteMany();
+
+  // Configurações e Usuários
+  await prisma.section.deleteMany();
+  await prisma.landingPage.deleteMany();
+  await prisma.media.deleteMany();
   await prisma.userSettings.deleteMany();
   await prisma.user.deleteMany();
   await prisma.organization.deleteMany();
@@ -296,6 +317,19 @@ async function main() {
   const organization = await prisma.organization.create({
     data: {
       name: 'Minha Empresa Principal',
+    },
+  });
+
+  console.log('Criando cliente de sistema para resíduos...');
+  await prisma.pessoa.upsert({
+    where: { id: 'SYSTEM_RESIDUE' },
+    update: {},
+    create: {
+      id: 'SYSTEM_RESIDUE',
+      organizationId: organization.id,
+      name: 'Resíduos do Sistema',
+      type: 'JURIDICA',
+      razaoSocial: 'Resíduos Internos do Sistema',
     },
   });
 

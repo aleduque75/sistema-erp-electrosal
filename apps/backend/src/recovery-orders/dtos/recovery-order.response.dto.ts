@@ -7,14 +7,24 @@ export class RecoveryOrderResponseDto {
   status: RecoveryOrderStatus;
   dataInicio: Date;
   dataFim?: Date;
-  descricaoProcesso?: string;
-  volumeProcessado?: number;
-  unidadeProcessada?: string;
-  resultadoFinal?: number;
-  unidadeResultado?: string;
+  descricao?: string; // Renomeado de descricaoProcesso
   observacoes?: string;
   dataCriacao: Date;
   dataAtualizacao: Date;
+
+  // --- INPUT ---
+  totalBrutoEstimadoGramas: number;
+
+  // --- PROCESSAMENTO ---
+  resultadoProcessamentoGramas?: number;
+  teorFinal?: number;
+
+  // --- OUTPUT (Calculado) ---
+  auPuroRecuperadoGramas?: number;
+  residuoGramas?: number;
+
+  // --- VÍNCULO COM RESÍDUO ---
+  residueAnalysisId?: string;
 
   static fromDomain(recoveryOrder: RecoveryOrder): RecoveryOrderResponseDto {
     const dto = new RecoveryOrderResponseDto();
@@ -24,14 +34,16 @@ export class RecoveryOrderResponseDto {
     dto.status = recoveryOrder.status;
     dto.dataInicio = recoveryOrder.dataInicio;
     dto.dataFim = recoveryOrder.dataFim;
-    dto.descricaoProcesso = recoveryOrder.descricaoProcesso;
-    dto.volumeProcessado = recoveryOrder.volumeProcessado;
-    dto.unidadeProcessada = recoveryOrder.unidadeProcessada;
-    dto.resultadoFinal = recoveryOrder.resultadoFinal;
-    dto.unidadeResultado = recoveryOrder.unidadeResultado;
+    dto.descricao = recoveryOrder.descricao; // Mapeado
     dto.observacoes = recoveryOrder.observacoes;
     dto.dataCriacao = recoveryOrder.dataCriacao;
     dto.dataAtualizacao = recoveryOrder.dataAtualizacao;
+    dto.totalBrutoEstimadoGramas = recoveryOrder.totalBrutoEstimadoGramas; // Mapeado
+    dto.resultadoProcessamentoGramas = recoveryOrder.resultadoProcessamentoGramas; // Mapeado
+    dto.teorFinal = recoveryOrder.teorFinal; // Mapeado
+    dto.auPuroRecuperadoGramas = recoveryOrder.auPuroRecuperadoGramas; // Mapeado
+    dto.residuoGramas = recoveryOrder.residuoGramas; // Mapeado
+    dto.residueAnalysisId = recoveryOrder.residueAnalysisId; // Mapeado
     return dto;
   }
 }
