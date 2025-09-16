@@ -1,4 +1,3 @@
-
 import { PrismaPessoaRepository } from '../pessoa/repositories/prisma-pessoa.repository';
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -51,10 +50,6 @@ import { RefazerAnaliseUseCase } from './use-cases/refazer-analise.use-case';
 			useClass: PrismaPessoaRepository,
 		},
 	],
-	exports: [
-		'IAnaliseQuimicaRepository',
-		'IContaMetalRepository',
-		'IPessoaRepository',
-	],
+	exports: ['IAnaliseQuimicaRepository'],
 })
 export class AnalisesQuimicasModule {}

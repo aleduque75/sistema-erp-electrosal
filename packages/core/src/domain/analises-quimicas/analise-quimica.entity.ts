@@ -136,6 +136,23 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
       this.props.dataAtualizacao = new Date();
   }
 
+  public static criarResiduo(props: Omit<AnaliseQuimicaProps, 'id' | 'dataCriacao' | 'dataAtualizacao' | 'status' | 'numeroAnalise' | 'clienteId'> & { organizationId: string }): AnaliseQuimica {
+    const now = new Date();
+    const analise = new AnaliseQuimica(
+      {
+        ...props,
+        clienteId: 'SYSTEM_RESIDUE', // A specific client ID for residue
+        numeroAnalise: `RESIDUO-${nanoid(8)}`, // Generate a unique number for residue analysis
+        dataEntrada: now,
+        status: StatusAnaliseQuimica.RESIDUO, // A new status for residue
+        dataCriacao: now,
+        dataAtualizacao: now,
+      },
+      UniqueEntityID.create(),
+    );
+    return analise;
+  }
+
   public update(dto: Partial<AnaliseQuimicaProps>) {
     Object.assign(this.props, dto);
     this.props.dataAtualizacao = new Date();
