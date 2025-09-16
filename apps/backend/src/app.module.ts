@@ -39,6 +39,7 @@ import { JsonImportsModule } from './json-imports/json-imports.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { AnalisesQuimicasModule } from './analises-quimicas';
 import { RecuperacoesModule } from './recuperacoes';
+import { RecoveryOrdersModule } from './recovery-orders/recovery-orders.module';
 
 
 @Module({
@@ -65,9 +66,10 @@ import { RecuperacoesModule } from './recuperacoes';
     TransacoesModule,
     PrismaModule,
     AccountsRecModule, // <-- Registre o módulo aqui
-    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, PdfImportModule, JsonImportsModule, PurchaseOrdersModule, // <-- Registre o módulo aqui
+    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, PdfImportModule, JsonImportsModule, PurchaseOrdersModule,
   AnalisesQuimicasModule,
   RecuperacoesModule,
+  RecoveryOrdersModule,
   ],
   controllers: [AppController],
   providers: [

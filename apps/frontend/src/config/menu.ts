@@ -93,6 +93,12 @@ export const menuConfig: NavItem[] = [
         description: "Controle e lance resultados de análises químicas.",
       },
       {
+        title: "Recuperações",
+        href: "/recovery-orders",
+        icon: FlaskConical, // Reusing FlaskConical for now, or find a more appropriate icon
+        description: "Gerencie as ordens de recuperação de metais.",
+      },
+      {
         title: "Lançar Compra no Cartão",
         href: "/credit-card-transactions",
         icon: ArrowRightLeft,

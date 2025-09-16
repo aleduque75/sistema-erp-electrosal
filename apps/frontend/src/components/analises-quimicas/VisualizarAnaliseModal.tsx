@@ -86,7 +86,15 @@ export function VisualizarAnaliseModal({
 
     } catch (error) {
       console.error("Falha ao baixar o PDF:", error);
-      if (error.response && error.response.status === 401) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as any).response === "object" &&
+        (error as any).response !== null &&
+        "status" in (error as any).response &&
+        (error as any).response.status === 401
+      ) {
         toast.error("Sua sessão expirou ou você não está autorizado. Por favor, faça login novamente.");
       } else {
         toast.error("Falha ao baixar o PDF. Tente novamente.");

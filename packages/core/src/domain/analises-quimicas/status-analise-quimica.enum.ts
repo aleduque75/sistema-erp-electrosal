@@ -7,4 +7,5 @@ export enum StatusAnaliseQuimica {
   EM_RECUPERACAO = 'EM_RECUPERACAO', // Já está associada a uma OrdemDeRecuperacao em andamento
   FINALIZADO_RECUPERADO = 'FINALIZADO_RECUPERADO', // O Au desta análise foi recuperado e o processo referente a ela concluído
   CANCELADO = 'CANCELADO', // Análise cancelada por algum motivo
+  RESIDUO = 'RESIDUO', // Análise gerada a partir de um resíduo de recuperação
 }
