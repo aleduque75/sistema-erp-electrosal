@@ -1,21 +1,10 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsPositive } from 'class-validator';
 
 export class UpdateRecoveryOrderPurityDto {
   @IsNotEmpty()
   @IsNumber()
-  resultadoFinal: number;
-
-  @IsNotEmpty()
-  @IsString()
-  unidadeResultado: string;
-
-  @IsNotEmpty()
-  @IsNumber()
-  volumeProcessado: number;
-
-  @IsNotEmpty()
-  @IsString()
-  unidadeProcessada: string;
+  @IsPositive()
+  resultadoProcessamentoGramas: number;
 
   @IsOptional()
   @IsString()

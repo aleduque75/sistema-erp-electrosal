@@ -45,6 +45,10 @@ const StatusLegend = () => (
       <span className="text-xs text-muted-foreground">Aprovado</span>
     </div>
     <div className="flex items-center gap-2">
+      <ChemicalAnalysisStatusBadge status={StatusAnaliseQuimica.EM_RECUPERACAO} />
+      <span className="text-xs text-muted-foreground">Em Recuperação</span>
+    </div>
+    <div className="flex items-center gap-2">
       <ChemicalAnalysisStatusBadge status={StatusAnaliseQuimica.RECUSADO_PELO_CLIENTE} />
       <span className="text-xs text-muted-foreground">Recusado</span>
     </div>

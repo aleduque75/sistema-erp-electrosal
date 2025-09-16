@@ -1,21 +1,40 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { IRecoveryOrderRepository, RecoveryOrder, UniqueEntityID, RecoveryOrderStatus } from '@sistema-erp-electrosal/core';
+import { IRecoveryOrderRepository, RecoveryOrder, UniqueEntityID, RecoveryOrderStatus, AnaliseQuimicaResumida } from '@sistema-erp-electrosal/core';
 import { RecoveryOrder as PrismaRecoveryOrder, RecoveryOrderStatusPrisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
   constructor(private prisma: PrismaService) {}
 
-  private mapToDomain(dbData: PrismaRecoveryOrder): RecoveryOrder {
+  private mapToDomain(dbData: PrismaRecoveryOrder, analisesEnvolvidas?: AnaliseQuimicaResumida[]): RecoveryOrder {
     const { id, ...props } = dbData;
-    return RecoveryOrder.reconstitute(
+    const domainRecoveryOrder = RecoveryOrder.reconstitute(
       {
-        ...props,
+        organizationId: props.organizationId,
+        chemicalAnalysisIds: props.chemicalAnalysisIds,
         status: props.status as RecoveryOrderStatus,
+        dataInicio: props.dataInicio,
+        dataFim: props.dataFim ?? undefined,
+        descricao: props.descricao ?? undefined,
+        observacoes: props.observacoes ?? undefined,
+        dataCriacao: props.dataCriacao,
+        dataAtualizacao: props.dataAtualizacao,
+        totalBrutoEstimadoGramas: props.totalBrutoEstimadoGramas,
+        resultadoProcessamentoGramas: props.resultadoProcessamentoGramas ?? undefined,
+        teorFinal: props.teorFinal ?? undefined,
+        auPuroRecuperadoGramas: props.auPuroRecuperadoGramas ?? undefined,
+        residuoGramas: props.residuoGramas ?? undefined,
+        residueAnalysisId: props.residueAnalysisId ?? undefined,
       },
       UniqueEntityID.create(id),
     );
+
+    if (analisesEnvolvidas) {
+      domainRecoveryOrder.setAnalisesEnvolvidas(analisesEnvolvidas);
+    }
+
+    return domainRecoveryOrder;
   }
 
   async create(recoveryOrder: RecoveryOrder): Promise<RecoveryOrder> {
@@ -26,14 +45,11 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       status: recoveryOrder.status as RecoveryOrderStatusPrisma,
       dataInicio: recoveryOrder.dataInicio,
       dataFim: recoveryOrder.dataFim,
-      descricaoProcesso: recoveryOrder.descricaoProcesso,
-      volumeProcessado: recoveryOrder.volumeProcessado,
-      unidadeProcessada: recoveryOrder.unidadeProcessada,
-      resultadoFinal: recoveryOrder.resultadoFinal,
-      unidadeResultado: recoveryOrder.unidadeResultado,
+      descricao: recoveryOrder.descricao,
       observacoes: recoveryOrder.observacoes,
       dataCriacao: recoveryOrder.dataCriacao,
       dataAtualizacao: recoveryOrder.dataAtualizacao,
+      totalBrutoEstimadoGramas: recoveryOrder.totalBrutoEstimadoGramas,
     };
 
     const dbRecoveryOrder = await this.prisma.recoveryOrder.create({ data });
@@ -47,7 +63,36 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         organizationId,
       },
     });
-    return dbRecoveryOrder ? this.mapToDomain(dbRecoveryOrder) : null;
+
+    if (!dbRecoveryOrder) {
+      return null;
+    }
+
+    const analisesEnvolvidas = await this.prisma.analiseQuimica.findMany({
+      where: {
+        id: { in: dbRecoveryOrder.chemicalAnalysisIds },
+        organizationId: dbRecoveryOrder.organizationId,
+      },
+      select: {
+        id: true,
+        numeroAnalise: true,
+        volumeOuPesoEntrada: true,
+        cliente: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    const mappedAnalises: AnaliseQuimicaResumida[] = analisesEnvolvidas.map(analise => ({
+      id: analise.id,
+      numeroAnalise: analise.numeroAnalise,
+      clienteName: analise.cliente?.name || 'N/A',
+      volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+    }));
+
+    return this.mapToDomain(dbRecoveryOrder, mappedAnalises);
   }
 
   async findAll(organizationId: string): Promise<RecoveryOrder[]> {
@@ -57,24 +102,52 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       },
       orderBy: { dataCriacao: 'desc' },
     });
-    return dbRecoveryOrders.map(this.mapToDomain);
+
+    const recoveryOrdersWithAnalyses: RecoveryOrder[] = [];
+
+    for (const dbRecoveryOrder of dbRecoveryOrders) {
+      const analisesEnvolvidas = await this.prisma.analiseQuimica.findMany({
+        where: {
+          id: { in: dbRecoveryOrder.chemicalAnalysisIds },
+          organizationId: dbRecoveryOrder.organizationId,
+        },
+        select: {
+          id: true,
+          numeroAnalise: true,
+          volumeOuPesoEntrada: true,
+          cliente: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      const mappedAnalises: AnaliseQuimicaResumida[] = analisesEnvolvidas.map(analise => ({
+        id: analise.id,
+        numeroAnalise: analise.numeroAnalise,
+        clienteName: analise.cliente?.name || 'N/A',
+        volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+      }));
+
+      recoveryOrdersWithAnalyses.push(this.mapToDomain(dbRecoveryOrder, mappedAnalises));
+    }
+
+    return recoveryOrdersWithAnalyses;
   }
 
   async save(recoveryOrder: RecoveryOrder): Promise<RecoveryOrder> {
     const data = {
-      organizationId: recoveryOrder.organizationId,
-      chemicalAnalysisIds: recoveryOrder.chemicalAnalysisIds,
       status: recoveryOrder.status as RecoveryOrderStatusPrisma,
-      dataInicio: recoveryOrder.dataInicio,
       dataFim: recoveryOrder.dataFim,
-      descricaoProcesso: recoveryOrder.descricaoProcesso,
-      volumeProcessado: recoveryOrder.volumeProcessado,
-      unidadeProcessada: recoveryOrder.unidadeProcessada,
-      resultadoFinal: recoveryOrder.resultadoFinal,
-      unidadeResultado: recoveryOrder.unidadeResultado,
+      descricao: recoveryOrder.descricao,
       observacoes: recoveryOrder.observacoes,
-      dataCriacao: recoveryOrder.dataCriacao,
       dataAtualizacao: recoveryOrder.dataAtualizacao,
+      resultadoProcessamentoGramas: recoveryOrder.resultadoProcessamentoGramas,
+      teorFinal: recoveryOrder.teorFinal,
+      auPuroRecuperadoGramas: recoveryOrder.auPuroRecuperadoGramas,
+      residuoGramas: recoveryOrder.residuoGramas,
+      residueAnalysisId: recoveryOrder.residueAnalysisId,
     };
 
     const dbRecoveryOrder = await this.prisma.recoveryOrder.update({

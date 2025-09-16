@@ -3,35 +3,36 @@ import {
   Inject,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   IRecoveryOrderRepository,
   IAnaliseQuimicaRepository,
-  IMetalCreditRepository,
   RecoveryOrderStatus,
   AnaliseQuimica,
-  StatusAnaliseQuimica,
-  MetalCredit,
 } from '@sistema-erp-electrosal/core';
 
-export interface ProcessRecoveryFinalizationCommand {
+export interface FinalizeRecoveryOrderCommand {
   recoveryOrderId: string;
   organizationId: string;
+  teorFinal: number;
 }
 
 @Injectable()
-export class ProcessRecoveryFinalizationUseCase {
+export class ProcessRecoveryFinalizationUseCase { // Filename is kept, but logic is for finalization
   constructor(
     @Inject('IRecoveryOrderRepository')
     private readonly recoveryOrderRepository: IRecoveryOrderRepository,
     @Inject('IAnaliseQuimicaRepository')
     private readonly analiseRepository: IAnaliseQuimicaRepository,
-    @Inject('IMetalCreditRepository')
-    private readonly metalCreditRepository: IMetalCreditRepository,
   ) {}
 
-  async execute(command: ProcessRecoveryFinalizationCommand): Promise<void> {
-    const { recoveryOrderId, organizationId } = command;
+  async execute(command: FinalizeRecoveryOrderCommand): Promise<void> {
+    const { recoveryOrderId, organizationId, teorFinal } = command;
+
+    if (teorFinal <= 0 || teorFinal > 1) {
+        throw new BadRequestException('O teor final deve ser um valor entre 0 e 1.');
+    }
 
     const recoveryOrder = await this.recoveryOrderRepository.findById(
       recoveryOrderId,
@@ -44,43 +45,62 @@ export class ProcessRecoveryFinalizationUseCase {
       );
     }
 
-    if (recoveryOrder.status !== RecoveryOrderStatus.RESULTADO_LANCADO) {
+    if (recoveryOrder.status !== RecoveryOrderStatus.AGUARDANDO_TEOR) {
       throw new ConflictException(
-        `Ordem de recuperação não pode ser finalizada pois não está com o status RESULTADO_LANCADO.`,
+        `A ordem de recuperação não pode ser finalizada, pois não está com o status AGUARDANDO_TEOR.`,
       );
     }
 
-    // Assuming the recovery order has a final result (resultadoFinal and unidadeResultado)
-    if (!recoveryOrder.resultadoFinal || !recoveryOrder.unidadeResultado) {
-      throw new ConflictException(
-        'Não é possível finalizar a ordem de recuperação sem o resultado final.',
-      );
+    if (!recoveryOrder.resultadoProcessamentoGramas) {
+        throw new ConflictException(
+            'Não é possível finalizar a ordem de recuperação sem o resultado do processamento.',
+        );
     }
 
-    // Create MetalCredit for the recovered pure metal
-    const metalCredit = MetalCredit.create({
-      clientId: 'SYSTEM_STOCK', // Or a specific client for recovered metal stock
-      chemicalAnalysisId: recoveryOrder.chemicalAnalysisIds[0], // Assuming first analysis for now
-      metal: 'Au', // Assuming Au, this might need to be dynamic
-      grams: recoveryOrder.resultadoFinal, // Use the final result as grams
-      date: new Date(),
-      organizationId: organizationId,
-    });
-    await this.metalCreditRepository.create(metalCredit);
+    // --- Calculations ---
+    const auPuroRecuperadoGramas = recoveryOrder.resultadoProcessamentoGramas * teorFinal;
+    const residuoGramas = recoveryOrder.totalBrutoEstimadoGramas - auPuroRecuperadoGramas;
 
-    // Create a new ChemicalAnalysis for residue if resultadoFinal is less than 1000
-    if (recoveryOrder.resultadoFinal < 1000) { // Assuming the threshold is 1000 grams
+    let residueAnalysisId: string | undefined = undefined;
+
+    // --- Create Residue Analysis ---
+    if (residuoGramas > 0) {
       const residueAnalysis = AnaliseQuimica.criarResiduo({
         organizationId,
-        descricaoMaterial: `Resíduo da Recuperação ${recoveryOrder.id.toString()}`,
-        volumeOuPesoEntrada: (recoveryOrder.volumeProcessado || 0) - recoveryOrder.resultadoFinal, // Simplified
-        unidadeEntrada: recoveryOrder.unidadeProcessada || 'g',
+        descricaoMaterial: `Resíduo da Ordem de Recuperação ${recoveryOrder.id.toString()}`,
+        volumeOuPesoEntrada: residuoGramas,
+        unidadeEntrada: 'g',
+        // Campos não aplicáveis para resíduo são omitidos
+        resultadoAnaliseValor: null,
+        unidadeResultado: null,
+        percentualQuebra: null,
+        taxaServicoPercentual: null,
+        teorRecuperavel: null,
+        auEstimadoBrutoGramas: null,
+        auEstimadoRecuperavelGramas: null,
+        taxaServicoEmGramas: null,
+        auLiquidoParaClienteGramas: null,
+        dataAnaliseConcluida: null,
+        dataAprovacaoCliente: null,
+        dataFinalizacaoRecuperacao: null,
+        observacoes: 'Análise de resíduo gerada automaticamente.',
+        ordemDeRecuperacaoId: null,
       });
-      await this.analiseRepository.create(residueAnalysis, organizationId);
+      
+      const createdResidue = await this.analiseRepository.create(residueAnalysis, organizationId);
+      residueAnalysisId = createdResidue.id.toString();
     }
 
-    // Update the recovery order status to indicate finalization
-    recoveryOrder.update({ status: RecoveryOrderStatus.FINALIZADA });
+    // --- Update Recovery Order ---
+    recoveryOrder.update({
+      status: RecoveryOrderStatus.FINALIZADA,
+      teorFinal,
+      auPuroRecuperadoGramas,
+      residuoGramas,
+      residueAnalysisId,
+      dataFim: new Date(),
+    });
+
     await this.recoveryOrderRepository.save(recoveryOrder);
   }
 }

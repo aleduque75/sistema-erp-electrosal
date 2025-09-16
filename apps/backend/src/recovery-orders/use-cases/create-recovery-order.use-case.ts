@@ -59,10 +59,21 @@ export class CreateRecoveryOrderUseCase {
       );
     }
 
+    const totalBrutoEstimadoGramas = analyses.reduce((sum, analise) => {
+      return sum + (analise.auEstimadoBrutoGramas || 0);
+    }, 0);
+
+    if (totalBrutoEstimadoGramas <= 0) {
+      throw new BadRequestException(
+        'O somatório dos pesos das análises não pode ser zero ou negativo.',
+      );
+    }
+
     const recoveryOrder = RecoveryOrder.create({
       organizationId,
       chemicalAnalysisIds,
       dataInicio: new Date(),
+      totalBrutoEstimadoGramas,
     });
 
     const createdRecoveryOrder = await this.recoveryOrderRepository.create(

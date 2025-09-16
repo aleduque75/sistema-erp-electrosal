@@ -1,4 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Loader2, CheckCircle } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,11 +13,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2, CheckCircle } from "lucide-react";
 import { RecoveryOrder } from "@/types/recovery-order";
 import { finalizeRecoveryOrder } from "@/services/recoveryOrdersApi";
+
+const finalizeSchema = z.object({
+  teorFinal: z.coerce.number()
+    .min(0, "O teor não pode ser negativo.")
+    .max(1, "O teor não pode ser maior que 1 (100%)."),
+});
+
+type FinalizeFormData = z.infer<typeof finalizeSchema>;
 
 interface ProcessRecoveryFinalizationModalProps {
   isOpen: boolean;
@@ -28,15 +49,29 @@ export function ProcessRecoveryFinalizationModal({
 }: ProcessRecoveryFinalizationModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const form = useForm<FinalizeFormData>({
+    resolver: zodResolver(finalizeSchema),
+    defaultValues: {
+      teorFinal: undefined,
+    },
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({ teorFinal: undefined });
+    }
+  }, [isOpen, form]);
+
   if (!recoveryOrder) return null;
 
-  const handleFinalize = async () => {
+  const onSubmit = async (data: FinalizeFormData) => {
     setIsSubmitting(true);
     try {
-      await finalizeRecoveryOrder(recoveryOrder.id, {}); // Empty DTO for now
+      await finalizeRecoveryOrder(recoveryOrder.id, data);
       toast.success("Ordem de recuperação finalizada com sucesso!");
       onSuccess();
       onOpenChange(false);
+      form.reset();
     } catch (err: any) {
       toast.error("Erro ao finalizar ordem de recuperação", { description: err.message });
     } finally {
@@ -48,25 +83,43 @@ export function ProcessRecoveryFinalizationModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Finalizar Ordem de Recuperação</DialogTitle>
+          <DialogTitle>Lançar Teor Final e Finalizar Ordem</DialogTitle>
           <DialogDescription>
-            Tem certeza que deseja finalizar a ordem de recuperação ID:{" "}
-            <strong>{recoveryOrder.id}</strong>? Esta ação é irreversível e irá gerar o crédito de metal e a análise de resíduo.
+            Informe o teor de pureza final para a ordem ID:{" "}
+            <strong>{recoveryOrder.id}</strong>. Esta ação é irreversível.
+             <br />
+            <span className="text-sm text-muted-foreground">
+              Resultado do Processamento: {recoveryOrder.resultadoProcessamentoGramas}g
+            </span>
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleFinalize} disabled={isSubmitting}>
-            {isSubmitting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle className="mr-2 h-4 w-4" />
-            )}
-            Confirmar Finalização
-          </Button>
-        </DialogFooter>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
+            <FormField
+              control={form.control}
+              name="teorFinal"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Teor Final (Ex: 0.995 para 99.5%)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="any" placeholder="0.995" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                )}
+                Finalizar Ordem
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
