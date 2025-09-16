@@ -8,9 +8,10 @@ import { StartRecoveryOrderUseCase } from './use-cases/start-recovery-order.use-
 import { UpdateRecoveryOrderPurityUseCase } from './use-cases/update-recovery-order-purity.use-case';
 import { MetalCreditsModule } from '../metal-credits/metal-credits.module';
 import { ProcessRecoveryFinalizationUseCase } from './use-cases/process-recovery-finalization.use-case';
+import { ContasMetaisModule } from '../contas-metais/contas-metais.module'; // Adicionado
 
 @Module({
-  imports: [PrismaModule, AnalisesQuimicasModule, MetalCreditsModule],
+  imports: [PrismaModule, AnalisesQuimicasModule, MetalCreditsModule, ContasMetaisModule], // Adicionado
   controllers: [RecoveryOrdersController],
   providers: [
     {

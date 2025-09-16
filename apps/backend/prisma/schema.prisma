@@ -41,6 +41,7 @@ model Organization {
   recuperacoes          Recuperacao[]
   metalCredits          MetalCredit[]
   recoveryOrders        RecoveryOrder[]
+  contasMetais          ContaMetal[] // Adicionado para a relação inversa
 }
 
 // --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
@@ -721,4 +722,25 @@ model RecoveryOrder {
   dataAtualizacao DateTime                  @updatedAt
 
   @@map("recovery_orders")
+}
+
+enum TipoMetal {
+  AU
+  AG
+  RH
+  // Adicione outros metais conforme necessário
+}
+
+model ContaMetal {
+  id             String    @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  metalType      TipoMetal
+  balance        Decimal   @default(0) @db.Decimal(10, 4) // Saldo em gramas, com precisão
+  dataCriacao    DateTime  @default(now())
+  dataAtualizacao DateTime  @updatedAt
+
+  @@unique([organizationId, name, metalType]) // Garante que não há contas de metal duplicadas para a mesma organização, nome e tipo de metal
+  @@index([organizationId])
 }

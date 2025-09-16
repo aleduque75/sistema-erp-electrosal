@@ -9,3 +9,4 @@ export * from './domain';
 export * from './value-objects';
 export * from './domain/metal-credits';
 export * from './domain/recovery-orders';
+export * from './domain/contas-metais';
