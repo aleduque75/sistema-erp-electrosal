@@ -5,6 +5,7 @@ import { CreateContaMetalDto } from './dtos/create-conta-metal.dto';
 import { ContaMetalResponseDto } from './dtos/conta-metal.response.dto';
 import { FindContaMetalByIdUseCase } from './use-cases/find-conta-metal-by-id.use-case';
 import { UpdateContaMetalBalanceUseCase } from './use-cases/update-conta-metal-balance.use-case';
+import { FindAllContasMetaisUseCase } from './use-cases/find-all-contas-metais.use-case'; // ADDED
 
 @UseGuards(JwtAuthGuard)
 @Controller('contas-metais')
@@ -13,6 +14,7 @@ export class ContasMetaisController {
     private readonly createContaMetalUseCase: CreateContaMetalUseCase,
     private readonly findContaMetalByIdUseCase: FindContaMetalByIdUseCase,
     private readonly updateContaMetalBalanceUseCase: UpdateContaMetalBalanceUseCase,
+    private readonly findAllContasMetaisUseCase: FindAllContasMetaisUseCase, // ADDED
   ) {}
 
   @Post()
@@ -22,6 +24,14 @@ export class ContasMetaisController {
     const contaMetal = await this.createContaMetalUseCase.execute(command);
     return ContaMetalResponseDto.fromDomain(contaMetal);
   }
+
+  @Get() // ADDED
+  async findAllContasMetais(@Req() req): Promise<ContaMetalResponseDto[]> { // ADDED
+    const organizationId = req.user?.orgId; // ADDED
+    const command = { organizationId }; // ADDED
+    const contasMetais = await this.findAllContasMetaisUseCase.execute(command); // ADDED
+    return contasMetais.map(ContaMetalResponseDto.fromDomain); // ADDED
+  } // ADDED
 
   @Get(':id')
   async getContaMetalById(@Param('id', new ParseUUIDPipe()) id: string, @Req() req): Promise<ContaMetalResponseDto> {

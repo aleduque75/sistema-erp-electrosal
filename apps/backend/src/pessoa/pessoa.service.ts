@@ -85,7 +85,7 @@ export class PessoaService {
       const newPessoa = await tx.pessoa.create({
         data: {
           ...pessoaData,
-          type: PessoaType.FISICA, // ou JURIDICA baseado em um campo do DTO
+          type: data.type, // Usar o tipo vindo do DTO
           organization: { connect: { id: organizationId } },
         },
       });

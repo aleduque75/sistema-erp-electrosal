@@ -27,4 +27,9 @@ export class CreateUserDto {
   role?: Role;
 }
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {}
+export class UpdateUserDto extends PartialType(CreateUserDto) {
+  @IsString()
+  @MinLength(6, { message: 'A senha deve ter no mínimo 6 caracteres.' })
+  @IsOptional() // Mark as optional for update
+  password?: string; // Explicitly define as optional
+}

@@ -19,6 +19,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"; // ADDED
 
 // Interface atualizada
 interface Pessoa {
@@ -46,6 +53,7 @@ interface PessoaFormProps {
 
 // Schema de validação com papéis
 const formSchema = z.object({
+  type: z.enum(["FISICA", "JURIDICA"], { message: "O tipo de pessoa é obrigatório." }), // ADDED
   name: z.string().min(2, "O nome é obrigatório."),
   email: z.string().email("Formato de email inválido.").optional().nullable(),
   cpf: z.string().optional().nullable(),
@@ -75,6 +83,7 @@ export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      type: "FISICA", // ADDED default type
       name: "",
       email: initialData?.email ?? undefined,
       cpf: "",
@@ -159,6 +168,29 @@ export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
               <FormControl>
                 <Input placeholder="Nome da pessoa" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* --- TIPO DE PESSOA --- */}
+        <FormField
+          name="type"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de Pessoa</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="FISICA">Pessoa Física</SelectItem>
+                  <SelectItem value="JURIDICA">Pessoa Jurídica</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

@@ -92,6 +92,25 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     );
   }
 
+  async findLastNumeroAnalise(organizationId: string): Promise<string | null> {
+    const lastAnalise = await this.prisma.analiseQuimica.findFirst({
+      where: {
+        organizationId,
+        numeroAnalise: {
+          startsWith: 'AQ-',
+        },
+      },
+      orderBy: {
+        dataCriacao: 'desc',
+      },
+      select: {
+        numeroAnalise: true,
+      },
+    });
+
+    return lastAnalise?.numeroAnalise || null;
+  }
+
   async findAllByClienteId(clienteId: string): Promise<AnaliseQuimica[]> {
     return this.findAll({ clienteId });
   }
