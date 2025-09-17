@@ -14,6 +14,10 @@ import { PessoaType } from '@prisma/client';
 
 // --- DTO para criar ou atualizar UMA pessoa ---
 export class CreatePessoaDto {
+  @IsEnum(PessoaType, { message: 'Tipo de pessoa inválido.' })
+  @IsNotEmpty({ message: 'O tipo de pessoa é obrigatório.' })
+  type: PessoaType;
+
   @IsString()
   @IsNotEmpty({ message: 'O nome é obrigatório.' })
   name: string;

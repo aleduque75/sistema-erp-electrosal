@@ -18,7 +18,13 @@ export class AuditLogService implements OnModuleInit {
   private logFilePath: string;
 
   constructor(private prisma: PrismaService) {
-    this.logFilePath = path.join(process.cwd(), 'apps', 'backend', 'logs', 'audit.log.json');
+    this.logFilePath = path.join(
+      process.cwd(),
+      'apps',
+      'backend',
+      'logs',
+      'audit.log.json',
+    );
   }
 
   onModuleInit() {
@@ -41,7 +47,7 @@ export class AuditLogService implements OnModuleInit {
     description: string,
   ): Promise<void> {
     let userName: string | undefined;
-    if (userId) {
+     if (userId) {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
       userName = user?.name || user?.email || userId; // Tenta pegar o nome, email ou o ID
     }

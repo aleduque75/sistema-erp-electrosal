@@ -21,23 +21,25 @@ export class RegistrarNovaAnaliseUseCase {
 
   async execute(command: RegistrarNovaAnaliseCommand): Promise<AnaliseQuimica> {
     const { dto, organizationId } = command;
-    if (await this.analiseRepo.findByNumeroAnalise(dto.numeroAnalise)) {
-      throw new ConflictException(
-        'Já existe uma análise química com este número.',
-      );
+
+    const lastNumeroAnalise = await this.analiseRepo.findLastNumeroAnalise(organizationId);
+    let nextNumber = 1;
+    if (lastNumeroAnalise) {
+      const lastNumber = parseInt(lastNumeroAnalise.split('-')[1], 10);
+      nextNumber = lastNumber + 1;
     }
+    const newNumeroAnalise = `AQ-${nextNumber.toString().padStart(3, '0')}`;
 
     const props: Omit<
       AnaliseQuimicaProps,
-      'id' | 'dataCriacao' | 'dataAtualizacao'
+      'id' | 'dataCriacao' | 'dataAtualizacao' | 'status'
     > = {
       clienteId: dto.clienteId,
-      numeroAnalise: dto.numeroAnalise,
+      numeroAnalise: newNumeroAnalise,
       dataEntrada: dto.dataEntrada,
       descricaoMaterial: dto.descricaoMaterial,
       volumeOuPesoEntrada: dto.volumeOuPesoEntrada,
       unidadeEntrada: dto.unidadeEntrada,
-      
       observacoes: dto.observacoes ?? null,
       resultadoAnaliseValor: null,
       unidadeResultado: null,

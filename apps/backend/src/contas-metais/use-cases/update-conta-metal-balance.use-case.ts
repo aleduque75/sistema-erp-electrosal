@@ -25,7 +25,7 @@ export class UpdateContaMetalBalanceUseCase {
     }
 
     if (type === 'credit') {
-      contaMetal.credit(amount);
+      contaMetal.credit({ gramas: amount });
     } else if (type === 'debit') {
       contaMetal.debit(amount);
     } else {

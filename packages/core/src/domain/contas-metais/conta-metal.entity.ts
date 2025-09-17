@@ -9,6 +9,7 @@ export interface ContaMetalProps {
   balance: number; // Saldo em gramas
   dataCriacao: Date;
   dataAtualizacao: Date;
+  pessoaId?: string; // ADDED - Opcional, para contas de metal de clientes
 }
 
 export class ContaMetal extends AggregateRoot<ContaMetalProps> {
@@ -17,7 +18,7 @@ export class ContaMetal extends AggregateRoot<ContaMetalProps> {
   }
 
   public static create(
-    props: Omit<ContaMetalProps, 'dataCriacao' | 'dataAtualizacao' | 'balance'>,
+    props: Omit<ContaMetalProps, 'dataCriacao' | 'dataAtualizacao' | 'balance'> & { pessoaId?: string }, // MODIFIED to accept pessoaId
     id?: UniqueEntityID,
   ): ContaMetal {
     const now = new Date();
@@ -44,12 +45,22 @@ export class ContaMetal extends AggregateRoot<ContaMetalProps> {
   get dataCriacao(): Date { return this.props.dataCriacao; }
   get dataAtualizacao(): Date { return this.props.dataAtualizacao; }
 
-  public credit(amount: number): void {
-    if (amount <= 0) {
+  public credit(
+    creditDetails: {
+      gramas: number;
+      data?: Date;
+      origemId?: string;
+      origemTipo?: string;
+      observacao?: string;
+    }
+  ): void {
+    if (creditDetails.gramas <= 0) {
       throw new Error('O valor a ser creditado deve ser positivo.');
     }
-    this.props.balance += amount;
-    this.props.dataAtualizacao = new Date();
+    this.props.balance += creditDetails.gramas;
+    this.props.dataAtualizacao = creditDetails.data || new Date();
+    // Note: The additional details (origemId, origemTipo, observacao) are not stored in ContaMetalProps
+    // If these need to be persisted, a separate MetalTransaction entity is required.
   }
 
   public debit(amount: number): void {

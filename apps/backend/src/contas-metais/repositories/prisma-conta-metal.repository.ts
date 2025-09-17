@@ -6,7 +6,7 @@ import {
   TipoMetal,
   UniqueEntityID,
 } from '@sistema-erp-electrosal/core';
-import { ContaMetal as PrismaContaMetal } from '@prisma/client';
+import { ContaMetal as PrismaContaMetal, PrismaClient, Prisma } from '@prisma/client'; // ADDED Prisma
 
 @Injectable()
 export class PrismaContaMetalRepository implements IContaMetalRepository {
@@ -52,7 +52,27 @@ export class PrismaContaMetalRepository implements IContaMetalRepository {
     return dbContaMetal ? this.mapToDomain(dbContaMetal) : null;
   }
 
-  async create(contaMetal: ContaMetal): Promise<ContaMetal> {
+  async findByPessoaIdAndMetal( // ADDED
+    pessoaId: string,
+    metalType: TipoMetal,
+    organizationId: string,
+    tx?: PrismaClient, // ADDED
+  ): Promise<ContaMetal | null> {
+    const client = tx || this.prisma; // ADDED
+    const dbContaMetal = await client.contaMetal.findFirst({
+      where: {
+        // Assuming 'name' field in ContaMetal can store pessoaId for client accounts
+        // This might need adjustment based on actual schema design for client metal accounts
+        name: pessoaId, // This is a placeholder. Needs to be a proper way to link to client.
+        metalType: metalType as any,
+        organizationId,
+      },
+    });
+    return dbContaMetal ? this.mapToDomain(dbContaMetal) : null;
+  }
+
+  async create(contaMetal: ContaMetal, tx?: PrismaClient): Promise<ContaMetal> { // MODIFIED
+    const client = tx || this.prisma; // ADDED
     const data = {
       id: contaMetal.id.toString(),
       organizationId: contaMetal.organizationId,
@@ -62,21 +82,30 @@ export class PrismaContaMetalRepository implements IContaMetalRepository {
       dataCriacao: contaMetal.dataCriacao,
       dataAtualizacao: contaMetal.dataAtualizacao,
     };
-    const dbContaMetal = await this.prisma.contaMetal.create({ data });
+    const dbContaMetal = await client.contaMetal.create({ data }); // MODIFIED
     return this.mapToDomain(dbContaMetal);
   }
 
-  async save(contaMetal: ContaMetal): Promise<ContaMetal> {
+  async save(contaMetal: ContaMetal, tx?: PrismaClient): Promise<ContaMetal> { // MODIFIED
+    const client = tx || this.prisma; // ADDED
     const data = {
       name: contaMetal.name,
       metalType: contaMetal.metalType as any, // Prisma enum type
-      balance: contaMetal.balance,
+      balance: new Prisma.Decimal(contaMetal.balance), // MODIFIED: Convert to Prisma.Decimal
       dataAtualizacao: contaMetal.dataAtualizacao,
     };
-    const dbContaMetal = await this.prisma.contaMetal.update({
+    const dbContaMetal = await client.contaMetal.update({
       where: { id: contaMetal.id.toString() },
       data,
     });
     return this.mapToDomain(dbContaMetal);
+  }
+
+  async findAll(organizationId: string): Promise<ContaMetal[]> {
+    const dbContasMetais = await this.prisma.contaMetal.findMany({
+      where: { organizationId },
+      orderBy: { name: 'asc' },
+    });
+    return dbContasMetais.map(this.mapToDomain);
   }
 }

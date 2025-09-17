@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Logger, // ADDED
 } from '@nestjs/common';
 import {
   IRecoveryOrderRepository,
@@ -27,6 +28,7 @@ export interface FinalizeRecoveryOrderCommand {
 
 @Injectable()
 export class ProcessRecoveryFinalizationUseCase {
+  private readonly logger = new Logger(ProcessRecoveryFinalizationUseCase.name); // ADDED
   constructor(
     @Inject('IRecoveryOrderRepository')
     private readonly recoveryOrderRepository: IRecoveryOrderRepository,
@@ -58,7 +60,7 @@ export class ProcessRecoveryFinalizationUseCase {
 
     if (recoveryOrder.status !== RecoveryOrderStatus.AGUARDANDO_TEOR) {
       throw new ConflictException(
-        `A ordem de recuperação não pode ser finalizada, pois não está com o status AGUARDANDO_TEOR.`,
+        `A ordem de recuperação não pode ser finalizada, pois não está com o status AGUARDANDO_TEOR.`, 
       );
     }
 
@@ -72,6 +74,11 @@ export class ProcessRecoveryFinalizationUseCase {
     const auPuroRecuperadoGramas = recoveryOrder.resultadoProcessamentoGramas * teorFinal;
     const residuoGramas = recoveryOrder.totalBrutoEstimadoGramas - auPuroRecuperadoGramas;
 
+    // ADDED DEBUG LOGS
+    this.logger.debug(`teorFinal: ${teorFinal}`);
+    this.logger.debug(`recoveryOrder.resultadoProcessamentoGramas: ${recoveryOrder.resultadoProcessamentoGramas}`);
+    this.logger.debug(`auPuroRecuperadoGramas: ${auPuroRecuperadoGramas}`);
+
     let residueAnalysisId: string | undefined = undefined;
 
     // --- Create Residue Analysis ---
@@ -81,13 +88,13 @@ export class ProcessRecoveryFinalizationUseCase {
         descricaoMaterial: `Resíduo da Ordem de Recuperação ${recoveryOrder.id.toString()}`,
         volumeOuPesoEntrada: residuoGramas,
         unidadeEntrada: 'g',
+        auEstimadoBrutoGramas: residuoGramas, // Corrigido para popular o campo correto
         // Campos não aplicáveis para resíduo são omitidos
         resultadoAnaliseValor: null,
         unidadeResultado: null,
         percentualQuebra: null,
         taxaServicoPercentual: null,
         teorRecuperavel: null,
-        auEstimadoBrutoGramas: null,
         auEstimadoRecuperavelGramas: null,
         taxaServicoEmGramas: null,
         auLiquidoParaClienteGramas: null,

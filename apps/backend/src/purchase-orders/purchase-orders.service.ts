@@ -18,6 +18,16 @@ export class PurchaseOrdersService {
     const { items, fornecedorId, paymentTermId, ...orderData } = data;
 
     return this.prisma.$transaction(async (tx) => {
+      // Validate if all productIds exist and belong to the organization
+      for (const item of items) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId, organizationId },
+        });
+        if (!product) {
+          throw new NotFoundException(`Produto com ID ${item.productId} não encontrado ou não pertence à organização.`);
+        }
+      }
+
       const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
 
       const newOrder = await tx.purchaseOrder.create({

@@ -60,7 +60,14 @@ export class CreateRecoveryOrderUseCase {
     }
 
     const totalBrutoEstimadoGramas = analyses.reduce((sum, analise) => {
-      return sum + (analise.auEstimadoBrutoGramas || 0);
+      let gramsToAdd = 0;
+      if (analise.auEstimadoBrutoGramas && analise.auEstimadoBrutoGramas > 0) {
+        gramsToAdd = analise.auEstimadoBrutoGramas;
+      } else if (analise.volumeOuPesoEntrada && analise.volumeOuPesoEntrada > 0) {
+        // If it's a RESIDUO analysis, use volumeOuPesoEntrada if auEstimadoBrutoGramas is not available
+        gramsToAdd = analise.volumeOuPesoEntrada;
+      }
+      return sum + gramsToAdd;
     }, 0);
 
     if (totalBrutoEstimadoGramas <= 0) {

@@ -22,16 +22,30 @@ interface PageHeaderProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof pageHeaderVariants> {
   asChild?: boolean;
+  title: string; // ADDED
+  description?: string; // ADDED
+  actions?: React.ReactNode; // ADDED
 }
 
 function PageHeader({
   className,
   size,
   asChild = false,
+  title, // ADDED
+  description, // ADDED
+  actions, // ADDED
   ...props
 }: PageHeaderProps) {
   return (
-    <div className={cn(pageHeaderVariants({ size }), className)} {...props} />
+    <div className={cn(pageHeaderVariants({ size }), className)} {...props}>
+      <div className="flex items-center justify-between"> {/* ADDED */}
+        <div> {/* ADDED */}
+          <PageHeaderHeading size={size}>{title}</PageHeaderHeading> {/* ADDED */}
+          {description && <PageHeaderDescription size={size}>{description}</PageHeaderDescription>} {/* ADDED */}
+        </div> {/* ADDED */}
+        {actions && <div className="flex-shrink-0">{actions}</div>} {/* ADDED */}
+      </div> {/* ADDED */}
+    </div>
   );
 }
 

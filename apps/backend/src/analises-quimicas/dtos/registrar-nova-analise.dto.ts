@@ -13,10 +13,6 @@ export class RegistrarNovaAnaliseDto {
   @IsUUID()
   clienteId!: string;
 
-  @IsString()
-  @IsNotEmpty()
-  numeroAnalise!: string;
-
   @IsDate()
   @Type(() => Date)
   dataEntrada!: Date;

@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   BadRequestException,
+  Logger, // ADDED
 } from '@nestjs/common';
 import {
   AnaliseQuimica,
@@ -16,6 +17,7 @@ import { Decimal } from 'decimal.js';
 
 @Injectable()
 export class AprovarRecuperacaoAnaliseUseCase {
+  private readonly logger = new Logger(AprovarRecuperacaoAnaliseUseCase.name); // ADDED
   constructor(
     private readonly prisma: PrismaService,
     @Inject('IAnaliseQuimicaRepository')
@@ -32,7 +34,19 @@ export class AprovarRecuperacaoAnaliseUseCase {
       );
 
     analise.aprovarParaRecuperacao();
-    const valorACreditar = analise.auLiquidoParaClienteGramas;
+    let valorACreditar: number | null = null; // MODIFIED to be mutable
+
+    // ADDED DEBUG LOGS
+    this.logger.debug(`Analise ID: ${analise.id}`);
+    this.logger.debug(`clienteId: ${analise.clienteId}`);
+    this.logger.debug(`volumeOuPesoEntrada: ${analise.volumeOuPesoEntrada}`);
+    this.logger.debug(`auLiquidoParaClienteGramas: ${analise.auLiquidoParaClienteGramas}`);
+
+    if (analise.clienteId === 'SYSTEM_RESIDUE') { // ADDED logic for RESIDUE
+      valorACreditar = analise.volumeOuPesoEntrada;
+    } else {
+      valorACreditar = analise.auLiquidoParaClienteGramas;
+    }
 
     if (!valorACreditar || valorACreditar <= 0) {
       return this.analiseRepo.save(analise, command.organizationId);
@@ -50,15 +64,16 @@ export class AprovarRecuperacaoAnaliseUseCase {
       if (!contaCliente) {
         contaCliente = ContaMetal.create({
           pessoaId: analise.clienteId,
-          tipoMetal: TipoMetal.OURO,
+          name: analise.clienteId, // Using clienteId as name for now, assuming it's a client-specific account
+          metalType: TipoMetal.OURO,
           organizationId: command.organizationId,
         });
         await this.contaMetalRepo.create(contaCliente, tx);
       }
 
-      contaCliente.creditar({
-        data: new Date(),
+      contaCliente.credit({ // MODIFIED to use the updated credit method
         gramas: valorACreditar,
+        data: new Date(),
         origemId: analise.id.toString(),
         origemTipo: 'AnaliseQuimica',
         observacao: `Crédito da Análise Nº ${analise.numeroAnalise}`,

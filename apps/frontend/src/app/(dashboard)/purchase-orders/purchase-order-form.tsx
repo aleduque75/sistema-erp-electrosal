@@ -298,7 +298,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
           render={({ field }) => (
             <FormItem>
               <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={(value) => { console.log("Select onValueChange value:", value); field.onChange(value); }} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o status" />
@@ -473,7 +473,7 @@ function ItemForm({ products, isLoading, onSave, onCancel, initialData }: ItemFo
           render={({ field }) => (
             <FormItem>
               <FormLabel>Produto</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={(value) => { console.log("Select onValueChange value:", value); field.onChange(value); }} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um produto" />

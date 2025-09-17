@@ -27,7 +27,6 @@ import { getPessoas } from "@/services/pessoasApi";
 
 const formSchema = z.object({
   clienteId: z.string().uuid({ message: "Por favor, selecione um cliente." }),
-  numeroAnalise: z.string().min(1, { message: "O número da análise é obrigatório." }),
   dataEntrada: z.date({ required_error: "A data de entrada é obrigatória." }),
   descricaoMaterial: z.string().min(1, { message: "A descrição do material é obrigatória." }),
   volumeOuPesoEntrada: z.coerce.number().min(0.001, { message: "O valor deve ser maior que zero." }),
@@ -68,7 +67,6 @@ export function AnaliseQuimicaForm({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
       dataEntrada: new Date(),
-      numeroAnalise: `AQ-${new Date().getTime()}`, // Sugestão de número único
     },
   });
 
@@ -90,20 +88,6 @@ export function AnaliseQuimicaForm({
                   searchPlaceholder="Buscar cliente..."
                   emptyText="Nenhum cliente encontrado."
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="numeroAnalise"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Número da Análise</FormLabel>
-              <FormControl>
-                <Input placeholder="Ex: AQ-2025-001" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

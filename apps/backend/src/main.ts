@@ -6,9 +6,13 @@ import { config } from 'dotenv';
 
 config();
 
+import { LogLevel } from '@nestjs/common'; // ADDED
+
 async function bootstrap() {
   process.env.TZ = 'UTC'; // Garante que o Node.js use UTC
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['log', 'error', 'warn', 'debug'] as LogLevel[], // ADDED to enable debug logs
+  });
 
   app.setGlobalPrefix('api');
 

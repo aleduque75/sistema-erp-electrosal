@@ -129,6 +129,12 @@ export const menuConfig: NavItem[] = [
         icon: Wallet,
         description: "Acompanhe o saldo e o fluxo de caixa.",
       },
+      { // ADDED
+        title: "Contas de Metais", // ADDED
+        href: "/contas-metais", // ADDED
+        icon: Wallet, // ADDED - Reusing Wallet icon for now, or find a more appropriate one
+        description: "Gerencie suas contas de metais preciosos.", // ADDED
+      }, // ADDED
       {
         title: "Importar Extrato",
         href: "/imports",
