@@ -37,7 +37,7 @@ interface ContaContabil {
 }
 
 const formSchema = z.object({
-  codigo: z.string().optional(),
+  codigo: z.string().optional(), // Adicionado: Código da conta contábil (opcional)
   nome: z.string().min(3, "O nome é obrigatório."),
   tipo: z.enum([
     "ATIVO",
@@ -88,8 +88,8 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
   }, [conta?.id]);
 
   const onSubmit = async (data: FormValues) => {
-    // Usamos a desestruturação para separar e remover o 'codigo' do payload.
-    const { codigo, ...payload } = data;
+    // O payload agora inclui o 'codigo' se fornecido pelo usuário.
+    const payload = data;
 
     try {
       if (conta) {
@@ -110,6 +110,19 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
     <Form {...form}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            name="codigo"
+            control={control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Código</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: 1.1.3.01" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             name="nome"
             control={control}
@@ -133,7 +146,7 @@ export function ContaContabilForm({ conta, onSave }: ContaContabilFormProps) {
               <FormControl>
                 <Combobox
                   value={field.value ?? undefined}
-                  onValueChange={field.onChange}
+                  onChange={field.onChange} // Corrigido: Usar onChange
                   placeholder="Selecione a conta pai..."
                   options={[
                     { value: "", label: "Nenhuma (Conta Raiz)" },

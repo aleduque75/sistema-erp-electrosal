@@ -16,11 +16,27 @@ export class ContasContabeisService {
 
   // Recebe organizationId
   async create(organizationId: string, data: CreateContaContabilDto) {
-    const { contaPaiId, ...restOfData } = data; // Extrai o campo opcional
-    const proximoCodigo = await this.getNextCodigo(organizationId, contaPaiId);
+    const { contaPaiId, codigo, ...restOfData } = data; // Extrai o campo opcional
+
+    let finalCodigo: string;
+
+    if (codigo && codigo.length > 0) { // Se o código foi fornecido e não é vazio
+      // Se o código foi fornecido, verifica se já existe
+      const existingConta = await this.prisma.contaContabil.findUnique({
+        where: { organizationId_codigo: { organizationId, codigo } },
+      });
+      if (existingConta) {
+        throw new ConflictException(`Já existe uma conta contábil com o código '${codigo}' nesta organização.`);
+      }
+      finalCodigo = codigo;
+    } else {
+      // Se o código não foi fornecido, gera o próximo
+      const proximoCodigo = await this.getNextCodigo(organizationId, contaPaiId);
+      finalCodigo = proximoCodigo.proximoCodigo;
+    }
 
     const createData: Prisma.ContaContabilCreateInput = {
-      codigo: proximoCodigo.proximoCodigo,
+      codigo: finalCodigo,
       nome: restOfData.nome,
       tipo: restOfData.tipo,
       aceitaLancamento: restOfData.aceitaLancamento,
@@ -63,6 +79,18 @@ export class ContasContabeisService {
     if (!conta) {
       throw new NotFoundException(
         `Conta contábil com ID ${id} não encontrada.`,
+      );
+    }
+    return conta;
+  }
+
+  async findByCodigo(organizationId: string, codigo: string) {
+    const conta = await this.prisma.contaContabil.findFirst({
+      where: { organizationId, codigo },
+    });
+    if (!conta) {
+      throw new NotFoundException(
+        `Conta contábil com código ${codigo} não encontrada.`,
       );
     }
     return conta;

@@ -29,8 +29,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 // --- Interfaces ---
 interface Client { id: string; name: string; }
-interface Product { id: string; name: string; price: number; stock: number; }
-interface SaleItem { productId: string; name: string; quantity: number; price: number; stock: number; }
+interface InventoryLot { id: string; remainingQuantity: number; sourceType: string; }
+interface Product { id: string; name: string; price: number; stock: number; inventoryLots: InventoryLot[] }
+interface SaleItem { productId: string; name: string; quantity: number; price: number; stock: number; inventoryLotId?: string; }
 interface ContaCorrente { id: string; nome: string; }
 interface Fee { id: string; installments: number; feePercentage: number; }
 interface PaymentTerm { id: string; name: string; installmentsDays: number[]; interestRate?: number; }
@@ -40,12 +41,12 @@ const formatCurrency = (value?: number) =>
 
 const formSchema = z.object({
   clientId: z.string().min(1, "Selecione um cliente."),
-  paymentMethod: z.string().min(1, "Selecione a forma de pagamento."),
+  paymentConditionId: z.string().min(1, "Selecione a condição de pagamento."),
   numberOfInstallments: z.coerce.number().int().min(1).optional(),
-  paymentTermId: z.string().optional(),
   contaCorrenteId: z.string().nullable().optional(),
 });
-export function NewSaleForm({ onSave }: NewSaleFormProps) {
+
+export function NewSaleForm({ onSave }: any) {
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [contasCorrentes, setContasCorrentes] = useState<ContaCorrente[]>([]);
@@ -53,6 +54,7 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
   const [items, setItems] = useState<SaleItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedLot, setSelectedLot] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [itemPrice, setItemPrice] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,25 +66,34 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<FormValues>({
+  } = useForm<any>({
     resolver: zodResolver(formSchema),
-    defaultValues: { clientId: "", paymentMethod: "", numberOfInstallments: 1, contaCorrenteId: null },
+    defaultValues: { clientId: "", paymentConditionId: "", numberOfInstallments: 1, contaCorrenteId: null },
   });
-  const paymentMethod = watch("paymentMethod");
+  const paymentConditionId = watch("paymentConditionId");
   const numberOfInstallments = watch("numberOfInstallments");
+
+  const paymentOptions = useMemo(() => {
+    const terms = paymentTerms.map(term => ({ value: term.id, label: term.name, isTerm: true }));
+    return [...terms, { value: 'CREDIT_CARD', label: 'Cartão de Crédito', isTerm: false }];
+  }, [paymentTerms]);
+
+  const selectedPaymentCondition = useMemo(() => {
+    return paymentOptions.find(opt => opt.value === paymentConditionId);
+  }, [paymentConditionId, paymentOptions]);
 
   useEffect(() => {
     async function fetchData() {
       try {
         const [clientsRes, productsRes, contasRes, feesRes, orgSettingsRes, paymentTermsRes] = await Promise.all([
-          api.get("/clients"),
+          api.get("/pessoas?role=client"),
           api.get("/products"),
           api.get("/contas-correntes"),
           api.get("/credit-card-fees"),
           api.get("/settings/organization"),
           api.get("/payment-terms"),
         ]);
-        setClients(clientsRes.data);
+        setClients(clientsRes.data.map((c: any) => ({ id: c.id, name: c.name })));
         setProducts(productsRes.data);
         setContasCorrentes(contasRes.data);
         setFees(feesRes.data);
@@ -96,7 +107,7 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
   }, []);
 
   useEffect(() => {
-    if (paymentMethod === "CREDIT_CARD" && numberOfInstallments) {
+    if (paymentConditionId === "CREDIT_CARD" && numberOfInstallments) {
       const selectedFee = fees.find(
         (f) => f.installments === numberOfInstallments
       );
@@ -104,11 +115,12 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
     } else {
       setFeePercentage(0);
     }
-  }, [paymentMethod, numberOfInstallments, fees]);
+  }, [paymentConditionId, numberOfInstallments, fees]);
 
   useEffect(() => {
     if (selectedProduct) {
       setItemPrice(Number(selectedProduct.price));
+      setSelectedLot(null);
     } else {
       setItemPrice(0);
     }
@@ -119,17 +131,29 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
       toast.error("Selecione um produto, quantidade e preço válidos.");
       return;
     }
-    if (quantity > selectedProduct.stock) {
-      toast.error(`Estoque insuficiente. Disponível: ${selectedProduct.stock}`);
+
+    const isManufactured = selectedProduct.inventoryLots.some(lot => lot.sourceType === 'REACTION');
+    if (isManufactured && !selectedLot) {
+      toast.error("Para produtos manufaturados, selecione um lote.");
       return;
     }
+
+    const lot = selectedProduct.inventoryLots.find(l => l.id === selectedLot);
+    const stockAvailable = isManufactured ? (lot?.remainingQuantity || 0) : selectedProduct.stock;
+
+    if (quantity > stockAvailable) {
+      toast.error(`Estoque insuficiente. Disponível: ${stockAvailable}`);
+      return;
+    }
+
     const existingItem = items.find(
-      (item) => item.productId === selectedProduct.id
+      (item) => item.productId === selectedProduct.id && item.inventoryLotId === selectedLot
     );
+
     if (existingItem) {
       setItems(
         items.map((item) =>
-          item.productId === selectedProduct.id
+          item.productId === selectedProduct.id && item.inventoryLotId === selectedLot
             ? { ...item, quantity: item.quantity + quantity }
             : item
         )
@@ -142,17 +166,19 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
           name: selectedProduct.name,
           quantity: quantity,
           price: itemPrice,
-          stock: selectedProduct.stock,
+          stock: stockAvailable,
+          inventoryLotId: selectedLot || undefined,
         },
       ]);
     }
     setSelectedProduct(null);
+    setSelectedLot(null);
     setQuantity(1);
     setItemPrice(0);
   };
 
-  const handleRemoveItem = (productId: string) =>
-    setItems(items.filter((item) => item.productId !== productId));
+  const handleRemoveItem = (productId: string, inventoryLotId?: string) =>
+    setItems(items.filter((item) => !(item.productId === productId && item.inventoryLotId === inventoryLotId)));
 
   const totalAmount = useMemo(
     () => items.reduce((total, item) => total + item.price * item.quantity, 0),
@@ -167,16 +193,35 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
     [totalAmount, feeAmount, absorbCreditCardFee]
   );
 
-  const onFinalizeSale = async (formData: FormValues) => {
+  const onFinalizeSale = async (formData: any) => {
     if (items.length === 0) return toast.error("Adicione pelo menos um item à venda.");
-    if (formData.paymentMethod === "A_VISTA" && !formData.contaCorrenteId) return toast.error("Para vendas à vista, selecione a conta de destino.");
-    if (formData.paymentMethod === "A_PRAZO" && !formData.paymentTermId) return toast.error("Para vendas a prazo, selecione um prazo de pagamento.");
+    const isAVista = selectedPaymentCondition?.label.toLowerCase().includes('vista');
+    if (isAVista && !formData.contaCorrenteId) return toast.error("Para vendas à vista, selecione a conta de destino.");
 
     setIsSubmitting(true);
+
+    let paymentMethod = 'A_PRAZO';
+    let paymentTermId = null;
+
+    if (selectedPaymentCondition) {
+      if (selectedPaymentCondition.value === 'CREDIT_CARD') {
+        paymentMethod = 'CREDIT_CARD';
+      } else if (selectedPaymentCondition.isTerm) {
+        paymentTermId = selectedPaymentCondition.value;
+        if (selectedPaymentCondition.label.toLowerCase().includes('vista')) {
+          paymentMethod = 'A_VISTA';
+        }
+      }
+    }
+
     const payload = {
-      ...formData,
-      items: items.map(({ productId, quantity, price }) => ({ productId, quantity, price })),
+      pessoaId: formData.clientId,
+      items: items.map(({ productId, quantity, price, inventoryLotId }) => ({ productId, quantity, price, inventoryLotId })),
       feeAmount: totalAmount * (feePercentage / 100),
+      paymentMethod,
+      paymentTermId,
+      numberOfInstallments: formData.numberOfInstallments,
+      contaCorrenteId: formData.contaCorrenteId,
     };
 
     try {
@@ -211,7 +256,7 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
                     <Combobox
                       options={clients.map((c) => ({ value: c.id, label: c.name }))}
                       value={field.value}
-                      onValueChange={field.onChange}
+onChange={field.onChange}
                       placeholder="Selecione..."
                     />
                     <p className="text-sm text-destructive">{errors.clientId?.message}</p>
@@ -219,46 +264,26 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
                 )}
               />
               <Controller
-                name="paymentMethod"
+                name="paymentConditionId"
                 control={control}
                 render={({ field }) => (
                   <div className="space-y-1">
-                    <Label>Forma de Pagamento</Label>
+                    <Label>Condição de Pagamento</Label>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="A_VISTA">À Vista</SelectItem>
-                        <SelectItem value="A_PRAZO">A Prazo</SelectItem>
-                        <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                        {paymentOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-destructive">{errors.paymentMethod?.message}</p>
+                    <p className="text-sm text-destructive">{errors.paymentConditionId?.message}</p>
                   </div>
                 )}
               />
-              {paymentMethod === "A_PRAZO" && (
-                <Controller
-                  name="paymentTermId"
-                  control={control}
-                  render={({ field }) => (
-                    <div className="space-y-1">
-                      <Label>Prazo de Pagamento</Label>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>
-                          {paymentTerms.map((term) => (
-                            <SelectItem key={term.id} value={term.id}>
-                              {term.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.paymentTermId && <p className="text-sm text-destructive">{errors.paymentTermId.message}</p>}
-                    </div>
-                  )}
-                />
-              )}
-              {paymentMethod === "CREDIT_CARD" && (
+              {paymentConditionId === "CREDIT_CARD" && (
                 <Controller
                   name="numberOfInstallments"
                   control={control}
@@ -286,7 +311,7 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
                   )}
                 />
               )}
-              {paymentMethod === "A_VISTA" && (
+              {selectedPaymentCondition && selectedPaymentCondition.label.toLowerCase().includes('vista') && (
                 <Controller
                   name="contaCorrenteId"
                   control={control}
@@ -320,10 +345,27 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
                 <Combobox
                   options={products.map((p) => ({ value: p.id, label: `${p.name} (Estoque: ${p.stock})` }))}
                   value={selectedProduct?.id}
-                  onValueChange={(value) => setSelectedProduct(products.find((p) => p.id === value) || null)}
+                  onChange={(value) => setSelectedProduct(products.find((p) => p.id === value) || null)}
                   placeholder="Pesquise..."
                 />
               </div>
+              {selectedProduct && selectedProduct.inventoryLots.some(lot => lot.sourceType === 'REACTION') && (
+                <div className="sm:col-span-2">
+                  <Label>Lote de Produção</Label>
+                  <Select onValueChange={setSelectedLot} value={selectedLot || ""}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o lote..." /></SelectTrigger>
+                    <SelectContent>
+                      {selectedProduct.inventoryLots
+                        .filter(lot => lot.sourceType === 'REACTION' && lot.remainingQuantity > 0)
+                        .map(lot => (
+                          <SelectItem key={lot.id} value={lot.id}>
+                            Lote #{lot.id.substring(0, 8)} (Disponível: {lot.remainingQuantity})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="sm:col-span-1">
                 <Label>Preço Unit.</Label>
                 <Input type="number" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))} min="0" step="0.01" />
@@ -356,13 +398,13 @@ export function NewSaleForm({ onSave }: NewSaleFormProps) {
                   <TableBody>
                     {items.length > 0 ? (
                       items.map((item) => (
-                        <TableRow key={item.productId}>
-                          <TableCell>{item.name}</TableCell>
+                        <TableRow key={`${item.productId}-${item.inventoryLotId || 'stock'}`}>
+                          <TableCell>{item.name}{item.inventoryLotId && ` (Lote: ${item.inventoryLotId.substring(0,8)})`}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
                           <TableCell>{formatCurrency(item.price)}</TableCell>
                           <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
                           <TableCell>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.productId)}>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.productId, item.inventoryLotId)}>
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
                           </TableCell>

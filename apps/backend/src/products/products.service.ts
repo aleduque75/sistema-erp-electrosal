@@ -162,10 +162,19 @@ export class ProductsService {
     return ProductMapper.toDomain(prismaProduct);
   }
 
-  async findAll(organizationId: string): Promise<Product[]> {
-    const prismaProducts = await this.prisma.product.findMany({ where: { organizationId } });
-    console.log('Produtos do Prisma:', prismaProducts);
-    return prismaProducts.map(ProductMapper.toDomain);
+  async findAll(organizationId: string): Promise<any[]> {
+    const prismaProducts = await this.prisma.product.findMany({
+      where: { organizationId },
+      include: {
+        inventoryLots: {
+          orderBy: {
+            receivedDate: 'asc',
+          },
+        },
+      },
+    });
+    const domainProducts = prismaProducts.map(ProductMapper.toDomain);
+    return domainProducts.map(p => p.toJSON());
   }
 
   async findOne(organizationId: string, id: string): Promise<Product> {

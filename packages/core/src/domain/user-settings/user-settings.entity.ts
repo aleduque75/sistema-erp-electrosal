@@ -6,6 +6,8 @@ export interface UserSettingsProps {
   defaultReceitaContaId?: string;
   defaultCaixaContaId?: string;
   defaultDespesaContaId?: string;
+  metalStockAccountId?: string; // ADDED
+  productionCostAccountId?: string; // ADDED
   createdAt?: Date; // Not in schema, but good practice
   updatedAt?: Date; // Not in schema, but good practice
 }

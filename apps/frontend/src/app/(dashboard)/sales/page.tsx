@@ -77,7 +77,7 @@ export default function SalesPage() {
 
   const columns: ColumnDef<Sale>[] = [
     { accessorKey: "orderNumber", header: "Nº Pedido" },
-    { accessorKey: "client.name", header: "Cliente" },
+    { accessorKey: "pessoa.name", header: "Cliente" },
     {
       accessorKey: "createdAt",
       header: "Data",
@@ -90,6 +90,15 @@ export default function SalesPage() {
         <Badge variant="outline">
           {row.original.paymentMethod.replace("_", " ")}
         </Badge>
+      ),
+    },
+    {
+      accessorKey: "goldValue",
+      header: () => <div className="text-right">Valor em Ouro</div>,
+      cell: ({ row }) => (
+        <div className="text-right font-medium">
+          {Number(row.original.goldValue).toFixed(4)} g
+        </div>
       ),
     },
     {

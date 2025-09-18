@@ -19,6 +19,11 @@ import {
 } from '@sistema-erp-electrosal/core';
 import { UpdateContaMetalBalanceUseCase } from '../../contas-metais/use-cases/update-conta-metal-balance.use-case'; // Adicionado
 import { FindContaMetalByNameAndMetalTypeUseCase } from '../../contas-metais/use-cases/find-conta-metal-by-name-and-metal-type.use-case'; // Adicionado
+import { CotacoesService } from '../../cotacoes/cotacoes.service';
+import { ContasContabeisService } from '../../contas-contabeis/contas-contabeis.service';
+import { TransacoesService } from '../../transacoes/transacoes.service';
+import { UsersService } from '../../users/users.service';
+import { TipoTransacaoPrisma } from '@prisma/client';
 
 export interface FinalizeRecoveryOrderCommand {
   recoveryOrderId: string;
@@ -38,6 +43,10 @@ export class ProcessRecoveryFinalizationUseCase {
     private readonly contaMetalRepository: IContaMetalRepository, // Adicionado
     private readonly updateContaMetalBalanceUseCase: UpdateContaMetalBalanceUseCase, // Adicionado
     private readonly findContaMetalByNameAndMetalTypeUseCase: FindContaMetalByNameAndMetalTypeUseCase, // Adicionado
+    private readonly cotacoesService: CotacoesService,
+    private readonly contasContabeisService: ContasContabeisService,
+    private readonly transacoesService: TransacoesService,
+    private readonly usersService: UsersService,
   ) {}
 
   async execute(command: FinalizeRecoveryOrderCommand): Promise<void> {
@@ -75,9 +84,9 @@ export class ProcessRecoveryFinalizationUseCase {
     const residuoGramas = recoveryOrder.totalBrutoEstimadoGramas - auPuroRecuperadoGramas;
 
     // ADDED DEBUG LOGS
-    this.logger.debug(`teorFinal: ${teorFinal}`);
-    this.logger.debug(`recoveryOrder.resultadoProcessamentoGramas: ${recoveryOrder.resultadoProcessamentoGramas}`);
-    this.logger.debug(`auPuroRecuperadoGramas: ${auPuroRecuperadoGramas}`);
+    console.log(`teorFinal: ${teorFinal}`);
+    console.log(`recoveryOrder.resultadoProcessamentoGramas: ${recoveryOrder.resultadoProcessamentoGramas}`);
+    console.log(`auPuroRecuperadoGramas: ${auPuroRecuperadoGramas}`);
 
     let residueAnalysisId: string | undefined = undefined;
 
@@ -134,6 +143,50 @@ export class ProcessRecoveryFinalizationUseCase {
         amount: auPuroRecuperadoGramas,
         type: 'credit',
       });
+
+      // --- Create Financial Transaction ---
+      const cotacao = await this.cotacoesService.findLatest(TipoMetal.AU, organizationId);
+      console.log(`Cotação encontrada: ${JSON.stringify(cotacao)}`); // ADDED
+
+      if (cotacao && parseFloat(cotacao.valorCompra.toString()) > 0) {
+        const valorBRL = auPuroRecuperadoGramas * parseFloat(cotacao.valorCompra.toString());
+        console.log(`Valor BRL calculado: ${valorBRL}`); // ADDED
+
+        const userSettings = await this.usersService.getUserSettingsByOrganizationId(organizationId);
+        console.log(`User Settings: ${JSON.stringify(userSettings)}`); // ADDED
+
+        if (!userSettings || !userSettings.metalStockAccountId || !userSettings.productionCostAccountId) {
+          console.warn(`Configurações de contas contábeis para estoque de metal ou custo de produção não encontradas para a organização ${organizationId}. Lançamento contábil não será gerado.`);
+          // Optionally throw an error or return early if this is a critical requirement
+        } else {
+          const contaDebito = await this.contasContabeisService.findOne(organizationId, userSettings.metalStockAccountId);
+          const contaCredito = await this.contasContabeisService.findOne(organizationId, userSettings.productionCostAccountId);
+          console.log(`Conta Débito: ${JSON.stringify(contaDebito)}`); // ADDED
+          console.log(`Conta Crédito: ${JSON.stringify(contaCredito)}`); // ADDED
+
+          const dataTransacao = new Date();
+
+          // Débito
+          await this.transacoesService.create({
+            descricao: `Valorização de estoque por recuperação de metal da Ordem #${recoveryOrder.id.toString()}`,
+            valor: valorBRL,
+            tipo: TipoTransacaoPrisma.DEBITO,
+            dataHora: dataTransacao,
+            contaContabilId: contaDebito.id,
+          }, organizationId);
+          console.log(`Transação de débito criada.`); // ADDED
+
+          // Crédito
+          await this.transacoesService.create({
+            descricao: `Contrapartida da valorização de estoque da Ordem #${recoveryOrder.id.toString()}`,
+            valor: valorBRL,
+            tipo: TipoTransacaoPrisma.CREDITO,
+            dataHora: dataTransacao,
+            contaContabilId: contaCredito.id,
+          }, organizationId);
+          console.log(`Transação de crédito criada.`); // ADDED
+        }
+      }
     }
 
     // --- Update Recovery Order ---

@@ -41,6 +41,7 @@ import { AnalisesQuimicasModule } from './analises-quimicas';
 import { RecuperacoesModule } from './recuperacoes';
 import { RecoveryOrdersModule } from './recovery-orders/recovery-orders.module';
 import { ContasMetaisModule } from './contas-metais/contas-metais.module';
+import { CotacoesModule } from './cotacoes/cotacoes.module';
 
 
 @Module({
@@ -72,6 +73,7 @@ import { ContasMetaisModule } from './contas-metais/contas-metais.module';
   RecuperacoesModule,
   RecoveryOrdersModule,
   ContasMetaisModule,
+  CotacoesModule,
   ],
   controllers: [AppController],
   providers: [

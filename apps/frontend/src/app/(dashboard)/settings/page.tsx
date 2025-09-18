@@ -28,6 +28,8 @@ interface UserSettings {
   defaultCaixaContaId?: string | null;
   defaultReceitaContaId?: string | null;
   defaultDespesaContaId?: string | null;
+  metalStockAccountId?: string | null; // Novo campo
+  productionCostAccountId?: string | null; // Novo campo
 }
 interface ContaContabil {
   id: string;
@@ -41,6 +43,8 @@ const settingsFormSchema = z.object({
   defaultCaixaContaId: z.string().nullable().optional(),
   defaultReceitaContaId: z.string().nullable().optional(),
   defaultDespesaContaId: z.string().nullable().optional(),
+  metalStockAccountId: z.string().nullable().optional(), // Novo campo
+  productionCostAccountId: z.string().nullable().optional(), // Novo campo
 });
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
 
@@ -84,6 +88,8 @@ export default function SettingsPage() {
         defaultCaixaContaId: settings.defaultCaixaContaId,
         defaultReceitaContaId: settings.defaultReceitaContaId,
         defaultDespesaContaId: settings.defaultDespesaContaId,
+        metalStockAccountId: settings.metalStockAccountId,
+        productionCostAccountId: settings.productionCostAccountId,
       });
     }
   }, [settings, form]);
@@ -133,6 +139,22 @@ export default function SettingsPage() {
         label: `${acc.codigo} - ${acc.nome}`,
       })) || [];
 
+  const metalStockOptions: ComboboxOption[] =
+    allAccounts
+      ?.filter((acc) => acc.tipo === "ATIVO") // Estoque é um ativo
+      .map((acc) => ({
+        value: acc.id,
+        label: `${acc.codigo} - ${acc.nome}`,
+      })) || [];
+
+  const productionCostOptions: ComboboxOption[] =
+    allAccounts
+      ?.filter((acc) => acc.tipo === "DESPESA" || acc.tipo === "RECEITA") // Custo de produção pode ser despesa ou receita (contrapartida)
+      .map((acc) => ({
+        value: acc.id,
+        label: `${acc.codigo} - ${acc.nome}`,
+      })) || [];
+
   if (isLoadingSettings || isLoadingAccounts) {
     return <p className="text-center p-10">Carregando configurações...</p>;
   }
@@ -156,7 +178,7 @@ export default function SettingsPage() {
                 <Label>Conta Caixa/Banco Padrão</Label>
                 <Combobox
                   value={field.value}
-                  onValueChange={field.onChange}
+                  onChange={field.onChange}
                   options={caixaOptions}
                   placeholder="Selecione a conta de caixa..."
                 />
@@ -176,7 +198,7 @@ export default function SettingsPage() {
                 <Label>Conta de Receita de Vendas Padrão</Label>
                 <Combobox
                   value={field.value}
-                  onValueChange={field.onChange}
+                  onChange={field.onChange}
                   options={receitaOptions}
                   placeholder="Selecione a conta de receita..."
                 />
@@ -196,12 +218,51 @@ export default function SettingsPage() {
                 <Label>Conta de Despesa Padrão</Label>
                 <Combobox
                   value={field.value}
-                  onValueChange={field.onChange}
+                  onChange={field.onChange}
                   options={despesaOptions}
                   placeholder="Selecione a conta de despesa..."
                 />
                 <p className="text-sm text-muted-foreground">
                   Conta usada para registrar despesas gerais e pagamentos.
+                </p>
+              </div>
+            )}
+          />
+
+          {/* Novos campos para contas de metal e custo de produção */}
+          <Controller
+            name="metalStockAccountId"
+            control={form.control}
+            render={({ field }) => (
+              <div className="space-y-2">
+                <Label>Conta de Estoque de Metal Padrão</Label>
+                <Combobox
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={metalStockOptions}
+                  placeholder="Selecione a conta de estoque de metal..."
+                />
+                <p className="text-sm text-muted-foreground">
+                  Conta contábil para registrar o valor do metal recuperado.
+                </p>
+              </div>
+            )}
+          />
+
+          <Controller
+            name="productionCostAccountId"
+            control={form.control}
+            render={({ field }) => (
+              <div className="space-y-2">
+                <Label>Conta de Custo de Produção Padrão</Label>
+                <Combobox
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={productionCostOptions}
+                  placeholder="Selecione a conta de custo de produção..."
+                />
+                <p className="text-sm text-muted-foreground">
+                  Conta contábil para a contrapartida do valor do metal recuperado.
                 </p>
               </div>
             )}

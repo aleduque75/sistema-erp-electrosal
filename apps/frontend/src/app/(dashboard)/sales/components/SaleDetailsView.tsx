@@ -11,11 +11,9 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { format } from "date-fns";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -32,7 +30,7 @@ export function SaleDetailsView({ sale }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <h3 className="font-semibold">Cliente</h3>
-          <p className="text-muted-foreground">{sale.client.name}</p>
+          <p className="text-muted-foreground">{sale.pessoa.name}</p>
         </div>
         <div>
           <h3 className="font-semibold">Data da Venda</h3>
@@ -49,6 +47,7 @@ export function SaleDetailsView({ sale }) {
             <TableHeader>
               <TableRow>
                 <TableHead>Produto</TableHead>
+                <TableHead>Lote</TableHead>
                 <TableHead className="text-center">Qtd.</TableHead>
                 <TableHead className="text-right">Valor Unit.</TableHead>
                 <TableHead className="text-right">Subtotal</TableHead>
@@ -58,6 +57,7 @@ export function SaleDetailsView({ sale }) {
               {sale.saleItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>{item.product.name}</TableCell>
+                  <TableCell>{item.inventoryLotId ? item.inventoryLotId.substring(0, 8) : 'N/A'}</TableCell>
                   <TableCell className="text-center">{item.quantity}</TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(item.price)}
@@ -80,6 +80,10 @@ export function SaleDetailsView({ sale }) {
         <div className="flex justify-between w-full max-w-xs">
           <span className="text-muted-foreground">Taxas</span>
           <span>{formatCurrency(sale.feeAmount)}</span>
+        </div>
+        <div className="flex justify-between w-full max-w-xs">
+          <span className="text-muted-foreground">Valor em Ouro</span>
+          <span>{sale.goldValue.toFixed(4)} g</span>
         </div>
         <div className="flex justify-between w-full max-w-xs font-bold text-lg">
           <span>Total</span>

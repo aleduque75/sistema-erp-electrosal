@@ -9,6 +9,8 @@ export class UserSettingsMapper {
         defaultReceitaContaId: raw.defaultReceitaContaId ?? undefined,
         defaultCaixaContaId: raw.defaultCaixaContaId ?? undefined,
         defaultDespesaContaId: raw.defaultDespesaContaId ?? undefined,
+        metalStockAccountId: raw.metalStockAccountId ?? undefined, // ADDED
+        productionCostAccountId: raw.productionCostAccountId ?? undefined, // ADDED
         // createdAt and updatedAt are not in Prisma model for UserSettings,
         // but are in our DDD entity. We can omit them or add default values if needed.
       },
@@ -23,6 +25,8 @@ export class UserSettingsMapper {
       defaultReceitaContaId: userSettings.defaultReceitaContaId ?? null,
       defaultCaixaContaId: userSettings.defaultCaixaContaId ?? null,
       defaultDespesaContaId: userSettings.defaultDespesaContaId ?? null,
+      metalStockAccountId: userSettings.metalStockAccountId ?? null, // ADDED
+      productionCostAccountId: userSettings.productionCostAccountId ?? null, // ADDED
     } as PrismaUserSettings; // Cast to PrismaUserSettings to satisfy type checking
   }
 }

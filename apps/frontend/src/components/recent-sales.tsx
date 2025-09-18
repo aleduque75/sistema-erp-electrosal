@@ -40,9 +40,9 @@ export function RecentSales({ data }) {
               data.map((sale) => (
                 <TableRow key={sale.id}>
                   <TableCell>
-                    <div className="font-medium">{sale.client.name}</div>
+                    <div className="font-medium">{sale.pessoa.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {sale.client.email}
+                      {sale.pessoa.email}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">

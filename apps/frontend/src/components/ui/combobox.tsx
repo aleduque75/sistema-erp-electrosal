@@ -67,11 +67,10 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label} // Usar o label para busca
-                  onSelect={(currentLabel) => {
-                    const selectedValue = options.find(opt => opt.label.toLowerCase() === currentLabel.toLowerCase())?.value || "";
-                    onChange(selectedValue === value ? "" : selectedValue);
-                    setOpen(false);
+                  value={option.value} // Corrigido: Usar o value real
+                  onSelect={(currentValue) => {
+                    onChange(currentValue === value ? "" : currentValue)
+                    setOpen(false)
                   }}
                 >
                   <Check
