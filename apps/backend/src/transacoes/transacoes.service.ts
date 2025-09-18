@@ -25,7 +25,7 @@ export class TransacoesService {
           tipo: data.tipo,
           dataHora: data.dataHora, // Usar dataHora do DTO
           contaContabil: { connect: { id: data.contaContabilId } }, // Agora é obrigatório
-          contaCorrente: { connect: { id: data.contaCorrenteId } },
+          contaCorrente: data.contaCorrenteId ? { connect: { id: data.contaCorrenteId } } : undefined,
           organization: { connect: { id: organizationId } },
           moeda: 'BRL',
         },

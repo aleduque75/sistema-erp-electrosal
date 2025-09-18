@@ -19,7 +19,7 @@ export class CreateTransacaoDto {
   @IsNumber() @Min(0.01) valor: number;
   @IsString() @IsNotEmpty() descricao: string;
   @IsUUID() @IsNotEmpty() contaContabilId: string;
-  @IsUUID() @IsNotEmpty() contaCorrenteId: string;
+  @IsOptional() @IsUUID() contaCorrenteId?: string;
   @IsDate() @Type(() => Date) dataHora: Date; // Adicionado
 }
 

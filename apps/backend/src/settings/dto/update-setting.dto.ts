@@ -13,4 +13,12 @@ export class UpdateSettingDto {
   @IsUUID()
   @IsOptional()
   defaultDespesaContaId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  metalStockAccountId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  productionCostAccountId?: string;
 }

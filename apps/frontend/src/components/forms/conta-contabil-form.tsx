@@ -42,6 +42,7 @@ interface ContaContabilFormProps {
 
 // Schema de validação
 const formSchema = z.object({
+  codigo: z.string().optional(), // Adicionado: Código da conta contábil (opcional)
   nome: z.string().min(2, "O nome é obrigatório."),
   tipo: z.nativeEnum(TipoContaContabilPrisma),
   contaPaiId: z.string().uuid().optional().nullable(),
@@ -55,6 +56,7 @@ export function ContaContabilForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
+      codigo: "",
       nome: "",
       tipo: TipoContaContabilPrisma.DESPESA,
       contaPaiId: null,
@@ -88,6 +90,19 @@ export function ContaContabilForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          name="codigo"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Código da Conta (Opcional)</FormLabel>
+              <FormControl>
+                <Input placeholder="Ex: 1.1.3.01" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           name="nome"
           control={form.control}

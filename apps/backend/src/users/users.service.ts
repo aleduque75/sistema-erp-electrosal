@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dtos/create-user.dto'; // Importe o UpdateUserDto
 import * as bcrypt from 'bcryptjs';
-import { User } from '@prisma/client';
+import { User, UserSettings } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -59,5 +59,13 @@ export class UsersService {
     return this.prisma.user.delete({
       where: { id, organizationId },
     });
+  }
+
+  async getUserSettingsByOrganizationId(organizationId: string): Promise<UserSettings | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { organizationId },
+      include: { settings: true },
+    });
+    return user?.settings || null;
   }
 }

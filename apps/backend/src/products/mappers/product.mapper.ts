@@ -1,8 +1,19 @@
-import { Product, UniqueEntityID } from '@sistema-erp-electrosal/core';
-import { Product as PrismaProduct, Prisma } from '@prisma/client';
+import { Product, UniqueEntityID, InventoryLotProps } from '@sistema-erp-electrosal/core';
+import { Product as PrismaProduct, InventoryLot as PrismaInventoryLot, Prisma } from '@prisma/client';
+
+// É necessário definir o tipo do `raw` que o `toDomain` recebe para incluir as relações
+type PrismaProductWithRelations = PrismaProduct & {
+  inventoryLots?: PrismaInventoryLot[];
+};
 
 export class ProductMapper {
-  static toDomain(raw: PrismaProduct): Product {
+  static toDomain(raw: PrismaProductWithRelations): Product {
+    const inventoryLots: InventoryLotProps[] = raw.inventoryLots?.map(lot => ({
+      id: UniqueEntityID.create(lot.id),
+      remainingQuantity: lot.remainingQuantity,
+      sourceType: lot.sourceType,
+    })) ?? [];
+
     const product = Product.create(
       {
         organizationId: raw.organizationId,
@@ -11,19 +22,19 @@ export class ProductMapper {
         price: raw.price.toNumber(),
         costPrice: raw.costPrice?.toNumber() ?? undefined,
         stock: raw.stock ?? 0,
+        inventoryLots: inventoryLots, // Mapeando os lotes
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
       },
       raw.id ? UniqueEntityID.create(raw.id) : undefined,
     );
-    console.log('Produto mapeado para domínio:', product);
     return product;
   }
 
-  static toPersistence(product: Product): PrismaProduct {
+  static toPersistence(product: Product): Prisma.ProductCreateInput {
     return {
       id: product.id.toString(),
-      organizationId: product.organizationId,
+      organization: { connect: { id: product.organizationId } },
       name: product.name,
       description: product.description ?? null,
       price: new Prisma.Decimal(product.price),
@@ -31,8 +42,6 @@ export class ProductMapper {
       stock: product.stock,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
-      // saleItems: [], // Relations are handled by Prisma, not directly mapped here
-      // stockMovements: [], // Relations are handled by Prisma, not directly mapped here
-    } as PrismaProduct; // Cast to PrismaProduct to satisfy type checking
+    };
   }
 }

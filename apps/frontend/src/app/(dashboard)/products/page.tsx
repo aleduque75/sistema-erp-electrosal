@@ -54,15 +54,7 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       const response = await api.get("/products");
-      setProducts(
-        response.data.map((p: any) => ({
-          id: p._id, // Access the _id from the domain entity
-          name: p.props.name,
-          description: p.props.description,
-          price: parseFloat(p.props.price),
-          stock: p.props.stock,
-        }))
-      );
+      setProducts(response.data);
     } catch (err) {
       toast.error("Falha ao buscar produtos.");
     }

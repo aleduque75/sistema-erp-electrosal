@@ -1,3 +1,4 @@
+## Utilize o portugues do brasil para traduzir as respostas
 Persona
 Você é Gemini, um assistente de programação especialista em full-stack com TypeScript. Seu foco é em NestJS para o backend e Next.js com Tailwind CSS e shadcn/ui para o frontend. Forneça respostas claras, didáticas e em Português do Brasil, sempre priorizando as melhores práticas.
 
@@ -383,3 +384,21 @@ Reforce a Regra:
 Fora do Domínio -> Dentro do Domínio: Receba IDs como string e converta para new UniqueEntityID(string) internamente.
 
 Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, sempre use id.toString() ou id.toValue().
+
+### Objetivos Atuais
+
+**1. Criação da Entidade `Cotação`**
+   - **Tarefa:** Definir o modelo `Cotacao` no `schema.prisma` para registrar os preços diários de compra e venda dos metais.
+   - **Tarefa:** Criar o módulo backend (`cotacoes`) para gerenciar o CRUD (Create, Read, Update, Delete) das cotações.
+   - **Status:** A fazer.
+
+**2. Integração do Plano de Contas na Recuperação**
+   - **Tarefa:** Ao finalizar uma `OrdemDeRecuperacao`, o sistema deverá buscar a cotação do dia para o metal recuperado.
+   - **Tarefa:** Calcular o valor em Reais (R$) do metal puro obtido (`auPuroRecuperadoGramas`).
+   - **Tarefa:** Criar um `LancamentoFinanceiro` automático, debitando uma conta de `Estoque` e creditando uma conta de `Custo de Produção` ou `Variação de Ativo`.
+   - **Status:** A fazer.
+
+**3. Refatoração do Fluxo de Pagamentos e Entradas de Metal**
+   - **Tarefa:** Implementar a lógica para que um cliente possa pagar uma venda usando seu saldo de metal (`Conta de Metal`).
+   - **Tarefa:** Modelar e implementar o fluxo de compra de metal de fornecedores, incluindo o cenário onde um cliente deposita um valor diretamente para o fornecedor da empresa.
+   - **Status:** A fazer.

@@ -42,6 +42,8 @@ model Organization {
   metalCredits          MetalCredit[]
   recoveryOrders        RecoveryOrder[]
   contasMetais          ContaMetal[] // Adicionado para a relação inversa
+  cotacoes              Cotacao[]
+  stockMovements        StockMovement[] // Adicionado para a relação inversa
 }
 
 // --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
@@ -70,6 +72,8 @@ model UserSettings {
   defaultReceitaContaId String?
   defaultCaixaContaId   String?
   defaultDespesaContaId String?
+  metalStockAccountId   String? // ID da conta contábil para Estoque de Metais em Processo
+  productionCostAccountId String? // ID da conta contábil para Custo de Produção
 
   @@map("user_settings")
 }
@@ -203,12 +207,14 @@ model InventoryLot {
 }
 
 model StockMovement {
-  id        String   @id @default(uuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  type      String
-  quantity  Int
-  createdAt DateTime @default(now())
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id])
+  type           String
+  quantity       Int
+  createdAt      DateTime     @default(now())
 }
 
 model Sale {
@@ -219,15 +225,18 @@ model Sale {
   pessoa         Pessoa            @relation(fields: [pessoaId], references: [id])
   orderNumber    String            @unique
   totalAmount    Decimal           @db.Decimal(10, 2)
+  totalCost      Decimal?          @db.Decimal(10, 2)
   feeAmount      Decimal?          @db.Decimal(10, 2)
   netAmount      Decimal?          @db.Decimal(10, 2)
+  goldPrice      Decimal?          @db.Decimal(10, 2) // Cotação do ouro no dia da venda
+  goldValue      Decimal?          @db.Decimal(10, 4) // Valor da venda em gramas de ouro
   paymentMethod  String?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   saleItems      SaleItem[]
   accountsRec    AccountRec[]
   installments   SaleInstallment[]
-  paymentTermId  String? // Novo campo para o prazo de pagamento
+  paymentTermId  String?
   paymentTerm    PaymentTerm?      @relation(fields: [paymentTermId], references: [id])
 }
 
@@ -249,18 +258,18 @@ model PaymentTerm {
 }
 
 model SaleItem {
-  id        String   @id @default(uuid())
-  saleId    String
-  sale      Sale     @relation(fields: [saleId], references: [id])
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  quantity  Int
-  price     Decimal  @db.Decimal(10, 2)
-  inventoryLotId    String?
-  inventoryLot      InventoryLot? @relation(fields: [inventoryLotId], references: [id])
-  costPriceAtSale   Decimal?      @db.Decimal(10, 2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String        @id @default(uuid())
+  saleId          String
+  sale            Sale          @relation(fields: [saleId], references: [id])
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Int
+  price           Decimal       @db.Decimal(10, 2)
+  inventoryLotId  String?
+  inventoryLot    InventoryLot? @relation(fields: [inventoryLotId], references: [id])
+  costPriceAtSale Decimal       @db.Decimal(10, 2)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 enum SaleInstallmentStatus {
@@ -743,4 +752,20 @@ model ContaMetal {
 
   @@unique([organizationId, name, metalType]) // Garante que não há contas de metal duplicadas para a mesma organização, nome e tipo de metal
   @@index([organizationId])
+}
+
+model Cotacao {
+  id             String    @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  metal          TipoMetal
+  data           DateTime  @db.Date
+  valorCompra    Decimal   @db.Decimal(10, 2)
+  valorVenda     Decimal   @db.Decimal(10, 2)
+  tipoPagamento  String?   // PIX, CHEQUE, etc.
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, metal, data, tipoPagamento])
+  @@map("cotacoes")
 }

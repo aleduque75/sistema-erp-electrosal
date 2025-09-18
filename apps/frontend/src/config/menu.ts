@@ -18,6 +18,7 @@ import {
   LayoutPanelLeft,
   Percent,
   FlaskConical, // Ícone para Análise Química
+  Scale, // Ícone para Cotações
 } from "lucide-react";
 import React from "react";
 
@@ -129,12 +130,24 @@ export const menuConfig: NavItem[] = [
         icon: Wallet,
         description: "Acompanhe o saldo e o fluxo de caixa.",
       },
+      {
+        title: "Transações",
+        href: "/transacoes",
+        icon: ArrowRightLeft,
+        description: "Visualize todos os lançamentos financeiros.",
+      },
       { // ADDED
         title: "Contas de Metais", // ADDED
         href: "/contas-metais", // ADDED
         icon: Wallet, // ADDED - Reusing Wallet icon for now, or find a more appropriate one
         description: "Gerencie suas contas de metais preciosos.", // ADDED
       }, // ADDED
+      {
+        title: "Cotações",
+        href: "/cotacoes",
+        icon: Scale,
+        description: "Gerencie as cotações diárias de metais.",
+      },
       {
         title: "Importar Extrato",
         href: "/imports",

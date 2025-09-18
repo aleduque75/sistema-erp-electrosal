@@ -25,12 +25,17 @@ export class SettingsService {
 
   // Atualiza as configurações
   async update(userId: string, updateSettingDto: UpdateSettingDto): Promise<UserSettings> {
-    const existingSettings = await this.findOne(userId); // Garante que as configs existam e retorna DDD entity
-    existingSettings.update(updateSettingDto); // Update DDD entity
-    
+    console.log("SettingsService.update - updateSettingDto:", updateSettingDto); // ADDED
+
     const updatedPrismaSettings = await this.prisma.userSettings.update({
-      where: { id: existingSettings.id.toString() }, // Use id from DDD entity
-      data: UserSettingsMapper.toPersistence(existingSettings), // Convert back to Prisma for persistence
+      where: { userId: userId }, // Update by userId directly
+      data: {
+        defaultReceitaContaId: updateSettingDto.defaultReceitaContaId,
+        defaultCaixaContaId: updateSettingDto.defaultCaixaContaId,
+        defaultDespesaContaId: updateSettingDto.defaultDespesaContaId,
+        metalStockAccountId: updateSettingDto.metalStockAccountId,
+        productionCostAccountId: updateSettingDto.productionCostAccountId,
+      },
     });
     return UserSettingsMapper.toDomain(updatedPrismaSettings);
   }
