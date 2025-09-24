@@ -182,7 +182,7 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
               <Combobox
                 options={filteredOptions}
                 value={field.value}
-                onValueChange={field.onChange}
+                onChange={field.onChange}
                 placeholder="Selecione a conta..."
                 disabled={!tipoLancamento || filteredOptions.length === 0}
               />

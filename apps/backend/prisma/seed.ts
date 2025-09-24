@@ -39,6 +39,12 @@ const planoDeContasEstruturado = [
             aceitaLancamento: true,
           },
           {
+            codigo: '1.1.3.01',
+            nome: 'Estoque de Metais em Processo',
+            tipo: TipoContaContabilPrisma.ATIVO,
+            aceitaLancamento: true,
+          },
+          {
             codigo: '1.1.4',
             nome: 'Empréstimos e Adiantamentos a Terceiros',
             tipo: TipoContaContabilPrisma.ATIVO,
@@ -161,6 +167,12 @@ const planoDeContasEstruturado = [
             aceitaLancamento: true,
           },
           {
+            codigo: '4.1.1.01',
+            nome: 'Custo de Produção - Recuperação',
+            tipo: TipoContaContabilPrisma.RECEITA,
+            aceitaLancamento: true,
+          },
+          {
             codigo: '4.1.2',
             nome: 'Prestação de Serviços',
             tipo: TipoContaContabilPrisma.RECEITA,
@@ -233,6 +245,12 @@ const planoDeContasEstruturado = [
           {
             codigo: '5.1.9',
             nome: 'Lançamentos a Classificar',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: true,
+          },
+          {
+            codigo: '5.1.10',
+            nome: 'Despesas Gerais',
             tipo: TipoContaContabilPrisma.DESPESA,
             aceitaLancamento: true,
           },
@@ -344,15 +362,27 @@ async function main() {
     },
   });
 
+  console.log('Criando plano de contas completo...');
+  await seedContas(organization.id, planoDeContasEstruturado);
+
+  console.log('Buscando contas padrão para configurações...');
+  const defaultReceitaConta = await prisma.contaContabil.findFirst({ where: { organizationId: organization.id, codigo: '4.1.1' } });
+  const defaultCaixaConta = await prisma.contaContabil.findFirst({ where: { organizationId: organization.id, codigo: '1.1.1' } });
+  const defaultDespesaConta = await prisma.contaContabil.findFirst({ where: { organizationId: organization.id, codigo: '5.1.10' } });
+  const metalStockAccount = await prisma.contaContabil.findFirst({ where: { organizationId: organization.id, codigo: '1.1.3.01' } });
+  const productionCostAccount = await prisma.contaContabil.findFirst({ where: { organizationId: organization.id, codigo: '4.1.1.01' } });
+
   console.log('Criando configurações do usuário...');
   await prisma.userSettings.create({
     data: {
       userId: user.id,
+      defaultReceitaContaId: defaultReceitaConta?.id,
+      defaultCaixaContaId: defaultCaixaConta?.id,
+      defaultDespesaContaId: defaultDespesaConta?.id,
+      metalStockAccountId: metalStockAccount?.id,
+      productionCostAccountId: productionCostAccount?.id,
     },
   });
-
-  console.log('Criando plano de contas completo...');
-  await seedContas(organization.id, planoDeContasEstruturado);
 
   console.log('Seed finalizado com sucesso!');
 }

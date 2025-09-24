@@ -18,6 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "preprocess:sales": "tsx src/json-imports/preprocess-sales.ts",
     "copy:prisma-engine": "cp ../../node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node ./dist/"
   },
   "dependencies": {

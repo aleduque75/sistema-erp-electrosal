@@ -172,7 +172,7 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
                   label: `${c.codigo} - ${c.nome}`,
                 }))}
                 value={field.value ?? undefined}
-                onValueChange={field.onChange}
+                onChange={field.onChange}
                 placeholder="Selecione uma categoria..."
               />
               <FormMessage />

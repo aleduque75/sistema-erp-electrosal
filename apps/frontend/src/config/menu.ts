@@ -62,6 +62,12 @@ export const menuConfig: NavItem[] = [
         icon: CreditCard,
         description: "Cadastre e gerencie seus cartões de crédito.",
       },
+      {
+        title: "Grupos de Produtos",
+        href: "/product-groups",
+        icon: Package, // Reutilizando o ícone de Package, ou encontrar um mais adequado
+        description: "Gerencie os grupos de produtos para comissionamento.",
+      },
     ],
   },
   {
@@ -144,9 +150,15 @@ export const menuConfig: NavItem[] = [
       }, // ADDED
       {
         title: "Cotações",
-        href: "/cotacoes",
+        href: "/quotations",
         icon: Scale,
         description: "Gerencie as cotações diárias de metais.",
+      },
+      {
+        title: "Importar Vendas Antigas",
+        href: "/imports/sales",
+        icon: Upload, // Reutilizando o ícone de Upload
+        description: "Importe dados de vendas de sistemas legados.",
       },
       {
         title: "Importar Extrato",

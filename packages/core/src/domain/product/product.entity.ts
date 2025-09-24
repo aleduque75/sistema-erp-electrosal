@@ -1,5 +1,6 @@
 import { Entity } from '../../_shared/domain/entity';
 import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
+import { ProductGroup } from './product-group.entity';
 
 export interface InventoryLotProps {
   id: UniqueEntityID;
@@ -15,6 +16,7 @@ export interface ProductProps {
   costPrice?: number | null;
   stock: number;
   inventoryLots?: InventoryLotProps[];
+  productGroup?: ProductGroup;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -69,6 +71,10 @@ export class Product extends Entity<ProductProps> {
     return this.props.stock;
   }
 
+  get productGroup(): ProductGroup | undefined {
+    return this.props.productGroup;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt!;
   }
@@ -95,6 +101,7 @@ export class Product extends Entity<ProductProps> {
         remainingQuantity: lot.remainingQuantity,
         sourceType: lot.sourceType,
       })),
+      productGroup: this.productGroup?.toJSON(),
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       organizationId: this.organizationId,

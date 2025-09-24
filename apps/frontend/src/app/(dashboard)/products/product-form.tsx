@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Define a interface do Produto
 interface Product {
@@ -25,30 +33,60 @@ interface Product {
   name: string;
   description?: string | null;
   price: number;
-  costPrice?: number; // Adicionado para rastreamento de custo
+  costPrice?: number;
   stock: number;
+  productGroupId?: string;
+  goldValue?: number;
 }
 
 // Define o schema de validação com Zod
 const formSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
   price: z.coerce.number().positive("O preço deve ser um número positivo."),
-  costPrice: z.coerce.number().positive("O preço de custo deve ser um número positivo.").optional(),
+  costPrice: z.coerce
+    .number()
+    .positive("O preço de custo deve ser um número positivo.")
+    .optional(),
   stock: z.coerce
     .number()
     .int()
     .nonnegative("O estoque não pode ser negativo."),
   description: z.string().optional(),
+  productGroupId: z.string().optional(),
+  goldValue: z.coerce.number().optional(),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
 
 interface ProductFormProps {
-  product?: Product | null; // Produto para editar, ou null para criar
-  onSave: () => void; // Função para ser chamada após salvar (para recarregar a tabela)
+  product?: Product | null;
+  onSave: () => void;
+}
+
+interface ProductGroup {
+  id: string;
+  name: string;
 }
 
 export function ProductForm({ product, onSave }: ProductFormProps) {
+  const [productGroups, setProductGroups] = useState<ProductGroup[]>([]);
+  const [isLoadingGroups, setIsLoadingGroups] = useState(true);
+
+  useEffect(() => {
+    const fetchProductGroups = async () => {
+      try {
+        const response = await api.get<ProductGroup[]>("/product-groups");
+        setProductGroups(response.data);
+      } catch (error) {
+        toast.error("Falha ao carregar grupos de produtos.");
+        console.error("Erro ao carregar grupos de produtos:", error);
+      } finally {
+        setIsLoadingGroups(false);
+      }
+    };
+    fetchProductGroups();
+  }, []);
+
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -57,21 +95,21 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
       costPrice: product?.costPrice || 0,
       stock: product?.stock || 0,
       description: product?.description || "",
+      productGroupId: product?.productGroupId || "", // CORRIGIDO: Use "" em vez de undefined
+      goldValue: product?.goldValue || 0,
     },
   });
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
       if (product) {
-        // Modo de Edição
         await api.patch(`/products/${product.id}`, data);
         toast.success("Produto atualizado com sucesso!");
       } else {
-        // Modo de Criação
         await api.post("/products", data);
         toast.success("Produto criado com sucesso!");
       }
-      onSave(); // Chama a função onSave para fechar o modal e atualizar a tabela
+      onSave();
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || "Ocorreu um erro.";
       toast.error(errorMessage);
@@ -130,6 +168,58 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
                 <FormLabel>Estoque</FormLabel>
                 <FormControl>
                   <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="productGroupId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Grupo de Produto</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value} // CORRIGIDO: Use field.value sem o '|| undefined'
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um grupo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {isLoadingGroups ? (
+                      <SelectItem value="loading" disabled>
+                        Carregando grupos...
+                      </SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value="">Nenhum</SelectItem>{" "}
+                        {/* CORRIGIDO: O valor para 'Nenhum' deve ser uma string vazia "" */}
+                        {productGroups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            {group.name}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="goldValue"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Valor em Ouro (g)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.001" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

@@ -31,6 +31,8 @@ export class CreateSaleDto {
 
   @IsNumber() @IsOptional() @Min(0) feeAmount?: number;
   @IsUUID() @IsOptional() contaCorrenteId?: string;
+  @IsNumber() @IsOptional() @Min(0) goldQuoteValue?: number; // Adicionado para importação
+  @IsString() @IsOptional() externalId?: string; // Adicionado para importação
 }
 
 export class UpdateSaleDto extends PartialType(CreateSaleDto) {}

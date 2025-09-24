@@ -402,3 +402,6 @@ Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, se
    - **Tarefa:** Implementar a lógica para que um cliente possa pagar uma venda usando seu saldo de metal (`Conta de Metal`).
    - **Tarefa:** Modelar e implementar o fluxo de compra de metal de fornecedores, incluindo o cenário onde um cliente deposita um valor diretamente para o fornecedor da empresa.
    - **Status:** A fazer.
+
+
+# Vendas uma de produto de revenda, a comissão seria o que pagou menos o que vendeu, seria uma porcentagem desse lucrobruto em venda do sal de au 68$, que vira da reação, ai muda, eu cobro uma mão de obra, que seria por exemplo teria que ter uma tabela, abaixo de 19 gramas cobro 1 gr, isso pode ser altarado , mas seria como padrão, vamos dar um exemplo de uma venda de 10 gr, na cotação de venda 606 e tem frete de R$ 70,00, recebo R$ 6736,00 em metal 11,115 g, mas a cotação de compra do fornecedor é 605,entao seria  11,13, essa diferença seria para uma conta diferença_cotação de 0,014 gr, para calculo de comissão seria a 1 gr de mão de obra menos custos, que ai teria que colocar. é bem complexo deu para entendeer, e queria importar do sistema antigo, os clientes tem um externalId do sistema antigo queria vincular as vendas, elas então em /home/aleduque/Documentos/cursos/sistema-erp-electrosal/json-imports    

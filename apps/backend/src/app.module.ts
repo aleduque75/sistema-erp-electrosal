@@ -41,7 +41,10 @@ import { AnalisesQuimicasModule } from './analises-quimicas';
 import { RecuperacoesModule } from './recuperacoes';
 import { RecoveryOrdersModule } from './recovery-orders/recovery-orders.module';
 import { ContasMetaisModule } from './contas-metais/contas-metais.module';
-import { CotacoesModule } from './cotacoes/cotacoes.module';
+import { QuotationsModule } from './quotations/quotations.module';
+
+
+import { ProductGroupsModule } from './product-groups/product-groups.module';
 
 
 @Module({
@@ -73,16 +76,17 @@ import { CotacoesModule } from './cotacoes/cotacoes.module';
   RecuperacoesModule,
   RecoveryOrdersModule,
   ContasMetaisModule,
-  CotacoesModule,
+  QuotationsModule,
+  ProductGroupsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService, 
     AuditLogService,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: JwtAuthGuard,
+    // },
   ],
 })
 export class AppModule {}

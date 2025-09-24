@@ -51,7 +51,6 @@ export function SaleDetailsModal({
   open,
   onOpenChange,
 }: SaleDetailsModalProps) {
-  console.log("Sale object in modal:", sale);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,7 +61,7 @@ export function SaleDetailsModal({
         {sale ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
-              <DetailItem label="Cliente" value={sale.client.name} />
+              <DetailItem label="Cliente" value={sale.pessoa.name} />
               <DetailItem
                 label="Data da Venda"
                 value={formatDate(sale.createdAt)}
@@ -98,9 +97,9 @@ export function SaleDetailsModal({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sale.saleItems.map((item: any) => (
+                  {sale.saleItems.map((item) => (
                     <TableRow key={item.productId}>
-                      <TableCell>{item.product.name}</TableCell>
+                      <TableCell>{item.product?.name || 'Produto não encontrado'}</TableCell>
                       <TableCell className="text-center">
                         {item.quantity}
                       </TableCell>

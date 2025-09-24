@@ -6,8 +6,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto, UpdateProductDto } from './dtos/create-product.dto';
 import { ConfirmImportXmlDto, ImportXmlDto } from './dtos/import-xml.dto';
-import { Product } from '@sistema-erp-electrosal/core'; // Changed
+import { Product, ProductGroup } from '@sistema-erp-electrosal/core'; // Changed
 import { ProductMapper } from './mappers/product.mapper'; // Added
+import { ProductGroupMapper } from './mappers/product-group.mapper'; // Added
 import * as xml2js from 'xml2js';
 import { XmlImportLogsService } from '../xml-import-logs/xml-import-logs.service'; // Added
 
@@ -101,7 +102,7 @@ export class ProductsService {
           });
           await tx.product.update({
             where: { id: existingProduct.id.toString() },
-            data: ProductMapper.toPersistence(existingProduct),
+            data: { ...ProductMapper.toPersistence(existingProduct) },
           });
         } else {
           const newProduct = Product.create({
@@ -153,11 +154,16 @@ export class ProductsService {
     const newProduct = Product.create({
       ...data,
       organizationId,
-      price: data.price, // Ensure price is number
-      stock: data.stock, // Ensure stock is number
+      price: data.price,
+      stock: data.stock,
+      costPrice: data.costPrice,
+      goldValue: data.goldValue,
     });
     const prismaProduct = await this.prisma.product.create({
-      data: ProductMapper.toPersistence(newProduct),
+      data: {
+        ...ProductMapper.toPersistence(newProduct),
+        productGroup: data.productGroupId ? { connect: { id: data.productGroupId } } : undefined,
+      },
     });
     return ProductMapper.toDomain(prismaProduct);
   }
@@ -171,6 +177,7 @@ export class ProductsService {
             receivedDate: 'asc',
           },
         },
+        productGroup: true, // Incluir o grupo do produto
       },
     });
     const domainProducts = prismaProducts.map(ProductMapper.toDomain);
@@ -180,6 +187,7 @@ export class ProductsService {
   async findOne(organizationId: string, id: string): Promise<Product> {
     const prismaProduct = await this.prisma.product.findFirst({
       where: { id, organizationId },
+      include: { productGroup: true }, // Incluir o grupo do produto
     });
     if (!prismaProduct)
       throw new NotFoundException(`Produto com ID ${id} não encontrado.`);
@@ -192,11 +200,30 @@ export class ProductsService {
     data: UpdateProductDto,
   ): Promise<Product> {
     const existingProduct = await this.findOne(organizationId, id); // Returns DDD entity
-    existingProduct.update(data); // Update DDD entity
+
+    let productGroup: ProductGroup | undefined = undefined;
+    if (data.productGroupId) {
+      const prismaProductGroup = await this.prisma.productGroup.findUnique({
+        where: { id: data.productGroupId },
+      });
+      if (prismaProductGroup) {
+        productGroup = ProductGroupMapper.toDomain(prismaProductGroup);
+      }
+    }
+
+    existingProduct.update({
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      costPrice: data.costPrice,
+      stock: data.stock,
+      goldValue: data.goldValue,
+      productGroup: productGroup,
+    }); // Update DDD entity
     
     const updatedPrismaProduct = await this.prisma.product.update({
       where: { id: existingProduct.id.toString() }, // Use id from DDD entity
-      data: ProductMapper.toPersistence(existingProduct), // Convert back to Prisma for persistence
+      data: ProductMapper.toPersistence(existingProduct),
     });
     return ProductMapper.toDomain(updatedPrismaProduct); // Convert back to DDD for return
   }

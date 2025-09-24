@@ -9,13 +9,13 @@ import { UpdateRecoveryOrderPurityUseCase } from './use-cases/update-recovery-or
 import { MetalCreditsModule } from '../metal-credits/metal-credits.module';
 import { ProcessRecoveryFinalizationUseCase } from './use-cases/process-recovery-finalization.use-case';
 import { ContasMetaisModule } from '../contas-metais/contas-metais.module'; // Adicionado
-import { CotacoesModule } from '../cotacoes/cotacoes.module';
+import { QuotationsModule } from '../quotations/quotations.module';
 import { ContasContabeisModule } from '../contas-contabeis/contas-contabeis.module';
 import { TransacoesModule } from '../transacoes/transacoes.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [PrismaModule, AnalisesQuimicasModule, MetalCreditsModule, ContasMetaisModule, CotacoesModule, ContasContabeisModule, TransacoesModule, UsersModule], // Adicionado
+  imports: [PrismaModule, AnalisesQuimicasModule, MetalCreditsModule, ContasMetaisModule, QuotationsModule, ContasContabeisModule, TransacoesModule, UsersModule], // Adicionado
   controllers: [RecoveryOrdersController],
   providers: [
     {

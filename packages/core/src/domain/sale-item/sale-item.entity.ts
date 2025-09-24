@@ -1,11 +1,13 @@
 import { Entity } from '../../_shared/domain/entity';
 import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
+import { Product } from '../product/product.entity';
 
 export interface SaleItemProps {
   saleId: string;
   productId: string;
   quantity: number;
   price: number; // Decimal in Prisma, number in TS
+  product?: Product;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -54,5 +56,13 @@ export class SaleItem extends Entity<SaleItemProps> {
   update(props: Partial<SaleItemProps>) {
     Object.assign(this.props, props);
     this.props.updatedAt = new Date();
+  }
+
+  toJSON() {
+    return {
+      id: this.id.toString(),
+      ...this.props,
+      product: this.props.product?.toJSON(),
+    };
   }
 }

@@ -11,17 +11,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PlusCircle } from "lucide-react";
-import { CotacaoForm } from "./CotacaoForm";
+import { QuotationForm } from "./QuotationForm"; // Updated import
 
-interface NovaCotacaoModalProps {
-  onSave: () => void;
+interface NovaQuotationModalProps { // Renamed interface
+  onSaveSuccess: () => void; // Renamed prop
 }
 
-export function NovaCotacaoModal({ onSave }: NovaCotacaoModalProps) {
+export function NovaQuotationModal({ onSaveSuccess }: NovaQuotationModalProps) { // Renamed function and prop
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSave = () => {
-    onSave();
+    onSaveSuccess(); // Updated prop usage
     setIsOpen(false);
   };
 
@@ -39,7 +39,7 @@ export function NovaCotacaoModal({ onSave }: NovaCotacaoModalProps) {
             Preencha os detalhes abaixo para registrar uma nova cotação.
           </DialogDescription>
         </DialogHeader>
-        <CotacaoForm onSave={handleSave} />
+        <QuotationForm onSave={handleSave} />
       </DialogContent>
     </Dialog>
   );

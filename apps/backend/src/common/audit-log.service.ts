@@ -48,7 +48,7 @@ export class AuditLogService implements OnModuleInit {
   ): Promise<void> {
     let userName: string | undefined;
      if (userId) {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      const user = await (this.prisma as any).user.findUnique({ where: { id: userId } });
       userName = user?.name || user?.email || userId; // Tenta pegar o nome, email ou o ID
     }
 

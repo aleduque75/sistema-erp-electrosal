@@ -1,9 +1,11 @@
-import { Product, UniqueEntityID, InventoryLotProps } from '@sistema-erp-electrosal/core';
-import { Product as PrismaProduct, InventoryLot as PrismaInventoryLot, Prisma } from '@prisma/client';
+import { Product, UniqueEntityID, InventoryLotProps, ProductGroup } from '@sistema-erp-electrosal/core';
+import { Product as PrismaProduct, InventoryLot as PrismaInventoryLot, ProductGroup as PrismaProductGroup, Prisma } from '@prisma/client';
+import { ProductGroupMapper } from './product-group.mapper';
 
 // É necessário definir o tipo do `raw` que o `toDomain` recebe para incluir as relações
 type PrismaProductWithRelations = PrismaProduct & {
   inventoryLots?: PrismaInventoryLot[];
+  productGroup?: PrismaProductGroup | null;
 };
 
 export class ProductMapper {
@@ -14,6 +16,11 @@ export class ProductMapper {
       sourceType: lot.sourceType,
     })) ?? [];
 
+    let productGroup: ProductGroup | undefined = undefined;
+    if (raw.productGroup) {
+      productGroup = ProductGroupMapper.toDomain(raw.productGroup);
+    }
+
     const product = Product.create(
       {
         organizationId: raw.organizationId,
@@ -23,6 +30,7 @@ export class ProductMapper {
         costPrice: raw.costPrice?.toNumber() ?? undefined,
         stock: raw.stock ?? 0,
         inventoryLots: inventoryLots, // Mapeando os lotes
+        productGroup: productGroup,
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
       },
@@ -40,6 +48,7 @@ export class ProductMapper {
       price: new Prisma.Decimal(product.price),
       costPrice: product.costPrice ? new Prisma.Decimal(product.costPrice) : null,
       stock: product.stock,
+      productGroup: product.productGroup ? { connect: { id: product.productGroup.id.toString() } } : undefined,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
     };

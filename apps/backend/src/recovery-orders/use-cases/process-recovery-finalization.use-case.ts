@@ -19,7 +19,7 @@ import {
 } from '@sistema-erp-electrosal/core';
 import { UpdateContaMetalBalanceUseCase } from '../../contas-metais/use-cases/update-conta-metal-balance.use-case'; // Adicionado
 import { FindContaMetalByNameAndMetalTypeUseCase } from '../../contas-metais/use-cases/find-conta-metal-by-name-and-metal-type.use-case'; // Adicionado
-import { CotacoesService } from '../../cotacoes/cotacoes.service';
+import { QuotationsService } from '../../quotations/quotations.service';
 import { ContasContabeisService } from '../../contas-contabeis/contas-contabeis.service';
 import { TransacoesService } from '../../transacoes/transacoes.service';
 import { UsersService } from '../../users/users.service';
@@ -43,7 +43,7 @@ export class ProcessRecoveryFinalizationUseCase {
     private readonly contaMetalRepository: IContaMetalRepository, // Adicionado
     private readonly updateContaMetalBalanceUseCase: UpdateContaMetalBalanceUseCase, // Adicionado
     private readonly findContaMetalByNameAndMetalTypeUseCase: FindContaMetalByNameAndMetalTypeUseCase, // Adicionado
-    private readonly cotacoesService: CotacoesService,
+    private readonly cotacoesService: QuotationsService,
     private readonly contasContabeisService: ContasContabeisService,
     private readonly transacoesService: TransacoesService,
     private readonly usersService: UsersService,
@@ -148,8 +148,8 @@ export class ProcessRecoveryFinalizationUseCase {
       const cotacao = await this.cotacoesService.findLatest(TipoMetal.AU, organizationId);
       console.log(`Cotação encontrada: ${JSON.stringify(cotacao)}`); // ADDED
 
-      if (cotacao && parseFloat(cotacao.valorCompra.toString()) > 0) {
-        const valorBRL = auPuroRecuperadoGramas * parseFloat(cotacao.valorCompra.toString());
+      if (cotacao && parseFloat(cotacao.buyPrice.toString()) > 0) {
+        const valorBRL = auPuroRecuperadoGramas * parseFloat(cotacao.buyPrice.toString());
         console.log(`Valor BRL calculado: ${valorBRL}`); // ADDED
 
         const userSettings = await this.usersService.getUserSettingsByOrganizationId(organizationId);

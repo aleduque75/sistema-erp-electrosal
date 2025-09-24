@@ -1,15 +1,21 @@
+export * from './domain/product';
 // This is a placeholder for shared types, interfaces, etc.
 export interface SharedType {
   id: string;
   name: string;
 }
 export * from './_shared';
-export * from './domain/sales';
+export * from './domain/sales/sale.entity';
+export * from './domain/sales/sale-installment.entity';
+export * from './domain/sales/enums/sale-installment-status.enum';
+export * from './domain/sales/sale.repository';
+export * from './domain/sale-item/sale-item.entity'; // Correct SaleItem export
 export * from './domain';
 export * from './value-objects';
 export * from './domain/metal-credits';
 export * from './domain/recovery-orders';
 export * from './domain/contas-metais';
+export * from './domain/quotations';
 
 // Explicitly re-export from contas-metais for direct access
 export { ContaMetal } from './domain/contas-metais/conta-metal.entity';

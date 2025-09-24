@@ -41,11 +41,14 @@ export class SalesService {
       },
       take: limit,
     });
-    // Map SaleItems to DDD entities
-    return prismaSales.map(sale => ({
+    const result = prismaSales.map(sale => ({
       ...sale,
       saleItems: sale.saleItems.map(SaleItemMapper.toDomain),
     })) as any;
+
+    console.log('[DEBUG sales.service.ts findAll] returning:', JSON.stringify(result, null, 2));
+
+    return result;
   }
 
   // Recebe organizationId
@@ -66,11 +69,15 @@ export class SalesService {
     if (!prismaSale) {
       throw new NotFoundException(`Venda com ID ${id} não encontrada.`);
     }
-    // Map SaleItems to DDD entities
-    return {
+
+    const result = {
       ...prismaSale,
       saleItems: prismaSale.saleItems.map(SaleItemMapper.toDomain),
     } as any;
+
+    console.log('[DEBUG sales.service.ts findOne] returning:', JSON.stringify(result, null, 2));
+
+    return result;
   }
 
   // Recebe organizationId

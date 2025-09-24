@@ -83,7 +83,7 @@ export function PayBillForm({ billId, onSave }: PayBillFormProps) {
                   label: c.nome,
                 }))}
                 value={field.value}
-                onValueChange={field.onChange}
+                onChange={field.onChange}
                 placeholder="Selecione a conta de origem..."
               />
               <FormMessage />
@@ -102,7 +102,7 @@ export function PayBillForm({ billId, onSave }: PayBillFormProps) {
                   label: c.nome,
                 }))}
                 value={field.value}
-                onValueChange={field.onChange}
+                onChange={field.onChange}
                 placeholder="Selecione a conta do cartão..."
               />
               <FormMessage />

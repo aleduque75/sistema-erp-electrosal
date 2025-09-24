@@ -12,11 +12,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         },
       },
     });
-    console.log('PrismaService using DATABASE_URL:', this.configService.get<string>('DATABASE_URL'));
+    console.log('[DEBUG PRISMA] PrismaService inicializado. DATABASE_URL:', this.configService.get<string>('DATABASE_URL'));
   }
 
   async onModuleInit() {
     await this.$connect();
+    console.log('[DEBUG PRISMA] PrismaService conectado.');
   }
 
   async onModuleDestroy() {

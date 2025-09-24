@@ -42,8 +42,11 @@ model Organization {
   metalCredits          MetalCredit[]
   recoveryOrders        RecoveryOrder[]
   contasMetais          ContaMetal[] // Adicionado para a relação inversa
-  cotacoes              Cotacao[]
+  quotations              Quotation[]
   stockMovements        StockMovement[] // Adicionado para a relação inversa
+  productGroups         ProductGroup[] // Adicionado para a relação inversa
+  laborCostTableEntries LaborCostTableEntry[] // Adicionado para a relação inversa
+  operationalCosts      OperationalCost[] // Adicionado para a relação inversa
 }
 
 // --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
@@ -171,20 +174,44 @@ model Funcionario {
 }
 
 model Product {
-  id             String          @id @default(uuid())
-  organizationId String
-  organization   Organization    @relation(fields: [organizationId], references: [id])
-  name           String
-  description    String?
-  price          Decimal         @db.Decimal(10, 2)
-  costPrice      Decimal?        @db.Decimal(10, 2) // Adicionado para rastreamento de custo
-  stock          Int?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  saleItems      SaleItem[]
-  stockMovements StockMovement[]
-  purchaseOrderItems PurchaseOrderItem[] // Nova relação
-  inventoryLots      InventoryLot[] // Relação com lotes de estoque
+  id                 String          @id @default(uuid())
+  organizationId     String
+  organization       Organization    @relation(fields: [organizationId], references: [id])
+  name               String
+  description        String?
+  price              Decimal         @db.Decimal(10, 2)
+  costPrice          Decimal?        @db.Decimal(10, 2)
+  stock              Int?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  saleItems          SaleItem[]
+  stockMovements     StockMovement[]
+  purchaseOrderItems PurchaseOrderItem[]
+  inventoryLots      InventoryLot[]
+
+  // Nova relação com ProductGroup
+  productGroupId     String?
+  productGroup       ProductGroup? @relation(fields: [productGroupId], references: [id])
+
+  goldValue          Float?          // Gramas de ouro por unidade do produto (para produtos de reação)
+  externalId         String?         @unique // ID do produto no sistema antigo
+}
+
+// Novo modelo para agrupar produtos e definir comissões
+model ProductGroup {
+  id                     String        @id @default(uuid())
+  organizationId         String
+  organization           Organization  @relation(fields: [organizationId], references: [id])
+  name                   String
+  description            String?
+  commissionPercentage   Decimal?      @db.Decimal(5, 2) // Para produtos de revenda
+  isReactionProductGroup Boolean       @default(false) // Indica se usa tabela de mão de obra
+  products               Product[]     // Relação inversa com Product
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  @@unique([organizationId, name])
+  @@map("product_groups")
 }
 
 model InventoryLot {
@@ -238,6 +265,9 @@ model Sale {
   installments   SaleInstallment[]
   paymentTermId  String?
   paymentTerm    PaymentTerm?      @relation(fields: [paymentTermId], references: [id])
+  commissionAmount Decimal?          @db.Decimal(10, 2) // Valor da comissão calculada
+  commissionDetails Json?            // Detalhes do cálculo da comissão (JSON)
+  externalId String? @unique // ID da venda no sistema antigo
 }
 
 model PaymentTerm {
@@ -270,6 +300,7 @@ model SaleItem {
   costPriceAtSale Decimal       @db.Decimal(10, 2)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  externalId String? @unique // ID do item de venda no sistema antigo
 }
 
 enum SaleInstallmentStatus {
@@ -352,6 +383,7 @@ model AccountRec {
   transacaoId      String?           @unique
   transacao        Transacao?        @relation(fields: [transacaoId], references: [id])
   saleInstallments SaleInstallment[] // Adicionado para a relação inversa
+  externalId       String?           @unique // ID da duplicata no sistema antigo
 }
 
 model ContaContabil {
@@ -402,6 +434,7 @@ model Transacao {
   organization    Organization        @relation(fields: [organizationId], references: [id])
   tipo            TipoTransacaoPrisma
   valor           Decimal             @db.Decimal(10, 2)
+  goldAmount      Decimal?            @db.Decimal(10, 4)
   moeda           String
   descricao       String?
   dataHora        DateTime            @default(now())
@@ -754,18 +787,49 @@ model ContaMetal {
   @@index([organizationId])
 }
 
-model Cotacao {
+model Quotation {
   id             String    @id @default(uuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   metal          TipoMetal
-  data           DateTime  @db.Date
-  valorCompra    Decimal   @db.Decimal(10, 2)
-  valorVenda     Decimal   @db.Decimal(10, 2)
+  date           DateTime  @map("quotation_date") @db.Date
+  buyPrice       Decimal   @db.Decimal(10, 2)
+  sellPrice      Decimal   @db.Decimal(10, 2)
   tipoPagamento  String?   // PIX, CHEQUE, etc.
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  @@unique([organizationId, metal, data, tipoPagamento])
-  @@map("cotacoes")
+  @@unique([organizationId, metal, date, tipoPagamento])
+  @@map("quotations")
+}
+
+// Tabela de Mão de Obra para produtos de reação
+model LaborCostTableEntry {
+  id                     String        @id @default(uuid())
+  organizationId         String
+  organization           Organization  @relation(fields: [organizationId], references: [id])
+  minGrams               Float         // Gramas mínimas para esta faixa
+  maxGrams               Float?        // Gramas máximas para esta faixa (null para "acima de")
+  goldGramsCharged       Float         // Gramas de ouro cobradas como mão de obra
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  @@unique([organizationId, minGrams]) // Garante faixas únicas por organização
+  @@map("labor_cost_table_entries")
+}
+
+// Custos Operacionais para cálculo de comissão
+model OperationalCost {
+  id                     String        @id @default(uuid())
+  organizationId         String
+  organization           Organization  @relation(fields: [organizationId], references: [id])
+  name                   String        // Nome do custo (ex: "Motorista", "Água", "Energia")
+  value                  Decimal       @db.Decimal(10, 2) // Valor do custo
+  type                   String        // Tipo de custo (ex: "FIXED", "PER_GRAM", "PERCENTAGE")
+  appliesToProductGroup  String?       // Opcional: ID do ProductGroup se o custo for específico
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  @@unique([organizationId, name])
+  @@map("operational_costs")
 }

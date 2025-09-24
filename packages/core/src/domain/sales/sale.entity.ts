@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { SaleItem } from "./sale-item.entity";
+import { SaleItem } from "../sale-item/sale-item.entity";
 import { SaleInstallment } from "./sale-installment.entity";
 
 export type SaleProps = {

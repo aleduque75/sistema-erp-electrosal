@@ -30,44 +30,44 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { TipoMetal } from "@prisma/client";
+import { TipoMetal } from "@sistema-erp-electrosal/core"; // Updated import
 
-interface CotacaoFormProps {
+interface QuotationFormProps { // Renamed interface
   onSave: () => void;
   initialData?: {
     metal: TipoMetal;
-    data: Date;
-    valorCompra: number;
-    valorVenda: number;
+    date: Date; // Renamed from data
+    buyPrice: number; // Renamed from valorCompra
+    sellPrice: number; // Renamed from valorVenda
     tipoPagamento?: string;
   };
 }
 
 const formSchema = z.object({
   metal: z.nativeEnum(TipoMetal, { required_error: "O metal é obrigatório." }),
-  data: z.date({ required_error: "A data é obrigatória." }),
-  valorCompra: z.coerce.number().min(0.01, "O valor de compra deve ser maior que zero."),
-  valorVenda: z.coerce.number().min(0.01, "O valor de venda deve ser maior que zero."),
+  date: z.date({ required_error: "A data é obrigatória." }), // Renamed from data
+  buyPrice: z.coerce.number().min(0.01, "O valor de compra deve ser maior que zero."), // Renamed from valorCompra
+  sellPrice: z.coerce.number().min(0.01, "O valor de venda deve ser maior que zero."), // Renamed from valorVenda
   tipoPagamento: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function CotacaoForm({ onSave, initialData }: CotacaoFormProps) {
+export function QuotationForm({ onSave, initialData }: QuotationFormProps) { // Renamed function and props type
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
       metal: TipoMetal.AU,
-      data: new Date(),
-      valorCompra: 0,
-      valorVenda: 0,
+      date: new Date(), // Renamed from data
+      buyPrice: 0, // Renamed from valorCompra
+      sellPrice: 0, // Renamed from valorVenda
       tipoPagamento: "",
     },
   });
 
   const onSubmit = async (data: FormValues) => {
     try {
-      await api.post("/cotacoes", data);
+      await api.post("/quotations", data); // Updated API call
       toast.success("Cotação salva com sucesso!");
       onSave();
     } catch (err: any) {
@@ -105,7 +105,7 @@ export function CotacaoForm({ onSave, initialData }: CotacaoFormProps) {
 
         <FormField
           control={form.control}
-          name="data"
+          name="date" // Renamed from data
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Data</FormLabel>
@@ -144,7 +144,7 @@ export function CotacaoForm({ onSave, initialData }: CotacaoFormProps) {
 
         <FormField
           control={form.control}
-          name="valorCompra"
+          name="buyPrice" // Renamed from valorCompra
           render={({ field }) => (
             <FormItem>
               <FormLabel>Valor de Compra (R$)</FormLabel>
@@ -158,7 +158,7 @@ export function CotacaoForm({ onSave, initialData }: CotacaoFormProps) {
 
         <FormField
           control={form.control}
-          name="valorVenda"
+          name="sellPrice" // Renamed from valorVenda
           render={({ field }) => (
             <FormItem>
               <FormLabel>Valor de Venda (R$)</FormLabel>
