@@ -42,6 +42,7 @@ import { RecuperacoesModule } from './recuperacoes';
 import { RecoveryOrdersModule } from './recovery-orders/recovery-orders.module';
 import { ContasMetaisModule } from './contas-metais/contas-metais.module';
 import { QuotationsModule } from './quotations/quotations.module';
+import { QuotationImportsModule } from './quotation-imports/quotation-imports.module';
 
 
 import { ProductGroupsModule } from './product-groups/product-groups.module';
@@ -77,6 +78,7 @@ import { ProductGroupsModule } from './product-groups/product-groups.module';
   RecoveryOrdersModule,
   ContasMetaisModule,
   QuotationsModule,
+  QuotationImportsModule,
   ProductGroupsModule,
   ],
   controllers: [AppController],

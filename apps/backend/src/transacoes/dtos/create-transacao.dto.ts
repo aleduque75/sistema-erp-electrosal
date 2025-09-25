@@ -1,43 +1,32 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsDate,
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-  ValidateNested,
-} from 'class-validator';
+import { IsString, IsNumber, IsDate, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
 import { TipoTransacaoPrisma } from '@prisma/client';
 
 export class CreateTransacaoDto {
-  @IsEnum(TipoTransacaoPrisma) tipo: TipoTransacaoPrisma;
-  @IsNumber() @Min(0.01) valor: number;
-  @IsString() @IsNotEmpty() descricao: string;
-  @IsUUID() @IsNotEmpty() contaContabilId: string;
-  @IsOptional() @IsUUID() contaCorrenteId?: string;
-  @IsDate() @Type(() => Date) dataHora: Date; // Adicionado
-}
+  @IsString()
+  @IsNotEmpty()
+  descricao: string;
 
-export class UpdateTransacaoDto extends PartialType(CreateTransacaoDto) {}
+  @IsNumber()
+  @IsOptional()
+  valor?: number;
 
-export class TransacaoLoteDto {
-  @IsString() @IsOptional() fitId?: string;
-  @IsEnum(TipoTransacaoPrisma) tipo: TipoTransacaoPrisma;
-  @IsNumber() @Min(0.01) amount: number;
-  @IsString() @IsOptional() description?: string;
-  @IsDate() @Type(() => Date) postedAt: Date;
-  @IsUUID() @IsNotEmpty() contaContabilId: string;
-}
+  @IsNumber()
+  @IsOptional()
+  goldAmount?: number;
 
-export class CreateBulkTransacoesDto {
-  @IsUUID() @IsNotEmpty() contaCorrenteId: string;
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => TransacaoLoteDto)
-  transactions: TransacaoLoteDto[];
+  @IsEnum(TipoTransacaoPrisma)
+  @IsNotEmpty()
+  tipo: TipoTransacaoPrisma;
+
+  @IsDate()
+  @IsNotEmpty()
+  dataHora: Date;
+
+  @IsString()
+  @IsNotEmpty()
+  contaContabilId: string;
+
+  @IsString()
+  @IsOptional()
+  contaCorrenteId?: string;
 }

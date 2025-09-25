@@ -137,6 +137,12 @@ export const menuConfig: NavItem[] = [
         description: "Acompanhe o saldo e o fluxo de caixa.",
       },
       {
+        title: "Configurar Contas",
+        href: "/dashboard/financeiro/contas",
+        icon: Settings,
+        description: "Ajuste os saldos iniciais e outras configurações das contas.",
+      },
+      {
         title: "Transações",
         href: "/transacoes",
         icon: ArrowRightLeft,

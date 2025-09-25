@@ -409,20 +409,21 @@ model ContaContabil {
 }
 
 model ContaCorrente {
-  id             String       @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  nome           String
-  numeroConta    String
-  agencia        String?
-  saldo          Decimal      @db.Decimal(10, 2)
-  limite         Decimal      @default(0) @db.Decimal(10, 2) // Adicionado
-  moeda          String       @default("BRL")
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
-  transacoes     Transacao[]
-  accountsRec    AccountRec[]
+  id                 String       @id @default(uuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  nome               String
+  numeroConta        String
+  agencia            String?
+  initialBalanceBRL  Decimal      @default(0) @db.Decimal(10, 2)
+  initialBalanceGold Decimal      @default(0) @db.Decimal(10, 4)
+  limite             Decimal      @default(0) @db.Decimal(10, 2)
+  moeda              String       @default("BRL")
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  deletedAt          DateTime?
+  transacoes         Transacao[]
+  accountsRec        AccountRec[]
 
   @@unique([organizationId, numeroConta])
   @@map("contas_correntes")

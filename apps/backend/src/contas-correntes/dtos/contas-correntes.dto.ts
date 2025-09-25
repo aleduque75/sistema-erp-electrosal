@@ -1,4 +1,4 @@
-import { OmitType, PartialType } from '@nestjs/mapped-types'; // ✅ 1. Importar OmitType
+import { PartialType } from '@nestjs/mapped-types';
 import {
   IsNotEmpty,
   IsNumber,
@@ -7,7 +7,6 @@ import {
   Min,
 } from 'class-validator';
 
-// O DTO de criação permanece o mesmo
 export class CreateContaCorrenteDto {
   @IsString()
   @IsNotEmpty({ message: 'O nome da conta é obrigatório.' })
@@ -26,21 +25,17 @@ export class CreateContaCorrenteDto {
   moeda: string;
 
   @IsNumber()
-  @Min(0)
-  saldoInicial: number;
+  @IsOptional()
+  initialBalanceBRL?: number;
+
+  @IsNumber()
+  @IsOptional()
+  initialBalanceGold?: number;
 
   @IsNumber()
   @IsOptional()
   @Min(0)
-  limite?: number; // Adicionado
+  limite?: number;
 }
 
-// ✅ 2. CORREÇÃO: Usando OmitType para remover 'saldoInicial' ANTES de aplicar PartialType
-export class UpdateContaCorrenteDto extends PartialType(
-  OmitType(CreateContaCorrenteDto, ['saldoInicial'] as const),
-) {
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  limite?: number; // Adicionado
-}
+export class UpdateContaCorrenteDto extends PartialType(CreateContaCorrenteDto) {}

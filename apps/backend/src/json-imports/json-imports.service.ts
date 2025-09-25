@@ -23,23 +23,29 @@ export class JsonImportsService {
   }
 
   async deleteAllSales() {
-    this.logger.warn('Iniciando a exclusão de TODAS as vendas, itens e contas a receber...');
+    this.logger.warn('Iniciando a exclusão de TODAS as transações financeiras, vendas, e contas...');
     try {
       // A ordem é importante para evitar erros de chave estrangeira
+      await this.prisma.transacao.deleteMany({});
+      this.logger.log('Transações financeiras (débitos e créditos) excluídas.');
+
       await this.prisma.saleItem.deleteMany({});
       this.logger.log('Itens de venda excluídos.');
 
       await this.prisma.accountRec.deleteMany({});
-      this.logger.log('Contas a receber (duplicatas) excluídas.');
+      this.logger.log('Contas a receber (duplicatas de venda) excluídas.');
+
+      await this.prisma.accountPay.deleteMany({});
+      this.logger.log('Contas a pagar (despesas) excluídas.');
 
       await this.prisma.sale.deleteMany({});
       this.logger.log('Vendas excluídas.');
 
       this.logger.log('Exclusão completa concluída com sucesso.');
-      return { message: 'Todas as vendas, itens e contas a receber foram excluídos com sucesso.' };
+      return { message: 'Todas as transações, vendas, e contas associadas foram excluídas com sucesso.' };
     } catch (error) {
-      this.logger.error('Ocorreu um erro ao excluir os dados de vendas.', error.stack);
-      throw new Error('Falha ao excluir dados de vendas.');
+      this.logger.error('Ocorreu um erro ao excluir os dados financeiros.', error.stack);
+      throw new Error('Falha ao excluir dados financeiros.');
     }
   }
 
@@ -204,14 +210,14 @@ export class JsonImportsService {
               }
             },
             update: {
-              saldo: this.parseDecimal(conta.saldoInicial),
+              initialBalanceBRL: this.parseDecimal(conta.saldoInicial),
             },
             create: {
               organizationId: organizationId,
               nome: nome,
               numeroConta: nome, // Usando nome como número da conta
               agencia: 'legacy',
-              saldo: this.parseDecimal(conta.saldoInicial),
+              initialBalanceBRL: this.parseDecimal(conta.saldoInicial),
               moeda: 'BRL',
             },
           });
@@ -274,6 +280,7 @@ export class JsonImportsService {
       // Diagnóstico avançado para encontrar a chave de ligação correta
       const allOrderNumbers = new Set(pedidos.map(p => p.numero));
       const financialsByOrderNumberMap = new Map<string, any>();
+      const processedFinancaIds = new Set<string>();
       let linkedFinancialRecords = 0;
 
       this.logger.log(`Iniciando diagnóstico de ligação financeira para ${allOrderNumbers.size} pedidos...`);
@@ -282,15 +289,19 @@ export class JsonImportsService {
         const potentialKeys = ['pedidoDuplicata', 'duplicata', 'numeroDuplicata'];
         let foundMatch = false;
         for (const key of potentialKeys) {
-          const value = financa[key];
-          if (value && allOrderNumbers.has(String(value))) {
-            if (!financialsByOrderNumberMap.has(String(value))) {
-              financialsByOrderNumberMap.set(String(value), financa);
-              linkedFinancialRecords++;
-              this.logger.log(`Ligação encontrada para pedido ${value} no campo '${key}'.`);
+          let value = financa[key];
+          if (value) {
+            // Normaliza o valor removendo sufixos como '/a'
+            value = String(value).split('/')[0];
+            if (allOrderNumbers.has(value)) {
+              if (!financialsByOrderNumberMap.has(value)) {
+                financialsByOrderNumberMap.set(value, financa);
+                linkedFinancialRecords++;
+                this.logger.log(`Ligação encontrada para pedido ${value} no campo '${key}'.`);
+              }
+              foundMatch = true;
+              break; // Sai do loop de chaves pois já encontrou a ligação
             }
-            foundMatch = true;
-            break; // Sai do loop de chaves pois já encontrou a ligação
           }
         }
       }
@@ -322,6 +333,57 @@ export class JsonImportsService {
       if (!receitaConta) {
         throw new Error('Conta contábil de receita padrão (4.1.1) não encontrada.');
       }
+
+      const emprestimoPrincipalConta = await this.prisma.contaContabil.findFirst({
+        where: { organizationId, codigo: '2.1.4.01' },
+      });
+      if (!emprestimoPrincipalConta) {
+        throw new Error('Conta contábil de Empréstimo - Eladio (Principal) (2.1.4.01) não encontrada. Execute o seed novamente.');
+      }
+
+      const jurosEmprestimosConta = await this.prisma.contaContabil.findFirst({
+        where: { organizationId, nome: 'Juros de Empréstimos' }, // Assumindo que o nome é 'Juros de Empréstimos'
+      });
+      if (!jurosEmprestimosConta) {
+        // Fallback para uma conta de despesa geral se não encontrar a específica de juros
+        this.logger.warn('Conta contábil de Juros de Empréstimos não encontrada. Usando Despesas Gerais.');
+      }
+
+      const defaultDespesaConta = await this.prisma.contaContabil.findFirst({
+        where: { organizationId, codigo: '5.1.10' }, // Código para Despesas Gerais
+      });
+      if (!defaultDespesaConta) {
+        throw new Error('Conta contábil de Despesas Gerais (5.1.10) não encontrada. Verifique o seed.');
+      }
+
+      const transferenciasInternasConta = await this.prisma.contaContabil.findFirst({
+        where: { organizationId, codigo: '5.1.11' },
+      });
+      if (!transferenciasInternasConta) {
+        throw new Error('Conta contábil de Transferências Internas (5.1.11) não encontrada. Execute o seed novamente.');
+      }
+
+      const categoryMapping: Record<string, string> = {
+        'fretes e transportes': 'Transporte e Deslocamento (Motoboy, etc)',
+        'energia eletrica': 'Contas de Consumo (Água, Luz, Internet)',
+        'salarios e ordenados': 'Salários e Encargos (Administrativo)',
+        'impostos e taxas diversos': 'Despesas Gerais', // Mapeando para Despesas Gerais por enquanto
+        'aluguel': 'Aluguel e Condomínio',
+        'telefonia / internet': 'Contas de Consumo (Água, Luz, Internet)',
+        'despesas bancarias': 'Taxas de Cartão e Bancárias',
+        '13 salario': 'Salários e Encargos (Administrativo)',
+        'operacional fabrica': 'Despesas Gerais',
+        'material recuperação': 'Despesas Gerais',
+        'ajuda de custo vendedores': 'Despesas Gerais',
+        'almoço / clientes outros': 'Despesas Gerais',
+        'estacionamentos': 'Despesas Gerais',
+        'combustivel': 'Despesas Gerais',
+        'mão de obra recuperação': 'Despesas Gerais',
+        'escritorio': 'Despesas Gerais',
+        'informatica': 'Despesas Gerais',
+        'operacional recuperação': 'Despesas Gerais',
+        'juros de emprestimos': jurosEmprestimosConta?.nome || 'Despesas Gerais', // Mapeamento para juros
+      };
 
       for (const pedido of pedidos) {
         // Encontrar o cliente (Pessoa)
@@ -388,6 +450,7 @@ export class JsonImportsService {
               if (duplicata.aberto === 'não') {
                 const financa = financialsByOrderNumberMap.get(pedido.numero);
                 if (financa) {
+                  processedFinancaIds.add(financa['unique id']);
                   const paymentDate = this.parseDate(financa.dataPagamento);
                   if (accountRec.receivedAt !== paymentDate) {
                     await this.prisma.accountRec.update({
@@ -405,6 +468,7 @@ export class JsonImportsService {
                         organizationId: organizationId,
                         tipo: 'CREDITO',
                         valor: this.parseDecimal(financa.valorRecebido),
+                        goldAmount: this.parseDecimal(financa.valorRecebidoAu),
                         moeda: 'BRL',
                         descricao: financa.descricao || `Pagamento para pedido ${pedido.numero}`,
                         dataHora: paymentDate,
@@ -481,6 +545,7 @@ export class JsonImportsService {
             if (duplicata.aberto === 'não') {
               const financa = financialsByOrderNumberMap.get(pedido.numero);
               if (financa) {
+                processedFinancaIds.add(financa['unique id']);
                 const paymentDate = this.parseDate(financa.dataPagamento);
                 await this.prisma.accountRec.update({
                   where: { id: newAccountRec.id },
@@ -495,6 +560,7 @@ export class JsonImportsService {
                     organizationId: organizationId,
                     tipo: 'CREDITO',
                     valor: this.parseDecimal(financa.valorRecebido),
+                    goldAmount: this.parseDecimal(financa.valorRecebidoAu),
                     moeda: 'BRL',
                     descricao: financa.descricao || `Pagamento para pedido ${pedido.numero}`,
                     dataHora: paymentDate,
@@ -516,12 +582,166 @@ export class JsonImportsService {
         }
       }
 
-      this.logger.log(`Importação de vendas concluída.`);
+      this.logger.log('Iniciando processamento de transferências e juros de empréstimos...');
+      let transferenciasCriadas = 0;
+      let jurosCriados = 0;
+
+      // Mapear todas as financas por unique id para acesso rápido
+      const financasById = new Map<string, any>(financas.map(f => [f['unique id'], f]));
+
+      // Processar Transferências (Simplificado)
+      for (const financa of financas) {
+        const uniqueId = financa['unique id'];
+        if (processedFinancaIds.has(uniqueId)) {
+          continue; // Já processado
+        }
+
+        if (financa.transferencia === 'sim') {
+          const valorPago = this.parseDecimal(financa.valorPago);
+          const valorRecebido = this.parseDecimal(financa.valorRecebido);
+
+          if (valorPago === 0 && valorRecebido === 0) {
+            this.logger.warn(`Transferência '${financa.descricao}' (ID: ${uniqueId}) não tem valor de débito nem de crédito. Pulando.`);
+            processedFinancaIds.add(uniqueId);
+            continue;
+          }
+
+          const tipoTransacao = valorPago > 0 ? 'DEBITO' : 'CREDITO';
+          const valor = valorPago > 0 ? valorPago : valorRecebido;
+          const goldAmount = valorPago > 0 ? this.parseDecimal(financa.valorPagoAu) : this.parseDecimal(financa.valorRecebidoAu);
+
+          const contaCorrenteName = financa.contaCorrente?.trim().toLowerCase();
+          const contaCorrenteId = contaCorrenteName ? contasCorrentesMap.get(contaCorrenteName) : undefined;
+
+          if (!contaCorrenteId) {
+            this.logger.warn(`Conta corrente '${financa.contaCorrente}' para transferência '${financa.descricao}' (ID: ${uniqueId}) não encontrada. Criando transação sem vínculo com conta corrente.`);
+          }
+
+          await this.prisma.transacao.create({
+            data: {
+              organizationId,
+              tipo: tipoTransacao,
+              valor: valor,
+              goldAmount: goldAmount,
+              moeda: 'BRL',
+              descricao: `Transferência Interna: ${financa.descricao}`,
+              dataHora: this.parseDate(financa.dataPagamento),
+              contaContabilId: transferenciasInternasConta.id, // Usar a conta de Transferências Internas
+              contaCorrenteId: contaCorrenteId,
+            },
+          });
+          this.logger.log(`Transferência simplificada '${financa.descricao}' (ID: ${uniqueId}) criada como ${tipoTransacao}.`);
+          processedFinancaIds.add(uniqueId);
+          transferenciasCriadas++;
+        }
+      }
+
+      // Processar Juros de Empréstimos
+      for (const financa of financas) {
+        const uniqueId = financa['unique id'];
+        if (processedFinancaIds.has(uniqueId)) {
+          continue; // Já processado
+        }
+
+        if (financa.planoContaCategoria?.trim().toLowerCase() === 'juros de emprestimos' && financa.transferencia !== 'sim') {
+          const contaCorrenteName = financa.contaCorrente?.trim().toLowerCase();
+          const contaCorrenteId = contaCorrenteName ? contasCorrentesMap.get(contaCorrenteName) : undefined;
+
+          if (!contaCorrenteId) {
+            this.logger.warn(`Conta corrente para juros de empréstimo '${financa.descricao}' não encontrada. A transação será criada sem vínculo com conta corrente.`);
+            // Não pulamos, apenas criamos a transação sem contaCorrenteId
+          }
+
+          await this.prisma.transacao.create({
+            data: {
+              organizationId,
+              tipo: 'DEBITO',
+              valor: this.parseDecimal(financa.valorPago), // Juros são pagos
+              goldAmount: this.parseDecimal(financa.valorPagoAu),
+              moeda: 'BRL',
+              descricao: financa.descricao || 'Pagamento de Juros de Empréstimo',
+              dataHora: this.parseDate(financa.dataPagamento),
+              contaContabilId: jurosEmprestimosConta?.id || defaultDespesaConta.id,
+              contaCorrenteId: contaCorrenteId,
+            },
+          });
+          processedFinancaIds.add(uniqueId);
+          jurosCriados++;
+        }
+      }
+
+      this.logger.log('Iniciando processamento de débitos e despesas gerais...');
+      const contasContabeis = await this.prisma.contaContabil.findMany({ where: { organizationId } });
+      const contasContabeisMap = new Map(contasContabeis.map(c => [c.nome.trim().toLowerCase(), c.id]));
+      let debitosCriados = 0;
+
+      for (const financa of financas) {
+        if (processedFinancaIds.has(financa['unique id'])) {
+          continue; // Já processado como crédito de venda
+        }
+
+        try {
+          const rawCategoria = financa.planoContaCategoria?.trim().toLowerCase();
+          const mappedCategoriaName = rawCategoria ? categoryMapping[rawCategoria] || 'despesas gerais' : 'despesas gerais';
+
+          const contaContabilId = contasContabeisMap.get(mappedCategoriaName.toLowerCase());
+          if (!contaContabilId) {
+            this.logger.warn(`Categoria de conta contábil mapeada \"${mappedCategoriaName}\" não encontrada no banco para o débito \"${financa.descricao}\". Pulando.`);
+            continue;
+          }
+
+          const contaCorrenteName = financa.contaCorrente?.trim().toLowerCase();
+          const contaCorrenteId = contaCorrenteName ? contasCorrentesMap.get(contaCorrenteName) : undefined;
+
+          // Criar o AccountPay (Conta a Pagar)
+          const newAccountPay = await this.prisma.accountPay.create({
+            data: {
+              organizationId,
+              description: financa.descricao || 'Pagamento diverso',
+              amount: this.parseDecimal(financa.valor),
+              dueDate: this.parseDate(financa.dataVencimento),
+              paid: financa.baixaPagamento === 'sim',
+              paidAt: financa.baixaPagamento === 'sim' ? this.parseDate(financa.dataPagamento) : null,
+              contaContabilId: contaContabilId,
+            }
+          });
+
+          // Criar a Transacao de Débito/Crédito se estiver paga
+          if (newAccountPay.paid && newAccountPay.paidAt) {
+            const transacaoTipo = this.parseDecimal(financa.valorRecebido) > 0 ? 'CREDITO' : 'DEBITO';
+            const transacaoValor = this.parseDecimal(financa.valorRecebido) > 0 ? this.parseDecimal(financa.valorRecebido) : newAccountPay.amount;
+            const transacaoGoldAmount = this.parseDecimal(financa.valorRecebido) > 0 ? this.parseDecimal(financa.valorRecebidoAu) : this.parseDecimal(financa.valorPagoAu);
+
+            await this.prisma.transacao.create({
+              data: {
+                organizationId,
+                tipo: transacaoTipo,
+                valor: transacaoValor,
+                goldAmount: transacaoGoldAmount,
+                moeda: 'BRL',
+                descricao: newAccountPay.description,
+                dataHora: newAccountPay.paidAt,
+                contaContabilId: contaContabilId,
+                contaCorrenteId: contaCorrenteId,
+                AccountPay: {
+                  connect: { id: newAccountPay.id }
+                }
+              }
+            });
+          }
+          debitosCriados++;
+        } catch (error) {
+          this.logger.error(`Erro ao importar débito com descrição \"${financa.descricao}\": ${error.message}`);
+        }
+      }
+      
+      this.logger.log(`Importação de vendas e débitos concluída.`);
       this.logger.log(`- ${createdCount} vendas criadas com sucesso.`);
+      this.logger.log(`- ${debitosCriados} débitos criados com sucesso.`);
       this.logger.log(`- ${skippedCount} vendas puladas por dados ausentes ou duplicidade.`);
       this.logger.log(`- ${errorCount} vendas com erro durante a criação.`);
 
-      return { message: `Importação de vendas concluída: ${createdCount} criadas, ${skippedCount} puladas, ${errorCount} com erro.` };
+      return { message: `Importação concluída: ${createdCount} vendas e ${debitosCriados} débitos processados.` };
 
     } catch (error) {
       this.logger.error('Falha ao ler ou mapear arquivos JSON para importação de vendas.', error.stack);

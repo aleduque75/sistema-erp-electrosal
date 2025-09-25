@@ -39,19 +39,19 @@ const planoDeContasEstruturado = [
             aceitaLancamento: true,
           },
           {
-            codigo: '1.1.3.01',
+            codigo: '1.1.4',
             nome: 'Estoque de Metais em Processo',
             tipo: TipoContaContabilPrisma.ATIVO,
             aceitaLancamento: true,
           },
           {
-            codigo: '1.1.4',
+            codigo: '1.1.5',
             nome: 'Empréstimos e Adiantamentos a Terceiros',
             tipo: TipoContaContabilPrisma.ATIVO,
             aceitaLancamento: true,
           },
           {
-            codigo: '1.1.5',
+            codigo: '1.1.6',
             nome: 'Estoque de Produtos',
             tipo: TipoContaContabilPrisma.ATIVO,
             aceitaLancamento: true,
@@ -95,6 +95,14 @@ const planoDeContasEstruturado = [
             nome: 'Empréstimos e Financiamentos',
             tipo: TipoContaContabilPrisma.PASSIVO,
             aceitaLancamento: true,
+            subContas: [
+              {
+                codigo: '2.1.4.01',
+                nome: 'Empréstimo - Eladio (Principal)',
+                tipo: TipoContaContabilPrisma.PASSIVO,
+                aceitaLancamento: true,
+              },
+            ],
           },
           {
             codigo: '2.1.5',
@@ -167,12 +175,6 @@ const planoDeContasEstruturado = [
             aceitaLancamento: true,
           },
           {
-            codigo: '4.1.1.01',
-            nome: 'Custo de Produção - Recuperação',
-            tipo: TipoContaContabilPrisma.RECEITA,
-            aceitaLancamento: true,
-          },
-          {
             codigo: '4.1.2',
             nome: 'Prestação de Serviços',
             tipo: TipoContaContabilPrisma.RECEITA,
@@ -196,7 +198,7 @@ const planoDeContasEstruturado = [
         subContas: [
           {
             codigo: '5.1.1',
-            nome: 'Salários e Encargos',
+            nome: 'Salários e Encargos (Administrativo)',
             tipo: TipoContaContabilPrisma.DESPESA,
             aceitaLancamento: true,
           },
@@ -253,6 +255,72 @@ const planoDeContasEstruturado = [
             nome: 'Despesas Gerais',
             tipo: TipoContaContabilPrisma.DESPESA,
             aceitaLancamento: true,
+          },
+          {
+            codigo: '5.1.11',
+            nome: 'Transferências Internas',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: true,
+          },
+        ],
+      },
+      {
+        codigo: '5.2',
+        nome: 'CUSTOS DE PRODUÇÃO',
+        tipo: TipoContaContabilPrisma.DESPESA,
+        aceitaLancamento: false,
+        subContas: [
+          {
+            codigo: '5.2.1',
+            nome: 'Custos de Recuperação de Metais',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: false,
+            subContas: [
+              {
+                codigo: '5.2.1.1',
+                nome: 'Matérias-Primas (Recuperação)',
+                tipo: TipoContaContabilPrisma.DESPESA,
+                aceitaLancamento: true,
+              },
+              {
+                codigo: '5.2.1.2',
+                nome: 'Mão de Obra Direta (Recuperação)',
+                tipo: TipoContaContabilPrisma.DESPESA,
+                aceitaLancamento: true,
+              },
+              {
+                codigo: '5.2.1.3',
+                nome: 'Custos Indiretos (Recuperação)',
+                tipo: TipoContaContabilPrisma.DESPESA,
+                aceitaLancamento: true,
+              },
+            ],
+          },
+          {
+            codigo: '5.2.2',
+            nome: 'Custos de Reação Química',
+            tipo: TipoContaContabilPrisma.DESPESA,
+            aceitaLancamento: false,
+            subContas: [
+              {
+                codigo: '5.2.2.1',
+                nome: 'Matérias-Primas (Reação)',
+                tipo: TipoContaContabilPrisma.DESPESA,
+                aceitaLancamento: true,
+              },
+              {
+                codigo: '5.2.2.2',
+                nome: 'Mão de Obra Direta (Reação)',
+                tipo: TipoContaContabilPrisma.DESPESA,
+                aceitaLancamento: true,
+              },
+              {
+                codigo: '5.2.2.3',
+                nome: 'Custos Indiretos (Reação)',
+                tipo: TipoContaContabilPrisma.DESPESA,
+                aceitaLancamento: true,
+              },
+            ],
           },
         ],
       },
@@ -321,6 +389,7 @@ async function main() {
   await prisma.paymentTerm.deleteMany();
   await prisma.creditCardFee.deleteMany();
   await prisma.xmlImportLog.deleteMany();
+  await prisma.quotation.deleteMany();
 
   // Configurações e Usuários
   await prisma.section.deleteMany();
@@ -328,6 +397,7 @@ async function main() {
   await prisma.media.deleteMany();
   await prisma.userSettings.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.productGroup.deleteMany(); // Adicionado
   await prisma.organization.deleteMany();
   // ------------------------------------
 

@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { QuotationsService } from './quotations.service';
 import { CreateQuotationDto } from './dto/create-quotation.dto';
 import { UpdateQuotationDto } from './dto/update-quotation.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { TipoMetal } from '@prisma/client';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('quotations')
@@ -21,6 +22,15 @@ export class QuotationsController {
   @Get()
   findAll(@CurrentUser('orgId') organizationId: string) {
     return this.quotationsService.findAll(organizationId);
+  }
+
+  @Get('by-date')
+  findByDate(
+    @CurrentUser('orgId') organizationId: string,
+    @Query('date') date: string,
+    @Query('metal') metal: TipoMetal,
+  ) {
+    return this.quotationsService.findByDate(new Date(date), metal, organizationId);
   }
 
   @Get(':id')

@@ -19,6 +19,11 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "preprocess:sales": "tsx src/json-imports/preprocess-sales.ts",
+    "db:backfill-quotations": "dotenv -e ../../.env -- ts-node prisma/backfill-quotations.ts",
+    "db:import-sales": "dotenv -e ../../.env -- ts-node prisma/import-sales.ts",
+    "db:backfill-quotations-from-items": "dotenv -e ../../.env -- ts-node prisma/backfill-quotations-from-items.ts",
+    "db:import-clients-from-csv": "dotenv -e ../../.env -- ts-node prisma/import-clients-from-csv.ts",
+    "db:recalculate-gold-amount": "dotenv -e ../../.env -- ts-node prisma/recalculate-gold-amount.ts",
     "copy:prisma-engine": "cp ../../node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node ./dist/"
   },
   "dependencies": {

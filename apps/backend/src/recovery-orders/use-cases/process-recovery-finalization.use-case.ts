@@ -22,6 +22,8 @@ import { FindContaMetalByNameAndMetalTypeUseCase } from '../../contas-metais/use
 import { QuotationsService } from '../../quotations/quotations.service';
 import { ContasContabeisService } from '../../contas-contabeis/contas-contabeis.service';
 import { TransacoesService } from '../../transacoes/transacoes.service';
+import { CreateTransacaoDto } from '../../transacoes/dtos/create-transacao.dto';
+
 import { UsersService } from '../../users/users.service';
 import { TipoTransacaoPrisma } from '@prisma/client';
 

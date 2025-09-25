@@ -28,9 +28,10 @@ import {
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 
-const formSchema = z.object({
+const createFormSchema = (moeda?: string) => z.object({
   descricao: z.string().min(3, "A descrição é obrigatória."),
-  valor: z.coerce.number().positive("O valor deve ser maior que zero."),
+  valor: moeda === 'BRL' ? z.coerce.number().positive("O valor deve ser maior que zero.") : z.coerce.number().optional(),
+  goldAmount: moeda !== 'BRL' ? z.coerce.number().positive("O valor deve ser maior que zero.") : z.coerce.number().optional(),
   tipo: z.enum(["CREDITO", "DEBITO"]),
   contaContabilId: z.string({
     required_error: "Selecione uma conta contábil.",
@@ -40,10 +41,22 @@ const formSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de data inválido (AAAA-MM-DD)."),
 });
 
-type FormValues = z.infer<typeof formSchema>;
 interface TransacaoFormProps {
   contaCorrenteId: string;
   onSave: () => void;
+  initialData?: TransacaoExtrato | null;
+  moeda?: string;
+}
+
+interface TransacaoExtrato {
+  id: string;
+  dataHora: string;
+  descricao: string;
+  valor: number;
+  goldAmount?: number;
+  tipo: "CREDITO" | "DEBITO";
+  contaContabilId: string;
+  contaContabilNome: string;
 }
 interface ContaContabil {
   id: string;
@@ -51,20 +64,62 @@ interface ContaContabil {
   codigo: string;
 }
 
-export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
+export function TransacaoForm({ contaCorrenteId, onSave, initialData, moeda }: TransacaoFormProps) {
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
+  const formSchema = createFormSchema(moeda);
+  type FormValues = z.infer<typeof formSchema>;
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      dataHora: new Date().toISOString().split("T")[0], // Data atual no formato YYYY-MM-DD
-      tipo: "CREDITO", // Inicia com Crédito selecionado por padrão
-    },
   });
 
   const tipoLancamento = form.watch("tipo");
+  const dataHora = form.watch("dataHora");
+
+  const handleConversion = async (fieldToConvert: 'valor' | 'goldAmount') => {
+    if (!dataHora) return;
+
+    try {
+      const response = await api.get(`/quotations/by-date?date=${dataHora}&metal=AU`);
+      const quotation = response.data;
+
+      if (quotation) {
+        const valor = form.getValues('valor');
+        const goldAmount = form.getValues('goldAmount');
+
+        if (fieldToConvert === 'valor' && valor) {
+          const newGoldAmount = valor / quotation.buyPrice;
+          form.setValue('goldAmount', newGoldAmount, { shouldValidate: true });
+        } else if (fieldToConvert === 'goldAmount' && goldAmount) {
+          const newValor = goldAmount * quotation.buyPrice;
+          form.setValue('valor', newValor, { shouldValidate: true });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch quotation', error);
+      toast.error('Cotação não encontrada para a data selecionada.');
+    }
+  };
 
   useEffect(() => {
-    // Busca os dados filtrados do backend sempre que o tipo de lançamento muda
+    if (initialData) {
+      form.reset({
+        ...initialData,
+        dataHora: initialData.dataHora.split('T')[0],
+      });
+    } else {
+      form.reset({
+        dataHora: new Date().toISOString().split("T")[0],
+        tipo: "CREDITO",
+        descricao: "",
+        valor: 0,
+        goldAmount: 0,
+        contaContabilId: "",
+      });
+    }
+  }, [initialData, form]);
+
+  useEffect(() => {
     if (tipoLancamento) {
       const endpoint = `/contas-contabeis?tipo=${tipoLancamento === "CREDITO" ? "RECEITA" : "DESPESA"}`;
       api.get(endpoint).then((res) => {
@@ -75,28 +130,39 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
     }
   }, [tipoLancamento]);
 
-  // Limpa o campo de conta selecionada sempre que a lista de opções mudar
   useEffect(() => {
-    form.setValue("contaContabilId", "");
-  }, [contasContabeis, form.setValue]);
+    if (!initialData) {
+      form.setValue("contaContabilId", "");
+    }
+  }, [contasContabeis, form.setValue, initialData]);
 
-  // ✅ CÓDIGO SIMPLIFICADO AQUI
+  useEffect(() => {
+    if (!initialData) {
+        form.setValue('valor', 0);
+        form.setValue('goldAmount', 0);
+    }
+  }, [dataHora, initialData, form.setValue]);
+
   const filteredOptions = useMemo(() => {
-    // A lista 'contasContabeis' já vem filtrada do backend.
-    // Só precisamos mapeá-la para o formato que o Combobox espera.
     return contasContabeis.map((c) => ({
       value: c.id,
       label: `${c.codigo} - ${c.nome}`,
     }));
-  }, [contasContabeis]); // A dependência agora é apenas 'contasContabeis'
+  }, [contasContabeis]);
 
   const onSubmit = async (data: FormValues) => {
     try {
-      await api.post("/transacoes", {
+      const method = initialData ? "patch" : "post";
+      const url = initialData
+        ? `/transacoes/${initialData.id}`
+        : "/transacoes";
+
+      await api[method](url, {
         ...data,
         contaCorrenteId,
       });
-      toast.success("Lançamento realizado com sucesso!");
+
+      toast.success(`Lançamento ${initialData ? 'atualizado' : 'realizado'} com sucesso!`);
       onSave();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Ocorreu um erro.");
@@ -112,7 +178,7 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Tipo de Lançamento</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione..." />
@@ -123,19 +189,6 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
                   <SelectItem value="DEBITO">Débito (Saída)</SelectItem>
                 </SelectContent>
               </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          name="valor"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Valor (R$)</FormLabel>
-              <FormControl>
-                <Input type="number" step="0.01" {...field} />
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -153,6 +206,35 @@ export function TransacaoForm({ contaCorrenteId, onSave }: TransacaoFormProps) {
             </FormItem>
           )}
         />
+        {moeda === 'BRL' ? (
+          <FormField
+            name="valor"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Valor (R$)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" {...field} onBlur={() => handleConversion('valor')} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : (
+          <FormField
+            name="goldAmount"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Valor (Au g)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.0001" {...field} onBlur={() => handleConversion('goldAmount')} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <FormField
           name="descricao"
           control={form.control}

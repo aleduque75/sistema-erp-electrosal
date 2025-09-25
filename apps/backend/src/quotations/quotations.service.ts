@@ -95,4 +95,19 @@ export class QuotationsService {
       },
     });
   }
+
+  async findByDate(date: Date, metal: TipoMetal, organizationId: string) {
+    return this.prisma.quotation.findFirst({
+      where: {
+        date: {
+          lte: date,
+        },
+        metal,
+        organizationId,
+      },
+      orderBy: {
+        date: 'desc',
+      },
+    });
+  }
 }

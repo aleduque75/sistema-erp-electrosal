@@ -1,60 +1,145 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  CreateTransacaoDto,
-  UpdateTransacaoDto,
-  CreateBulkTransacoesDto,
-  TransacaoLoteDto,
-} from './dtos/create-transacao.dto';
 import { Transacao } from '@prisma/client';
+import { CreateTransferDto } from './dtos/create-transfer.dto';
+import { CreateTransacaoDto } from './dtos/create-transacao.dto';
+import { UpdateTransacaoDto } from './dtos/update-transacao.dto';
+import { BulkCreateTransacaoDto } from './dtos/bulk-create-transacao.dto';
 
 @Injectable()
 export class TransacoesService {
   constructor(private prisma: PrismaService) {}
 
-  // Recebe organizationId
-    async create(
+  async updateTransacao(
+    organizationId: string,
+    transacaoId: string,
+    data: { contaContabilId?: string },
+  ): Promise<Transacao> {
+    const transacao = await this.prisma.transacao.findFirst({
+      where: { id: transacaoId, organizationId },
+    });
+
+    if (!transacao) {
+      throw new NotFoundException(`Transação com ID ${transacaoId} não encontrada.`);
+    }
+
+    return this.prisma.transacao.update({
+      where: { id: transacaoId },
+      data: {
+        contaContabilId: data.contaContabilId,
+      },
+    });
+  }
+
+  async createTransfer(
+    organizationId: string,
+    dto: CreateTransferDto,
+  ): Promise<{ debitTransaction: Transacao; creditTransaction: Transacao }> {
+    const { sourceAccountId, destinationAccountId, amount, goldAmount, description, contaContabilId, dataHora } = dto;
+
+    // 1. Validar se as contas existem e pertencem à organização
+    const sourceAccount = await this.prisma.contaCorrente.findFirst({
+      where: { id: sourceAccountId, organizationId },
+    });
+    if (!sourceAccount) {
+      throw new NotFoundException(`Conta de origem com ID ${sourceAccountId} não encontrada.`);
+    }
+
+    const destinationAccount = await this.prisma.contaCorrente.findFirst({
+      where: { id: destinationAccountId, organizationId },
+    });
+    if (!destinationAccount) {
+      throw new NotFoundException(`Conta de destino com ID ${destinationAccountId} não encontrada.`);
+    }
+
+    // 2. Criar a transação de débito (saída da conta de origem)
+    const debitTransaction = await this.prisma.transacao.create({
+      data: {
+        organizationId,
+        tipo: 'DEBITO',
+        valor: amount,
+        goldAmount: goldAmount || 0,
+        moeda: 'BRL', // Assumindo BRL para transferências de valor
+        descricao: description || `Transferência para ${destinationAccount.nome}`,
+        dataHora: dataHora || new Date(),
+        contaContabilId,
+        contaCorrenteId: sourceAccountId,
+      },
+    });
+
+    // 3. Criar a transação de crédito (entrada na conta de destino)
+    const creditTransaction = await this.prisma.transacao.create({
+      data: {
+        organizationId,
+        tipo: 'CREDITO',
+        valor: amount,
+        goldAmount: goldAmount || 0,
+        moeda: 'BRL', // Assumindo BRL para transferências de valor
+        descricao: description || `Transferência de ${sourceAccount.nome}`,
+        dataHora: dataHora || new Date(),
+        contaContabilId,
+        contaCorrenteId: destinationAccountId,
+      },
+    });
+
+    // TODO: Considerar vincular as duas transações (e.g., com um campo 'linkedTransactionId')
+    // para facilitar a conciliação e visualização de pares de transferência.
+
+    return { debitTransaction, creditTransaction };
+  }
+
+  async create(
     data: CreateTransacaoDto,
     organizationId: string,
   ): Promise<Transacao> {
-    return this.prisma.$transaction(async (tx) => {
-      const transacao = await tx.transacao.create({
-        data: {
-          descricao: data.descricao,
-          valor: data.valor,
-          tipo: data.tipo,
-          dataHora: data.dataHora, // Usar dataHora do DTO
-          contaContabil: { connect: { id: data.contaContabilId } }, // Agora é obrigatório
-          contaCorrente: data.contaCorrenteId ? { connect: { id: data.contaCorrenteId } } : undefined,
-          organization: { connect: { id: organizationId } },
-          moeda: 'BRL',
-        },
-      });
+    const { valor, goldAmount, ...restData } = data;
+    return this.prisma.transacao.create({
+      data: {
+        ...restData,
+        valor: valor ?? 0,
+        goldAmount: goldAmount,
+        organizationId,
+        moeda: 'BRL', // TODO: This should probably come from the account
+      },
+    });
+  }
 
-      // Atualiza o saldo da conta corrente
-      const valor = Number(transacao.valor);
-      if (transacao.contaCorrenteId) { // Verifica se não é nulo
-        await tx.contaCorrente.update({
-          where: { id: transacao.contaCorrenteId },
-          data: {
-            saldo: {
-              [transacao.tipo === 'CREDITO' ? 'increment' : 'decrement']:
-                valor,
-            },
-          },
-        });
-      }
+  async findOne(id: string, organizationId: string): Promise<Transacao> {
+    const transacao = await this.prisma.transacao.findFirst({
+      where: { id, organizationId },
+    });
+    if (!transacao) {
+      throw new NotFoundException(`Transação com ID ${id} não encontrada.`);
+    }
+    return transacao;
+  }
 
-      return transacao;
+  async update(
+    id: string,
+    data: UpdateTransacaoDto,
+    organizationId: string,
+  ): Promise<Transacao> {
+    await this.findOne(id, organizationId); // Garante a posse
+    return this.prisma.transacao.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async remove(id: string, organizationId: string): Promise<Transacao> {
+    await this.findOne(id, organizationId); // Garante a posse
+    return this.prisma.transacao.delete({
+      where: { id },
     });
   }
 
   async createMany(
+    data: BulkCreateTransacaoDto,
     organizationId: string,
-    data: CreateBulkTransacoesDto,
   ): Promise<{ count: number }> {
     const { contaCorrenteId, transactions } = data;
-    const transacoesParaCriar = transactions.map((t: TransacaoLoteDto) => ({
+
+    const transacoesParaCriar = transactions.map((t) => ({
       fitId: t.fitId,
       tipo: t.tipo,
       descricao: t.description,
@@ -66,68 +151,27 @@ export class TransacoesService {
       moeda: 'BRL',
     }));
 
-    return this.prisma.$transaction(async (tx) => {
-      const result = await tx.transacao.createMany({
-        data: transacoesParaCriar,
-        skipDuplicates: true,
-      });
-
-      // Atualiza o saldo da conta corrente para cada transação criada
-      for (const transacaoData of transacoesParaCriar) {
-        const valor = Number(transacaoData.valor);
-        await tx.contaCorrente.update({
-          where: { id: transacaoData.contaCorrenteId },
-          data: {
-            saldo: {
-              [transacaoData.tipo === 'CREDITO' ? 'increment' : 'decrement']:
-                valor,
-            },
-          },
-        });
-      }
-
-      return result;
+    return this.prisma.transacao.createMany({
+      data: transacoesParaCriar,
+      skipDuplicates: true,
     });
   }
 
-  // Recebe organizationId
-  async findAll(organizationId: string): Promise<Transacao[]> {
-    return this.prisma.transacao.findMany({
-      where: { organizationId }, // Usa no 'where'
-      include: { contaContabil: true, contaCorrente: true },
-      orderBy: { dataHora: 'desc' },
-    });
-  }
-
-  // Recebe organizationId
-  async findOne(organizationId: string, id: string): Promise<Transacao> {
-    const transacao = await this.prisma.transacao.findFirst({
-      where: { id, organizationId }, // Usa no 'where'
-    });
-    if (!transacao) {
-      throw new NotFoundException(`Transação com ID ${id} não encontrada.`);
-    }
-    return transacao;
-  }
-
-  // Recebe organizationId
-  async update(
+  async bulkUpdateContaContabil(
+    transactionIds: string[],
+    contaContabilId: string,
     organizationId: string,
-    id: string,
-    data: UpdateTransacaoDto,
-  ): Promise<Transacao> {
-    await this.findOne(organizationId, id); // Garante a posse
-    return this.prisma.transacao.update({
-      where: { id },
-      data,
-    });
-  }
-
-  // Recebe organizationId
-  async remove(organizationId: string, id: string): Promise<Transacao> {
-    await this.findOne(organizationId, id); // Garante a posse
-    return this.prisma.transacao.delete({
-      where: { id },
+  ): Promise<{ count: number }> {
+    return this.prisma.transacao.updateMany({
+      where: {
+        id: {
+          in: transactionIds,
+        },
+        organizationId,
+      },
+      data: {
+        contaContabilId,
+      },
     });
   }
 }

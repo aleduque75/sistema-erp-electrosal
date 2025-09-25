@@ -21,7 +21,8 @@ export class ContasCorrentesService {
         numeroConta: data.numeroConta,
         agencia: data.agencia,
         moeda: data.moeda,
-        saldo: data.saldoInicial || 0,
+        initialBalanceBRL: data.initialBalanceBRL || 0,
+        initialBalanceGold: data.initialBalanceGold || 0,
         organizationId: organizationId,
       },
     });
@@ -55,58 +56,85 @@ export class ContasCorrentesService {
     // 1. Garante que a conta corrente existe e pertence à organização
     const contaCorrente = await this.findOne(organizationId, id);
 
-    // 2. Calcula o Saldo Anterior
+    // 2. Calcula o Saldo Anterior (BRL e Gold)
     const agregadosAnteriores = await this.prisma.transacao.groupBy({
       by: ['tipo'],
       where: {
         contaCorrenteId: id,
         dataHora: {
-          lt: startDate, // lt = less than (menor que a data de início)
+          lt: startDate,
         },
       },
       _sum: {
         valor: true,
+        goldAmount: true,
       },
     });
 
-    const creditosAnteriores =
-      agregadosAnteriores
-        .find((a) => a.tipo === 'CREDITO')
-        ?._sum.valor?.toNumber() || 0;
-    const debitosAnteriores =
-      agregadosAnteriores
-        .find((a) => a.tipo === 'DEBITO')
-        ?._sum.valor?.toNumber() || 0;
+    const creditosAnterioresBRL =
+      agregadosAnteriores.find((a) => a.tipo === 'CREDITO')?._sum.valor?.toNumber() || 0;
+    const debitosAnterioresBRL =
+      agregadosAnteriores.find((a) => a.tipo === 'DEBITO')?._sum.valor?.toNumber() || 0;
 
-    // O saldo anterior é simplesmente a diferença entre créditos e débitos passados
-    const saldoAnterior = creditosAnteriores - debitosAnteriores;
+    const creditosAnterioresGold =
+      agregadosAnteriores.find((a) => a.tipo === 'CREDITO')?._sum.goldAmount?.toNumber() || 0;
+    const debitosAnterioresGold =
+      agregadosAnteriores.find((a) => a.tipo === 'DEBITO')?._sum.goldAmount?.toNumber() || 0;
+
+    const saldoAnteriorBRL =
+      contaCorrente.initialBalanceBRL.toNumber() +
+      creditosAnterioresBRL -
+      debitosAnterioresBRL;
+
+    const saldoAnteriorGold =
+      contaCorrente.initialBalanceGold.toNumber() +
+      creditosAnterioresGold -
+      debitosAnterioresGold;
 
     // 3. Busca as Transações do Período
     const transacoesNoPeriodo = await this.prisma.transacao.findMany({
       where: {
         contaCorrenteId: id,
         dataHora: {
-          gte: startDate, // gte = greater than or equal to (a partir da data de início)
-          lte: endDate, // lte = less than or equal to (até a data de fim)
+          gte: startDate,
+          lte: endDate,
         },
       },
       include: { contaContabil: true },
       orderBy: { dataHora: 'asc' },
     });
 
-    // 4. Calcula o Saldo Final a partir do saldo anterior CORRETO
-    const saldoFinal = transacoesNoPeriodo.reduce((acc, transacao) => {
-      const valor = Number(transacao.valor);
-      return transacao.tipo === 'CREDITO' ? acc + valor : acc - valor;
-    }, saldoAnterior);
+    // 4. Calcula os Saldos Finais (BRL e Gold)
+    const saldosFinais = transacoesNoPeriodo.reduce(
+      (acc, transacao) => {
+        const valorBRL = Number(transacao.valor);
+        const valorGold = Number(transacao.goldAmount) || 0;
+        if (transacao.tipo === 'CREDITO') {
+          acc.brl += valorBRL;
+          acc.gold += valorGold;
+        } else {
+          acc.brl -= valorBRL;
+          acc.gold -= valorGold;
+        }
+        return acc;
+      },
+      { brl: saldoAnteriorBRL, gold: saldoAnteriorGold },
+    );
 
     return {
-      saldoAnterior,
-      saldoFinal,
+      saldoAnteriorBRL,
+      saldoAnteriorGold,
+      saldoFinalBRL: saldosFinais.brl,
+      saldoFinalGold: saldosFinais.gold,
       contaCorrente,
-      transacoes: transacoesNoPeriodo,
+      transacoes: transacoesNoPeriodo.map(t => ({
+        ...t,
+        contaContabilNome: t.contaContabil?.nome,
+      })),
     };
   }
+
+
   async update(
     organizationId: string,
     id: string,

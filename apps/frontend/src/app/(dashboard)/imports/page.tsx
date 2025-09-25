@@ -88,6 +88,7 @@ export default function ImportPage() {
     useState<TipoContaContabilPrisma>(TipoContaContabilPrisma.DESPESA);
 
   const [isJsonImporting, setIsJsonImporting] = useState(false);
+  const [quotationFile, setQuotationFile] = useState<File | null>(null);
 
   const fetchContas = async () => {
     try {
@@ -184,6 +185,30 @@ export default function ImportPage() {
       } finally {
         setIsJsonImporting(false);
       }
+    }
+  };
+
+  const handleImportQuotations = async () => {
+    if (!quotationFile) {
+      toast.error("Por favor, selecione o arquivo pedidoItens.json.");
+      return;
+    }
+    setIsJsonImporting(true);
+    toast.info("Iniciando importação de cotações...");
+    const formData = new FormData();
+    formData.append("file", quotationFile);
+
+    try {
+      const response = await api.post("/quotation-imports", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success(`${response.data.createdCount} cotações importadas com sucesso!`);
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Falha ao importar cotações."
+      );
+    } finally {
+      setIsJsonImporting(false);
     }
   };
 
@@ -448,6 +473,38 @@ export default function ImportPage() {
               {isJsonImporting
                 ? "Importando Produtos..."
                 : "Iniciar Importação de Produtos"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Card de Importação de Cotações JSON */}
+        <Card className="w-full max-w-lg">
+          <CardHeader>
+            <CardTitle>Importar Cotações (JSON)</CardTitle>
+            <CardDescription>
+              Importe cotações a partir do arquivo <code>pedidoItens.json</code>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="quotation-file">Arquivo pedidoItens.json</Label>
+              <Input
+                id="quotation-file"
+                type="file"
+                accept=".json"
+                onChange={(e) =>
+                  setQuotationFile(e.target.files ? e.target.files[0] : null)
+                }
+              />
+            </div>
+            <Button
+              onClick={handleImportQuotations}
+              disabled={isJsonImporting}
+              className="w-full"
+            >
+              {isJsonImporting
+                ? "Importando Cotações..."
+                : "Iniciar Importação de Cotações"}
             </Button>
           </CardContent>
         </Card>

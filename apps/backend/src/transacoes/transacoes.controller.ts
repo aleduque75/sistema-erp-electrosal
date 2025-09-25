@@ -11,67 +11,82 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { TransacoesService } from './transacoes.service';
-import {
-  CreateTransacaoDto,
-  UpdateTransacaoDto,
-  CreateBulkTransacoesDto,
-} from './dtos/create-transacao.dto';
+import { CreateTransacaoDto } from './dtos/create-transacao.dto';
+import { UpdateTransacaoDto } from './dtos/update-transacao.dto';
+import { BulkCreateTransacaoDto } from './dtos/bulk-create-transacao.dto';
+import { BulkUpdateTransacaoDto } from './dtos/bulk-update-transacao.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CreateTransferDto } from './dtos/create-transfer.dto';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('transacoes')
 export class TransacoesController {
   constructor(private readonly transacoesService: TransacoesService) {}
 
-  @Post('bulk-create')
-  createMany(
-    @CurrentUser('orgId') organizationId: string,
-    @Body() createBulkDto: CreateBulkTransacoesDto,
-  ) {
-    return this.transacoesService.createMany(organizationId, createBulkDto);
-  }
-
   @Post()
   create(
-    @CurrentUser('orgId') organizationId: string,
     @Body() createTransacaoDto: CreateTransacaoDto,
+    @CurrentUser('orgId') organizationId: string,
   ) {
     return this.transacoesService.create(createTransacaoDto, organizationId);
   }
 
+  @Post('transfer')
+  @HttpCode(HttpStatus.CREATED)
+  async createTransfer(
+    @CurrentUser('orgId') organizationId: string,
+    @Body() createTransferDto: CreateTransferDto,
+  ) {
+    return this.transacoesService.createTransfer(organizationId, createTransferDto);
+  }
+
+  @Post('/bulk-create')
+  @HttpCode(HttpStatus.CREATED)
+  async bulkCreate(
+    @Body() bulkCreateDto: BulkCreateTransacaoDto,
+    @CurrentUser('orgId') organizationId: string,
+  ) {
+    return this.transacoesService.createMany(bulkCreateDto, organizationId);
+  }
+
   @Get()
   findAll(@CurrentUser('orgId') organizationId: string) {
-    return this.transacoesService.findAll(organizationId);
+    // This needs to be implemented in the service
+    // return this.transacoesService.findAll(organizationId);
+    return []; // Placeholder
   }
 
   @Get(':id')
   findOne(
-    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
+    @CurrentUser('orgId') organizationId: string,
   ) {
-    return this.transacoesService.findOne(organizationId, id);
+    return this.transacoesService.findOne(id, organizationId);
   }
 
   @Patch(':id')
   update(
-    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
     @Body() updateTransacaoDto: UpdateTransacaoDto,
+    @CurrentUser('orgId') organizationId: string,
   ) {
-    return this.transacoesService.update(
-      organizationId,
-      id,
-      updateTransacaoDto,
-    );
+    return this.transacoesService.update(id, updateTransacaoDto, organizationId);
+  }
+
+  @Post('bulk-update-conta-contabil')
+  bulkUpdateContaContabil(
+    @Body() bulkUpdateDto: BulkUpdateTransacaoDto,
+    @CurrentUser('orgId') organizationId: string,
+  ) {
+    return this.transacoesService.bulkUpdateContaContabil(bulkUpdateDto.transactionIds, bulkUpdateDto.contaContabilId, organizationId);
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
   remove(
-    @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
+    @CurrentUser('orgId') organizationId: string,
   ) {
-    return this.transacoesService.remove(organizationId, id);
+    return this.transacoesService.remove(id, organizationId);
   }
 }
