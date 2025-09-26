@@ -19,6 +19,48 @@ const config = {
   	},
   	extend: {
   		colors: {
+  			badgeYellow: {
+  				light: 'hsl(48 96% 89%)', // bg-yellow-100
+  				dark: 'hsl(48 96% 29%)',  // bg-yellow-800
+  				textLight: 'hsl(48 96% 29%)', // text-yellow-800
+  				textDark: 'hsl(48 96% 89%)',  // text-yellow-100
+  			},
+  			badgeBlue: {
+  				light: 'hsl(210 40% 96.1%)', // bg-blue-100 (usando secondary do shadcn/ui como base)
+  				dark: 'hsl(217.2 32.6% 17.5%)', // bg-blue-800 (usando secondary do shadcn/ui como base)
+  				textLight: 'hsl(215.4 16.3% 46.9%)', // text-blue-800
+  				textDark: 'hsl(210 40% 98%)', // text-blue-100
+  			},
+  			badgeOrange: {
+  				light: 'hsl(27 87% 90%)', // bg-orange-100
+  				dark: 'hsl(27 87% 30%)',  // bg-orange-800
+  				textLight: 'hsl(27 87% 30%)', // text-orange-800
+  				textDark: 'hsl(27 87% 90%)',  // text-orange-100
+  			},
+  			badgeGreen: {
+  				light: 'hsl(142.1 76.2% 36.3%)', // bg-green-100 (usando success do shadcn/ui como base)
+  				dark: 'hsl(142.1 76.2% 16.3%)', // bg-green-800 (usando success do shadcn/ui como base)
+  				textLight: 'hsl(142.1 76.2% 16.3%)', // text-green-800
+  				textDark: 'hsl(142.1 76.2% 36.3%)', // text-green-100
+  			},
+  			badgeRed: {
+  				light: 'hsl(0 84.2% 60.2%)', // bg-red-100 (usando destructive do shadcn/ui como base)
+  				dark: 'hsl(0 62.8% 30.6%)',  // bg-red-800 (usando destructive do shadcn/ui como base)
+  				textLight: 'hsl(0 62.8% 30.6%)', // text-red-800
+  				textDark: 'hsl(0 84.2% 60.2%)',  // text-red-100
+  			},
+  			badgePurple: {
+  				light: 'hsl(270 80% 90%)', // bg-purple-100
+  				dark: 'hsl(270 80% 20%)',  // bg-purple-800
+  				textLight: 'hsl(270 80% 20%)', // text-purple-800
+  				textDark: 'hsl(270 80% 90%)',  // text-purple-100
+  			},
+  			badgeGray: {
+  				light: 'hsl(210 40% 96.1%)', // bg-gray-100 (usando secondary do shadcn/ui como base)
+  				dark: 'hsl(217.2 32.6% 17.5%)', // bg-gray-800 (usando secondary do shadcn/ui como base)
+  				textLight: 'hsl(215.4 16.3% 46.9%)', // text-gray-800
+  				textDark: 'hsl(210 40% 98%)', // text-gray-100
+  			},
   			fuchsia: {
   				'50': '#fdf4ff',
   				'100': '#fae8ff',

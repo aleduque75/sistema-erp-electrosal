@@ -31,9 +31,17 @@ export class AccountsRecService {
     });
   }
 
-  async findAll(organizationId: string): Promise<AccountRec[]> {
+  async findAll(organizationId: string, status?: string): Promise<AccountRec[]> {
+    const where: Prisma.AccountRecWhereInput = { organizationId };
+
+    if (status === 'received') {
+      where.received = true;
+    } else if (status === 'pending') {
+      where.received = false;
+    }
+
     return this.prisma.accountRec.findMany({
-      where: { organizationId },
+      where,
       include: { sale: true },
       orderBy: { dueDate: 'asc' },
     });

@@ -408,17 +408,24 @@ model ContaContabil {
   @@map("contas_contabeis")
 }
 
+enum ContaCorrenteType {
+  BANCO
+  FORNECEDOR_METAL
+  EMPRESTIMO
+}
+
 model ContaCorrente {
-  id                 String       @id @default(uuid())
+  id                 String            @id @default(uuid())
   organizationId     String
-  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization       Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   nome               String
   numeroConta        String
   agencia            String?
-  initialBalanceBRL  Decimal      @default(0) @db.Decimal(10, 2)
-  initialBalanceGold Decimal      @default(0) @db.Decimal(10, 4)
-  limite             Decimal      @default(0) @db.Decimal(10, 2)
-  moeda              String       @default("BRL")
+  initialBalanceBRL  Decimal           @default(0) @db.Decimal(10, 2)
+  initialBalanceGold Decimal           @default(0) @db.Decimal(10, 4)
+  limite             Decimal           @default(0) @db.Decimal(10, 2)
+  type               ContaCorrenteType @default(BANCO)
+  moeda              String            @default("BRL")
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
   deletedAt          DateTime?

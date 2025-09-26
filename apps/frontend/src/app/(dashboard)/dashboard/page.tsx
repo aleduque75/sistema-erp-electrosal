@@ -10,6 +10,7 @@ import { CashFlowChart } from "@/components/cash-flow-chart";
 import { RecentSales } from "@/components/recent-sales";
 import { CreditCardForecastChart } from "./credit-card-forecast-chart";
 import { ThirdPartyLoansCard } from "./third-party-loans-card";
+import { QuotationChart } from "@/components/quotation-chart";
 
 export default function DashboardPage() {
   const [summaryData, setSummaryData] = useState(null);
@@ -65,6 +66,9 @@ export default function DashboardPage() {
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
         <div className="lg:col-span-7">
           <CreditCardForecastChart />
+        </div>
+        <div className="lg:col-span-7">
+          <QuotationChart />
         </div>
       </div>
     </div>

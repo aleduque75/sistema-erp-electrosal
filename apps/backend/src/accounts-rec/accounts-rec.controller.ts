@@ -23,19 +23,22 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 @UseGuards(AuthGuard('jwt'))
 @Controller('accounts-rec')
 export class AccountsRecController {
-  constructor(private readonly service: AccountsRecService) {}
+  constructor(private readonly accountsRecService: AccountsRecService) {}
 
   @Post()
   create(
     @CurrentUser('orgId') organizationId: string,
     @Body() createDto: CreateAccountRecDto,
   ) {
-    return this.service.create(organizationId, createDto);
+    return this.accountsRecService.create(organizationId, createDto);
   }
 
   @Get()
-  findAll(@CurrentUser('orgId') organizationId: string) {
-    return this.service.findAll(organizationId);
+  findAll(
+    @CurrentUser('orgId') organizationId: string,
+    @Query('status') status?: string,
+  ) {
+    return this.accountsRecService.findAll(organizationId, status);
   }
 
   @Get(':id')
@@ -43,7 +46,7 @@ export class AccountsRecController {
     @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
   ) {
-    return this.service.findOne(organizationId, id);
+    return this.accountsRecService.findOne(organizationId, id);
   }
 
   @Patch(':id')
@@ -52,7 +55,7 @@ export class AccountsRecController {
     @Param('id') id: string,
     @Body() updateDto: UpdateAccountRecDto,
   ) {
-    return this.service.update(organizationId, id, updateDto);
+    return this.accountsRecService.update(organizationId, id, updateDto);
   }
 
   @Patch(':id/receive')
@@ -62,7 +65,7 @@ export class AccountsRecController {
     @Param('id') id: string,
     @Body() dto: ReceivePaymentDto,
   ) {
-    return this.service.receive(organizationId, userId, id, dto); // Pass userId
+    return this.accountsRecService.receive(organizationId, userId, id, dto); // Pass userId
   }
 
   @Delete(':id')
@@ -71,6 +74,6 @@ export class AccountsRecController {
     @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
   ) {
-    return this.service.remove(organizationId, id);
+    return this.accountsRecService.remove(organizationId, id);
   }
 }

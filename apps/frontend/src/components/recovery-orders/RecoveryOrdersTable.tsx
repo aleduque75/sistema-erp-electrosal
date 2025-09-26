@@ -27,7 +27,7 @@ import { toast } from "sonner";
 
 // Componente de Legenda
 const StatusLegend = () => (
-  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4 bg-gray-50 rounded-md border mb-4">
+  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4 bg-muted rounded-md border mb-4">
     <p className="font-semibold text-sm">Legenda:</p>
     <div className="flex items-center gap-2">
       <RecoveryOrderStatusBadge status={RecoveryOrderStatus.PENDENTE} />

@@ -1,4 +1,4 @@
-import { PrismaClient, TipoContaContabilPrisma } from '@prisma/client';
+import { PrismaClient, TipoContaContabilPrisma, ContaCorrenteType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { config } from 'dotenv';
 
@@ -399,69 +399,39 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.productGroup.deleteMany(); // Adicionado
   await prisma.organization.deleteMany();
-  // ------------------------------------
-
-  console.log('Criando organização principal...');
-  const organization = await prisma.organization.create({
+  console.log('Criando contas correntes de exemplo...');
+  await prisma.contaCorrente.create({
     data: {
-      name: 'Minha Empresa Principal',
-    },
-  });
-
-  console.log('Criando cliente de sistema para resíduos...');
-  await prisma.pessoa.upsert({
-    where: { id: 'SYSTEM_RESIDUE' },
-    update: {},
-    create: {
-      id: 'SYSTEM_RESIDUE',
       organizationId: organization.id,
-      name: 'Resíduos do Sistema',
-      type: 'JURIDICA',
-      razaoSocial: 'Resíduos Internos do Sistema',
+      nome: 'Banco Principal',
+      numeroConta: '12345-6',
+      agencia: '0001',
+      initialBalanceBRL: 10000.00,
+      type: ContaCorrenteType.BANCO,
+      moeda: 'BRL',
     },
   });
 
-  console.log('Criando usuário principal...');
-  const hashedPassword = await bcrypt.hash('123456', 10);
-  const user = await prisma.user.create({
+  await prisma.contaCorrente.create({
     data: {
-      email: 'admin@example.com',
-      name: 'Administrador',
-      password: hashedPassword,
       organizationId: organization.id,
+      nome: 'BSA - Fornecedor de Metal',
+      numeroConta: 'BSA-001',
+      agencia: 'METAL',
+      initialBalanceBRL: 0.00,
+      type: ContaCorrenteType.FORNECEDOR_METAL,
+      moeda: 'BRL',
     },
   });
 
-  console.log('Criando plano de contas completo...');
-  await seedContas(organization.id, planoDeContasEstruturado);
-
-  console.log('Buscando contas padrão para configurações...');
-  const defaultReceitaConta = await prisma.contaContabil.findFirst({ where: { organizationId: organization.id, codigo: '4.1.1' } });
-  const defaultCaixaConta = await prisma.contaContabil.findFirst({ where: { organizationId: organization.id, codigo: '1.1.1' } });
-  const defaultDespesaConta = await prisma.contaContabil.findFirst({ where: { organizationId: organization.id, codigo: '5.1.10' } });
-  const metalStockAccount = await prisma.contaContabil.findFirst({ where: { organizationId: organization.id, codigo: '1.1.3.01' } });
-  const productionCostAccount = await prisma.contaContabil.findFirst({ where: { organizationId: organization.id, codigo: '4.1.1.01' } });
-
-  console.log('Criando configurações do usuário...');
-  await prisma.userSettings.create({
+  await prisma.contaCorrente.create({
     data: {
-      userId: user.id,
-      defaultReceitaContaId: defaultReceitaConta?.id,
-      defaultCaixaContaId: defaultCaixaConta?.id,
-      defaultDespesaContaId: defaultDespesaConta?.id,
-      metalStockAccountId: metalStockAccount?.id,
-      productionCostAccountId: productionCostAccount?.id,
+      organizationId: organization.id,
+      nome: 'Eladio - Empréstimo',
+      numeroConta: 'EMP-ELADIO',
+      agencia: 'LOAN',
+      initialBalanceBRL: 50000.00,
+      type: ContaCorrenteType.EMPRESTIMO,
+      moeda: 'BRL',
     },
-  });
-
-  console.log('Seed finalizado com sucesso!');
-}
-
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });

@@ -7,7 +7,8 @@ import { MoreHorizontal } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AccountsReceivableTable } from "./components/AccountsReceivableTable";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +60,7 @@ const formatDate = (dateString?: string | null) => {
 export default function AccountsRecPage() {
   const [accounts, setAccounts] = useState<AccountRec[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [accountsRec, setAccountsRec] = useState<AccountRec[]>([]);
   const [accountToReceive, setAccountToReceive] = useState<AccountRec | null>(
     null
   );
@@ -172,14 +174,14 @@ export default function AccountsRecPage() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Contas a Receber</CardTitle>
+          <CardTitle>Lista de Contas a Receber</CardTitle>
+          <CardDescription>
+            Gerencie todas as contas a receber da sua empresa.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <DataTable
-            columns={columns}
-            data={accounts}
-            filterColumnId="description"
-          />
+
+          <AccountsReceivableTable accountsRec={accounts} />
         </CardContent>
       </Card>
 
