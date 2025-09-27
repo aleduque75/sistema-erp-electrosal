@@ -106,6 +106,12 @@ export const menuConfig: NavItem[] = [
         description: "Gerencie as ordens de recuperação de metais.",
       },
       {
+        title: "Reações Químicas",
+        href: "/producao/reacoes-quimicas",
+        icon: FlaskConical,
+        description: "Inicie e finalize reações para produção de lotes.",
+      },
+      {
         title: "Lançar Compra no Cartão",
         href: "/credit-card-transactions",
         icon: ArrowRightLeft,

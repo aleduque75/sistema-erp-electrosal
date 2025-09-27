@@ -16,6 +16,14 @@ export * from './domain/metal-credits';
 export * from './domain/recovery-orders';
 export * from './domain/contas-metais';
 export * from './domain/quotations';
+export * from './domain/entities/pure-metal-lot.entity';
+export * from './domain/entities/chemical-reaction.entity';
+export * from './domain/entities/inventory-lot.entity'; // Adicionado
+export * from './domain/repositories/ipure-metal-lot.repository';
+export * from './domain/repositories/ichemical-reaction.repository';
+export * from './domain/repositories/iinventory-lot.repository'; // Adicionado
+export * from './domain/repositories/iproduct.repository'; // Adicionado
+export * from './domain/enums'; // Adicionado
 
 // Explicitly re-export from contas-metais for direct access
 export { ContaMetal } from './domain/contas-metais/conta-metal.entity';

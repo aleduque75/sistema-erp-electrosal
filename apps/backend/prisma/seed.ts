@@ -399,6 +399,14 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.productGroup.deleteMany(); // Adicionado
   await prisma.organization.deleteMany();
+
+  // Criar uma organização padrão
+  const organization = await prisma.organization.create({
+    data: {
+      name: 'Organização Padrão',
+    },
+  });
+
   console.log('Criando contas correntes de exemplo...');
   await prisma.contaCorrente.create({
     data: {

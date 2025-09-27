@@ -24,6 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { MetalAccountType } from "@prisma/client";
+
 // Definir o enum TipoMetal no frontend para validação
 enum TipoMetalFrontend {
   AU = "AU",
@@ -35,6 +37,9 @@ const formSchema = z.object({
   name: z.string().min(3, "O nome da conta deve ter pelo menos 3 caracteres."),
   metalType: z.nativeEnum(TipoMetalFrontend, {
     errorMap: () => ({ message: "Tipo de metal inválido." }),
+  }),
+  type: z.nativeEnum(MetalAccountType, {
+    errorMap: () => ({ message: "Tipo de conta inválido." }),
   }),
   initialBalance: z.coerce.number().min(0, "O saldo inicial não pode ser negativo.").optional(),
 });
@@ -52,6 +57,7 @@ export function ContaMetalForm({ onSave, onCancel }: ContaMetalFormProps) {
     defaultValues: {
       name: "",
       metalType: TipoMetalFrontend.AU, // Default para Ouro
+      type: MetalAccountType.INTERNAL_STOCK,
       initialBalance: 0,
     },
   });
@@ -97,6 +103,31 @@ export function ContaMetalForm({ onSave, onCancel }: ContaMetalFormProps) {
                 </FormControl>
                 <SelectContent>
                   {Object.values(TipoMetalFrontend).map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de Conta</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de conta" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {Object.values(MetalAccountType).map((type) => (
                     <SelectItem key={type} value={type}>
                       {type}
                     </SelectItem>

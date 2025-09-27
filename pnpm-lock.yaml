@@ -464,6 +464,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@prisma/client':
+        specifier: ^6.11.0
+        version: 6.16.2(prisma@6.16.2(typescript@5.9.2))(typescript@5.9.2)
       nanoid:
         specifier: ^5.1.5
         version: 5.1.5

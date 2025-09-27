@@ -8,11 +8,12 @@
     "dev": "tsc -w"
   },
   "devDependencies": {
+    "@types/uuid": "^9.0.0",
     "tsc-alias": "^1.8.16",
-    "typescript": "latest",
-    "@types/uuid": "^9.0.0"
+    "typescript": "latest"
   },
   "dependencies": {
+    "@prisma/client": "^6.11.0",
     "nanoid": "^5.1.5",
     "uuid": "^9.0.0"
   }

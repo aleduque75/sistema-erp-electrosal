@@ -6,18 +6,3 @@
   - Environments: .env.local
 
    Creating an optimized production build ...
- ✓ Compiled successfully
-   Linting and checking validity of types ...
-Failed to compile.
-
-./src/app/(dashboard)/recovery-orders/page.tsx:41:8
-Type error: Property 'title' is missing in type '{ children: Element[]; }' but required in type 'PageHeaderProps'.
-
-[0m [90m 39 |[39m   [36mreturn[39m ([0m
-[0m [90m 40 |[39m     [33m<[39m[33mShell[39m[33m>[39m[0m
-[0m[31m[1m>[22m[39m[90m 41 |[39m       [33m<[39m[33mPageHeader[39m[33m>[39m[0m
-[0m [90m    |[39m        [31m[1m^[22m[39m[0m
-[0m [90m 42 |[39m         [33m<[39m[33mPageHeaderHeading[39m size[33m=[39m[32m"sm"[39m[33m>[39m[33mOrdens[39m de [33mRecuperação[39m[33m<[39m[33m/[39m[33mPageHeaderHeading[39m[33m>[39m[0m
-[0m [90m 43 |[39m         [33m<[39m[33mPageHeaderDescription[39m[33m>[39m[0m
-[0m [90m 44 |[39m           [33mGerencie[39m [36mas[39m ordens de recuperação de metais[33m.[39m[0m
- ELIFECYCLE  Command failed with exit code 1.
