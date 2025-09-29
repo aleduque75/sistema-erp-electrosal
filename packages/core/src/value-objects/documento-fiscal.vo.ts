@@ -1,5 +1,5 @@
 import { InvalidArgumentError } from "../errors/invalid-argument.error";
-import { TipoDocumentoFiscalEnum } from "../enums/tipo-documento-fiscal.enum";
+import { TipoDocumentoFiscalEnum } from "../domain/enums/tipo-documento-fiscal.enum";
 
 export class DocumentoFiscalVO {
   private readonly _numero: string;

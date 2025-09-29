@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEnum, IsNumber, IsOptional, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum } from 'class-validator';
 import { TipoMetal } from '@sistema-erp-electrosal/core';
 
 export class CreateContaMetalDto {
@@ -10,8 +10,7 @@ export class CreateContaMetalDto {
   @IsNotEmpty()
   metalType: TipoMetal;
 
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  initialBalance?: number; // Saldo inicial opcional, default 0
+  @IsEnum(['CLIENTE', 'FORNECEDOR', 'INTERNA', 'EMPRESTIMO'])
+  @IsNotEmpty()
+  type: string;
 }

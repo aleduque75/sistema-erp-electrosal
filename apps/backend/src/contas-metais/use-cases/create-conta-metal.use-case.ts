@@ -1,5 +1,5 @@
 import { Injectable, Inject, ConflictException } from '@nestjs/common';
-import { ContaMetal, IContaMetalRepository } from '@sistema-erp-electrosal/core';
+import { ContaMetal, IContaMetalRepository, ContaMetalType } from '@sistema-erp-electrosal/core';
 import { CreateContaMetalDto } from '../dtos/create-conta-metal.dto';
 
 export interface CreateContaMetalCommand {
@@ -16,18 +16,18 @@ export class CreateContaMetalUseCase {
 
   async execute(command: CreateContaMetalCommand): Promise<ContaMetal> {
     const { organizationId, dto } = command;
-    const { name, metalType, initialBalance } = dto;
+    const { name, metalType, type } = dto;
 
-    // Verificar se já existe uma conta de metal com o mesmo nome e tipo para a organização
-    const existingConta = await this.contaMetalRepository.findByNameAndMetalType(
+    const existingConta = await this.contaMetalRepository.findUnique(
       name,
       metalType,
+      type,
       organizationId,
     );
 
     if (existingConta) {
       throw new ConflictException(
-        `Já existe uma conta de metal com o nome '${name}' e tipo '${metalType}' para esta organização.`,
+        `Já existe uma conta de metal com o nome '${name}', tipo de metal '${metalType}' e tipo de conta '${type}' para esta organização.`,
       );
     }
 
@@ -35,11 +35,8 @@ export class CreateContaMetalUseCase {
       organizationId,
       name,
       metalType,
+      type,
     });
-
-    if (initialBalance && initialBalance > 0) {
-      contaMetal.credit(initialBalance);
-    }
 
     return this.contaMetalRepository.create(contaMetal);
   }

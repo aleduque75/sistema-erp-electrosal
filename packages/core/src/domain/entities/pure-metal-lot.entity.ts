@@ -37,6 +37,17 @@ export class PureMetalLot extends Entity<PureMetalLotProps> {
     return new PureMetalLot(props, id);
   }
 
+  get organizationId(): string { return this.props.organizationId; }
+  get sourceType(): string { return this.props.sourceType; }
+  get sourceId(): string { return this.props.sourceId; }
+  get metalType(): TipoMetal { return this.props.metalType; }
+  get initialGrams(): number { return this.props.initialGrams; }
+  get remainingGrams(): number { return this.props.remainingGrams; }
+  get purity(): number { return this.props.purity; }
+  get status(): PureMetalLotStatus { return this.props.status; }
+  get entryDate(): Date { return this.props.entryDate; }
+  get notes(): string | undefined { return this.props.notes; }
+
   public decreaseRemainingGrams(grams: number): void {
     this.props.remainingGrams -= grams;
   }

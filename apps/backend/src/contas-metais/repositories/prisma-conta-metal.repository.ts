@@ -4,9 +4,10 @@ import {
   ContaMetal,
   IContaMetalRepository,
   TipoMetal,
+  ContaMetalType,
   UniqueEntityID,
 } from '@sistema-erp-electrosal/core';
-import { ContaMetal as PrismaContaMetal, PrismaClient, Prisma } from '@prisma/client'; // ADDED Prisma
+import { ContaMetal as PrismaContaMetal, PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class PrismaContaMetalRepository implements IContaMetalRepository {
@@ -19,9 +20,10 @@ export class PrismaContaMetalRepository implements IContaMetalRepository {
         organizationId: props.organizationId,
         name: props.name,
         metalType: props.metalType as TipoMetal,
-        balance: props.balance.toNumber(), // Convert Decimal to number
+        type: props.type as ContaMetalType,
         dataCriacao: props.dataCriacao,
         dataAtualizacao: props.dataAtualizacao,
+        entries: [], // Entries are loaded on demand
       },
       UniqueEntityID.create(id),
     );
@@ -37,68 +39,43 @@ export class PrismaContaMetalRepository implements IContaMetalRepository {
     return dbContaMetal ? this.mapToDomain(dbContaMetal) : null;
   }
 
-  async findByNameAndMetalType(
+  async findUnique(
     name: string,
     metalType: TipoMetal,
+    type: ContaMetalType,
     organizationId: string,
   ): Promise<ContaMetal | null> {
     const dbContaMetal = await this.prisma.contaMetal.findFirst({
       where: {
         name,
-        metalType: metalType as any, // Prisma enum type
-        organizationId,
-      },
-    });
-    return dbContaMetal ? this.mapToDomain(dbContaMetal) : null;
-  }
-
-  async findByPessoaIdAndMetal( // ADDED
-    pessoaId: string,
-    metalType: TipoMetal,
-    organizationId: string,
-    tx?: PrismaClient, // ADDED
-  ): Promise<ContaMetal | null> {
-    const client = tx || this.prisma; // ADDED
-    const dbContaMetal = await client.contaMetal.findFirst({
-      where: {
-        // Assuming 'name' field in ContaMetal can store pessoaId for client accounts
-        // This might need adjustment based on actual schema design for client metal accounts
-        name: pessoaId, // This is a placeholder. Needs to be a proper way to link to client.
         metalType: metalType as any,
+        type: type as any,
         organizationId,
       },
     });
     return dbContaMetal ? this.mapToDomain(dbContaMetal) : null;
   }
 
-  async create(contaMetal: ContaMetal, tx?: PrismaClient): Promise<ContaMetal> { // MODIFIED
-    const client = tx || this.prisma; // ADDED
+  async create(contaMetal: ContaMetal, tx?: PrismaClient): Promise<ContaMetal> {
+    const client = tx || this.prisma;
     const data = {
       id: contaMetal.id.toString(),
       organizationId: contaMetal.organizationId,
       name: contaMetal.name,
-      metalType: contaMetal.metalType as any, // Prisma enum type
-      balance: contaMetal.balance,
+      metalType: contaMetal.metalType as any,
+      type: contaMetal.type as any,
       dataCriacao: contaMetal.dataCriacao,
       dataAtualizacao: contaMetal.dataAtualizacao,
     };
-    const dbContaMetal = await client.contaMetal.create({ data }); // MODIFIED
+    const dbContaMetal = await client.contaMetal.create({ data });
     return this.mapToDomain(dbContaMetal);
   }
 
-  async save(contaMetal: ContaMetal, tx?: PrismaClient): Promise<ContaMetal> { // MODIFIED
-    const client = tx || this.prisma; // ADDED
-    const data = {
-      name: contaMetal.name,
-      metalType: contaMetal.metalType as any, // Prisma enum type
-      balance: new Prisma.Decimal(contaMetal.balance), // MODIFIED: Convert to Prisma.Decimal
-      dataAtualizacao: contaMetal.dataAtualizacao,
-    };
-    const dbContaMetal = await client.contaMetal.update({
-      where: { id: contaMetal.id.toString() },
-      data,
-    });
-    return this.mapToDomain(dbContaMetal);
+  async save(contaMetal: ContaMetal, tx?: PrismaClient): Promise<ContaMetal> {
+    // O saldo é agora calculado a partir das entries, então o save pode não precisar fazer nada
+    // ou pode ser usado para atualizar outros campos como 'name'.
+    // Por enquanto, apenas retorna a entidade sem alterações no banco.
+    return Promise.resolve(contaMetal);
   }
 
   async findAll(organizationId: string): Promise<ContaMetal[]> {

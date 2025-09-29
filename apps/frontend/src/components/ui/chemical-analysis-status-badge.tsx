@@ -7,38 +7,42 @@ interface Props {
   status: StatusAnaliseQuimica;
 }
 
-const statusMap: Record<StatusAnaliseQuimica, { label: string; className: string }> = {
-  [StatusAnaliseQuimica.RECEBIDO]: {
+const statusMap: Record<string, { label: string; className: string }> = {
+  RECEBIDO: {
     label: "Recebido",
     className: "bg-yellow-400",
   },
-  [StatusAnaliseQuimica.EM_ANALISE]: {
+  EM_ANALISE: {
     label: "Em Análise",
     className: "bg-blue-500",
   },
-  [StatusAnaliseQuimica.ANALISADO_AGUARDANDO_APROVACAO]: {
+  ANALISADO_AGUARDANDO_APROVACAO: {
     label: "Aguardando Aprovação",
     className: "bg-orange-500",
   },
-  [StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO]: {
+  APROVADO_PARA_RECUPERACAO: {
     label: "Aprovado p/ Recuperação",
     className: "bg-green-500",
   },
-  [StatusAnaliseQuimica.RECUSADO_PELO_CLIENTE]: {
+  RECUSADO_PELO_CLIENTE: {
     label: "Recusado",
     className: "bg-red-500",
   },
-  [StatusAnaliseQuimica.EM_RECUPERACAO]: {
+  EM_RECUPERACAO: {
     label: "Em Recuperação",
     className: "bg-purple-500",
   },
-  [StatusAnaliseQuimica.FINALIZADO_RECUPERADO]: {
+  FINALIZADO_RECUPERADO: {
     label: "Finalizado",
     className: "bg-slate-500",
   },
-  [StatusAnaliseQuimica.CANCELADO]: {
+  CANCELADO: {
     label: "Cancelado",
     className: "bg-gray-400",
+  },
+  RESIDUO: {
+    label: "Resíduo",
+    className: "bg-pink-500",
   },
 };
 

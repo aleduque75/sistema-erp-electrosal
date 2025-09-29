@@ -9,279 +9,246 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- MODELO DE ORGANIZAÇÃO ---
 model Organization {
-  id              String           @id @default(uuid())
-  name            String
-  users           User[]
-  pessoas         Pessoa[]
-  products        Product[]
-  sales           Sale[]
-  accountsPay     AccountPay[]
-  accountsRec     AccountRec[]
-  contasCorrentes ContaCorrente[]
-  contasContabeis ContaContabil[]
-  creditCards     CreditCard[]
-  creditCardBills CreditCardBill[]
-
-  xmlImportLogs         XmlImportLog[]
+  id                    String                @id @default(uuid())
+  name                  String
+  absorbCreditCardFee   Boolean               @default(false)
+  creditCardReceiveDays Int?                  @default(30)
+  accountsRec           AccountRec[]
+  contasMetais          ContaMetal[]
   landingPages          LandingPage[]
   media                 Media[]
-  transacoes            Transacao[]
-  CreditCardFee         CreditCardFee[]
-  absorbCreditCardFee   Boolean         @default(false)
-  creditCardReceiveDays Int?            @default(30)
-  paymentTerms          PaymentTerm[]
+  products              Product[]
+  sales                 Sale[]
+  stockMovements        StockMovement[]
+  users                 User[]
+  xmlImportLogs         XmlImportLog[]
+  accountsPay           AccountPay[]
+  analisesQuimicas      AnaliseQuimica[]
+  chemical_reactions    chemical_reactions[]
   clients               Client[]
+  contasContabeis       ContaContabil[]
+  contasCorrentes       ContaCorrente[]
+  creditCardBills       CreditCardBill[]
+  CreditCardFee         CreditCardFee[]
+  creditCards           CreditCard[]
   fornecedores          Fornecedor[]
   funcionarios          Funcionario[]
-  purchaseOrders        PurchaseOrder[] // Nova relação
-  inventoryLots         InventoryLot[] // Relação com lotes de estoque
-  analisesQuimicas      AnaliseQuimica[]
-  recuperacoes          Recuperacao[]
+  inventoryLots         InventoryLot[]
+  laborCostTableEntries LaborCostTableEntry[]
   metalCredits          MetalCredit[]
+  operationalCosts      OperationalCost[]
+  paymentTerms          PaymentTerm[]
+  pessoas               Pessoa[]
+  productGroups         ProductGroup[]
+  purchaseOrders        PurchaseOrder[]
+  pure_metal_lots       pure_metal_lots[]
+  quotations            Quotation[]
   recoveryOrders        RecoveryOrder[]
-  contasMetais          ContaMetal[] // Adicionado para a relação inversa
-  quotations              Quotation[]
-  stockMovements        StockMovement[] // Adicionado para a relação inversa
-  productGroups         ProductGroup[] // Adicionado para a relação inversa
-  laborCostTableEntries LaborCostTableEntry[] // Adicionado para a relação inversa
-  operationalCosts      OperationalCost[] // Adicionado para a relação inversa
+  recuperacoes          Recuperacao[]
+  transacoes            Transacao[]
 }
 
-// --- MODELOS DE USUÁRIO E CONFIGURAÇÕES ---
 model User {
   id             String        @id @default(uuid())
   email          String        @unique
   password       String
   name           String?
-  role           Role          @default(USER)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  role           Role          @default(USER)
   organizationId String
   organization   Organization  @relation(fields: [organizationId], references: [id])
   settings       UserSettings?
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
 model UserSettings {
-  id                    String  @id @default(uuid())
-  userId                String  @unique
-  user                  User    @relation(fields: [userId], references: [id])
-  defaultReceitaContaId String?
-  defaultCaixaContaId   String?
-  defaultDespesaContaId String?
-  metalStockAccountId   String? // ID da conta contábil para Estoque de Metais em Processo
-  productionCostAccountId String? // ID da conta contábil para Custo de Produção
+  id                      String  @id @default(uuid())
+  userId                  String  @unique
+  defaultReceitaContaId   String?
+  defaultCaixaContaId     String?
+  defaultDespesaContaId   String?
+  metalStockAccountId     String?
+  productionCostAccountId String?
+  user                    User    @relation(fields: [userId], references: [id])
 
   @@map("user_settings")
 }
 
-// --- MODELOS DE NEGÓCIO (VENDAS, PRODUTOS, PESSOAS) ---
-enum PessoaType {
-  FISICA
-  JURIDICA
-}
-
 model Pessoa {
-  id             String       @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  type PessoaType
-
-  name        String // Nome (Física) ou Nome Fantasia (Jurídica)
-  razaoSocial String? // Apenas para Jurídica
-
-  email String? @unique
-  phone String?
-
-  cpf  String? @unique // Apenas para Física
-  cnpj String? @unique // Apenas para Jurídica
-
-  birthDate DateTime?
-  gender    String?
-
-  cep         String?
-  logradouro  String?
-  numero      String?
-  complemento String?
-  bairro      String?
-  cidade      String?
-  uf          String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  externalId String? @unique // Para importação de dados legados
-
-  sales       Sale[]
-  client      Client?      // Relação com o papel de Cliente
-  fornecedor  Fornecedor?  // Relação com o papel de Fornecedor
-  funcionario Funcionario? // Relação com o papel de Funcionário
+  id                          String           @id @default(uuid())
+  organizationId              String
+  type                        PessoaType
+  name                        String
+  razaoSocial                 String?
+  email                       String?          @unique
+  phone                       String?
+  cpf                         String?          @unique
+  cnpj                        String?          @unique
+  birthDate                   DateTime?
+  gender                      String?
+  cep                         String?
+  logradouro                  String?
+  numero                      String?
+  complemento                 String?
+  bairro                      String?
+  cidade                      String?
+  uf                          String?
+  createdAt                   DateTime         @default(now())
+  updatedAt                   DateTime         @updatedAt
+  externalId                  String?          @unique
+  sales                       Sale[]
   analisesQuimicasComoCliente AnaliseQuimica[] @relation("PessoaAnalisesQuimicas")
-  metalCredits MetalCredit[]
+  client                      Client?
+  fornecedor                  Fornecedor?
+  funcionario                 Funcionario?
+  metalCredits                MetalCredit[]
+  organization                Organization     @relation(fields: [organizationId], references: [id])
 
   @@map("pessoas")
 }
 
 model Client {
-  pessoaId String @id
-  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
-
+  pessoaId       String       @id
   organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  pessoa         Pessoa       @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
 
   @@map("clients")
 }
 
 model Fornecedor {
-  pessoaId String @id
-  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
-
+  pessoaId       String          @id
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  purchaseOrders PurchaseOrder[] // Nova relação
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  pessoa         Pessoa          @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  purchaseOrders PurchaseOrder[]
 
   @@map("fornecedores")
 }
 
 model Funcionario {
-  pessoaId String @id
-  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
-
+  pessoaId       String       @id
   organizationId String
+  hireDate       DateTime
+  position       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id])
-
-  hireDate DateTime // Data de admissão
-  position String?  // Cargo
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  pessoa         Pessoa       @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
 
   @@map("funcionarios")
 }
 
 model Product {
-  id                 String          @id @default(uuid())
-  organizationId     String
-  organization       Organization    @relation(fields: [organizationId], references: [id])
+  id                 String              @id @default(uuid())
   name               String
   description        String?
-  price              Decimal         @db.Decimal(10, 2)
-  costPrice          Decimal?        @db.Decimal(10, 2)
+  price              Decimal             @db.Decimal(10, 2)
   stock              Int?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  organizationId     String
+  costPrice          Decimal?            @db.Decimal(10, 2)
+  productGroupId     String?
+  goldValue          Float?
+  externalId         String?             @unique
+  organization       Organization        @relation(fields: [organizationId], references: [id])
+  productGroup       ProductGroup?       @relation(fields: [productGroupId], references: [id])
   saleItems          SaleItem[]
   stockMovements     StockMovement[]
-  purchaseOrderItems PurchaseOrderItem[]
   inventoryLots      InventoryLot[]
-
-  // Nova relação com ProductGroup
-  productGroupId     String?
-  productGroup       ProductGroup? @relation(fields: [productGroupId], references: [id])
-
-  goldValue          Float?          // Gramas de ouro por unidade do produto (para produtos de reação)
-  externalId         String?         @unique // ID do produto no sistema antigo
+  purchaseOrderItems PurchaseOrderItem[]
 }
 
-// Novo modelo para agrupar produtos e definir comissões
 model ProductGroup {
-  id                     String        @id @default(uuid())
+  id                     String       @id @default(uuid())
   organizationId         String
-  organization           Organization  @relation(fields: [organizationId], references: [id])
   name                   String
   description            String?
-  commissionPercentage   Decimal?      @db.Decimal(5, 2) // Para produtos de revenda
-  isReactionProductGroup Boolean       @default(false) // Indica se usa tabela de mão de obra
-  products               Product[]     // Relação inversa com Product
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
+  commissionPercentage   Decimal?     @db.Decimal(5, 2)
+  isReactionProductGroup Boolean      @default(false)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  products               Product[]
+  organization           Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, name])
   @@map("product_groups")
 }
 
 model InventoryLot {
-  id                String    @id @default(uuid())
+  id                String       @id @default(uuid())
   organizationId    String
-  organization      Organization @relation(fields: [organizationId], references: [id])
   productId         String
-  product           Product   @relation(fields: [productId], references: [id])
-  costPrice         Decimal   @db.Decimal(10, 2)
+  costPrice         Decimal      @db.Decimal(10, 2)
   quantity          Int
   remainingQuantity Int
-  sourceType        String    // e.g., "PURCHASE_ORDER", "REACTION"
-  sourceId          String    // ID of the source (PurchaseOrder.id or Reaction.id)
-  receivedDate      DateTime  @default(now())
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  saleItems         SaleItem[] // Relação com itens de venda
+  sourceType        String
+  sourceId          String
+  receivedDate      DateTime     @default(now())
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  saleItems         SaleItem[]
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  product           Product      @relation(fields: [productId], references: [id])
 
   @@map("inventory_lots")
 }
 
 model StockMovement {
   id             String       @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
   productId      String
-  product        Product      @relation(fields: [productId], references: [id])
   type           String
   quantity       Int
   createdAt      DateTime     @default(now())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  product        Product      @relation(fields: [productId], references: [id])
 }
 
 model Sale {
-  id             String            @id @default(uuid())
-  organizationId String
-  organization   Organization      @relation(fields: [organizationId], references: [id])
-  pessoaId       String
-  pessoa         Pessoa            @relation(fields: [pessoaId], references: [id])
-  orderNumber    String            @unique
-  totalAmount    Decimal           @db.Decimal(10, 2)
-  totalCost      Decimal?          @db.Decimal(10, 2)
-  feeAmount      Decimal?          @db.Decimal(10, 2)
-  netAmount      Decimal?          @db.Decimal(10, 2)
-  goldPrice      Decimal?          @db.Decimal(10, 2) // Cotação do ouro no dia da venda
-  goldValue      Decimal?          @db.Decimal(10, 4) // Valor da venda em gramas de ouro
-  paymentMethod  String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  saleItems      SaleItem[]
-  accountsRec    AccountRec[]
-  installments   SaleInstallment[]
-  paymentTermId  String?
-  paymentTerm    PaymentTerm?      @relation(fields: [paymentTermId], references: [id])
-  commissionAmount Decimal?          @db.Decimal(10, 2) // Valor da comissão calculada
-  commissionDetails Json?            // Detalhes do cálculo da comissão (JSON)
-  externalId String? @unique // ID da venda no sistema antigo
+  id                String            @id @default(uuid())
+  orderNumber       String            @unique
+  totalAmount       Decimal           @db.Decimal(10, 2)
+  feeAmount         Decimal?          @db.Decimal(10, 2)
+  netAmount         Decimal?          @db.Decimal(10, 2)
+  paymentMethod     String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  organizationId    String
+  paymentTermId     String?
+  pessoaId          String
+  goldPrice         Decimal?          @db.Decimal(10, 2)
+  goldValue         Decimal?          @db.Decimal(10, 4)
+  totalCost         Decimal?          @db.Decimal(10, 2)
+  commissionAmount  Decimal?          @db.Decimal(10, 2)
+  commissionDetails Json?
+  externalId        String?           @unique
+  accountsRec       AccountRec[]
+  organization      Organization      @relation(fields: [organizationId], references: [id])
+  paymentTerm       PaymentTerm?      @relation(fields: [paymentTermId], references: [id])
+  pessoa            Pessoa            @relation(fields: [pessoaId], references: [id])
+  saleItems         SaleItem[]
+  installments      SaleInstallment[]
 }
 
 model PaymentTerm {
-  id               String       @id @default(uuid())
+  id               String          @id @default(uuid())
   organizationId   String
-  organization     Organization @relation(fields: [organizationId], references: [id])
   name             String
   description      String?
   installmentsDays Int[]
-  interestRate     Decimal?     @db.Decimal(5, 2)
+  interestRate     Decimal?        @db.Decimal(5, 2)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   sales            Sale[]
+  organization     Organization    @relation(fields: [organizationId], references: [id])
   purchaseOrders   PurchaseOrder[]
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
 
   @@unique([organizationId, name])
   @@map("payment_terms")
@@ -290,17 +257,516 @@ model PaymentTerm {
 model SaleItem {
   id              String        @id @default(uuid())
   saleId          String
-  sale            Sale          @relation(fields: [saleId], references: [id])
   productId       String
-  product         Product       @relation(fields: [productId], references: [id])
   quantity        Int
   price           Decimal       @db.Decimal(10, 2)
-  inventoryLotId  String?
-  inventoryLot    InventoryLot? @relation(fields: [inventoryLotId], references: [id])
-  costPriceAtSale Decimal       @db.Decimal(10, 2)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-  externalId String? @unique // ID do item de venda no sistema antigo
+  costPriceAtSale Decimal       @db.Decimal(10, 2)
+  inventoryLotId  String?
+  externalId      String?       @unique
+  inventoryLot    InventoryLot? @relation(fields: [inventoryLotId], references: [id])
+  product         Product       @relation(fields: [productId], references: [id])
+  sale            Sale          @relation(fields: [saleId], references: [id])
+}
+
+model SaleInstallment {
+  id                String                @id @default(uuid())
+  saleId            String
+  amount            Decimal
+  dueDate           DateTime
+  paidAt            DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  installmentNumber Int
+  status            SaleInstallmentStatus
+  accountRecId      String?
+  accountRec        AccountRec?           @relation(fields: [accountRecId], references: [id])
+  sale              Sale                  @relation(fields: [saleId], references: [id])
+
+  @@map("sale_installments")
+}
+
+model AccountPay {
+  id                String         @id @default(uuid())
+  description       String
+  amount            Decimal        @db.Decimal(10, 2)
+  dueDate           DateTime
+  paid              Boolean        @default(false)
+  paidAt            DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  installmentNumber Int?
+  isInstallment     Boolean?
+  totalInstallments Int?
+  contaContabilId   String?
+  organizationId    String
+  transacaoId       String?        @unique
+  contaContabil     ContaContabil? @relation(fields: [contaContabilId], references: [id])
+  organization      Organization   @relation(fields: [organizationId], references: [id])
+  transacao         Transacao?     @relation(fields: [transacaoId], references: [id])
+
+  @@map("accounts_pay")
+}
+
+model AccountRec {
+  id               String            @id @default(uuid())
+  saleId           String?
+  description      String
+  amount           Decimal           @db.Decimal(10, 2)
+  dueDate          DateTime
+  received         Boolean           @default(false)
+  receivedAt       DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  contaCorrenteId  String?
+  organizationId   String
+  transacaoId      String?           @unique
+  externalId       String?           @unique
+  contaCorrente    ContaCorrente?    @relation(fields: [contaCorrenteId], references: [id])
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  sale             Sale?             @relation(fields: [saleId], references: [id])
+  transacao        Transacao?        @relation(fields: [transacaoId], references: [id])
+  saleInstallments SaleInstallment[]
+}
+
+model ContaContabil {
+  id                     String                  @id @default(uuid())
+  codigo                 String
+  nome                   String
+  tipo                   TipoContaContabilPrisma
+  aceitaLancamento       Boolean                 @default(true)
+  contaPaiId             String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  organizationId         String
+  AccountPay             AccountPay[]
+  contaPai               ContaContabil?          @relation("SubContas", fields: [contaPaiId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subContas              ContaContabil[]         @relation("SubContas")
+  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creditCardTransactions CreditCardTransaction[]
+  cartoesDeCredito       CreditCard[]            @relation("CartaoParaContaPassivo")
+  transacoes             Transacao[]
+
+  @@unique([organizationId, codigo])
+  @@map("contas_contabeis")
+}
+
+model ContaCorrente {
+  id                 String            @id @default(uuid())
+  nome               String
+  numeroConta        String
+  agencia            String?
+  moeda              String            @default("BRL")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  deletedAt          DateTime?
+  organizationId     String
+  limite             Decimal           @default(0) @db.Decimal(10, 2)
+  initialBalanceBRL  Decimal           @default(0) @db.Decimal(10, 2)
+  initialBalanceGold Decimal           @default(0) @db.Decimal(10, 4)
+  type               ContaCorrenteType @default(BANCO)
+  accountsRec        AccountRec[]
+  organization       Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transacoes         Transacao[]
+
+  @@unique([organizationId, numeroConta])
+  @@map("contas_correntes")
+}
+
+model Transacao {
+  id              String              @id @default(uuid())
+  tipo            TipoTransacaoPrisma
+  valor           Decimal             @db.Decimal(10, 2)
+  moeda           String
+  descricao       String?
+  dataHora        DateTime            @default(now())
+  contaContabilId String
+  contaCorrenteId String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  fitId           String?
+  organizationId  String
+  goldAmount      Decimal?            @db.Decimal(10, 4)
+  AccountRec      AccountRec?
+  AccountPay      AccountPay?
+  contaContabil   ContaContabil       @relation(fields: [contaContabilId], references: [id])
+  contaCorrente   ContaCorrente?      @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction)
+  organization    Organization        @relation(fields: [organizationId], references: [id])
+
+  @@unique([contaCorrenteId, fitId])
+  @@map("transacoes")
+}
+
+model CreditCard {
+  id                     String                  @id @default(uuid())
+  name                   String
+  flag                   String
+  closingDay             Int
+  dueDate                Int
+  contaContabilPassivoId String?
+  organizationId         String
+  bills                  CreditCardBill[]
+  transactions           CreditCardTransaction[]
+  contaContabilPassivo   ContaContabil?          @relation("CartaoParaContaPassivo", fields: [contaContabilPassivoId], references: [id])
+  organization           Organization            @relation(fields: [organizationId], references: [id])
+
+  @@map("credit_cards")
+}
+
+model CreditCardTransaction {
+  id                 String          @id @default(uuid())
+  creditCardId       String
+  description        String
+  amount             Decimal         @db.Decimal(10, 2)
+  date               DateTime
+  isInstallment      Boolean         @default(false)
+  installments       Int?
+  currentInstallment Int?
+  creditCardBillId   String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  contaContabilId    String?
+  fingerprint        String?         @unique
+  contaContabil      ContaContabil?  @relation(fields: [contaContabilId], references: [id])
+  creditCardBill     CreditCardBill? @relation(fields: [creditCardBillId], references: [id])
+  creditCard         CreditCard      @relation(fields: [creditCardId], references: [id])
+
+  @@map("credit_card_transactions")
+}
+
+model CreditCardBill {
+  id             String                  @id @default(uuid())
+  creditCardId   String
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  dueDate        DateTime
+  totalAmount    Decimal                 @db.Decimal(10, 2)
+  paid           Boolean                 @default(false)
+  paidAt         DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  organizationId String
+  creditCard     CreditCard              @relation(fields: [creditCardId], references: [id])
+  organization   Organization            @relation(fields: [organizationId], references: [id])
+  transactions   CreditCardTransaction[]
+
+  @@map("credit_card_bills")
+}
+
+model XmlImportLog {
+  id             String       @id @default(cuid())
+  nfeKey         String       @unique
+  createdAt      DateTime     @default(now())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model LandingPage {
+  id              String        @id @default(uuid())
+  name            String        @unique @default("default")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  logoImageId     String?
+  logoText        String?
+  organizationId  String?
+  customThemeName String?
+  logoImage       Media?        @relation(fields: [logoImageId], references: [id])
+  Organization    Organization? @relation(fields: [organizationId], references: [id])
+  sections        Section[]
+}
+
+model Section {
+  id            String      @id @default(uuid())
+  landingPageId String
+  order         Int
+  type          String
+  content       Json
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  landingPage   LandingPage @relation(fields: [landingPageId], references: [id])
+
+  @@unique([landingPageId, order])
+}
+
+model Media {
+  id               String        @id @default(uuid())
+  filename         String        @unique
+  mimetype         String
+  size             Int
+  path             String        @unique
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  organizationId   String?
+  height           Int?
+  width            Int?
+  landingPageLogos LandingPage[]
+  organization     Organization? @relation(fields: [organizationId], references: [id])
+}
+
+model CreditCardFee {
+  id             String       @id @default(uuid())
+  organizationId String
+  installments   Int
+  feePercentage  Decimal      @db.Decimal(5, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, installments])
+  @@map("credit_card_fees")
+}
+
+model Recuperacao {
+  id                String                  @id @default(uuid())
+  organizationId    String
+  analiseQuimicaId  String
+  status            StatusRecuperacaoPrisma @default(PENDENTE)
+  dataInicio        DateTime                @default(now())
+  dataFim           DateTime?
+  descricaoProcesso String?
+  volumeProcessado  Float?
+  unidadeProcessada String?
+  resultadoFinal    Float?
+  unidadeResultado  String?
+  observacoes       String?
+  dataCriacao       DateTime                @default(now())
+  dataAtualizacao   DateTime                @updatedAt
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  analiseQuimica    AnaliseQuimica          @relation(fields: [analiseQuimicaId], references: [id], onDelete: Cascade)
+  organization      Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("recuperacoes")
+}
+
+model AnaliseQuimica {
+  id                          String                     @id @default(uuid())
+  organizationId              String
+  clienteId                   String
+  numeroAnalise               String                     @unique
+  dataEntrada                 DateTime
+  descricaoMaterial           String
+  volumeOuPesoEntrada         Float
+  unidadeEntrada              String
+  resultadoAnaliseValor       Float?
+  unidadeResultado            String?
+  percentualQuebra            Float?
+  taxaServicoPercentual       Float?
+  teorRecuperavel             Float?
+  auEstimadoBrutoGramas       Float?
+  auEstimadoRecuperavelGramas Float?
+  taxaServicoEmGramas         Float?
+  auLiquidoParaClienteGramas  Float?
+  status                      StatusAnaliseQuimicaPrisma @default(RECEBIDO)
+  dataAnaliseConcluida        DateTime?
+  dataAprovacaoCliente        DateTime?
+  dataFinalizacaoRecuperacao  DateTime?
+  observacoes                 String?
+  ordemDeRecuperacaoId        String?
+  dataCriacao                 DateTime                   @default(now())
+  dataAtualizacao             DateTime                   @updatedAt
+  cliente                     Pessoa                     @relation("PessoaAnalisesQuimicas", fields: [clienteId], references: [id], onDelete: Cascade)
+  organization                Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metalCredit                 MetalCredit?
+  recoveryOrderAsResidue      RecoveryOrder?             @relation("ResidueOfRecovery")
+  recuperacoes                Recuperacao[]
+
+  @@map("analises_quimicas")
+}
+
+model MetalCredit {
+  id                 String         @id @default(uuid())
+  organizationId     String
+  clientId           String
+  chemicalAnalysisId String         @unique
+  metal              String
+  grams              Float
+  date               DateTime       @default(now())
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  chemicalAnalysis   AnaliseQuimica @relation(fields: [chemicalAnalysisId], references: [id])
+  client             Pessoa         @relation(fields: [clientId], references: [id])
+  organization       Organization   @relation(fields: [organizationId], references: [id])
+
+  @@map("metal_credits")
+}
+
+model PurchaseOrder {
+  id                   String              @id @default(uuid())
+  organizationId       String
+  fornecedorId         String
+  orderNumber          String              @unique
+  totalAmount          Decimal             @db.Decimal(10, 2)
+  status               PurchaseOrderStatus @default(PENDING)
+  orderDate            DateTime            @default(now())
+  expectedDeliveryDate DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  paymentTermId        String?
+  items                PurchaseOrderItem[]
+  fornecedor           Fornecedor          @relation(fields: [fornecedorId], references: [pessoaId])
+  organization         Organization        @relation(fields: [organizationId], references: [id])
+  paymentTerm          PaymentTerm?        @relation(fields: [paymentTermId], references: [id])
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  price           Decimal       @db.Decimal(10, 2)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  product         Product       @relation(fields: [productId], references: [id])
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+model RecoveryOrder {
+  id                           String                    @id @default(uuid())
+  organizationId               String
+  chemicalAnalysisIds          String[]
+  dataInicio                   DateTime                  @default(now())
+  dataFim                      DateTime?
+  observacoes                  String?
+  dataCriacao                  DateTime                  @default(now())
+  dataAtualizacao              DateTime                  @updatedAt
+  status                       RecoveryOrderStatusPrisma @default(PENDENTE)
+  auPuroRecuperadoGramas       Float?
+  descricao                    String?
+  residueAnalysisId            String?                   @unique
+  residuoGramas                Float?
+  resultadoProcessamentoGramas Float?
+  teorFinal                    Float?
+  totalBrutoEstimadoGramas     Float
+  organization                 Organization              @relation(fields: [organizationId], references: [id])
+  residueAnalysis              AnaliseQuimica?           @relation("ResidueOfRecovery", fields: [residueAnalysisId], references: [id])
+
+  @@map("recovery_orders")
+}
+
+model ContaMetal {
+  id              String              @id @default(uuid())
+  organizationId  String
+  name            String
+  metalType       TipoMetal
+  dataCriacao     DateTime            @default(now())
+  dataAtualizacao DateTime            @updatedAt
+  type            ContaMetalType
+  organization    Organization        @relation(fields: [organizationId], references: [id])
+  entries         MetalAccountEntry[]
+
+  @@unique([organizationId, name, metalType, type])
+  @@index([organizationId])
+}
+
+model MetalAccountEntry {
+  id                   String              @id @default(uuid())
+  contaMetalId         String
+  tipo                 TipoTransacaoPrisma
+  valor                Decimal             @db.Decimal(10, 4)
+  data                 DateTime            @default(now())
+  relatedTransactionId String?
+  description          String?
+  contaMetal           ContaMetal          @relation(fields: [contaMetalId], references: [id])
+
+  @@map("metal_account_entries")
+}
+
+model Quotation {
+  id             String       @id @default(uuid())
+  organizationId String
+  metal          TipoMetal
+  date           DateTime     @map("quotation_date") @db.Date
+  buyPrice       Decimal      @db.Decimal(10, 2)
+  sellPrice      Decimal      @db.Decimal(10, 2)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  tipoPagamento  String?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, metal, date, tipoPagamento])
+  @@map("quotations")
+}
+
+model LaborCostTableEntry {
+  id               String       @id @default(uuid())
+  organizationId   String
+  minGrams         Float
+  maxGrams         Float?
+  goldGramsCharged Float
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, minGrams])
+  @@map("labor_cost_table_entries")
+}
+
+model OperationalCost {
+  id                    String       @id @default(uuid())
+  organizationId        String
+  name                  String
+  value                 Decimal      @db.Decimal(10, 2)
+  type                  String
+  appliesToProductGroup String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  organization          Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, name])
+  @@map("operational_costs")
+}
+
+model chemical_reactions {
+  id                            String          @id
+  createdAt                     DateTime        @default(now())
+  updatedAt                     DateTime        @updatedAt
+  notes                         String?
+  inputBasketLeftoverGrams      Float?
+  inputDistillateLeftoverGrams  Float?
+  inputGoldGrams                Float
+  inputRawMaterialGrams         Float
+  organizationId                String
+  outputBasketLeftoverGrams     Float?
+  outputDistillateLeftoverGrams Float?
+  outputProductGrams            Float
+  reactionDate                  DateTime        @default(now())
+  Organization                  Organization    @relation(fields: [organizationId], references: [id])
+  lots                          pure_metal_lots[] // Relação muitos-para-muitos
+}
+
+model pure_metal_lots {
+  id                 String               @id
+  organizationId     String
+  sourceType         String
+  sourceId           String
+  metalType          TipoMetal
+  initialGrams       Float
+  remainingGrams     Float
+  purity             Float
+  status             PureMetalLotStatus   @default(AVAILABLE)
+  entryDate          DateTime             @default(now())
+  notes              String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  chemical_reactions chemical_reactions[] // Relação muitos-para-muitos
+  Organization       Organization         @relation(fields: [organizationId], references: [id])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PessoaType {
+  FISICA
+  JURIDICA
 }
 
 enum SaleInstallmentStatus {
@@ -309,27 +775,6 @@ enum SaleInstallmentStatus {
   OVERDUE
 }
 
-model SaleInstallment {
-  id                String                @id @default(uuid())
-  saleId            String
-  sale              Sale                  @relation(fields: [saleId], references: [id])
-  amount            Decimal
-  dueDate           DateTime
-  status            SaleInstallmentStatus
-  paidAt            DateTime?
-  installmentNumber Int
-  accountRecId      String? // Novo campo para vincular à conta a receber principal
-  accountRec        AccountRec?           @relation(fields: [accountRecId], references: [id])
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-
-  @@map("sale_installments")
-}
-
-// --- MODELOS FINANCEIROS ---
-
-
-// --- ENUMS FINANCEIROS ---
 enum TipoContaContabilPrisma {
   ATIVO
   PASSIVO
@@ -343,252 +788,12 @@ enum TipoTransacaoPrisma {
   DEBITO
 }
 
-model AccountPay {
-  id                String         @id @default(uuid())
-  organizationId    String
-  organization      Organization   @relation(fields: [organizationId], references: [id])
-  description       String
-  amount            Decimal        @db.Decimal(10, 2)
-  dueDate           DateTime
-  paid              Boolean        @default(false)
-  paidAt            DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  isInstallment     Boolean?
-  installmentNumber Int?
-  totalInstallments Int?
-  contaContabilId   String?
-  contaContabil     ContaContabil? @relation(fields: [contaContabilId], references: [id])
-  transacaoId       String?        @unique
-  transacao         Transacao?     @relation(fields: [transacaoId], references: [id])
-
-  @@map("accounts_pay")
-}
-
-model AccountRec {
-  id               String            @id @default(uuid())
-  organizationId   String
-  organization     Organization      @relation(fields: [organizationId], references: [id])
-  saleId           String?
-  sale             Sale?             @relation(fields: [saleId], references: [id])
-  description      String
-  amount           Decimal           @db.Decimal(10, 2)
-  dueDate          DateTime
-  received         Boolean           @default(false)
-  receivedAt       DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  contaCorrenteId  String?
-  contaCorrente    ContaCorrente?    @relation(fields: [contaCorrenteId], references: [id])
-  transacaoId      String?           @unique
-  transacao        Transacao?        @relation(fields: [transacaoId], references: [id])
-  saleInstallments SaleInstallment[] // Adicionado para a relação inversa
-  externalId       String?           @unique // ID da duplicata no sistema antigo
-}
-
-model ContaContabil {
-  id                     String                  @id @default(uuid())
-  organizationId         String
-  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  codigo                 String
-  nome                   String
-  tipo                   TipoContaContabilPrisma
-  aceitaLancamento       Boolean                 @default(true)
-  contaPaiId             String?
-  contaPai               ContaContabil?          @relation("SubContas", fields: [contaPaiId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  subContas              ContaContabil[]         @relation("SubContas")
-  transacoes             Transacao[]
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  AccountPay             AccountPay[]
-  creditCardTransactions CreditCardTransaction[]
-  cartoesDeCredito       CreditCard[]            @relation("CartaoParaContaPassivo")
-
-  @@unique([organizationId, codigo])
-  @@map("contas_contabeis")
-}
-
 enum ContaCorrenteType {
   BANCO
   FORNECEDOR_METAL
   EMPRESTIMO
 }
 
-model ContaCorrente {
-  id                 String            @id @default(uuid())
-  organizationId     String
-  organization       Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  nome               String
-  numeroConta        String
-  agencia            String?
-  initialBalanceBRL  Decimal           @default(0) @db.Decimal(10, 2)
-  initialBalanceGold Decimal           @default(0) @db.Decimal(10, 4)
-  limite             Decimal           @default(0) @db.Decimal(10, 2)
-  type               ContaCorrenteType @default(BANCO)
-  moeda              String            @default("BRL")
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
-  deletedAt          DateTime?
-  transacoes         Transacao[]
-  accountsRec        AccountRec[]
-
-  @@unique([organizationId, numeroConta])
-  @@map("contas_correntes")
-}
-
-model Transacao {
-  id              String              @id @default(uuid())
-  organizationId  String
-  organization    Organization        @relation(fields: [organizationId], references: [id])
-  tipo            TipoTransacaoPrisma
-  valor           Decimal             @db.Decimal(10, 2)
-  goldAmount      Decimal?            @db.Decimal(10, 4)
-  moeda           String
-  descricao       String?
-  dataHora        DateTime            @default(now())
-  contaContabilId String
-  fitId           String?
-  contaContabil   ContaContabil       @relation(fields: [contaContabilId], references: [id])
-  contaCorrenteId String?
-  contaCorrente   ContaCorrente?      @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  AccountPay      AccountPay?
-  AccountRec      AccountRec?
-
-  @@unique([contaCorrenteId, fitId])
-  @@map("transacoes")
-}
-
-// --- MODELOS DE CARTÃO DE CRÉDITO ---
-model CreditCard {
-  id                     String                  @id @default(uuid())
-  organizationId         String
-  organization           Organization            @relation(fields: [organizationId], references: [id])
-  name                   String
-  flag                   String
-  closingDay             Int
-  dueDate                Int
-  transactions           CreditCardTransaction[]
-  bills                  CreditCardBill[]
-  contaContabilPassivoId String?
-  contaContabilPassivo   ContaContabil?          @relation("CartaoParaContaPassivo", fields: [contaContabilPassivoId], references: [id])
-
-  @@map("credit_cards")
-}
-
-model CreditCardTransaction {
-  id                 String          @id @default(uuid())
-  creditCardId       String
-  creditCard         CreditCard      @relation(fields: [creditCardId], references: [id])
-  description        String
-  amount             Decimal         @db.Decimal(10, 2)
-  date               DateTime
-  isInstallment      Boolean         @default(false)
-  installments       Int?
-  currentInstallment Int?
-  contaContabilId    String?
-  contaContabil      ContaContabil?  @relation(fields: [contaContabilId], references: [id])
-  creditCardBillId   String?
-  creditCardBill     CreditCardBill? @relation(fields: [creditCardBillId], references: [id])
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-
-  fingerprint String? @unique // Campo para detecção de duplicatas
-
-  @@map("credit_card_transactions")
-}
-
-model CreditCardBill {
-  id             String                  @id @default(uuid())
-  organizationId String
-  organization   Organization            @relation(fields: [organizationId], references: [id])
-  creditCardId   String
-  creditCard     CreditCard              @relation(fields: [creditCardId], references: [id])
-  name           String
-  startDate      DateTime
-  endDate        DateTime
-  dueDate        DateTime
-  totalAmount    Decimal                 @db.Decimal(10, 2)
-  paid           Boolean                 @default(false)
-  paidAt         DateTime?
-  transactions   CreditCardTransaction[]
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
-
-  @@map("credit_card_bills")
-}
-
-// --- MODELOS AUXILIARES ---
-model XmlImportLog {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  nfeKey         String       @unique
-  createdAt      DateTime     @default(now())
-}
-
-// --- MODELOS DA LANDING PAGE ---
-model LandingPage {
-  id              String        @id @default(uuid())
-  name            String        @unique @default("default")
-  logoText        String?
-  logoImageId     String?
-  logoImage       Media?        @relation(fields: [logoImageId], references: [id])
-  customThemeName String? // Novo campo para o nome do tema personalizado
-  sections        Section[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  Organization    Organization? @relation(fields: [organizationId], references: [id])
-  organizationId  String?
-}
-
-model Section {
-  id            String      @id @default(uuid())
-  landingPageId String
-  landingPage   LandingPage @relation(fields: [landingPageId], references: [id])
-  order         Int
-  type          String
-  content       Json
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  @@unique([landingPageId, order])
-}
-
-model Media {
-  id               String        @id @default(uuid())
-  organizationId   String?
-  organization     Organization? @relation(fields: [organizationId], references: [id])
-  filename         String        @unique
-  mimetype         String
-  size             Int
-  path             String        @unique
-  width            Int?
-  height           Int?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  landingPageLogos LandingPage[]
-}
-
-model CreditCardFee {
-  id             String       @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  installments  Int // Número de parcelas (ex: 1, 2, 3, ...)
-  feePercentage Decimal @db.Decimal(5, 2) // Porcentagem da taxa (ex: 4.99)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([organizationId, installments]) // Garante que só há uma taxa por nº de parcela
-  @@map("credit_card_fees")
-}
-
-// --- MODELOS DE PEDIDOS DE COMPRA ---
-
-// --- ENUM E MODELO DE ANÁLISE QUÍMICA ---
 enum StatusAnaliseQuimicaPrisma {
   RECEBIDO
   EM_ANALISE
@@ -601,94 +806,11 @@ enum StatusAnaliseQuimicaPrisma {
   RESIDUO
 }
 
-// --- ENUM E MODELO DE RECUPERAÇÃO ---
 enum StatusRecuperacaoPrisma {
   PENDENTE
   EM_ANDAMENTO
   FINALIZADA
   CANCELADA
-}
-
-model Recuperacao {
-  id              String                  @id @default(uuid())
-  organizationId  String
-  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  analiseQuimicaId String
-  analiseQuimica  AnaliseQuimica         @relation(fields: [analiseQuimicaId], references: [id], onDelete: Cascade)
-  status              StatusRecuperacaoPrisma @default(PENDENTE)
-  dataInicio          DateTime                @default(now())
-  dataFim             DateTime?
-  descricaoProcesso   String?
-  volumeProcessado    Float?
-  unidadeProcessada   String?
-  resultadoFinal      Float?
-  unidadeResultado    String?
-  observacoes         String?
-  dataCriacao         DateTime @default(now())
-  dataAtualizacao     DateTime @updatedAt
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  @@map("recuperacoes")
-}
-
-model AnaliseQuimica {
-  id        String @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clienteId String
-  cliente   Pessoa @relation("PessoaAnalisesQuimicas", fields: [clienteId], references: [id], onDelete: Cascade)
-
-  numeroAnalise       String   @unique
-  dataEntrada         DateTime
-  descricaoMaterial   String
-  volumeOuPesoEntrada Float
-  unidadeEntrada      String
-
-  resultadoAnaliseValor       Float?
-  unidadeResultado            String?
-  percentualQuebra            Float?
-  taxaServicoPercentual       Float?
-  teorRecuperavel             Float?
-  auEstimadoBrutoGramas       Float?
-  auEstimadoRecuperavelGramas Float?
-  taxaServicoEmGramas         Float?
-  auLiquidoParaClienteGramas  Float?
-
-  status                     StatusAnaliseQuimicaPrisma @default(RECEBIDO)
-  dataAnaliseConcluida       DateTime?
-  dataAprovacaoCliente       DateTime?
-  dataFinalizacaoRecuperacao DateTime?
-  observacoes                String?
-
-  ordemDeRecuperacaoId String?
-  //ordemDeRecuperacao   OrdemDeRecuperacao? @relation(fields: [ordemDeRecuperacaoId], references: [id])
-
-  dataCriacao     DateTime @default(now())
-  dataAtualizacao DateTime @updatedAt
-
-  recuperacoes          Recuperacao[]
-  metalCredit           MetalCredit?
-  recoveryOrderAsResidue RecoveryOrder? @relation("ResidueOfRecovery")
-
-  @@map("analises_quimicas")
-}
-
-model MetalCredit {
-  id                 String   @id @default(uuid())
-  organizationId     String
-  organization       Organization @relation(fields: [organizationId], references: [id])
-  clientId           String
-  client             Pessoa   @relation(fields: [clientId], references: [id])
-  chemicalAnalysisId String   @unique
-  chemicalAnalysis   AnaliseQuimica @relation(fields: [chemicalAnalysisId], references: [id])
-  metal              String
-  grams              Float
-  date               DateTime @default(now())
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  @@map("metal_credits")
 }
 
 enum PurchaseOrderStatus {
@@ -697,147 +819,30 @@ enum PurchaseOrderStatus {
   CANCELED
 }
 
-model PurchaseOrder {
-  id                   String                @id @default(uuid())
-  organizationId       String
-  organization         Organization          @relation(fields: [organizationId], references: [id])
-  fornecedorId         String
-  fornecedor           Fornecedor            @relation(fields: [fornecedorId], references: [pessoaId])
-  orderNumber          String                @unique
-  totalAmount          Decimal               @db.Decimal(10, 2)
-  status               PurchaseOrderStatus   @default(PENDING)
-  orderDate            DateTime              @default(now())
-  expectedDeliveryDate DateTime?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  items                PurchaseOrderItem[]
-  paymentTermId        String? // Adicionado para o prazo de pagamento
-  paymentTerm          PaymentTerm?          @relation(fields: [paymentTermId], references: [id])
-
-  @@map("purchase_orders")
-}
-
-model PurchaseOrderItem {
-  id              String        @id @default(uuid())
-  purchaseOrderId String
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  productId       String
-  product         Product       @relation(fields: [productId], references: [id])
-  quantity        Int
-  price           Decimal       @db.Decimal(10, 2)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  @@map("purchase_order_items")
-}
-
 enum RecoveryOrderStatusPrisma {
   PENDENTE
   EM_ANDAMENTO
-  AGUARDANDO_RESULTADO // Aguardando o peso bruto recuperado (ex: 56g)
-  AGUARDANDO_TEOR      // Aguardando o teor de pureza (ex: 0.995)
   FINALIZADA
   CANCELADA
-}
-
-model RecoveryOrder {
-  id             String       @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  // --- INPUT ---
-  chemicalAnalysisIds      String[] // IDs das análises que originaram a ordem
-  totalBrutoEstimadoGramas Float    // Soma dos 'auEstimadoBrutoGramas' das análises de origem (Ex: 85g)
-
-  // --- PROCESSAMENTO ---
-  resultadoProcessamentoGramas Float? // Resultado do processamento (peso antes de aplicar o teor). Ex: 56g
-  teorFinal                    Float? // Teor de pureza informado. Ex: 0.995
-
-  // --- OUTPUT (Calculado) ---
-  auPuroRecuperadoGramas Float? // Calculado: resultadoProcessamentoGramas * teorFinal. Ex: 55.72g
-  residuoGramas          Float? // Calculado: totalBrutoEstimadoGramas - auPuroRecuperadoGramas. Ex: 29.28g
-
-  // --- VÍNCULO COM RESÍDUO ---
-  // Relação com a nova análise de resíduo gerada ao finalizar a ordem
-  residueAnalysisId String?         @unique
-  residueAnalysis   AnaliseQuimica? @relation("ResidueOfRecovery", fields: [residueAnalysisId], references: [id])
-
-  // --- CONTROLE ---
-  status          RecoveryOrderStatusPrisma @default(PENDENTE)
-  descricao       String?
-  observacoes     String?
-  dataInicio      DateTime                  @default(now())
-  dataFim         DateTime?
-  dataCriacao     DateTime                  @default(now())
-  dataAtualizacao DateTime                  @updatedAt
-
-  @@map("recovery_orders")
+  AGUARDANDO_RESULTADO
+  AGUARDANDO_TEOR
 }
 
 enum TipoMetal {
   AU
   AG
   RH
-  // Adicione outros metais conforme necessário
 }
 
-model ContaMetal {
-  id             String    @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  name           String
-  metalType      TipoMetal
-  balance        Decimal   @default(0) @db.Decimal(10, 4) // Saldo em gramas, com precisão
-  dataCriacao    DateTime  @default(now())
-  dataAtualizacao DateTime  @updatedAt
-
-  @@unique([organizationId, name, metalType]) // Garante que não há contas de metal duplicadas para a mesma organização, nome e tipo de metal
-  @@index([organizationId])
+enum PureMetalLotStatus {
+  AVAILABLE
+  USED
+  PARTIALLY_USED
 }
 
-model Quotation {
-  id             String    @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  metal          TipoMetal
-  date           DateTime  @map("quotation_date") @db.Date
-  buyPrice       Decimal   @db.Decimal(10, 2)
-  sellPrice      Decimal   @db.Decimal(10, 2)
-  tipoPagamento  String?   // PIX, CHEQUE, etc.
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-
-  @@unique([organizationId, metal, date, tipoPagamento])
-  @@map("quotations")
-}
-
-// Tabela de Mão de Obra para produtos de reação
-model LaborCostTableEntry {
-  id                     String        @id @default(uuid())
-  organizationId         String
-  organization           Organization  @relation(fields: [organizationId], references: [id])
-  minGrams               Float         // Gramas mínimas para esta faixa
-  maxGrams               Float?        // Gramas máximas para esta faixa (null para "acima de")
-  goldGramsCharged       Float         // Gramas de ouro cobradas como mão de obra
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
-
-  @@unique([organizationId, minGrams]) // Garante faixas únicas por organização
-  @@map("labor_cost_table_entries")
-}
-
-// Custos Operacionais para cálculo de comissão
-model OperationalCost {
-  id                     String        @id @default(uuid())
-  organizationId         String
-  organization           Organization  @relation(fields: [organizationId], references: [id])
-  name                   String        // Nome do custo (ex: "Motorista", "Água", "Energia")
-  value                  Decimal       @db.Decimal(10, 2) // Valor do custo
-  type                   String        // Tipo de custo (ex: "FIXED", "PER_GRAM", "PERCENTAGE")
-  appliesToProductGroup  String?       // Opcional: ID do ProductGroup se o custo for específico
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
-
-  @@unique([organizationId, name])
-  @@map("operational_costs")
+enum ContaMetalType {
+  CLIENTE
+  FORNECEDOR
+  INTERNA
+  EMPRESTIMO
 }

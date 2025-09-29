@@ -1,35 +1,37 @@
-import { Entity } from '../../_shared/entity';
+import { AggregateRoot } from '../../_shared/domain/aggregate-root';
+import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
 
-interface ChemicalReactionProps {
+export interface ChemicalReactionProps {
   organizationId: string;
+  reactionDate: Date;
+  notes?: string;
+  // Inputs
   inputGoldGrams: number;
   inputRawMaterialGrams: number;
   inputBasketLeftoverGrams?: number;
   inputDistillateLeftoverGrams?: number;
+  // Outputs
   outputProductGrams: number;
   outputBasketLeftoverGrams?: number;
   outputDistillateLeftoverGrams?: number;
-  sourceLotId: string;
-  outputProductId: string; // Adicionado
-  reactionDate: Date;
-  notes?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  // Rastreabilidade
+  sourceLotIds: string[]; // Array de IDs dos lotes de metal puro usados
 }
 
-export class ChemicalReaction extends Entity<ChemicalReactionProps> {
-  private constructor(props: ChemicalReactionProps, id?: string) {
+export class ChemicalReaction extends AggregateRoot<ChemicalReactionProps> {
+  private constructor(props: ChemicalReactionProps, id?: UniqueEntityID) {
     super(props, id);
   }
 
-  public static create(props: ChemicalReactionProps, id?: string): ChemicalReaction {
+  public static create(props: ChemicalReactionProps, id?: UniqueEntityID): ChemicalReaction {
     const chemicalReaction = new ChemicalReaction(
       {
         ...props,
-        reactionDate: props.reactionDate ?? new Date(),
       },
       id,
     );
     return chemicalReaction;
   }
+
+  // Adicionar getters conforme necessário
 }

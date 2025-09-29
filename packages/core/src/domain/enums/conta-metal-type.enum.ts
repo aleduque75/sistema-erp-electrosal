@@ -1,0 +1,6 @@
+export enum ContaMetalType {
+  CLIENTE = 'CLIENTE',
+  FORNECEDOR = 'FORNECEDOR',
+  INTERNA = 'INTERNA',
+  EMPRESTIMO = 'EMPRESTIMO',
+}

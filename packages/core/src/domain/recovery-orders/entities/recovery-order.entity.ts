@@ -1,6 +1,6 @@
 import { UniqueEntityID } from '../../../_shared/domain/unique-entity-id';
 import { AggregateRoot } from "../../../_shared/domain/aggregate-root";
-import { RecoveryOrderStatus } from "../recovery-order-status.enum";
+import { RecoveryOrderStatus } from "../../enums/recovery-order-status.enum";
 
 // Define a interface para os dados resumidos da análise química
 export interface AnaliseQuimicaResumida {

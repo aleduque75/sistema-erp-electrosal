@@ -1,5 +1,5 @@
 import { Entity } from "../../_shared/entity";
-import { SaleInstallmentStatus } from "./enums/sale-installment-status.enum"; // 👈 Importe o Enum
+import { SaleInstallmentStatus } from "../enums/sale-installment-status.enum";
 
 export interface SaleInstallmentProps {
   saleId: string;

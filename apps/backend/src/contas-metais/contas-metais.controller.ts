@@ -1,11 +1,12 @@
-import { Controller, Post, Body, UseGuards, Req, Get, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, Param, ParseUUIDPipe } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateContaMetalUseCase } from './use-cases/create-conta-metal.use-case';
 import { CreateContaMetalDto } from './dtos/create-conta-metal.dto';
 import { ContaMetalResponseDto } from './dtos/conta-metal.response.dto';
 import { FindContaMetalByIdUseCase } from './use-cases/find-conta-metal-by-id.use-case';
-import { UpdateContaMetalBalanceUseCase } from './use-cases/update-conta-metal-balance.use-case';
-import { FindAllContasMetaisUseCase } from './use-cases/find-all-contas-metais.use-case'; // ADDED
+import { FindAllContasMetaisUseCase } from './use-cases/find-all-contas-metais.use-case';
+import { CreateMetalAccountEntryUseCase } from './use-cases/create-metal-account-entry.use-case';
+import { CreateMetalAccountEntryDto } from './dtos/create-metal-account-entry.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contas-metais')
@@ -13,8 +14,8 @@ export class ContasMetaisController {
   constructor(
     private readonly createContaMetalUseCase: CreateContaMetalUseCase,
     private readonly findContaMetalByIdUseCase: FindContaMetalByIdUseCase,
-    private readonly updateContaMetalBalanceUseCase: UpdateContaMetalBalanceUseCase,
-    private readonly findAllContasMetaisUseCase: FindAllContasMetaisUseCase, // ADDED
+    private readonly findAllContasMetaisUseCase: FindAllContasMetaisUseCase,
+    private readonly createMetalAccountEntryUseCase: CreateMetalAccountEntryUseCase,
   ) {}
 
   @Post()
@@ -25,13 +26,13 @@ export class ContasMetaisController {
     return ContaMetalResponseDto.fromDomain(contaMetal);
   }
 
-  @Get() // ADDED
-  async findAllContasMetais(@Req() req): Promise<ContaMetalResponseDto[]> { // ADDED
-    const organizationId = req.user?.orgId; // ADDED
-    const command = { organizationId }; // ADDED
-    const contasMetais = await this.findAllContasMetaisUseCase.execute(command); // ADDED
-    return contasMetais.map(ContaMetalResponseDto.fromDomain); // ADDED
-  } // ADDED
+  @Get()
+  async findAllContasMetais(@Req() req): Promise<ContaMetalResponseDto[]> {
+    const organizationId = req.user?.orgId;
+    const command = { organizationId };
+    const contasMetais = await this.findAllContasMetaisUseCase.execute(command);
+    return contasMetais.map(ContaMetalResponseDto.fromDomain);
+  }
 
   @Get(':id')
   async getContaMetalById(@Param('id', new ParseUUIDPipe()) id: string, @Req() req): Promise<ContaMetalResponseDto> {
@@ -41,25 +42,11 @@ export class ContasMetaisController {
     return ContaMetalResponseDto.fromDomain(contaMetal);
   }
 
-  @Patch(':id/credit')
-  async creditContaMetal(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body('amount') amount: number,
-    @Req() req,
-  ): Promise<void> {
+  @Post('entries')
+  async createEntry(@Body() dto: CreateMetalAccountEntryDto, @Req() req): Promise<void> {
     const organizationId = req.user?.orgId;
-    const command = { id, organizationId, amount, type: 'credit' as const };
-    await this.updateContaMetalBalanceUseCase.execute(command);
-  }
-
-  @Patch(':id/debit')
-  async debitContaMetal(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body('amount') amount: number,
-    @Req() req,
-  ): Promise<void> {
-    const organizationId = req.user?.orgId;
-    const command = { id, organizationId, amount, type: 'debit' as const };
-    await this.updateContaMetalBalanceUseCase.execute(command);
+    // O DTO já contém o contaMetalId, então não precisamos pegar o :id da URL
+    const command = { organizationId, dto };
+    await this.createMetalAccountEntryUseCase.execute(command);
   }
 }

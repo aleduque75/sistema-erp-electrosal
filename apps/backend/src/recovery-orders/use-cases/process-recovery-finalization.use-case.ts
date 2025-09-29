@@ -4,26 +4,20 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
-  Logger, // ADDED
+  Logger,
 } from '@nestjs/common';
 import {
   IRecoveryOrderRepository,
   IAnaliseQuimicaRepository,
   RecoveryOrderStatus,
   AnaliseQuimica,
-} from '@sistema-erp-electrosal/core';
-import {
-  IContaMetalRepository,
+  PureMetalLot,
+  IPureMetalLotRepository,
   TipoMetal,
-  ContaMetal,
 } from '@sistema-erp-electrosal/core';
-import { UpdateContaMetalBalanceUseCase } from '../../contas-metais/use-cases/update-conta-metal-balance.use-case'; // Adicionado
-import { FindContaMetalByNameAndMetalTypeUseCase } from '../../contas-metais/use-cases/find-conta-metal-by-name-and-metal-type.use-case'; // Adicionado
 import { QuotationsService } from '../../quotations/quotations.service';
 import { ContasContabeisService } from '../../contas-contabeis/contas-contabeis.service';
 import { TransacoesService } from '../../transacoes/transacoes.service';
-import { CreateTransacaoDto } from '../../transacoes/dtos/create-transacao.dto';
-
 import { UsersService } from '../../users/users.service';
 import { TipoTransacaoPrisma } from '@prisma/client';
 
@@ -35,16 +29,15 @@ export interface FinalizeRecoveryOrderCommand {
 
 @Injectable()
 export class ProcessRecoveryFinalizationUseCase {
-  private readonly logger = new Logger(ProcessRecoveryFinalizationUseCase.name); // ADDED
+  private readonly logger = new Logger(ProcessRecoveryFinalizationUseCase.name);
+
   constructor(
     @Inject('IRecoveryOrderRepository')
     private readonly recoveryOrderRepository: IRecoveryOrderRepository,
     @Inject('IAnaliseQuimicaRepository')
     private readonly analiseRepository: IAnaliseQuimicaRepository,
-    @Inject('IContaMetalRepository') // Adicionado
-    private readonly contaMetalRepository: IContaMetalRepository, // Adicionado
-    private readonly updateContaMetalBalanceUseCase: UpdateContaMetalBalanceUseCase, // Adicionado
-    private readonly findContaMetalByNameAndMetalTypeUseCase: FindContaMetalByNameAndMetalTypeUseCase, // Adicionado
+    @Inject('IPureMetalLotRepository')
+    private readonly pureMetalLotRepository: IPureMetalLotRepository,
     private readonly cotacoesService: QuotationsService,
     private readonly contasContabeisService: ContasContabeisService,
     private readonly transacoesService: TransacoesService,
@@ -71,7 +64,7 @@ export class ProcessRecoveryFinalizationUseCase {
 
     if (recoveryOrder.status !== RecoveryOrderStatus.AGUARDANDO_TEOR) {
       throw new ConflictException(
-        `A ordem de recuperação não pode ser finalizada, pois não está com o status AGUARDANDO_TEOR.`, 
+        `A ordem de recuperação não pode ser finalizada, pois não está com o status AGUARDANDO_TEOR.`,
       );
     }
 
@@ -85,10 +78,25 @@ export class ProcessRecoveryFinalizationUseCase {
     const auPuroRecuperadoGramas = recoveryOrder.resultadoProcessamentoGramas * teorFinal;
     const residuoGramas = recoveryOrder.totalBrutoEstimadoGramas - auPuroRecuperadoGramas;
 
-    // ADDED DEBUG LOGS
-    console.log(`teorFinal: ${teorFinal}`);
-    console.log(`recoveryOrder.resultadoProcessamentoGramas: ${recoveryOrder.resultadoProcessamentoGramas}`);
-    console.log(`auPuroRecuperadoGramas: ${auPuroRecuperadoGramas}`);
+    this.logger.log(`Teor Final: ${teorFinal}`);
+    this.logger.log(`Resultado Processamento Gramas: ${recoveryOrder.resultadoProcessamentoGramas}`);
+    this.logger.log(`Au Puro Recuperado: ${auPuroRecuperadoGramas}`);
+
+    // --- Create Pure Metal Lot ---
+    if (auPuroRecuperadoGramas > 0) {
+      const pureMetalLot = PureMetalLot.create({
+        organizationId,
+        sourceType: 'RECOVERY_ORDER',
+        sourceId: recoveryOrder.id.toString(),
+        metalType: TipoMetal.AU,
+        initialGrams: auPuroRecuperadoGramas,
+        remainingGrams: auPuroRecuperadoGramas,
+        purity: teorFinal,
+        notes: `Lote gerado a partir da Ordem de Recuperação #${recoveryOrder.id.toString()}`,
+      });
+      await this.pureMetalLotRepository.create(pureMetalLot);
+      this.logger.log(`Lote de metal puro criado: ${pureMetalLot.id.toString()}`);
+    }
 
     let residueAnalysisId: string | undefined = undefined;
 
@@ -99,94 +107,49 @@ export class ProcessRecoveryFinalizationUseCase {
         descricaoMaterial: `Resíduo da Ordem de Recuperação ${recoveryOrder.id.toString()}`,
         volumeOuPesoEntrada: residuoGramas,
         unidadeEntrada: 'g',
-        auEstimadoBrutoGramas: residuoGramas, // Corrigido para popular o campo correto
-        // Campos não aplicáveis para resíduo são omitidos
-        resultadoAnaliseValor: null,
-        unidadeResultado: null,
-        percentualQuebra: null,
-        taxaServicoPercentual: null,
-        teorRecuperavel: null,
-        auEstimadoRecuperavelGramas: null,
-        taxaServicoEmGramas: null,
-        auLiquidoParaClienteGramas: null,
-        dataAnaliseConcluida: null,
-        dataAprovacaoCliente: null,
-        dataFinalizacaoRecuperacao: null,
-        observacoes: 'Análise de resíduo gerada automaticamente.',
-        ordemDeRecuperacaoId: null,
+        auEstimadoBrutoGramas: residuoGramas,
       });
 
       const createdResidue = await this.analiseRepository.create(residueAnalysis, organizationId);
       residueAnalysisId = createdResidue.id.toString();
+      this.logger.log(`Análise de resíduo criada: ${residueAnalysisId}`);
     }
 
-    // --- Credit auPuroRecuperadoGramas to Metal Account ---
+    // --- Create Financial Transaction ---
     if (auPuroRecuperadoGramas > 0) {
-      let estoqueMetalAccount = await this.findContaMetalByNameAndMetalTypeUseCase.execute({
-        name: 'Estoque de Metal para Reação', // Nome da conta de estoque
-        metalType: TipoMetal.AU, // Tipo de metal
-        organizationId,
-      }).catch(() => null); // Captura NotFoundException se a conta não existir
-
-      if (!estoqueMetalAccount) {
-        // Se a conta não existe, cria uma
-        estoqueMetalAccount = await this.contaMetalRepository.create(
-          ContaMetal.create({
-            organizationId,
-            name: 'Estoque de Metal para Reação',
-            metalType: TipoMetal.AU,
-          }),
-        );
-      }
-
-      await this.updateContaMetalBalanceUseCase.execute({
-        id: estoqueMetalAccount.id.toString(),
-        organizationId,
-        amount: auPuroRecuperadoGramas,
-        type: 'credit',
-      });
-
-      // --- Create Financial Transaction ---
       const cotacao = await this.cotacoesService.findLatest(TipoMetal.AU, organizationId);
-      console.log(`Cotação encontrada: ${JSON.stringify(cotacao)}`); // ADDED
-
       if (cotacao && parseFloat(cotacao.buyPrice.toString()) > 0) {
         const valorBRL = auPuroRecuperadoGramas * parseFloat(cotacao.buyPrice.toString());
-        console.log(`Valor BRL calculado: ${valorBRL}`); // ADDED
+        this.logger.log(`Valor BRL do metal recuperado: ${valorBRL}`);
 
         const userSettings = await this.usersService.getUserSettingsByOrganizationId(organizationId);
-        console.log(`User Settings: ${JSON.stringify(userSettings)}`); // ADDED
-
         if (!userSettings || !userSettings.metalStockAccountId || !userSettings.productionCostAccountId) {
-          console.warn(`Configurações de contas contábeis para estoque de metal ou custo de produção não encontradas para a organização ${organizationId}. Lançamento contábil não será gerado.`);
-          // Optionally throw an error or return early if this is a critical requirement
+          this.logger.warn(`Contas contábeis para estoque ou custo não configuradas para a organização ${organizationId}.`);
         } else {
           const contaDebito = await this.contasContabeisService.findOne(organizationId, userSettings.metalStockAccountId);
           const contaCredito = await this.contasContabeisService.findOne(organizationId, userSettings.productionCostAccountId);
-          console.log(`Conta Débito: ${JSON.stringify(contaDebito)}`); // ADDED
-          console.log(`Conta Crédito: ${JSON.stringify(contaCredito)}`); // ADDED
 
-          const dataTransacao = new Date();
+          if (contaDebito && contaCredito) {
+            const dataTransacao = new Date();
+            // Débito (Aumenta o valor do estoque de metal)
+            await this.transacoesService.create({
+              descricao: `Valorização de estoque por recuperação de metal da Ordem #${recoveryOrder.id.toString()}`,
+              valor: valorBRL,
+              tipo: TipoTransacaoPrisma.DEBITO,
+              dataHora: dataTransacao,
+              contaContabilId: contaDebito.id,
+            }, organizationId);
 
-          // Débito
-          await this.transacoesService.create({
-            descricao: `Valorização de estoque por recuperação de metal da Ordem #${recoveryOrder.id.toString()}`,
-            valor: valorBRL,
-            tipo: TipoTransacaoPrisma.DEBITO,
-            dataHora: dataTransacao,
-            contaContabilId: contaDebito.id,
-          }, organizationId);
-          console.log(`Transação de débito criada.`); // ADDED
-
-          // Crédito
-          await this.transacoesService.create({
-            descricao: `Contrapartida da valorização de estoque da Ordem #${recoveryOrder.id.toString()}`,
-            valor: valorBRL,
-            tipo: TipoTransacaoPrisma.CREDITO,
-            dataHora: dataTransacao,
-            contaContabilId: contaCredito.id,
-          }, organizationId);
-          console.log(`Transação de crédito criada.`); // ADDED
+            // Crédito (Registra o custo da produção/recuperação)
+            await this.transacoesService.create({
+              descricao: `Contrapartida da valorização de estoque da Ordem #${recoveryOrder.id.toString()}`,
+              valor: valorBRL,
+              tipo: TipoTransacaoPrisma.CREDITO,
+              dataHora: dataTransacao,
+              contaContabilId: contaCredito.id,
+            }, organizationId);
+            this.logger.log(`Lançamento contábil de valorização de estoque gerado.`);
+          }
         }
       }
     }
@@ -202,5 +165,6 @@ export class ProcessRecoveryFinalizationUseCase {
     });
 
     await this.recoveryOrderRepository.save(recoveryOrder);
+    this.logger.log(`Ordem de recuperação ${recoveryOrderId} finalizada com sucesso.`);
   }
 }

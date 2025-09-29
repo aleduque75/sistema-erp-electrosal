@@ -14,6 +14,8 @@ import { ContasContabeisModule } from '../contas-contabeis/contas-contabeis.modu
 import { TransacoesModule } from '../transacoes/transacoes.module';
 import { UsersModule } from '../users/users.module';
 
+import { PrismaPureMetalLotRepository } from './repositories/prisma-pure-metal-lot.repository';
+
 @Module({
   imports: [PrismaModule, AnalisesQuimicasModule, MetalCreditsModule, ContasMetaisModule, QuotationsModule, ContasContabeisModule, TransacoesModule, UsersModule], // Adicionado
   controllers: [RecoveryOrdersController],
@@ -21,6 +23,10 @@ import { UsersModule } from '../users/users.module';
     {
       provide: 'IRecoveryOrderRepository',
       useClass: PrismaRecoveryOrderRepository,
+    },
+    {
+      provide: 'IPureMetalLotRepository',
+      useClass: PrismaPureMetalLotRepository,
     },
     CreateRecoveryOrderUseCase,
     StartRecoveryOrderUseCase,

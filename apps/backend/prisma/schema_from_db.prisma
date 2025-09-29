@@ -1,0 +1,785 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AccountRec {
+  id                String              @id
+  saleId            String?
+  description       String
+  amount            Decimal             @db.Decimal(10, 2)
+  dueDate           DateTime
+  received          Boolean             @default(false)
+  receivedAt        DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  contaCorrenteId   String?
+  organizationId    String
+  transacaoId       String?             @unique
+  externalId        String?             @unique
+  contas_correntes  contas_correntes?   @relation(fields: [contaCorrenteId], references: [id])
+  Organization      Organization        @relation(fields: [organizationId], references: [id])
+  Sale              Sale?               @relation(fields: [saleId], references: [id])
+  transacoes        transacoes?         @relation(fields: [transacaoId], references: [id])
+  sale_installments sale_installments[]
+}
+
+model ContaMetal {
+  id              String       @id
+  organizationId  String
+  name            String
+  metalType       TipoMetal
+  balance         Decimal      @default(0) @db.Decimal(10, 4)
+  dataCriacao     DateTime     @default(now())
+  dataAtualizacao DateTime
+  Organization    Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, name, metalType])
+  @@index([organizationId])
+}
+
+model LandingPage {
+  id              String        @id
+  name            String        @unique @default("default")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime
+  logoImageId     String?
+  logoText        String?
+  organizationId  String?
+  customThemeName String?
+  Media           Media?        @relation(fields: [logoImageId], references: [id])
+  Organization    Organization? @relation(fields: [organizationId], references: [id])
+  Section         Section[]
+}
+
+model Media {
+  id             String        @id
+  filename       String        @unique
+  mimetype       String
+  size           Int
+  path           String        @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime
+  organizationId String?
+  height         Int?
+  width          Int?
+  LandingPage    LandingPage[]
+  Organization   Organization? @relation(fields: [organizationId], references: [id])
+}
+
+model Organization {
+  id                       String                     @id
+  name                     String
+  absorbCreditCardFee      Boolean                    @default(false)
+  creditCardReceiveDays    Int?                       @default(30)
+  AccountRec               AccountRec[]
+  ContaMetal               ContaMetal[]
+  LandingPage              LandingPage[]
+  Media                    Media[]
+  Product                  Product[]
+  Sale                     Sale[]
+  StockMovement            StockMovement[]
+  User                     User[]
+  XmlImportLog             XmlImportLog[]
+  accounts_pay             accounts_pay[]
+  analises_quimicas        analises_quimicas[]
+  chemical_reactions       chemical_reactions[]
+  clients                  clients[]
+  contas_contabeis         contas_contabeis[]
+  contas_correntes         contas_correntes[]
+  credit_card_bills        credit_card_bills[]
+  credit_card_fees         credit_card_fees[]
+  credit_cards             credit_cards[]
+  fornecedores             fornecedores[]
+  funcionarios             funcionarios[]
+  inventory_lots           inventory_lots[]
+  labor_cost_table_entries labor_cost_table_entries[]
+  metal_credits            metal_credits[]
+  operational_costs        operational_costs[]
+  payment_terms            payment_terms[]
+  pessoas                  pessoas[]
+  product_groups           product_groups[]
+  purchase_orders          purchase_orders[]
+  pure_metal_lots          pure_metal_lots[]
+  quotations               quotations[]
+  recovery_orders          recovery_orders[]
+  recuperacoes             recuperacoes[]
+  transacoes               transacoes[]
+}
+
+model Product {
+  id                   String                 @id
+  name                 String
+  description          String?
+  price                Decimal                @db.Decimal(10, 2)
+  stock                Int?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  organizationId       String
+  costPrice            Decimal?               @db.Decimal(10, 2)
+  productGroupId       String?
+  goldValue            Float?
+  externalId           String?                @unique
+  Organization         Organization           @relation(fields: [organizationId], references: [id])
+  product_groups       product_groups?        @relation(fields: [productGroupId], references: [id])
+  SaleItem             SaleItem[]
+  StockMovement        StockMovement[]
+  inventory_lots       inventory_lots[]
+  purchase_order_items purchase_order_items[]
+}
+
+model Sale {
+  id                String              @id
+  orderNumber       String              @unique
+  totalAmount       Decimal             @db.Decimal(10, 2)
+  feeAmount         Decimal?            @db.Decimal(10, 2)
+  netAmount         Decimal?            @db.Decimal(10, 2)
+  paymentMethod     String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  organizationId    String
+  paymentTermId     String?
+  pessoaId          String
+  goldPrice         Decimal?            @db.Decimal(10, 2)
+  goldValue         Decimal?            @db.Decimal(10, 4)
+  totalCost         Decimal?            @db.Decimal(10, 2)
+  commissionAmount  Decimal?            @db.Decimal(10, 2)
+  commissionDetails Json?
+  externalId        String?             @unique
+  AccountRec        AccountRec[]
+  Organization      Organization        @relation(fields: [organizationId], references: [id])
+  payment_terms     payment_terms?      @relation(fields: [paymentTermId], references: [id])
+  pessoas           pessoas             @relation(fields: [pessoaId], references: [id])
+  SaleItem          SaleItem[]
+  sale_installments sale_installments[]
+}
+
+model SaleItem {
+  id              String          @id
+  saleId          String
+  productId       String
+  quantity        Int
+  price           Decimal         @db.Decimal(10, 2)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  costPriceAtSale Decimal         @db.Decimal(10, 2)
+  inventoryLotId  String?
+  externalId      String?         @unique
+  inventory_lots  inventory_lots? @relation(fields: [inventoryLotId], references: [id])
+  Product         Product         @relation(fields: [productId], references: [id])
+  Sale            Sale            @relation(fields: [saleId], references: [id])
+}
+
+model Section {
+  id            String      @id
+  landingPageId String
+  order         Int
+  type          String
+  content       Json
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime
+  LandingPage   LandingPage @relation(fields: [landingPageId], references: [id])
+
+  @@unique([landingPageId, order])
+}
+
+model StockMovement {
+  id             String       @id
+  productId      String
+  type           String
+  quantity       Int
+  createdAt      DateTime     @default(now())
+  organizationId String
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  Product        Product      @relation(fields: [productId], references: [id])
+}
+
+model User {
+  id             String         @id
+  email          String         @unique
+  password       String
+  name           String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime
+  role           Role           @default(USER)
+  organizationId String
+  Organization   Organization   @relation(fields: [organizationId], references: [id])
+  user_settings  user_settings?
+}
+
+model XmlImportLog {
+  id             String       @id
+  nfeKey         String       @unique
+  createdAt      DateTime     @default(now())
+  organizationId String
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model accounts_pay {
+  id                String            @id
+  description       String
+  amount            Decimal           @db.Decimal(10, 2)
+  dueDate           DateTime
+  paid              Boolean           @default(false)
+  paidAt            DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  installmentNumber Int?
+  isInstallment     Boolean?
+  totalInstallments Int?
+  contaContabilId   String?
+  organizationId    String
+  transacaoId       String?           @unique
+  contas_contabeis  contas_contabeis? @relation(fields: [contaContabilId], references: [id])
+  Organization      Organization      @relation(fields: [organizationId], references: [id])
+  transacoes        transacoes?       @relation(fields: [transacaoId], references: [id])
+}
+
+model analises_quimicas {
+  id                          String                     @id
+  organizationId              String
+  clienteId                   String
+  numeroAnalise               String                     @unique
+  dataEntrada                 DateTime
+  descricaoMaterial           String
+  volumeOuPesoEntrada         Float
+  unidadeEntrada              String
+  resultadoAnaliseValor       Float?
+  unidadeResultado            String?
+  percentualQuebra            Float?
+  taxaServicoPercentual       Float?
+  teorRecuperavel             Float?
+  auEstimadoBrutoGramas       Float?
+  auEstimadoRecuperavelGramas Float?
+  taxaServicoEmGramas         Float?
+  auLiquidoParaClienteGramas  Float?
+  status                      StatusAnaliseQuimicaPrisma @default(RECEBIDO)
+  dataAnaliseConcluida        DateTime?
+  dataAprovacaoCliente        DateTime?
+  dataFinalizacaoRecuperacao  DateTime?
+  observacoes                 String?
+  ordemDeRecuperacaoId        String?
+  dataCriacao                 DateTime                   @default(now())
+  dataAtualizacao             DateTime
+  pessoas                     pessoas                    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  Organization                Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metal_credits               metal_credits?
+  recovery_orders             recovery_orders?
+  recuperacoes                recuperacoes[]
+}
+
+model chemical_reactions {
+  id                            String          @id
+  createdAt                     DateTime        @default(now())
+  updatedAt                     DateTime
+  notes                         String?
+  inputBasketLeftoverGrams      Float?
+  inputDistillateLeftoverGrams  Float?
+  inputGoldGrams                Float
+  inputRawMaterialGrams         Float
+  organizationId                String
+  outputBasketLeftoverGrams     Float?
+  outputDistillateLeftoverGrams Float?
+  outputProductGrams            Float
+  reactionDate                  DateTime        @default(now())
+  sourceLotId                   String
+  Organization                  Organization    @relation(fields: [organizationId], references: [id])
+  pure_metal_lots               pure_metal_lots @relation(fields: [sourceLotId], references: [id])
+}
+
+model clients {
+  pessoaId       String       @id
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  pessoas        pessoas      @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+}
+
+model contas_contabeis {
+  id                       String                     @id
+  codigo                   String
+  nome                     String
+  tipo                     TipoContaContabilPrisma
+  aceitaLancamento         Boolean                    @default(true)
+  contaPaiId               String?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  organizationId           String
+  accounts_pay             accounts_pay[]
+  contas_contabeis         contas_contabeis?          @relation("contas_contabeisTocontas_contabeis", fields: [contaPaiId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_contas_contabeis   contas_contabeis[]         @relation("contas_contabeisTocontas_contabeis")
+  Organization             Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  credit_card_transactions credit_card_transactions[]
+  credit_cards             credit_cards[]
+  transacoes               transacoes[]
+
+  @@unique([organizationId, codigo])
+}
+
+model contas_correntes {
+  id                 String            @id
+  nome               String
+  numeroConta        String
+  agencia            String?
+  moeda              String            @default("BRL")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime
+  deletedAt          DateTime?
+  organizationId     String
+  limite             Decimal           @default(0) @db.Decimal(10, 2)
+  initialBalanceBRL  Decimal           @default(0) @db.Decimal(10, 2)
+  initialBalanceGold Decimal           @default(0) @db.Decimal(10, 4)
+  type               ContaCorrenteType @default(BANCO)
+  AccountRec         AccountRec[]
+  Organization       Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transacoes         transacoes[]
+
+  @@unique([organizationId, numeroConta])
+}
+
+model credit_card_bills {
+  id                       String                     @id
+  creditCardId             String
+  name                     String
+  startDate                DateTime
+  endDate                  DateTime
+  dueDate                  DateTime
+  totalAmount              Decimal                    @db.Decimal(10, 2)
+  paid                     Boolean                    @default(false)
+  paidAt                   DateTime?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  organizationId           String
+  credit_cards             credit_cards               @relation(fields: [creditCardId], references: [id])
+  Organization             Organization               @relation(fields: [organizationId], references: [id])
+  credit_card_transactions credit_card_transactions[]
+}
+
+model credit_card_fees {
+  id             String       @id
+  organizationId String
+  installments   Int
+  feePercentage  Decimal      @db.Decimal(5, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, installments])
+}
+
+model credit_card_transactions {
+  id                 String             @id
+  creditCardId       String
+  description        String
+  amount             Decimal            @db.Decimal(10, 2)
+  date               DateTime
+  isInstallment      Boolean            @default(false)
+  installments       Int?
+  currentInstallment Int?
+  creditCardBillId   String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime
+  contaContabilId    String?
+  fingerprint        String?            @unique
+  contas_contabeis   contas_contabeis?  @relation(fields: [contaContabilId], references: [id])
+  credit_card_bills  credit_card_bills? @relation(fields: [creditCardBillId], references: [id])
+  credit_cards       credit_cards       @relation(fields: [creditCardId], references: [id])
+}
+
+model credit_cards {
+  id                       String                     @id
+  name                     String
+  flag                     String
+  closingDay               Int
+  dueDate                  Int
+  contaContabilPassivoId   String?
+  organizationId           String
+  credit_card_bills        credit_card_bills[]
+  credit_card_transactions credit_card_transactions[]
+  contas_contabeis         contas_contabeis?          @relation(fields: [contaContabilPassivoId], references: [id])
+  Organization             Organization               @relation(fields: [organizationId], references: [id])
+}
+
+model fornecedores {
+  pessoaId        String            @id
+  organizationId  String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  Organization    Organization      @relation(fields: [organizationId], references: [id])
+  pessoas         pessoas           @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  purchase_orders purchase_orders[]
+}
+
+model funcionarios {
+  pessoaId       String       @id
+  organizationId String
+  hireDate       DateTime
+  position       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  pessoas        pessoas      @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+}
+
+model inventory_lots {
+  id                String       @id
+  organizationId    String
+  productId         String
+  costPrice         Decimal      @db.Decimal(10, 2)
+  quantity          Int
+  remainingQuantity Int
+  sourceType        String
+  sourceId          String
+  receivedDate      DateTime     @default(now())
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime
+  SaleItem          SaleItem[]
+  Organization      Organization @relation(fields: [organizationId], references: [id])
+  Product           Product      @relation(fields: [productId], references: [id])
+}
+
+model labor_cost_table_entries {
+  id               String       @id
+  organizationId   String
+  minGrams         Float
+  maxGrams         Float?
+  goldGramsCharged Float
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime
+  Organization     Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, minGrams])
+}
+
+model metal_credits {
+  id                 String            @id
+  organizationId     String
+  clientId           String
+  chemicalAnalysisId String            @unique
+  metal              String
+  grams              Float
+  date               DateTime          @default(now())
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime
+  analises_quimicas  analises_quimicas @relation(fields: [chemicalAnalysisId], references: [id])
+  pessoas            pessoas           @relation(fields: [clientId], references: [id])
+  Organization       Organization      @relation(fields: [organizationId], references: [id])
+}
+
+model operational_costs {
+  id                    String       @id
+  organizationId        String
+  name                  String
+  value                 Decimal      @db.Decimal(10, 2)
+  type                  String
+  appliesToProductGroup String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime
+  Organization          Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, name])
+}
+
+model payment_terms {
+  id               String            @id
+  organizationId   String
+  name             String
+  description      String?
+  installmentsDays Int[]
+  interestRate     Decimal?          @db.Decimal(5, 2)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime
+  Sale             Sale[]
+  Organization     Organization      @relation(fields: [organizationId], references: [id])
+  purchase_orders  purchase_orders[]
+
+  @@unique([organizationId, name])
+}
+
+model pessoas {
+  id                String              @id
+  organizationId    String
+  type              PessoaType
+  name              String
+  razaoSocial       String?
+  email             String?             @unique
+  phone             String?
+  cpf               String?             @unique
+  cnpj              String?             @unique
+  birthDate         DateTime?
+  gender            String?
+  cep               String?
+  logradouro        String?
+  numero            String?
+  complemento       String?
+  bairro            String?
+  cidade            String?
+  uf                String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  externalId        String?             @unique
+  Sale              Sale[]
+  analises_quimicas analises_quimicas[]
+  clients           clients?
+  fornecedores      fornecedores?
+  funcionarios      funcionarios?
+  metal_credits     metal_credits[]
+  Organization      Organization        @relation(fields: [organizationId], references: [id])
+}
+
+model product_groups {
+  id                     String       @id
+  organizationId         String
+  name                   String
+  description            String?
+  commissionPercentage   Decimal?     @db.Decimal(5, 2)
+  isReactionProductGroup Boolean      @default(false)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime
+  Product                Product[]
+  Organization           Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, name])
+}
+
+model purchase_order_items {
+  id              String          @id
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  price           Decimal         @db.Decimal(10, 2)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  Product         Product         @relation(fields: [productId], references: [id])
+  purchase_orders purchase_orders @relation(fields: [purchaseOrderId], references: [id])
+}
+
+model purchase_orders {
+  id                   String                 @id
+  organizationId       String
+  fornecedorId         String
+  orderNumber          String                 @unique
+  totalAmount          Decimal                @db.Decimal(10, 2)
+  status               PurchaseOrderStatus    @default(PENDING)
+  orderDate            DateTime               @default(now())
+  expectedDeliveryDate DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  paymentTermId        String?
+  purchase_order_items purchase_order_items[]
+  fornecedores         fornecedores           @relation(fields: [fornecedorId], references: [pessoaId])
+  Organization         Organization           @relation(fields: [organizationId], references: [id])
+  payment_terms        payment_terms?         @relation(fields: [paymentTermId], references: [id])
+}
+
+model pure_metal_lots {
+  id                 String               @id
+  organizationId     String
+  sourceType         String
+  sourceId           String
+  metalType          TipoMetal
+  initialGrams       Float
+  remainingGrams     Float
+  purity             Float
+  status             PureMetalLotStatus   @default(AVAILABLE)
+  entryDate          DateTime             @default(now())
+  notes              String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  chemical_reactions chemical_reactions[]
+  Organization       Organization         @relation(fields: [organizationId], references: [id])
+}
+
+model quotations {
+  id             String       @id
+  organizationId String
+  metal          TipoMetal
+  quotation_date DateTime     @db.Date
+  buyPrice       Decimal      @db.Decimal(10, 2)
+  sellPrice      Decimal      @db.Decimal(10, 2)
+  created_at     DateTime     @default(now())
+  updated_at     DateTime
+  tipoPagamento  String?
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, metal, quotation_date, tipoPagamento])
+}
+
+model recovery_orders {
+  id                           String                    @id
+  organizationId               String
+  chemicalAnalysisIds          String[]
+  dataInicio                   DateTime                  @default(now())
+  dataFim                      DateTime?
+  observacoes                  String?
+  dataCriacao                  DateTime                  @default(now())
+  dataAtualizacao              DateTime
+  status                       RecoveryOrderStatusPrisma @default(PENDENTE)
+  auPuroRecuperadoGramas       Float?
+  descricao                    String?
+  residueAnalysisId            String?                   @unique
+  residuoGramas                Float?
+  resultadoProcessamentoGramas Float?
+  teorFinal                    Float?
+  totalBrutoEstimadoGramas     Float
+  Organization                 Organization              @relation(fields: [organizationId], references: [id])
+  analises_quimicas            analises_quimicas?        @relation(fields: [residueAnalysisId], references: [id])
+}
+
+model recuperacoes {
+  id                String                  @id
+  organizationId    String
+  analiseQuimicaId  String
+  status            StatusRecuperacaoPrisma @default(PENDENTE)
+  dataInicio        DateTime                @default(now())
+  dataFim           DateTime?
+  descricaoProcesso String?
+  volumeProcessado  Float?
+  unidadeProcessada String?
+  resultadoFinal    Float?
+  unidadeResultado  String?
+  observacoes       String?
+  dataCriacao       DateTime                @default(now())
+  dataAtualizacao   DateTime
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime
+  analises_quimicas analises_quimicas       @relation(fields: [analiseQuimicaId], references: [id], onDelete: Cascade)
+  Organization      Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model sale_installments {
+  id                String                @id
+  saleId            String
+  amount            Decimal
+  dueDate           DateTime
+  paidAt            DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime
+  installmentNumber Int
+  status            SaleInstallmentStatus
+  accountRecId      String?
+  AccountRec        AccountRec?           @relation(fields: [accountRecId], references: [id])
+  Sale              Sale                  @relation(fields: [saleId], references: [id])
+}
+
+model transacoes {
+  id               String              @id
+  tipo             TipoTransacaoPrisma
+  valor            Decimal             @db.Decimal(10, 2)
+  moeda            String
+  descricao        String?
+  dataHora         DateTime            @default(now())
+  contaContabilId  String
+  contaCorrenteId  String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime
+  fitId            String?
+  organizationId   String
+  goldAmount       Decimal?            @db.Decimal(10, 4)
+  AccountRec       AccountRec?
+  accounts_pay     accounts_pay?
+  contas_contabeis contas_contabeis    @relation(fields: [contaContabilId], references: [id])
+  contas_correntes contas_correntes?   @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction)
+  Organization     Organization        @relation(fields: [organizationId], references: [id])
+
+  @@unique([contaCorrenteId, fitId])
+}
+
+model user_settings {
+  id                      String  @id
+  userId                  String  @unique
+  defaultReceitaContaId   String?
+  defaultCaixaContaId     String?
+  defaultDespesaContaId   String?
+  metalStockAccountId     String?
+  productionCostAccountId String?
+  User                    User    @relation(fields: [userId], references: [id])
+}
+
+enum ContaCorrenteType {
+  BANCO
+  FORNECEDOR_METAL
+  EMPRESTIMO
+}
+
+enum PessoaType {
+  FISICA
+  JURIDICA
+}
+
+enum PurchaseOrderStatus {
+  PENDING
+  RECEIVED
+  CANCELED
+}
+
+enum PureMetalLotStatus {
+  AVAILABLE
+  USED
+  PARTIALLY_USED
+}
+
+enum RecoveryOrderStatusPrisma {
+  PENDENTE
+  EM_ANDAMENTO
+  FINALIZADA
+  CANCELADA
+  AGUARDANDO_RESULTADO
+  AGUARDANDO_TEOR
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SaleInstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum StatusAnaliseQuimicaPrisma {
+  RECEBIDO
+  EM_ANALISE
+  ANALISADO_AGUARDANDO_APROVACAO
+  APROVADO_PARA_RECUPERACAO
+  RECUSADO_PELO_CLIENTE
+  EM_RECUPERACAO
+  FINALIZADO_RECUPERADO
+  CANCELADO
+  RESIDUO
+}
+
+enum StatusRecuperacaoPrisma {
+  PENDENTE
+  EM_ANDAMENTO
+  FINALIZADA
+  CANCELADA
+}
+
+enum TipoContaContabilPrisma {
+  ATIVO
+  PASSIVO
+  PATRIMONIO_LIQUIDO
+  RECEITA
+  DESPESA
+}
+
+enum TipoMetal {
+  AU
+  AG
+  RH
+}
+
+enum TipoTransacaoPrisma {
+  CREDITO
+  DEBITO
+}

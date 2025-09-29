@@ -357,47 +357,38 @@ async function main() {
 
   // --- SEÇÃO DE LIMPEZA COMPLETA ---
   console.log('Limpando dados antigos...');
-  // Nível mais alto de dependência
+  // O Prisma não tem uma ordem de deleção garantida, então deletar em uma ordem lógica pode ajudar a evitar erros de constraint
   await prisma.creditCardTransaction.deleteMany();
   await prisma.saleInstallment.deleteMany();
   await prisma.saleItem.deleteMany();
   await prisma.purchaseOrderItem.deleteMany();
   await prisma.stockMovement.deleteMany();
-
-  // Nível intermediário (dependem de Pessoas, Produtos, etc.)
-  await prisma.creditCardBill.deleteMany();
   await prisma.accountPay.deleteMany();
   await prisma.accountRec.deleteMany();
   await prisma.transacao.deleteMany();
   await prisma.inventoryLot.deleteMany();
   await prisma.recuperacao.deleteMany();
-  await prisma.recoveryOrder.deleteMany(); // Depende de AnaliseQuimica
-  await prisma.metalCredit.deleteMany(); // Depende de AnaliseQuimica e Pessoa
-  await prisma.analiseQuimica.deleteMany(); // Depende de Pessoa
+  await prisma.metalCredit.deleteMany();
+  await prisma.recoveryOrder.deleteMany();
+  await prisma.analiseQuimica.deleteMany();
   await prisma.sale.deleteMany();
   await prisma.purchaseOrder.deleteMany();
-
-  // Nível base (entidades principais)
+  await prisma.creditCardBill.deleteMany();
   await prisma.creditCard.deleteMany();
   await prisma.product.deleteMany();
-  await prisma.client.deleteMany();
-  await prisma.fornecedor.deleteMany();
-  await prisma.funcionario.deleteMany();
-  await prisma.pessoa.deleteMany();
-  await prisma.contaContabil.deleteMany();
+  await prisma.productGroup.deleteMany();
   await prisma.contaCorrente.deleteMany();
+  await prisma.contaContabil.deleteMany();
   await prisma.paymentTerm.deleteMany();
   await prisma.creditCardFee.deleteMany();
   await prisma.xmlImportLog.deleteMany();
   await prisma.quotation.deleteMany();
-
-  // Configurações e Usuários
   await prisma.section.deleteMany();
   await prisma.landingPage.deleteMany();
   await prisma.media.deleteMany();
   await prisma.userSettings.deleteMany();
   await prisma.user.deleteMany();
-  await prisma.productGroup.deleteMany(); // Adicionado
+  await prisma.pessoa.deleteMany();
   await prisma.organization.deleteMany();
 
   // Criar uma organização padrão
@@ -442,4 +433,32 @@ async function main() {
       type: ContaCorrenteType.EMPRESTIMO,
       moeda: 'BRL',
     },
+  });
+
+  console.log('Criando o plano de contas...');
+  await seedContas(organization.id, planoDeContasEstruturado);
+  console.log('Plano de contas criado com sucesso!');
+
+  console.log('Criando usuário administrador padrão...');
+  const hashedPassword = await bcrypt.hash('Electrosal123@', 10);
+  await prisma.user.create({
+    data: {
+      email: 'admin@electrosal.com',
+      name: 'Admin Electrosal',
+      password: hashedPassword,
+      role: 'ADMIN',
+      organizationId: organization.id,
+    },
+  });
+  console.log('Usuário administrador criado com sucesso!');
+
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });

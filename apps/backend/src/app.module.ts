@@ -43,52 +43,60 @@ import { RecoveryOrdersModule } from './recovery-orders/recovery-orders.module';
 import { ContasMetaisModule } from './contas-metais/contas-metais.module';
 import { QuotationsModule } from './quotations/quotations.module';
 import { QuotationImportsModule } from './quotation-imports/quotation-imports.module';
-
-
 import { ProductGroupsModule } from './product-groups/product-groups.module';
-
+import { ChemicalReactionsModule } from './chemical-reactions/chemical-reactions.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true, // Torna as variáveis de ambiente disponíveis globalmente
+    }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
-      serveRoot: '/uploads/', // Rota em que os arquivos estarão disponíveis
+      serveRoot: '/uploads',
     }),
-
-    // Registre (ligue) CADA módulo aqui
+    PrismaModule,
     AuthModule,
-    UsersModule, // O AuthModule geralmente depende do UsersModule, então é bom ele vir antes
+    UsersModule,
     PessoaModule,
     ContasContabeisModule,
     ContasCorrentesModule,
-    CreditCardBillsModule,
-    CreditCardTransactionsModule,
+    TransacoesModule,
     CreditCardsModule,
+    CreditCardTransactionsModule,
+    CreditCardBillsModule,
     DashboardModule,
     ProductsModule,
     SalesModule,
     SettingsModule,
-    TransacoesModule,
-    PrismaModule,
-    AccountsRecModule, // <-- Registre o módulo aqui
-    AccountsPayModule, BankStatementImportsModule, ClientImportsModule, AuditLogsModule, LandingPageModule, MediaModule, BackupsModule, CreditCardFeesModule, CreditCardForecastModule, PaymentTermsModule, PdfImportModule, JsonImportsModule, PurchaseOrdersModule,
-  AnalisesQuimicasModule,
-  RecuperacoesModule,
-  RecoveryOrdersModule,
-  ContasMetaisModule,
-  QuotationsModule,
-  QuotationImportsModule,
-  ProductGroupsModule,
+    AccountsRecModule,
+    AccountsPayModule,
+    BankStatementImportsModule,
+    ClientImportsModule,
+    AuditLogsModule,
+    LandingPageModule,
+    MediaModule,
+    BackupsModule,
+    CreditCardFeesModule,
+    CreditCardForecastModule,
+    PaymentTermsModule,
+    PdfImportModule,
+    JsonImportsModule,
+    PurchaseOrdersModule,
+    AnalisesQuimicasModule,
+    RecuperacoesModule,
+    RecoveryOrdersModule,
+    ContasMetaisModule,
+    QuotationsModule,
+    QuotationImportsModule,
+    ProductGroupsModule,
+    ChemicalReactionsModule,
   ],
   controllers: [AppController],
   providers: [
-    AppService, 
+    AppService,
     AuditLogService,
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: JwtAuthGuard,
-    // },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule {}
