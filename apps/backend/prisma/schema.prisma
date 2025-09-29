@@ -15,7 +15,7 @@ model Organization {
   absorbCreditCardFee   Boolean               @default(false)
   creditCardReceiveDays Int?                  @default(30)
   accountsRec           AccountRec[]
-  contasMetais          ContaMetal[]
+  metalAccounts         MetalAccount[]
   landingPages          LandingPage[]
   media                 Media[]
   products              Product[]
@@ -104,6 +104,7 @@ model Pessoa {
   funcionario                 Funcionario?
   metalCredits                MetalCredit[]
   organization                Organization     @relation(fields: [organizationId], references: [id])
+  metalAccounts               MetalAccount[]
 
   @@map("pessoas")
 }
@@ -544,7 +545,7 @@ model Recuperacao {
 model AnaliseQuimica {
   id                          String                     @id @default(uuid())
   organizationId              String
-  clienteId                   String
+  clienteId                   String?
   numeroAnalise               String                     @unique
   dataEntrada                 DateTime
   descricaoMaterial           String
@@ -567,7 +568,7 @@ model AnaliseQuimica {
   ordemDeRecuperacaoId        String?
   dataCriacao                 DateTime                   @default(now())
   dataAtualizacao             DateTime                   @updatedAt
-  cliente                     Pessoa                     @relation("PessoaAnalisesQuimicas", fields: [clienteId], references: [id], onDelete: Cascade)
+  cliente                     Pessoa?                    @relation("PessoaAnalisesQuimicas", fields: [clienteId], references: [id], onDelete: Cascade)
   organization                Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   metalCredit                 MetalCredit?
   recoveryOrderAsResidue      RecoveryOrder?             @relation("ResidueOfRecovery")
@@ -650,30 +651,33 @@ model RecoveryOrder {
   @@map("recovery_orders")
 }
 
-model ContaMetal {
-  id              String              @id @default(uuid())
-  organizationId  String
-  name            String
-  metalType       TipoMetal
-  dataCriacao     DateTime            @default(now())
-  dataAtualizacao DateTime            @updatedAt
-  type            ContaMetalType
-  organization    Organization        @relation(fields: [organizationId], references: [id])
-  entries         MetalAccountEntry[]
+model MetalAccount {
+  id             String              @id @default(uuid())
+  personId       String
+  person         Pessoa              @relation(fields: [personId], references: [id])
+  type           TipoMetal
+  entries        MetalAccountEntry[]
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
-  @@unique([organizationId, name, metalType, type])
+  @@unique([organizationId, personId, type])
   @@index([organizationId])
+  @@map("metal_accounts")
 }
 
 model MetalAccountEntry {
-  id                   String              @id @default(uuid())
-  contaMetalId         String
-  tipo                 TipoTransacaoPrisma
-  valor                Decimal             @db.Decimal(10, 4)
-  data                 DateTime            @default(now())
-  relatedTransactionId String?
-  description          String?
-  contaMetal           ContaMetal          @relation(fields: [contaMetalId], references: [id])
+  id           String      @id @default(uuid())
+  metalAccountId String
+  metalAccount   MetalAccount  @relation(fields: [metalAccountId], references: [id])
+  date         DateTime
+  description  String
+  grams        Float
+  type         String      // e.g., 'recovery', 'sale', 'transfer'
+  sourceId     String?     // ID of the source entity (e.g., RecoveryOrder, Sale)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@map("metal_account_entries")
 }

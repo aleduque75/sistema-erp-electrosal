@@ -1,6 +1,5 @@
 export enum TipoMetal {
-  OURO = 'Au',
-  PRATA = 'Ag',
-  PLATINA = 'Pt',
-  PALADIO = 'Pd',
+  AU = 'AU',
+  AG = 'AG',
+  RH = 'RH',
 }

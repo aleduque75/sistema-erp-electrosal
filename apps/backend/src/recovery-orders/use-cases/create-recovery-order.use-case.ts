@@ -5,11 +5,11 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core/domain/enums/status-analise-quimica.enum';
 import {
-  IRecoveryOrderRepository,
   IAnaliseQuimicaRepository,
+  IRecoveryOrderRepository,
   RecoveryOrder,
-  StatusAnaliseQuimica,
   RecoveryOrderStatus,
 } from '@sistema-erp-electrosal/core';
 

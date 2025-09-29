@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import {
-  IContaMetalRepository,
+  IMetalAccountRepository,
   IMetalAccountEntryRepository,
   MetalAccountEntry,
   UniqueEntityID,
@@ -15,30 +15,32 @@ export interface CreateMetalAccountEntryCommand {
 @Injectable()
 export class CreateMetalAccountEntryUseCase {
   constructor(
-    @Inject('IContaMetalRepository')
-    private readonly contaMetalRepository: IContaMetalRepository,
+    @Inject('IMetalAccountRepository')
+    private readonly metalAccountRepository: IMetalAccountRepository,
     @Inject('IMetalAccountEntryRepository')
     private readonly entryRepository: IMetalAccountEntryRepository,
   ) {}
 
   async execute(command: CreateMetalAccountEntryCommand): Promise<MetalAccountEntry> {
     const { organizationId, dto } = command;
-    const { contaMetalId, tipo, valor, data, relatedTransactionId, description } = dto;
+    const { metalAccountId, type, grams, date, sourceId, description } = dto;
 
-    const contaMetal = await this.contaMetalRepository.findById(contaMetalId, organizationId);
-    if (!contaMetal) {
-      throw new NotFoundException(`Conta de metal com ID '${contaMetalId}' não encontrada.`);
+    const metalAccount = await this.metalAccountRepository.findById(metalAccountId, organizationId);
+    if (!metalAccount) {
+      throw new NotFoundException(`Conta de metal com ID '${metalAccountId}' não encontrada.`);
     }
 
     const entry = MetalAccountEntry.create({
-      contaMetalId: contaMetal.id,
-      tipo,
-      valor,
-      data: data ? new Date(data) : new Date(),
-      relatedTransactionId,
+      metalAccountId: metalAccount.id.toString(),
+      type,
+      grams,
+      date: date ? new Date(date) : new Date(),
+      sourceId,
       description,
     });
 
-    return this.entryRepository.create(entry);
+    await this.entryRepository.create(entry);
+
+    return entry;
   }
 }

@@ -10,7 +10,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AnaliseQuimica } from "@/types/analise-quimica";
+import { AnaliseQuimica } from '@/types/analise-quimica';
 import { format } from "date-fns";
 import { Printer, X, Paperclip } from "lucide-react";
 import { Separator } from "@/components/ui/separator";

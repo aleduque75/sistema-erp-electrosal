@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { AnaliseQuimica } from "@/types/analise-quimica";
+import { AnaliseQuimica } from '@/types/analise-quimica';
 import { aprovarAnaliseQuimica } from "@/services/analisesApi";
 
 interface ConfirmarAprovacaoModalProps {

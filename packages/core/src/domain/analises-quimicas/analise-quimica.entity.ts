@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid';
 
 export interface AnaliseQuimicaProps {
   id?: string;
-  clienteId: string;
+  clienteId?: string | null;
   cliente?: { name: string };
   numeroAnalise: string;
   dataEntrada: Date;
@@ -56,7 +56,7 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
     return new AnaliseQuimica(props, id);
   }
 
-  get clienteId(): string { return this.props.clienteId; }
+  get clienteId(): string | null | undefined { return this.props.clienteId; }
   get cliente(): { name: string } | undefined { return this.props.cliente; }
   get numeroAnalise(): string { return this.props.numeroAnalise; }
   get dataEntrada(): Date { return this.props.dataEntrada; }
@@ -136,12 +136,12 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
       this.props.dataAtualizacao = new Date();
   }
 
-  public static criarResiduo(props: Omit<AnaliseQuimicaProps, 'id' | 'dataCriacao' | 'dataAtualizacao' | 'status' | 'numeroAnalise' | 'clienteId'> & { organizationId: string }): AnaliseQuimica {
+  public static criarResiduo(props: Omit<AnaliseQuimicaProps, 'id' | 'dataCriacao' | 'dataAtualizacao' | 'status' | 'numeroAnalise'> & { organizationId: string, clienteId: string | null | undefined }): AnaliseQuimica {
     const now = new Date();
     const analise = new AnaliseQuimica(
       {
         ...props,
-        clienteId: 'SYSTEM_RESIDUE', // A specific client ID for residue
+        clienteId: props.clienteId, // Usar o clienteId passado nos props
         numeroAnalise: `RESIDUO-${nanoid(8)}`, // Generate a unique number for residue analysis
         dataEntrada: now,
         status: StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO, // A new status for residue

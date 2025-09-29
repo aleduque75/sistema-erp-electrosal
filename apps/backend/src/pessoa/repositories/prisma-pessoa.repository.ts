@@ -63,7 +63,23 @@ export class PrismaPessoaRepository implements IPessoaRepository {
   }
 
   async findByEmail(email: EmailVO, organizationId: string): Promise<Pessoa | null> {
-    throw new Error('Method not implemented.');
+    const pessoa = await this.prisma.pessoa.findFirst({
+      where: {
+        email: email.valor,
+        organizationId: organizationId,
+      },
+      include: {
+        client: true,
+        fornecedor: true,
+        funcionario: true,
+      },
+    });
+
+    if (!pessoa) {
+      return null;
+    }
+
+    return this.toDomain(pessoa);
   }
   async findByDocumento(documento: DocumentoFiscalVO, organizationId: string): Promise<Pessoa | null> {
     throw new Error('Method not implemented.');

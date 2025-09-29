@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   AnaliseQuimica,
@@ -15,6 +15,8 @@ import {
 
 @Injectable()
 export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository {
+  private readonly logger = new Logger(PrismaAnaliseQuimicaRepository.name);
+
   constructor(private prisma: PrismaService) {}
 
   private mapToDomain(
@@ -37,10 +39,11 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     analise: AnaliseQuimica,
     organizationId: string,
   ): Prisma.AnaliseQuimicaUncheckedCreateInput {
+    this.logger.log(`analise.clienteId no mapToPrismaPayload: ${analise.clienteId}`);
     return {
       id: analise.id.toString(),
       organizationId,
-      clienteId: analise.clienteId,
+      clienteId: analise.clienteId || null,
       numeroAnalise: analise.numeroAnalise,
       dataEntrada: analise.dataEntrada,
       descricaoMaterial: analise.descricaoMaterial,

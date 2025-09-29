@@ -4,11 +4,11 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core/domain/enums/status-analise-quimica.enum';
 import {
   IAnaliseQuimicaRepository,
   IMetalCreditRepository,
   MetalCredit,
-  StatusAnaliseQuimica,
 } from '@sistema-erp-electrosal/core';
 
 export interface AprovarAnaliseCommand {

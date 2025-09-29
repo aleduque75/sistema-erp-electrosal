@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { RecoveryOrderStatus } from '@sistema-erp-electrosal/core';
+import { RecoveryOrderStatus } from '@/types/recovery-order';
 
 interface Props {
   status: RecoveryOrderStatus;

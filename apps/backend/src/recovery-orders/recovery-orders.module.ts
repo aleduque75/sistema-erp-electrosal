@@ -8,16 +8,17 @@ import { StartRecoveryOrderUseCase } from './use-cases/start-recovery-order.use-
 import { UpdateRecoveryOrderPurityUseCase } from './use-cases/update-recovery-order-purity.use-case';
 import { MetalCreditsModule } from '../metal-credits/metal-credits.module';
 import { ProcessRecoveryFinalizationUseCase } from './use-cases/process-recovery-finalization.use-case';
-import { ContasMetaisModule } from '../contas-metais/contas-metais.module'; // Adicionado
+import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
 import { QuotationsModule } from '../quotations/quotations.module';
 import { ContasContabeisModule } from '../contas-contabeis/contas-contabeis.module';
 import { TransacoesModule } from '../transacoes/transacoes.module';
 import { UsersModule } from '../users/users.module';
+import { PessoaModule } from '../pessoa/pessoa.module'; // Adicionado
 
 import { PrismaPureMetalLotRepository } from './repositories/prisma-pure-metal-lot.repository';
 
 @Module({
-  imports: [PrismaModule, AnalisesQuimicasModule, MetalCreditsModule, ContasMetaisModule, QuotationsModule, ContasContabeisModule, TransacoesModule, UsersModule], // Adicionado
+  imports: [PrismaModule, AnalisesQuimicasModule, MetalCreditsModule, MetalAccountsModule, QuotationsModule, ContasContabeisModule, TransacoesModule, UsersModule, PessoaModule], // Adicionado
   controllers: [RecoveryOrdersController],
   providers: [
     {

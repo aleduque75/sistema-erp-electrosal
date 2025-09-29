@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Play, FlaskConical, CheckCircle, XCircle, ThumbsDown, RotateCw } from "lucide-react";
 import { RecoveryOrder } from "@/types/recovery-order";
 import { format } from 'date-fns';
-import { RecoveryOrderStatus } from '@sistema-erp-electrosal/core';
+import { RecoveryOrderStatus } from '@/types/recovery-order';
 import { RecoveryOrderStatusBadge } from "@/components/ui/recovery-order-status-badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";

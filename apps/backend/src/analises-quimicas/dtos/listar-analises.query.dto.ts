@@ -1,5 +1,5 @@
 import { IsOptional, IsUUID, IsEnum, IsString } from 'class-validator';
-import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
+import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core/domain/enums/status-analise-quimica.enum';
 
 export class ListarAnalisesQueryDto {
   @IsOptional()

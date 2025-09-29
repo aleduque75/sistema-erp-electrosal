@@ -6,14 +6,19 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { RecoveryOrderStatus } from '@sistema-erp-electrosal/core/domain/enums/recovery-order-status.enum';
 import {
   IRecoveryOrderRepository,
   IAnaliseQuimicaRepository,
-  RecoveryOrderStatus,
   AnaliseQuimica,
   PureMetalLot,
   IPureMetalLotRepository,
   TipoMetal,
+  IMetalAccountRepository,
+  IMetalAccountEntryRepository,
+  MetalAccountEntry,
+  IPessoaRepository,
+  EmailVO,
 } from '@sistema-erp-electrosal/core';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { ContasContabeisService } from '../../contas-contabeis/contas-contabeis.service';
@@ -38,6 +43,12 @@ export class ProcessRecoveryFinalizationUseCase {
     private readonly analiseRepository: IAnaliseQuimicaRepository,
     @Inject('IPureMetalLotRepository')
     private readonly pureMetalLotRepository: IPureMetalLotRepository,
+    @Inject('IMetalAccountRepository')
+    private readonly metalAccountRepository: IMetalAccountRepository,
+    @Inject('IMetalAccountEntryRepository')
+    private readonly metalAccountEntryRepository: IMetalAccountEntryRepository,
+    @Inject('IPessoaRepository')
+    private readonly pessoaRepository: IPessoaRepository,
     private readonly cotacoesService: QuotationsService,
     private readonly contasContabeisService: ContasContabeisService,
     private readonly transacoesService: TransacoesService,
@@ -46,6 +57,23 @@ export class ProcessRecoveryFinalizationUseCase {
 
   async execute(command: FinalizeRecoveryOrderCommand): Promise<void> {
     const { recoveryOrderId, organizationId, teorFinal } = command;
+
+    // Criar EmailVO para o cliente interno
+    const internalClientEmail = new EmailVO('interno@electrosal.com');
+
+    // Buscar o cliente interno
+    const internalClient = await this.pessoaRepository.findByEmail(
+      internalClientEmail,
+      organizationId,
+    );
+
+    if (!internalClient) {
+      throw new NotFoundException(
+        `Cliente interno (interno@electrosal.com) não encontrado. Certifique-se de que o seed foi executado corretamente.`,
+      );
+    }
+
+    this.logger.log(`ID do cliente interno encontrado: ${internalClient.id.toString()}`);
 
     if (teorFinal <= 0 || teorFinal > 1) {
       throw new BadRequestException('O teor final deve ser um valor entre 0 e 1.');
@@ -96,6 +124,8 @@ export class ProcessRecoveryFinalizationUseCase {
       });
       await this.pureMetalLotRepository.create(pureMetalLot);
       this.logger.log(`Lote de metal puro criado: ${pureMetalLot.id.toString()}`);
+
+
     }
 
     let residueAnalysisId: string | undefined = undefined;
@@ -104,6 +134,7 @@ export class ProcessRecoveryFinalizationUseCase {
     if (residuoGramas > 0) {
       const residueAnalysis = AnaliseQuimica.criarResiduo({
         organizationId,
+        clienteId: internalClient.id.toString(), // Passar o clienteId do cliente interno
         descricaoMaterial: `Resíduo da Ordem de Recuperação ${recoveryOrder.id.toString()}`,
         volumeOuPesoEntrada: residuoGramas,
         unidadeEntrada: 'g',
@@ -112,6 +143,7 @@ export class ProcessRecoveryFinalizationUseCase {
 
       const createdResidue = await this.analiseRepository.create(residueAnalysis, organizationId);
       residueAnalysisId = createdResidue.id.toString();
+      this.logger.log(`Payload da AnaliseQuimica de resíduo para o repositório: ${JSON.stringify(residueAnalysis)}`);
       this.logger.log(`Análise de resíduo criada: ${residueAnalysisId}`);
     }
 

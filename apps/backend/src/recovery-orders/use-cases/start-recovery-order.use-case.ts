@@ -4,10 +4,8 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import {
-  IRecoveryOrderRepository,
-  RecoveryOrderStatus,
-} from '@sistema-erp-electrosal/core';
+import { RecoveryOrderStatus } from '@sistema-erp-electrosal/core/domain/enums/recovery-order-status.enum';
+import { IRecoveryOrderRepository } from '@sistema-erp-electrosal/core';
 
 export interface StartRecoveryOrderCommand {
   recoveryOrderId: string;

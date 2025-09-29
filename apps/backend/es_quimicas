@@ -1,0 +1,39 @@
+                                                Table "public.analises_quimicas"
+           Column            |              Type              | Collation | Nullable |                 Default                  
+-----------------------------+--------------------------------+-----------+----------+------------------------------------------
+ id                          | text                           |           | not null | 
+ organizationId              | text                           |           | not null | 
+ clienteId                   | text                           |           |          | 
+ numeroAnalise               | text                           |           | not null | 
+ dataEntrada                 | timestamp(3) without time zone |           | not null | 
+ descricaoMaterial           | text                           |           | not null | 
+ volumeOuPesoEntrada         | double precision               |           | not null | 
+ unidadeEntrada              | text                           |           | not null | 
+ resultadoAnaliseValor       | double precision               |           |          | 
+ unidadeResultado            | text                           |           |          | 
+ percentualQuebra            | double precision               |           |          | 
+ taxaServicoPercentual       | double precision               |           |          | 
+ teorRecuperavel             | double precision               |           |          | 
+ auEstimadoBrutoGramas       | double precision               |           |          | 
+ auEstimadoRecuperavelGramas | double precision               |           |          | 
+ taxaServicoEmGramas         | double precision               |           |          | 
+ auLiquidoParaClienteGramas  | double precision               |           |          | 
+ status                      | "StatusAnaliseQuimicaPrisma"   |           | not null | 'RECEBIDO'::"StatusAnaliseQuimicaPrisma"
+ dataAnaliseConcluida        | timestamp(3) without time zone |           |          | 
+ dataAprovacaoCliente        | timestamp(3) without time zone |           |          | 
+ dataFinalizacaoRecuperacao  | timestamp(3) without time zone |           |          | 
+ observacoes                 | text                           |           |          | 
+ ordemDeRecuperacaoId        | text                           |           |          | 
+ dataCriacao                 | timestamp(3) without time zone |           | not null | CURRENT_TIMESTAMP
+ dataAtualizacao             | timestamp(3) without time zone |           | not null | 
+Indexes:
+    "analises_quimicas_pkey" PRIMARY KEY, btree (id)
+    "analises_quimicas_numeroAnalise_key" UNIQUE, btree ("numeroAnalise")
+Foreign-key constraints:
+    "analises_quimicas_clienteId_fkey" FOREIGN KEY ("clienteId") REFERENCES pessoas(id) ON UPDATE CASCADE ON DELETE CASCADE
+    "analises_quimicas_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"(id) ON UPDATE CASCADE ON DELETE CASCADE
+Referenced by:
+    TABLE "metal_credits" CONSTRAINT "metal_credits_chemicalAnalysisId_fkey" FOREIGN KEY ("chemicalAnalysisId") REFERENCES analises_quimicas(id) ON UPDATE CASCADE ON DELETE RESTRICT
+    TABLE "recovery_orders" CONSTRAINT "recovery_orders_residueAnalysisId_fkey" FOREIGN KEY ("residueAnalysisId") REFERENCES analises_quimicas(id) ON UPDATE CASCADE ON DELETE SET NULL
+    TABLE "recuperacoes" CONSTRAINT "recuperacoes_analiseQuimicaId_fkey" FOREIGN KEY ("analiseQuimicaId") REFERENCES analises_quimicas(id) ON UPDATE CASCADE ON DELETE CASCADE
+

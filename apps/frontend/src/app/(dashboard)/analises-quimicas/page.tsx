@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { AnalisesQuimicasTable } from "@/components/analises-quimicas/AnalisesQuimicasTable";
 import { getAnalisesQuimicas } from "@/services/analisesApi";
-import { AnaliseQuimica } from "@/types/analise-quimica";
+import { AnaliseQuimica } from '@/types/analise-quimica';
 
 export default function AnalisesQuimicasPage() {
   const [analises, setAnalises] = useState<AnaliseQuimica[]>([]);

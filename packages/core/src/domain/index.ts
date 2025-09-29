@@ -11,4 +11,4 @@ export * from './client';
 export * from './fornecedor';
 export * from './funcionario';
 export * from './analises-quimicas';
-export * from './contas-metais'
+export * from './metal-accounts';

@@ -6,7 +6,7 @@ import { PessoaModule } from '../pessoa/pessoa.module';
 
 import { AnalisesQuimicasController } from './analises-quimicas.controller';
 import { PrismaAnaliseQuimicaRepository } from './repositories/prisma-analise-quimica.repository';
-import { PrismaContaMetalRepository } from '../contas-metais/repositories/prisma-conta-metal.repository';
+import { PrismaMetalAccountRepository } from '../metal-accounts/repositories/prisma-metal-account.repository';
 
 // Importando TODOS os use cases
 import { RegistrarNovaAnaliseUseCase } from './use-cases/registrar-nova-analise.use-case';
@@ -43,7 +43,7 @@ import { RefazerAnaliseUseCase } from './use-cases/refazer-analise.use-case';
 		},
 		{
 			provide: 'IContaMetalRepository',
-			useClass: PrismaContaMetalRepository,
+			useClass: PrismaMetalAccountRepository,
 		},
 		{
 			provide: 'IPessoaRepository',

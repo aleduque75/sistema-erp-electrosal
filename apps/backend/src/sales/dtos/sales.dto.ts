@@ -24,7 +24,9 @@ export class CreateSaleDto {
   @ValidateNested({ each: true })
   @Type(() => SaleItemDto)
   items: SaleItemDto[];
-  @IsString() @IsNotEmpty() paymentMethod: string;
+  @IsString() @IsNotEmpty() paymentMethod: 'A_VISTA' | 'A_PRAZO' | 'CREDIT_CARD' | 'IMPORTADO' | 'METAL';
+
+  @IsUUID() @IsOptional() clientMetalAccountId?: string; // Opcional: ID da conta de metal do cliente, se houver mais de uma
 
   @IsInt() @Min(1) @IsOptional() numberOfInstallments?: number; // Para Cartão de Crédito
   @IsUUID() @IsOptional() paymentTermId?: string; // Para Venda a Prazo

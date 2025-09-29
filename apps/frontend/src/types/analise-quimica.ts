@@ -1,4 +1,15 @@
-import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
+
+export enum StatusAnaliseQuimica {
+  RECEBIDO = 'RECEBIDO',
+  EM_ANALISE = 'EM_ANALISE',
+  ANALISADO_AGUARDANDO_APROVACAO = 'ANALISADO_AGUARDANDO_APROVACAO',
+  APROVADO_PARA_RECUPERACAO = 'APROVADO_PARA_RECUPERACAO',
+  RECUSADO_PELO_CLIENTE = 'RECUSADO_PELO_CLIENTE',
+  EM_RECUPERACAO = 'EM_RECUPERACAO',
+  FINALIZADO_RECUPERADO = 'FINALIZADO_RECUPERADO',
+  CANCELADO = 'CANCELADO',
+  RESIDUO = 'RESIDUO',
+}
 
 export interface AnaliseQuimica {
   id: string;
@@ -21,6 +32,6 @@ export interface AnaliseQuimica {
   cliente?: {
     name: string;
   };
-  resultado?: any; // Manter por enquanto, mas idealmente refinar
+  resultado?: any;
   pdfUrl?: string;
 }

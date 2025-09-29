@@ -1,0 +1,22 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Diagrama de Contexto do ERP de Gestão de Metais Preciosos
+
+Person(users, "Usuários", "Administradores, Operadores, Vendedores, Financeiro")
+Person(clients, "Clientes", "Pessoas ou empresas que interagem com o ERP")
+Person(suppliers, "Fornecedores", "Fornecem matérias-primas, compram metal")
+
+System(erp, "ERP de Gestão de Metais Preciosos", "Sistema central para gestão do ciclo de vida de metais preciosos")
+
+System_Ext(banking_system, "Sistema Bancário", "Sistema externo para transações financeiras")
+System_Ext(external_quotation_system, "Sistema de Cotações Externo", "Sistema externo para cotações de metais (opcional)")
+
+Rel(users, erp, "Gerencia", "HTTP/S")
+Rel(clients, erp, "Interage com", "HTTP/S")
+Rel(suppliers, erp, "Interage com", "HTTP/S")
+
+Rel_L(erp, banking_system, "Envia/Recebe Transações Financeiras", "API")
+Rel_R(erp, external_quotation_system, "Busca Cotações de Metais", "API")
+
+@enduml

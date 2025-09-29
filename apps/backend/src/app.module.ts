@@ -40,7 +40,7 @@ import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { AnalisesQuimicasModule } from './analises-quimicas';
 import { RecuperacoesModule } from './recuperacoes';
 import { RecoveryOrdersModule } from './recovery-orders/recovery-orders.module';
-import { ContasMetaisModule } from './contas-metais/contas-metais.module';
+import { MetalAccountsModule } from './metal-accounts/metal-accounts.module';
 import { QuotationsModule } from './quotations/quotations.module';
 import { QuotationImportsModule } from './quotation-imports/quotation-imports.module';
 import { ProductGroupsModule } from './product-groups/product-groups.module';
@@ -86,7 +86,7 @@ import { ChemicalReactionsModule } from './chemical-reactions/chemical-reactions
     AnalisesQuimicasModule,
     RecuperacoesModule,
     RecoveryOrdersModule,
-    ContasMetaisModule,
+    MetalAccountsModule,
     QuotationsModule,
     QuotationImportsModule,
     ProductGroupsModule,

@@ -23,9 +23,9 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-import { AnaliseQuimica } from "@/types/analise-quimica";
+import { AnaliseQuimica } from '@/types/analise-quimica';
 import { getAnalisesQuimicas } from "@/services/analisesApi";
-import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
+import { StatusAnaliseQuimica } from '@/types/analise-quimica';
 import { createRecoveryOrder } from "@/services/recoveryOrdersApi";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";

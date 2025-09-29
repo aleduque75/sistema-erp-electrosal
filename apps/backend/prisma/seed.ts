@@ -398,6 +398,20 @@ async function main() {
     },
   });
 
+  // Criar um cliente interno para análises de resíduo
+  const internalClient = await prisma.pessoa.create({
+    data: {
+      organizationId: organization.id,
+      type: 'JURIDICA',
+      name: 'Cliente Interno (Resíduo)',
+      razaoSocial: 'Cliente Interno (Resíduo)',
+      email: 'interno@electrosal.com',
+      cnpj: '00.000.000/0001-00',
+    },
+  });
+
+  console.log(`Cliente interno criado: ${internalClient.id}`);
+
   console.log('Criando contas correntes de exemplo...');
   await prisma.contaCorrente.create({
     data: {

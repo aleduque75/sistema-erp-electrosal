@@ -1,16 +1,12 @@
 import { IsString, IsNotEmpty, IsEnum } from 'class-validator';
 import { TipoMetal } from '@sistema-erp-electrosal/core';
 
-export class CreateContaMetalDto {
+export class CreateMetalAccountDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  personId: string;
 
   @IsEnum(TipoMetal)
   @IsNotEmpty()
-  metalType: TipoMetal;
-
-  @IsEnum(['CLIENTE', 'FORNECEDOR', 'INTERNA', 'EMPRESTIMO'])
-  @IsNotEmpty()
-  type: string;
+  type: TipoMetal;
 }

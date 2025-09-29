@@ -5,7 +5,7 @@ interface PureMetalLotProps {
   organizationId: string;
   sourceType: string;
   sourceId: string;
-  metalType: TipoMetal;
+  metalType: string;
   initialGrams: number;
   remainingGrams: number;
   purity: number;
@@ -40,7 +40,7 @@ export class PureMetalLot extends Entity<PureMetalLotProps> {
   get organizationId(): string { return this.props.organizationId; }
   get sourceType(): string { return this.props.sourceType; }
   get sourceId(): string { return this.props.sourceId; }
-  get metalType(): TipoMetal { return this.props.metalType; }
+  get metalType(): string { return this.props.metalType; }
   get initialGrams(): number { return this.props.initialGrams; }
   get remainingGrams(): number { return this.props.remainingGrams; }
   get purity(): number { return this.props.purity; }

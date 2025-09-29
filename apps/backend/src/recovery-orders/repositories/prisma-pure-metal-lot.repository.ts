@@ -29,16 +29,18 @@ export class PrismaPureMetalLotRepository implements IPureMetalLotRepository {
 
   async create(lot: PureMetalLot): Promise<PureMetalLot> {
     const data = {
+      id: lot.id.toString(),
       organizationId: lot.organizationId,
       sourceType: lot.sourceType,
       sourceId: lot.sourceId,
-      metalType: lot.metalType as any,
+      metalType: lot.props.metalType as any,
       initialGrams: lot.initialGrams,
       remainingGrams: lot.remainingGrams,
       purity: lot.purity,
       status: lot.status as any,
       entryDate: lot.entryDate,
       notes: lot.notes,
+      updatedAt: new Date(), // Adicionado updatedAt
     };
 
     // @ts-ignore

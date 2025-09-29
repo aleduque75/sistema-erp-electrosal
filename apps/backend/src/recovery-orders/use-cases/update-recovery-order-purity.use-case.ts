@@ -5,10 +5,8 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import {
-  IRecoveryOrderRepository,
-  RecoveryOrderStatus,
-} from '@sistema-erp-electrosal/core';
+import { RecoveryOrderStatus } from '@sistema-erp-electrosal/core/domain/enums/recovery-order-status.enum';
+import { IRecoveryOrderRepository } from '@sistema-erp-electrosal/core';
 
 // This command is now for entering the gross processed result
 export interface EnterRecoveryResultCommand {
