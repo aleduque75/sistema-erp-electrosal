@@ -4,11 +4,24 @@ import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Prisma } from '@prisma/client';
 import { CreatePurchaseOrderDto, UpdatePurchaseOrderDto } from './dtos/purchase-order.dto';
+import { CreateMetalPurchaseFromSupplierUseCase, CreateMetalPurchaseFromSupplierCommand } from './use-cases/create-metal-purchase-from-supplier.use-case'; // Import the use case and its command DTO
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('purchase-orders')
 export class PurchaseOrdersController {
-  constructor(private readonly purchaseOrdersService: PurchaseOrdersService) {}
+  constructor(
+    private readonly purchaseOrdersService: PurchaseOrdersService,
+    private readonly createMetalPurchaseFromSupplierUseCase: CreateMetalPurchaseFromSupplierUseCase, // Inject the new use case
+  ) {}
+
+  @Post('metal-purchase')
+  async createMetalPurchase(
+    @CurrentUser('organizationId') organizationId: string,
+    @Body() command: CreateMetalPurchaseFromSupplierCommand,
+  ) {
+    await this.createMetalPurchaseFromSupplierUseCase.execute({ ...command, organizationId });
+    return { message: 'Compra de metal de fornecedor registrada com sucesso.' };
+  }
 
   @Post()
   create(

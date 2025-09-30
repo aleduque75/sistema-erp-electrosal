@@ -150,7 +150,7 @@ model Product {
   name               String
   description        String?
   price              Decimal             @db.Decimal(10, 2)
-  stock              Int?
+  stock              Float?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   organizationId     String
@@ -187,8 +187,8 @@ model InventoryLot {
   organizationId    String
   productId         String
   costPrice         Decimal      @db.Decimal(10, 2)
-  quantity          Int
-  remainingQuantity Int
+  quantity          Float
+  remainingQuantity Float
   sourceType        String
   sourceId          String
   receivedDate      DateTime     @default(now())
@@ -205,7 +205,7 @@ model StockMovement {
   id             String       @id @default(uuid())
   productId      String
   type           String
-  quantity       Int
+  quantity       Float
   createdAt      DateTime     @default(now())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -214,7 +214,7 @@ model StockMovement {
 
 model Sale {
   id                String            @id @default(uuid())
-  orderNumber       String            @unique
+  orderNumber       Int               @unique
   totalAmount       Decimal           @db.Decimal(10, 2)
   feeAmount         Decimal?          @db.Decimal(10, 2)
   netAmount         Decimal?          @db.Decimal(10, 2)
@@ -259,7 +259,7 @@ model SaleItem {
   id              String        @id @default(uuid())
   saleId          String
   productId       String
-  quantity        Int
+  quantity        Float
   price           Decimal       @db.Decimal(10, 2)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -618,7 +618,7 @@ model PurchaseOrderItem {
   id              String        @id @default(uuid())
   purchaseOrderId String
   productId       String
-  quantity        Int
+  quantity        Float
   price           Decimal       @db.Decimal(10, 2)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -746,7 +746,7 @@ model chemical_reactions {
 }
 
 model pure_metal_lots {
-  id                 String               @id
+  id                 String               @id @default(uuid())
   organizationId     String
   sourceType         String
   sourceId           String
@@ -758,7 +758,7 @@ model pure_metal_lots {
   entryDate          DateTime             @default(now())
   notes              String?
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime             @updatedAt
   chemical_reactions chemical_reactions[] // Relação muitos-para-muitos
   Organization       Organization         @relation(fields: [organizationId], references: [id])
 }

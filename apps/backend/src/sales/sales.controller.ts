@@ -13,13 +13,24 @@ import { SalesService } from './sales.service';
 import { CreateSaleDto, UpdateSaleDto } from './dtos/sales.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { ProcessClientMetalPaymentToSupplierUseCase, ProcessClientMetalPaymentToSupplierCommand } from './use-cases/process-client-metal-payment-to-supplier.use-case'; // Import the new use case
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('sales')
 export class SalesController {
   constructor(
     private readonly salesService: SalesService,
+    private readonly processClientMetalPaymentToSupplierUseCase: ProcessClientMetalPaymentToSupplierUseCase, // Inject the new use case
   ) {}
+
+  @Post('client-metal-payment-to-supplier')
+  async processClientMetalPaymentToSupplier(
+    @CurrentUser('organizationId') organizationId: string,
+    @Body() command: ProcessClientMetalPaymentToSupplierCommand,
+  ) {
+    await this.processClientMetalPaymentToSupplierUseCase.execute({ ...command, organizationId });
+    return { message: 'Pagamento de metal do cliente para o fornecedor processado com sucesso.' };
+  }
 
   @Post()
   create(

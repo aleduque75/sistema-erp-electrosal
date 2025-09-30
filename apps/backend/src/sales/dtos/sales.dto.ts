@@ -14,8 +14,11 @@ import {
 
 class SaleItemDto {
   @IsUUID() @IsNotEmpty() productId: string;
-  @IsInt() @Min(1) quantity: number;
+  @IsNumber()
+  @Min(0.0001)
+  quantity: number;
   @IsNumber() @Min(0) price: number; // Adicionado
+  @IsUUID() @IsOptional() inventoryLotId?: string;
 }
 
 export class CreateSaleDto {
@@ -35,6 +38,7 @@ export class CreateSaleDto {
   @IsUUID() @IsOptional() contaCorrenteId?: string;
   @IsNumber() @IsOptional() @Min(0) goldQuoteValue?: number; // Adicionado para importação
   @IsString() @IsOptional() externalId?: string; // Adicionado para importação
+  @IsNumber() @IsOptional() @Min(0) freightAmount?: number; // Adicionado para custos de frete
 }
 
 export class UpdateSaleDto extends PartialType(CreateSaleDto) {}

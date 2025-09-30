@@ -55,11 +55,28 @@ export function NewSaleForm({ onSave }: any) {
   const [items, setItems] = useState<SaleItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedLot, setSelectedLot] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
   const [itemPrice, setItemPrice] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feePercentage, setFeePercentage] = useState(0);
   const [absorbCreditCardFee, setAbsorbCreditCardFee] = useState(false);
+  const [latestGoldQuote, setLatestGoldQuote] = useState<any>(null);
+  const [saleGoldQuote, setSaleGoldQuote] = useState(0);
+  const [laborCostTable, setLaborCostTable] = useState<any[]>([]);
+  const [laborGramsInput, setLaborGramsInput] = useState<number | string>(0);
+
+  // States for unit conversion
+  const [entryUnit, setEntryUnit] = useState('sal'); // 'sal' or 'au'
+  const [entryQuantity, setEntryQuantity] = useState<number | string>(1);
+
+  const GOLD_SALT_PRODUCT_NAME = 'El Sal 68%';
+  const GOLD_SALT_CONVERSION_RATE = 1.47;
+
+  const isGoldSaltProduct = useMemo(() => 
+    selectedProduct?.name.includes(GOLD_SALT_PRODUCT_NAME), 
+    [selectedProduct]
+  );
+
+
 
   const {
     control,
@@ -75,7 +92,11 @@ export function NewSaleForm({ onSave }: any) {
 
   const paymentOptions = useMemo(() => {
     const terms = paymentTerms.map(term => ({ value: term.id, label: term.name, isTerm: true }));
-    return [...terms, { value: 'CREDIT_CARD', label: 'Cartão de Crédito', isTerm: false }];
+    return [
+      ...terms, 
+      { value: 'CREDIT_CARD', label: 'Cartão de Crédito', isTerm: false },
+      { value: 'METAL', label: 'Metal', isTerm: false },
+    ];
   }, [paymentTerms]);
 
   const selectedPaymentCondition = useMemo(() => {
@@ -85,13 +106,15 @@ export function NewSaleForm({ onSave }: any) {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [clientsRes, productsRes, contasRes, feesRes, orgSettingsRes, paymentTermsRes] = await Promise.all([
+        const [clientsRes, productsRes, contasRes, feesRes, orgSettingsRes, paymentTermsRes, quoteRes, laborTableRes] = await Promise.all([
           api.get("/pessoas?role=client"),
           api.get("/products"),
           api.get("/contas-correntes"),
           api.get("/credit-card-fees"),
           api.get("/settings/organization"),
           api.get("/payment-terms"),
+          api.get("/quotations/latest?metal=AU"),
+          api.get("/labor-cost-table-entries"),
         ]);
         setClients(clientsRes.data.map((c: any) => ({ id: c.id, name: c.name })));
         setProducts(productsRes.data);
@@ -99,6 +122,12 @@ export function NewSaleForm({ onSave }: any) {
         setFees(feesRes.data);
         setAbsorbCreditCardFee(orgSettingsRes.data.absorbCreditCardFee);
         setPaymentTerms(paymentTermsRes.data);
+        setLaborCostTable(laborTableRes.data);
+        setLatestGoldQuote(quoteRes.data);
+        if (quoteRes.data?.sellPrice) {
+          setSaleGoldQuote(quoteRes.data.sellPrice);
+          toast.info(`Cotação do Ouro carregada: ${formatCurrency(quoteRes.data?.sellPrice)}`);
+        }
       } catch (error) {
         toast.error("Falha ao carregar dados para a venda.");
       }
@@ -117,17 +146,73 @@ export function NewSaleForm({ onSave }: any) {
     }
   }, [paymentConditionId, numberOfInstallments, fees]);
 
+  const goldAmount = useMemo(() => {
+    if (!isGoldSaltProduct) return 0;
+    const quant = typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity;
+    if (isNaN(quant)) return 0;
+    return entryUnit === 'au' ? quant : quant / GOLD_SALT_CONVERSION_RATE;
+  }, [entryQuantity, entryUnit, isGoldSaltProduct]);
+
+  const laborGramsCharged = useMemo(() => {
+    if (!isGoldSaltProduct || goldAmount <= 0) return 0;
+
+    const entry = laborCostTable.find(e => 
+      goldAmount >= e.minGrams && (e.maxGrams === null || goldAmount <= e.maxGrams)
+    );
+
+    return entry ? entry.goldGramsCharged : 0;
+  }, [goldAmount, isGoldSaltProduct, laborCostTable]);
+
   useEffect(() => {
-    if (selectedProduct) {
-      setItemPrice(Number(selectedProduct.price));
-      setSelectedLot(null);
-    } else {
-      setItemPrice(0);
+    setLaborGramsInput(laborGramsCharged);
+  }, [laborGramsCharged]);
+
+  const totalGoldAmount = useMemo(() => {
+    const laborGrams = typeof laborGramsInput === 'string' ? parseFloat(laborGramsInput) : (laborGramsInput || 0);
+    return goldAmount + laborGrams;
+  }, [goldAmount, laborGramsInput]);
+
+  const finalQuantity = useMemo(() => {
+    const quant = typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity;
+    if (isNaN(quant)) return 0;
+
+    if (isGoldSaltProduct) {
+      if (entryUnit === 'au') {
+        return quant * GOLD_SALT_CONVERSION_RATE;
+      }
+      return quant;
     }
-  }, [selectedProduct]);
+
+    return quant;
+  }, [entryQuantity, entryUnit, isGoldSaltProduct]);
+
+  const calculatedItemPrice = useMemo(() => {
+    if (!selectedProduct) return 0;
+
+    if (isGoldSaltProduct) {
+      if (!saleGoldQuote || saleGoldQuote <= 0) return 0;
+      if (goldAmount <= 0) return 0;
+
+      const laborGrams = typeof laborGramsInput === 'string' ? parseFloat(laborGramsInput) : laborGramsInput;
+      if (isNaN(laborGrams)) return 0;
+
+      const goldWithLabor = goldAmount + laborGrams;
+      const totalBRL = goldWithLabor * saleGoldQuote;
+      
+      // The price is per unit of SAL, so we divide the total BRL value by the final quantity in SAL
+      if (finalQuantity === 0) return 0; // Avoid division by zero
+      return totalBRL / finalQuantity;
+    } else {
+      return Number(selectedProduct.price);
+    }
+  }, [selectedProduct, isGoldSaltProduct, saleGoldQuote, goldAmount, laborGramsInput, finalQuantity]);
+
+  useEffect(() => {
+    setItemPrice(calculatedItemPrice);
+  }, [calculatedItemPrice]);
 
   const handleAddItem = () => {
-    if (!selectedProduct || quantity <= 0 || itemPrice <= 0) {
+    if (!selectedProduct || finalQuantity <= 0 || calculatedItemPrice <= 0) {
       toast.error("Selecione um produto, quantidade e preço válidos.");
       return;
     }
@@ -141,7 +226,7 @@ export function NewSaleForm({ onSave }: any) {
     const lot = selectedProduct.inventoryLots.find(l => l.id === selectedLot);
     const stockAvailable = isManufactured ? (lot?.remainingQuantity || 0) : selectedProduct.stock;
 
-    if (quantity > stockAvailable) {
+    if (finalQuantity > stockAvailable) {
       toast.error(`Estoque insuficiente. Disponível: ${stockAvailable}`);
       return;
     }
@@ -154,7 +239,7 @@ export function NewSaleForm({ onSave }: any) {
       setItems(
         items.map((item) =>
           item.productId === selectedProduct.id && item.inventoryLotId === selectedLot
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: item.quantity + finalQuantity }
             : item
         )
       );
@@ -164,8 +249,8 @@ export function NewSaleForm({ onSave }: any) {
         {
           productId: selectedProduct.id,
           name: selectedProduct.name,
-          quantity: quantity,
-          price: itemPrice,
+          quantity: finalQuantity,
+          price: calculatedItemPrice,
           stock: stockAvailable,
           inventoryLotId: selectedLot || undefined,
         },
@@ -173,7 +258,7 @@ export function NewSaleForm({ onSave }: any) {
     }
     setSelectedProduct(null);
     setSelectedLot(null);
-    setQuantity(1);
+    setEntryQuantity(1);
     setItemPrice(0);
   };
 
@@ -206,6 +291,8 @@ export function NewSaleForm({ onSave }: any) {
     if (selectedPaymentCondition) {
       if (selectedPaymentCondition.value === 'CREDIT_CARD') {
         paymentMethod = 'CREDIT_CARD';
+      } else if (selectedPaymentCondition.value === 'METAL') {
+        paymentMethod = 'METAL';
       } else if (selectedPaymentCondition.isTerm) {
         paymentTermId = selectedPaymentCondition.value;
         if (selectedPaymentCondition.label.toLowerCase().includes('vista')) {
@@ -220,6 +307,7 @@ export function NewSaleForm({ onSave }: any) {
       feeAmount: totalAmount * (feePercentage / 100),
       paymentMethod,
       paymentTermId,
+      goldQuoteValue: saleGoldQuote, // Adicionado
       numberOfInstallments: formData.numberOfInstallments,
       contaCorrenteId: formData.contaCorrenteId,
     };
@@ -283,6 +371,15 @@ onChange={field.onChange}
                   </div>
                 )}
               />
+              <div className="space-y-1">
+                <Label>Cotação do Ouro (Venda)</Label>
+                <Input
+                  type="number"
+                  value={saleGoldQuote}
+                  onChange={(e) => setSaleGoldQuote(Number(e.target.value))}
+                  step="0.01"
+                />
+              </div>
               {paymentConditionId === "CREDIT_CARD" && (
                 <Controller
                   name="numberOfInstallments"
@@ -339,16 +436,75 @@ onChange={field.onChange}
             <CardHeader>
               <CardTitle className="text-lg">2. Adicionar Produtos</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-6 gap-4 items-end">
-              <div className="sm:col-span-3">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+              <div className="sm:col-span-4">
                 <Label>Produto</Label>
                 <Combobox
                   options={products.map((p) => ({ value: p.id, label: `${p.name} (Estoque: ${p.stock})` }))}
                   value={selectedProduct?.id}
-                  onChange={(value) => setSelectedProduct(products.find((p) => p.id === value) || null)}
+                  onChange={(value) => {
+                    const product = products.find((p) => p.id === value) || null;
+                    setSelectedProduct(product);
+                    setEntryUnit('sal'); // Reset to default unit on product change
+                    setEntryQuantity(1);
+                  }}
                   placeholder="Pesquise..."
                 />
               </div>
+
+              {isGoldSaltProduct ? (
+                <>
+                  <div className="sm:col-span-2">
+                    <Label>Qtd. Lançada</Label>
+                    <Input
+                      type="number"
+                      value={entryQuantity}
+                      onChange={(e) => setEntryQuantity(e.target.value)}
+                      min="0.01"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <Label>Unidade</Label>
+                    <Select onValueChange={setEntryUnit} value={entryUnit}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sal">g Sal</SelectItem>
+                        <SelectItem value="au">g Au</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label>Mão de Obra (g)</Label>
+                    <Input 
+                      type="number"
+                      value={laborGramsInput}
+                      onChange={(e) => setLaborGramsInput(e.target.value)}
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label>Total Ouro (g)</Label>
+                    <Input type="number" value={totalGoldAmount.toFixed(4)} readOnly disabled className="font-bold" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label>Qtd. Final (Sal)</Label>
+                    <Input type="number" value={finalQuantity.toFixed(4)} readOnly disabled />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="sm:col-span-3">
+                    <Label>Preço Unit.</Label>
+                    <Input type="number" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))} min="0" step="0.01" />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <Label>Qtd.</Label>
+                    <Input type="number" value={entryQuantity} onChange={(e) => setEntryQuantity(Number(e.target.value))} min="1" />
+                  </div>
+                </>
+              )}
+
               {selectedProduct && selectedProduct.inventoryLots.some(lot => lot.sourceType === 'REACTION') && (
                 <div className="sm:col-span-2">
                   <Label>Lote de Produção</Label>
@@ -366,15 +522,8 @@ onChange={field.onChange}
                   </Select>
                 </div>
               )}
-              <div className="sm:col-span-1">
-                <Label>Preço Unit.</Label>
-                <Input type="number" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))} min="0" step="0.01" />
-              </div>
-              <div className="sm:col-span-1">
-                <Label>Qtd.</Label>
-                <Input type="number" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} min="1" />
-              </div>
-              <div className="sm:col-span-1">
+
+              <div className="sm:col-span-2">
                 <Button type="button" onClick={handleAddItem} className="w-full">Adicionar</Button>
               </div>
             </CardContent>

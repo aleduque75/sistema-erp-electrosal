@@ -45,6 +45,7 @@ import { QuotationsModule } from './quotations/quotations.module';
 import { QuotationImportsModule } from './quotation-imports/quotation-imports.module';
 import { ProductGroupsModule } from './product-groups/product-groups.module';
 import { ChemicalReactionsModule } from './chemical-reactions/chemical-reactions.module';
+import { LaborCostTableEntriesModule } from './labor-cost-table-entries/labor-cost-table-entries.module';
 
 @Module({
   imports: [
@@ -91,6 +92,7 @@ import { ChemicalReactionsModule } from './chemical-reactions/chemical-reactions
     QuotationImportsModule,
     ProductGroupsModule,
     ChemicalReactionsModule,
+    LaborCostTableEntriesModule,
   ],
   controllers: [AppController],
   providers: [

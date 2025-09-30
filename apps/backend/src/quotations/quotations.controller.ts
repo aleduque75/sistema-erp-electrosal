@@ -33,6 +33,14 @@ export class QuotationsController {
     return this.quotationsService.findByDate(new Date(date), metal, organizationId);
   }
 
+  @Get('latest')
+  findLatest(
+    @CurrentUser('orgId') organizationId: string,
+    @Query('metal') metal: TipoMetal,
+  ) {
+    return this.quotationsService.findLatest(metal, organizationId);
+  }
+
   @Get(':id')
   findOne(
     @CurrentUser('orgId') organizationId: string,

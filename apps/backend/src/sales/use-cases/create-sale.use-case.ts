@@ -231,7 +231,7 @@ export class CreateSaleUseCase {
         quantity: item.quantity,
         price: itemPrice,
         costPriceAtSale: itemCost.dividedBy(item.quantity),
-        inventoryLotId: productLots.length > 0 ? productLots[0]?.id : null,
+        inventoryLotId: item.inventoryLotId, // Usar o ID do lote do DTO
       });
     }
 
@@ -249,12 +249,19 @@ export class CreateSaleUseCase {
       console.log('[DEBUG CREATE_SALE] Conteúdo de tx:', Object.keys(tx));
       console.log('[DEBUG CREATE_SALE] Conteúdo de tx.sale:', !!tx.sale);
       console.log('[DEBUG CREATE_SALE] Conteúdo de tx.sale.create:', !!tx.sale.create);
-      // 1. Create the Sale and SaleItems first
+      // 1. Generate sequential order number
+      const lastSale = await tx.sale.findFirst({
+        where: { organizationId },
+        orderBy: { orderNumber: 'desc' },
+      });
+      const nextOrderNumber = (lastSale?.orderNumber || 31700) + 1;
+
+      // 2. Create the Sale and SaleItems first
       const sale = await tx.sale.create({
         data: {
           organizationId,
           pessoaId,
-          orderNumber: `V-${nanoid(8).toUpperCase()}`,
+          orderNumber: nextOrderNumber,
           totalAmount,
           totalCost,
           feeAmount: finalFeeAmount,
@@ -275,26 +282,33 @@ export class CreateSaleUseCase {
       // 2. Deduct stock and create stock movements
       for (const item of sale.saleItems) {
         if (!isImport) {
-          const productLots = inventoryLots.filter((lot) => lot.productId === item.productId);
-
-          if (productLots.length > 0) {
-            // Deduct from lots
-            let quantityToDeduct = item.quantity;
-            for (const lot of productLots) {
-              if (quantityToDeduct === 0) break;
-              const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
-              await tx.inventoryLot.update({
-                where: { id: lot.id },
-                data: { remainingQuantity: { decrement: quantityFromThisLot } },
-              });
-              quantityToDeduct -= quantityFromThisLot;
-            }
-          } else {
-            // Deduct from general product stock
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { stock: { decrement: item.quantity } },
+          if (item.inventoryLotId) {
+            // Deduct from the specific lot specified in the sale item
+            await tx.inventoryLot.update({
+              where: { id: item.inventoryLotId },
+              data: { remainingQuantity: { decrement: item.quantity } },
             });
+          } else {
+            // Fallback to FIFO deduction if no specific lot is provided
+            const productLots = inventoryLots.filter((lot) => lot.productId === item.productId);
+            if (productLots.length > 0) {
+              let quantityToDeduct = item.quantity;
+              for (const lot of productLots) {
+                if (quantityToDeduct === 0) break;
+                const quantityFromThisLot = Math.min(quantityToDeduct, lot.remainingQuantity);
+                await tx.inventoryLot.update({
+                  where: { id: lot.id },
+                  data: { remainingQuantity: { decrement: quantityFromThisLot } },
+                });
+                quantityToDeduct -= quantityFromThisLot;
+              }
+            } else {
+              // Deduct from general product stock if no lots exist
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { stock: { decrement: item.quantity } },
+              });
+            }
           }
         }
 
@@ -381,17 +395,24 @@ export class CreateSaleUseCase {
       let clientMetalAccount;
       if (clientMetalAccountId) {
         clientMetalAccount = await tx.metalAccount.findUnique({
-          where: { id: clientMetalAccountId, organizationId, pessoaId: sale.pessoaId },
+          where: { id: clientMetalAccountId, organizationId, personId: sale.pessoaId },
         });
       } else {
         // Buscar a conta de metal padrão do cliente (assumindo uma por tipo de metal)
         clientMetalAccount = await tx.metalAccount.findFirst({
-          where: { pessoaId: sale.pessoaId, organizationId, metalType: TipoMetal.AU },
+          where: { personId: sale.pessoaId, organizationId, type: TipoMetal.AU },
         });
       }
 
       if (!clientMetalAccount) {
-        throw new NotFoundException(`Conta de metal do cliente ${sale.pessoaId} não encontrada.`);
+        // throw new NotFoundException(`Conta de metal do cliente ${sale.pessoaId} não encontrada.`);
+        clientMetalAccount = await tx.metalAccount.create({
+          data: {
+            personId: sale.pessoaId,
+            organizationId,
+            type: TipoMetal.AU,
+          },
+        });
       }
 
       // 2. Verificar saldo do cliente (simplificado, idealmente buscar saldo agregado)
@@ -404,24 +425,23 @@ export class CreateSaleUseCase {
           metalAccountId: clientMetalAccount.id,
           date: new Date(),
           description: `Pagamento da Venda #${orderNumber} em metal`,
-          grams: goldValue.negated(), // Valor negativo para deduzir
+          grams: goldValue.negated().toNumber(), // Valor negativo para deduzir
           type: 'SALE_PAYMENT',
           sourceId: id,
-          organizationId,
         },
       });
 
       // 4. Adicionar ao pure_metal_lots da empresa
       // Criar um novo lote ou adicionar a um lote existente (simplificado para criar novo)
-      await tx.pureMetalLot.create({
+      await tx.pure_metal_lots.create({
         data: {
           organizationId,
           sourceType: 'SALE_PAYMENT',
           sourceId: id,
           metalType: TipoMetal.AU,
-          initialGrams: goldValue,
-          remainingGrams: goldValue,
-          purity: new Decimal(1), // Assumimos pureza 100% para pagamento em metal
+          initialGrams: goldValue.toNumber(),
+          remainingGrams: goldValue.toNumber(),
+          purity: 1, // Assumimos pureza 100% para pagamento em metal
           notes: `Metal recebido como pagamento da Venda #${orderNumber}`,
         },
       });
