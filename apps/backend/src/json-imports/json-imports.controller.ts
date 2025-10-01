@@ -46,6 +46,13 @@ export class JsonImportsController {
     return this.jsonImportsService.importOrUpdateCompanies(organizationId);
   }
 
+  @Post('reset-and-seed')
+  @HttpCode(HttpStatus.OK)
+  async resetAndSeed() {
+    this.logger.warn('Recebida requisição para RESETAR E POPULAR O BANCO DE DADOS.');
+    return this.jsonImportsService.resetAndSeed();
+  }
+
   @Post('products')
   @HttpCode(HttpStatus.OK)
   async importProducts(@Req() req: Request) {

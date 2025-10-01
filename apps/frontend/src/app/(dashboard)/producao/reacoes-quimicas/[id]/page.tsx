@@ -1,32 +1,34 @@
-import { getReactionById, ReactionDetails } from "@/lib/api/chemical-reactions";
+import { getChemicalReactionById, ChemicalReactionDetails } from "@/services/chemicalReactionsApi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FinalizeReactionClientBlock } from "./components/finalize-reaction-client-block";
+import { ProductionStepClientBlock } from "./components/production-step-client-block";
+import { AdjustPurityClientBlock } from "./components/adjust-purity-client-block";
 
 // Helper para formatação
 const formatGrams = (grams: number) => new Intl.NumberFormat('pt-BR', { style: 'unit', unit: 'gram', minimumFractionDigits: 2 }).format(grams);
 const formatDate = (date: string | null) => date ? new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
 
-const statusVariantMap: { [key in ReactionDetails['status']]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
+const statusVariantMap: { [key in ChemicalReactionDetails['status']]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
   STARTED: 'secondary',
   PROCESSING: 'secondary',
   PENDING_PURITY: 'secondary',
-  FINALIZED: 'default',
+  PENDING_PURITY_ADJUSTMENT: 'secondary',
+  COMPLETED: 'default',
   CANCELED: 'destructive',
 };
 
 export default async function ReactionDetailPage({ params }: { params: { id: string } }) {
-  const reaction = await getReactionById(params.id).catch(() => notFound());
+  const reaction = await getChemicalReactionById(params.id).catch(() => notFound());
 
   return (
     <div className="space-y-4 p-4 md:p-8">
       {/* Cabeçalho */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/producao/reacoes-quimicas">
+        <Link href="/producao/reacoes-quimicas">
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -48,13 +50,17 @@ export default async function ReactionDetailPage({ params }: { params: { id: str
               <Badge variant={statusVariantMap[reaction.status]} className="text-lg">{reaction.status.replace('_', ' ')}</Badge>
               <div className="text-sm text-muted-foreground">
                 <p>Iniciada em: {formatDate(reaction.createdAt)}</p>
-                <p>Finalizada em: {formatDate(reaction.endedAt)}</p>
+                <p>Finalizada em: {reaction.status === 'COMPLETED' ? formatDate(reaction.updatedAt) : '-'}</p>
               </div>
             </CardContent>
           </Card>
           
-          {reaction.status !== 'FINALIZED' && reaction.status !== 'CANCELED' && (
-            <FinalizeReactionClientBlock reactionId={reaction.id} />
+          {(reaction.status === 'STARTED' || reaction.status === 'PROCESSING') && (
+            <ProductionStepClientBlock reactionId={reaction.id} auUsedGrams={reaction.auUsedGrams} />
+          )}
+
+          {reaction.status === 'PENDING_PURITY_ADJUSTMENT' && (
+            <AdjustPurityClientBlock reactionId={reaction.id} />
           )}
         </div>
 
@@ -66,15 +72,7 @@ export default async function ReactionDetailPage({ params }: { params: { id: str
             </CardHeader>
             <CardContent className="space-y-2">
               <p><strong>Ouro Utilizado:</strong> {formatGrams(reaction.auUsedGrams)}</p>
-              <p><strong>Conta de Origem:</strong> {reaction.sourceMetalAccount?.name || 'N/A'}</p>
-              <div>
-                <strong>Sobras Consumidas:</strong>
-                {reaction.leftoversUsed.length > 0 ? (
-                  <ul className="list-disc pl-5 mt-1">
-                    {reaction.leftoversUsed.map(l => <li key={l.id}>{`${l.type}: ${formatGrams(l.grams)}`}</li>)}
-                  </ul>
-                ) : <p className="text-sm text-muted-foreground">Nenhuma</p>}
-              </div>
+              {/* ... (outros detalhes de insumos) */}
             </CardContent>
           </Card>
 
@@ -83,21 +81,15 @@ export default async function ReactionDetailPage({ params }: { params: { id: str
               <CardTitle>Resultados da Reação</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {reaction.status === 'FINALIZED' ? (
+              {(reaction.status === 'PENDING_PURITY_ADJUSTMENT' || reaction.status === 'COMPLETED') ? (
                 <>
                   <p><strong>Lote Gerado:</strong> {reaction.productionBatch?.batchNumber}</p>
                   <p><strong>Produto:</strong> {reaction.productionBatch?.product.name}</p>
-                  <div>
-                    <strong>Novas Sobras:</strong>
-                    {reaction.leftoversProduced.length > 0 ? (
-                      <ul className="list-disc pl-5 mt-1">
-                        {reaction.leftoversProduced.map(l => <li key={l.id}>{`${l.type}: ${formatGrams(l.grams)}`}</li>)}
-                      </ul>
-                    ) : <p className="text-sm text-muted-foreground">Nenhuma</p>}
-                  </div>
+                  <p><strong>Quantidade Produzida:</strong> {formatGrams(reaction.outputProductGrams)}</p>
+                  {/* ... (outros detalhes de resultados) */}
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">Aguardando finalização da reação...</p>
+                <p className="text-sm text-muted-foreground">Aguardando finalização da produção...</p>
               )}
             </CardContent>
           </Card>

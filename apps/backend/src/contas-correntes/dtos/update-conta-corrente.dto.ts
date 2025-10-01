@@ -1,11 +1,25 @@
-import { IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min, IsEnum } from 'class-validator';
+import { ContaCorrenteType } from '@prisma/client';
 
 export class UpdateContaCorrenteDto {
+  @IsString()
   @IsOptional()
-  @IsNumber()
-  initialBalanceBRL?: number;
+  nome?: string;
 
+  @IsString()
   @IsOptional()
+  numeroConta?: string;
+
+  @IsString()
+  @IsOptional()
+  agencia?: string;
+
   @IsNumber()
-  initialBalanceGold?: number;
+  @IsOptional()
+  @Min(0)
+  limite?: number;
+
+  @IsEnum(ContaCorrenteType)
+  @IsOptional()
+  type?: ContaCorrenteType;
 }

@@ -1,5 +1,3 @@
-"use client";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -7,7 +5,6 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
-// ✅ Importação que estava faltando
 import {
   Form,
   FormControl,
@@ -17,17 +14,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ContaCorrenteType } from "@/types/enums";
 
 const formSchema = z.object({
   nome: z.string().min(3, "O nome da conta é obrigatório."),
   numeroConta: z.string().min(1, "O número/identificador é obrigatório."),
   agencia: z.string().optional(),
-  moeda: z.string().default("BRL"),
   saldoInicial: z.coerce
     .number()
     .min(0, "O saldo não pode ser negativo.")
     .default(0),
-  limite: z.coerce.number().min(0).default(0).optional(), // Adicionado
+  limite: z.coerce.number().min(0).default(0).optional(),
+  type: z.nativeEnum(ContaCorrenteType).default(ContaCorrenteType.BANCO),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -38,9 +37,9 @@ interface ContaCorrenteFormProps {
     nome: string;
     numeroConta: string;
     agencia?: string | null;
-    moeda: string;
     saldoInicial: number;
-    limite?: number; // Adicionado
+    limite?: number;
+    type?: ContaCorrenteType;
   } | null;
   onSave: () => void;
 }
@@ -52,9 +51,9 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
       nome: conta?.nome || "",
       numeroConta: conta?.numeroConta || "",
       agencia: conta?.agencia || "",
-      moeda: "BRL",
       saldoInicial: 0,
-      limite: conta?.limite || 0, // Inicializa com o limite existente
+      limite: conta?.limite || 0,
+      type: conta?.type || ContaCorrenteType.BANCO,
     },
   });
 
@@ -121,6 +120,28 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
             )}
           />
         </div>
+        <FormField
+          name="type"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de Conta</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de conta" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={ContaCorrenteType.BANCO}>Banco</SelectItem>
+                  <SelectItem value={ContaCorrenteType.FORNECEDOR_METAL}>Fornecedor de Metal</SelectItem>
+                  <SelectItem value={ContaCorrenteType.EMPRESTIMO}>Empréstimo</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         {!conta && (
           <FormField
             name="saldoInicial"

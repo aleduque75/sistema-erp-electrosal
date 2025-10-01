@@ -35,6 +35,9 @@ CREATE TYPE "public"."TipoMetal" AS ENUM ('AU', 'AG', 'RH');
 CREATE TYPE "public"."PureMetalLotStatus" AS ENUM ('AVAILABLE', 'USED', 'PARTIALLY_USED');
 
 -- CreateEnum
+CREATE TYPE "public"."ChemicalReactionStatusPrisma" AS ENUM ('STARTED', 'PROCESSING', 'PENDING_PURITY', 'PENDING_PURITY_ADJUSTMENT', 'COMPLETED', 'CANCELED');
+
+-- CreateEnum
 CREATE TYPE "public"."ContaMetalType" AS ENUM ('CLIENTE', 'FORNECEDOR', 'INTERNA', 'EMPRESTIMO');
 
 -- CreateTable
@@ -139,7 +142,7 @@ CREATE TABLE "public"."Product" (
     "name" TEXT NOT NULL,
     "description" TEXT,
     "price" DECIMAL(10,2) NOT NULL,
-    "stock" INTEGER,
+    "stock" DOUBLE PRECISION,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "organizationId" TEXT NOT NULL,
@@ -170,11 +173,13 @@ CREATE TABLE "public"."inventory_lots" (
     "id" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
+    "batchNumber" TEXT,
     "costPrice" DECIMAL(10,2) NOT NULL,
-    "quantity" INTEGER NOT NULL,
-    "remainingQuantity" INTEGER NOT NULL,
+    "quantity" DOUBLE PRECISION NOT NULL,
+    "remainingQuantity" DOUBLE PRECISION NOT NULL,
     "sourceType" TEXT NOT NULL,
     "sourceId" TEXT NOT NULL,
+    "notes" TEXT,
     "receivedDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -187,7 +192,7 @@ CREATE TABLE "public"."StockMovement" (
     "id" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
     "type" TEXT NOT NULL,
-    "quantity" INTEGER NOT NULL,
+    "quantity" DOUBLE PRECISION NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "organizationId" TEXT NOT NULL,
 
@@ -197,7 +202,7 @@ CREATE TABLE "public"."StockMovement" (
 -- CreateTable
 CREATE TABLE "public"."Sale" (
     "id" TEXT NOT NULL,
-    "orderNumber" TEXT NOT NULL,
+    "orderNumber" INTEGER NOT NULL,
     "totalAmount" DECIMAL(10,2) NOT NULL,
     "feeAmount" DECIMAL(10,2),
     "netAmount" DECIMAL(10,2),
@@ -236,7 +241,7 @@ CREATE TABLE "public"."SaleItem" (
     "id" TEXT NOT NULL,
     "saleId" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
-    "quantity" INTEGER NOT NULL,
+    "quantity" DOUBLE PRECISION NOT NULL,
     "price" DECIMAL(10,2) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -496,7 +501,7 @@ CREATE TABLE "public"."recuperacoes" (
 CREATE TABLE "public"."analises_quimicas" (
     "id" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
-    "clienteId" TEXT NOT NULL,
+    "clienteId" TEXT,
     "numeroAnalise" TEXT NOT NULL,
     "dataEntrada" TIMESTAMP(3) NOT NULL,
     "descricaoMaterial" TEXT NOT NULL,
@@ -560,7 +565,7 @@ CREATE TABLE "public"."purchase_order_items" (
     "id" TEXT NOT NULL,
     "purchaseOrderId" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
-    "quantity" INTEGER NOT NULL,
+    "quantity" DOUBLE PRECISION NOT NULL,
     "price" DECIMAL(10,2) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -591,27 +596,28 @@ CREATE TABLE "public"."recovery_orders" (
 );
 
 -- CreateTable
-CREATE TABLE "public"."ContaMetal" (
+CREATE TABLE "public"."metal_accounts" (
     "id" TEXT NOT NULL,
+    "personId" TEXT NOT NULL,
+    "type" "public"."TipoMetal" NOT NULL,
     "organizationId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "metalType" "public"."TipoMetal" NOT NULL,
-    "dataCriacao" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "dataAtualizacao" TIMESTAMP(3) NOT NULL,
-    "type" "public"."ContaMetalType" NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "ContaMetal_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "metal_accounts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "public"."metal_account_entries" (
     "id" TEXT NOT NULL,
-    "contaMetalId" TEXT NOT NULL,
-    "tipo" "public"."TipoTransacaoPrisma" NOT NULL,
-    "valor" DECIMAL(10,4) NOT NULL,
-    "data" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "relatedTransactionId" TEXT,
-    "description" TEXT,
+    "metalAccountId" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "description" TEXT NOT NULL,
+    "grams" DOUBLE PRECISION NOT NULL,
+    "type" TEXT NOT NULL,
+    "sourceId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "metal_account_entries_pkey" PRIMARY KEY ("id")
 );
@@ -638,6 +644,7 @@ CREATE TABLE "public"."labor_cost_table_entries" (
     "minGrams" DOUBLE PRECISION NOT NULL,
     "maxGrams" DOUBLE PRECISION,
     "goldGramsCharged" DOUBLE PRECISION NOT NULL,
+    "commissionPercentage" DECIMAL(5,2),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -661,18 +668,15 @@ CREATE TABLE "public"."operational_costs" (
 -- CreateTable
 CREATE TABLE "public"."chemical_reactions" (
     "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "auUsedGrams" DOUBLE PRECISION NOT NULL,
+    "notes" TEXT,
+    "outputProductGrams" DOUBLE PRECISION NOT NULL,
+    "status" "public"."ChemicalReactionStatusPrisma" NOT NULL DEFAULT 'STARTED',
+    "reactionDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "notes" TEXT,
-    "inputBasketLeftoverGrams" DOUBLE PRECISION,
-    "inputDistillateLeftoverGrams" DOUBLE PRECISION,
-    "inputGoldGrams" DOUBLE PRECISION NOT NULL,
-    "inputRawMaterialGrams" DOUBLE PRECISION NOT NULL,
-    "organizationId" TEXT NOT NULL,
-    "outputBasketLeftoverGrams" DOUBLE PRECISION,
-    "outputDistillateLeftoverGrams" DOUBLE PRECISION,
-    "outputProductGrams" DOUBLE PRECISION NOT NULL,
-    "reactionDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "productionBatchId" TEXT,
 
     CONSTRAINT "chemical_reactions_pkey" PRIMARY KEY ("id")
 );
@@ -694,6 +698,17 @@ CREATE TABLE "public"."pure_metal_lots" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "pure_metal_lots_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."production_batch_counters" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "lastBatchNumber" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "production_batch_counters_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -727,6 +742,9 @@ CREATE UNIQUE INDEX "Product_externalId_key" ON "public"."Product"("externalId")
 
 -- CreateIndex
 CREATE UNIQUE INDEX "product_groups_organizationId_name_key" ON "public"."product_groups"("organizationId", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "inventory_lots_batchNumber_key" ON "public"."inventory_lots"("batchNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Sale_orderNumber_key" ON "public"."Sale"("orderNumber");
@@ -792,10 +810,10 @@ CREATE UNIQUE INDEX "purchase_orders_orderNumber_key" ON "public"."purchase_orde
 CREATE UNIQUE INDEX "recovery_orders_residueAnalysisId_key" ON "public"."recovery_orders"("residueAnalysisId");
 
 -- CreateIndex
-CREATE INDEX "ContaMetal_organizationId_idx" ON "public"."ContaMetal"("organizationId");
+CREATE INDEX "metal_accounts_organizationId_idx" ON "public"."metal_accounts"("organizationId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ContaMetal_organizationId_name_metalType_type_key" ON "public"."ContaMetal"("organizationId", "name", "metalType", "type");
+CREATE UNIQUE INDEX "metal_accounts_organizationId_personId_type_key" ON "public"."metal_accounts"("organizationId", "personId", "type");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "quotations_organizationId_metal_quotation_date_tipoPagament_key" ON "public"."quotations"("organizationId", "metal", "quotation_date", "tipoPagamento");
@@ -805,6 +823,12 @@ CREATE UNIQUE INDEX "labor_cost_table_entries_organizationId_minGrams_key" ON "p
 
 -- CreateIndex
 CREATE UNIQUE INDEX "operational_costs_organizationId_name_key" ON "public"."operational_costs"("organizationId", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "chemical_reactions_productionBatchId_key" ON "public"."chemical_reactions"("productionBatchId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "production_batch_counters_organizationId_key" ON "public"."production_batch_counters"("organizationId");
 
 -- CreateIndex
 CREATE INDEX "_chemical_reactionsTopure_metal_lots_B_index" ON "public"."_chemical_reactionsTopure_metal_lots"("B");
@@ -1005,10 +1029,13 @@ ALTER TABLE "public"."recovery_orders" ADD CONSTRAINT "recovery_orders_organizat
 ALTER TABLE "public"."recovery_orders" ADD CONSTRAINT "recovery_orders_residueAnalysisId_fkey" FOREIGN KEY ("residueAnalysisId") REFERENCES "public"."analises_quimicas"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."ContaMetal" ADD CONSTRAINT "ContaMetal_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "public"."Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."metal_accounts" ADD CONSTRAINT "metal_accounts_personId_fkey" FOREIGN KEY ("personId") REFERENCES "public"."pessoas"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."metal_account_entries" ADD CONSTRAINT "metal_account_entries_contaMetalId_fkey" FOREIGN KEY ("contaMetalId") REFERENCES "public"."ContaMetal"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."metal_accounts" ADD CONSTRAINT "metal_accounts_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "public"."Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."metal_account_entries" ADD CONSTRAINT "metal_account_entries_metalAccountId_fkey" FOREIGN KEY ("metalAccountId") REFERENCES "public"."metal_accounts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."quotations" ADD CONSTRAINT "quotations_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "public"."Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -1021,6 +1048,9 @@ ALTER TABLE "public"."operational_costs" ADD CONSTRAINT "operational_costs_organ
 
 -- AddForeignKey
 ALTER TABLE "public"."chemical_reactions" ADD CONSTRAINT "chemical_reactions_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "public"."Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."chemical_reactions" ADD CONSTRAINT "chemical_reactions_productionBatchId_fkey" FOREIGN KEY ("productionBatchId") REFERENCES "public"."inventory_lots"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."pure_metal_lots" ADD CONSTRAINT "pure_metal_lots_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "public"."Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

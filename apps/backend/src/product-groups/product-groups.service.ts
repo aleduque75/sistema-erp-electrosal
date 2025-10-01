@@ -19,6 +19,15 @@ export class ProductGroupsService {
   async findAll(organizationId: string): Promise<ProductGroup[]> {
     return this.prisma.productGroup.findMany({
       where: { organizationId },
+      include: {
+        products: {
+          select: {
+            id: true,
+            name: true,
+            goldValue: true,
+          },
+        },
+      },
       orderBy: { name: 'asc' },
     });
   }

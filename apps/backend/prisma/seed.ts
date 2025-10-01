@@ -358,6 +358,10 @@ async function main() {
   // --- SEÇÃO DE LIMPEZA COMPLETA ---
   console.log('Limpando dados antigos...');
   // O Prisma não tem uma ordem de deleção garantida, então deletar em uma ordem lógica pode ajudar a evitar erros de constraint
+  await prisma.chemical_reactions.deleteMany();
+  await prisma.pure_metal_lots.deleteMany();
+  await prisma.metalAccountEntry.deleteMany();
+  await prisma.metalAccount.deleteMany();
   await prisma.creditCardTransaction.deleteMany();
   await prisma.saleInstallment.deleteMany();
   await prisma.saleItem.deleteMany();
@@ -412,42 +416,6 @@ async function main() {
 
   console.log(`Cliente interno criado: ${internalClient.id}`);
 
-  console.log('Criando contas correntes de exemplo...');
-  await prisma.contaCorrente.create({
-    data: {
-      organizationId: organization.id,
-      nome: 'Banco Principal',
-      numeroConta: '12345-6',
-      agencia: '0001',
-      initialBalanceBRL: 10000.00,
-      type: ContaCorrenteType.BANCO,
-      moeda: 'BRL',
-    },
-  });
-
-  await prisma.contaCorrente.create({
-    data: {
-      organizationId: organization.id,
-      nome: 'BSA - Fornecedor de Metal',
-      numeroConta: 'BSA-001',
-      agencia: 'METAL',
-      initialBalanceBRL: 0.00,
-      type: ContaCorrenteType.FORNECEDOR_METAL,
-      moeda: 'BRL',
-    },
-  });
-
-  await prisma.contaCorrente.create({
-    data: {
-      organizationId: organization.id,
-      nome: 'Eladio - Empréstimo',
-      numeroConta: 'EMP-ELADIO',
-      agencia: 'LOAN',
-      initialBalanceBRL: 50000.00,
-      type: ContaCorrenteType.EMPRESTIMO,
-      moeda: 'BRL',
-    },
-  });
 
   console.log('Criando o plano de contas...');
   await seedContas(organization.id, planoDeContasEstruturado);
@@ -466,6 +434,16 @@ async function main() {
   });
   console.log('Usuário administrador criado com sucesso!');
 
+  console.log('Criando o contador de lote de produção...');
+  await prisma.productionBatchCounter.upsert({
+    where: { organizationId: organization.id },
+    update: {},
+    create: {
+      organizationId: organization.id,
+      lastBatchNumber: 1194,
+    },
+  });
+  console.log('Contador de lote de produção criado com sucesso!');
 }
 
 main()

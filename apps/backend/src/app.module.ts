@@ -46,6 +46,8 @@ import { QuotationImportsModule } from './quotation-imports/quotation-imports.mo
 import { ProductGroupsModule } from './product-groups/product-groups.module';
 import { ChemicalReactionsModule } from './chemical-reactions/chemical-reactions.module';
 import { LaborCostTableEntriesModule } from './labor-cost-table-entries/labor-cost-table-entries.module';
+import { PureMetalLotsModule } from './pure-metal-lots/pure-metal-lots.module';
+import { StockModule } from './stock/stock.module';
 
 @Module({
   imports: [
@@ -93,6 +95,8 @@ import { LaborCostTableEntriesModule } from './labor-cost-table-entries/labor-co
     ProductGroupsModule,
     ChemicalReactionsModule,
     LaborCostTableEntriesModule,
+    PureMetalLotsModule,
+    StockModule,
   ],
   controllers: [AppController],
   providers: [

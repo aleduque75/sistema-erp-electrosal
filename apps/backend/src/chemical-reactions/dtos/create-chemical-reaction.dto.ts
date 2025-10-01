@@ -12,6 +12,10 @@ class SourceLotDto {
 
 export class CreateChemicalReactionDto {
   @IsString()
+  @IsNotEmpty()
+  outputProductId: string;
+
+  @IsString()
   @IsOptional()
   notes?: string;
 
@@ -19,6 +23,15 @@ export class CreateChemicalReactionDto {
   @ValidateNested({ each: true })
   @Type(() => SourceLotDto)
   sourceLots: SourceLotDto[];
+
+  @IsString()
+  @IsOptional()
+  batchNumber?: string; // Novo campo para batchNumber manual
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  leftoversUsedIds?: string[];
 
   // TODO: Adicionar outros campos do DTO conforme necessário (inputs/outputs de sobras, etc.)
 }

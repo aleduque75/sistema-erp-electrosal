@@ -118,6 +118,7 @@ export function NewSaleForm({ onSave }: any) {
         ]);
         setClients(clientsRes.data.map((c: any) => ({ id: c.id, name: c.name })));
         setProducts(productsRes.data);
+        console.log("Fetched Products:", productsRes.data);
         setContasCorrentes(contasRes.data);
         setFees(feesRes.data);
         setAbsorbCreditCardFee(orgSettingsRes.data.absorbCreditCardFee);
@@ -512,7 +513,7 @@ onChange={field.onChange}
                     <SelectTrigger><SelectValue placeholder="Selecione o lote..." /></SelectTrigger>
                     <SelectContent>
                       {selectedProduct.inventoryLots
-                        .filter(lot => lot.sourceType === 'REACTION' && lot.remainingQuantity > 0)
+                        .filter(lot => (lot.sourceType === 'REACTION' || lot.sourceType === 'MANUAL_ADJUSTMENT') && lot.remainingQuantity > 0)
                         .map(lot => (
                           <SelectItem key={lot.id} value={lot.id}>
                             Lote #{lot.id.substring(0, 8)} (Disponível: {lot.remainingQuantity})

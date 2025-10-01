@@ -167,30 +167,6 @@ export const menuConfig: NavItem[] = [
         description: "Gerencie as cotações diárias de metais.",
       },
       {
-        title: "Importar Vendas Antigas",
-        href: "/imports/sales",
-        icon: Upload, // Reutilizando o ícone de Upload
-        description: "Importe dados de vendas de sistemas legados.",
-      },
-      {
-        title: "Importar Extrato",
-        href: "/imports",
-        icon: Upload,
-        description: "Importe seu extrato bancário (OFX) para conciliação.",
-      },
-      {
-        title: "Importar PDF (Fatura)",
-        href: "/dashboard/pdf-import",
-        icon: Upload,
-        description: "Importe faturas de cartão de crédito em PDF.",
-      },
-      {
-        title: "Faturas de Cartão",
-        href: "/credit-card-bills",
-        icon: CreditCard,
-        description: "Acompanhe e pague as faturas dos seus cartões.",
-      },
-      {
         title: "Gerar Fatura Manual",
         href: "/credit-card-bills/new",
         icon: FilePlus2,

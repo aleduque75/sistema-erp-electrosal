@@ -183,20 +183,23 @@ model ProductGroup {
 }
 
 model InventoryLot {
-  id                String       @id @default(uuid())
+  id                String              @id @default(uuid())
   organizationId    String
   productId         String
-  costPrice         Decimal      @db.Decimal(10, 2)
+  batchNumber       String?             @unique
+  costPrice         Decimal             @db.Decimal(10, 2)
   quantity          Float
   remainingQuantity Float
   sourceType        String
   sourceId          String
-  receivedDate      DateTime     @default(now())
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  notes             String?
+  receivedDate      DateTime            @default(now())
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   saleItems         SaleItem[]
-  organization      Organization @relation(fields: [organizationId], references: [id])
-  product           Product      @relation(fields: [productId], references: [id])
+  organization      Organization        @relation(fields: [organizationId], references: [id])
+  product           Product             @relation(fields: [productId], references: [id])
+  reaction          chemical_reactions? @relation("ReactionToBatch")
 
   @@map("inventory_lots")
 }
@@ -236,6 +239,7 @@ model Sale {
   pessoa            Pessoa            @relation(fields: [pessoaId], references: [id])
   saleItems         SaleItem[]
   installments      SaleInstallment[]
+  pureMetalLots     pure_metal_lots[]
 }
 
 model PaymentTerm {
@@ -668,16 +672,16 @@ model MetalAccount {
 }
 
 model MetalAccountEntry {
-  id           String      @id @default(uuid())
+  id             String       @id @default(uuid())
   metalAccountId String
-  metalAccount   MetalAccount  @relation(fields: [metalAccountId], references: [id])
-  date         DateTime
-  description  String
-  grams        Float
-  type         String      // e.g., 'recovery', 'sale', 'transfer'
-  sourceId     String?     // ID of the source entity (e.g., RecoveryOrder, Sale)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  metalAccount   MetalAccount @relation(fields: [metalAccountId], references: [id])
+  date           DateTime
+  description    String
+  grams          Float
+  type           String // e.g., 'recovery', 'sale', 'transfer'
+  sourceId       String? // ID of the source entity (e.g., RecoveryOrder, Sale)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@map("metal_account_entries")
 }
@@ -699,14 +703,15 @@ model Quotation {
 }
 
 model LaborCostTableEntry {
-  id               String       @id @default(uuid())
-  organizationId   String
-  minGrams         Float
-  maxGrams         Float?
-  goldGramsCharged Float
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  organization     Organization @relation(fields: [organizationId], references: [id])
+  id                   String       @id @default(uuid())
+  organizationId       String
+  minGrams             Float
+  maxGrams             Float?
+  goldGramsCharged     Float
+  commissionPercentage Decimal?     @db.Decimal(5, 2)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  organization         Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, minGrams])
   @@map("labor_cost_table_entries")
@@ -728,21 +733,21 @@ model OperationalCost {
 }
 
 model chemical_reactions {
-  id                            String          @id
-  createdAt                     DateTime        @default(now())
-  updatedAt                     DateTime        @updatedAt
-  notes                         String?
-  inputBasketLeftoverGrams      Float?
-  inputDistillateLeftoverGrams  Float?
-  inputGoldGrams                Float
-  inputRawMaterialGrams         Float
-  organizationId                String
-  outputBasketLeftoverGrams     Float?
-  outputDistillateLeftoverGrams Float?
-  outputProductGrams            Float
-  reactionDate                  DateTime        @default(now())
-  Organization                  Organization    @relation(fields: [organizationId], references: [id])
-  lots                          pure_metal_lots[] // Relação muitos-para-muitos
+  id                 String                       @id @default(uuid())
+  organizationId     String
+  auUsedGrams        Float
+  notes              String?
+  outputProductGrams Float
+  status             ChemicalReactionStatusPrisma @default(STARTED)
+  reactionDate       DateTime                     @default(now())
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+  lots               pure_metal_lots[]            @relation
+  organization       Organization                 @relation(fields: [organizationId], references: [id])
+  productionBatchId  String?                      @unique
+  productionBatch    InventoryLot?                @relation("ReactionToBatch", fields: [productionBatchId], references: [id])
+
+  @@map("chemical_reactions")
 }
 
 model pure_metal_lots {
@@ -761,6 +766,18 @@ model pure_metal_lots {
   updatedAt          DateTime             @updatedAt
   chemical_reactions chemical_reactions[] // Relação muitos-para-muitos
   Organization       Organization         @relation(fields: [organizationId], references: [id])
+  saleId             String?
+  sale               Sale?                @relation(fields: [saleId], references: [id])
+}
+
+model ProductionBatchCounter {
+  id              String   @id @default(uuid())
+  organizationId  String   @unique
+  lastBatchNumber Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("production_batch_counters")
 }
 
 enum Role {
@@ -842,6 +859,20 @@ enum PureMetalLotStatus {
   AVAILABLE
   USED
   PARTIALLY_USED
+}
+
+enum ChemicalReactionStatusPrisma {
+  STARTED
+  PROCESSING
+  PENDING_PURITY
+  PENDING_PURITY_ADJUSTMENT
+  COMPLETED
+  CANCELED
+}
+
+enum ReactionLeftoverType {
+  BASKET
+  DISTILLATE
 }
 
 enum ContaMetalType {

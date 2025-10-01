@@ -37,6 +37,7 @@ import {
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { ContaCorrenteForm } from "./conta-corrente-form";
 import { TransacaoForm } from "./transacao-form";
+import { ContaCorrenteType } from "@/types/enums";
 
 // ✅ 2. A importação do ExtratoModal não é mais necessária aqui
 // import { ExtratoModal } from './extrato-modal';
@@ -47,6 +48,7 @@ interface ContaCorrente {
   numeroConta: string;
   agencia?: string;
   saldo: number;
+  type: ContaCorrenteType;
 }
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -194,22 +196,10 @@ export default function ContasCorrentesPage() {
         title={contaToEdit ? "Editar Conta" : "Nova Conta"}
         description="Preencha os detalhes da sua conta corrente, caixa ou carteira."
       >
-        <ContaCorrenteForm
-          conta={
-            contaToEdit
-              ? {
-                  ...contaToEdit,
-                  moeda: (contaToEdit as any).moeda || "BRL",
-                  saldoInicial:
-                    (contaToEdit as any).saldoInicial !== undefined
-                      ? (contaToEdit as any).saldoInicial
-                      : contaToEdit.saldo || 0,
-                }
-              : null
-          }
-          onSave={handleSave}
-        />
-      </ResponsiveDialog>
+                  <ContaCorrenteForm
+                    conta={contaToEdit}
+                    onSave={handleSave}
+                  />      </ResponsiveDialog>
 
       <Dialog
         open={!!contaToDelete}

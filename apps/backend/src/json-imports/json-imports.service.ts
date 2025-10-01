@@ -2,12 +2,85 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { ContaCorrenteType } from '@prisma/client';
+
+import { exec } from 'child_process';
 
 @Injectable()
 export class JsonImportsService {
   private readonly logger = new Logger(JsonImportsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  async resetAndSeed(): Promise<{ message: string }> {
+    this.logger.warn('Iniciando o processo de RESET e SEED do banco de dados...');
+
+    // 1. Limpar todas as tabelas na ordem correta para evitar erros de constraint
+    await this.prisma.chemical_reactions.deleteMany({});
+    await this.prisma.pure_metal_lots.deleteMany({});
+    await this.prisma.metalAccountEntry.deleteMany({});
+    await this.prisma.metalAccount.deleteMany({});
+    await this.prisma.creditCardTransaction.deleteMany({});
+    await this.prisma.saleInstallment.deleteMany({});
+    await this.prisma.saleItem.deleteMany({});
+    await this.prisma.purchaseOrderItem.deleteMany({});
+    await this.prisma.stockMovement.deleteMany({});
+    await this.prisma.accountPay.deleteMany({});
+    await this.prisma.accountRec.deleteMany({});
+    await this.prisma.transacao.deleteMany({});
+    await this.prisma.inventoryLot.deleteMany({});
+    await this.prisma.recuperacao.deleteMany({});
+    await this.prisma.metalCredit.deleteMany({});
+    await this.prisma.recoveryOrder.deleteMany({});
+    await this.prisma.analiseQuimica.deleteMany({});
+    await this.prisma.sale.deleteMany({});
+    await this.prisma.purchaseOrder.deleteMany({});
+    await this.prisma.creditCardBill.deleteMany({});
+    await this.prisma.creditCard.deleteMany({});
+    await this.prisma.product.deleteMany({});
+    await this.prisma.productGroup.deleteMany({});
+    await this.prisma.contaCorrente.deleteMany({});
+    await this.prisma.contaContabil.deleteMany({});
+    await this.prisma.paymentTerm.deleteMany({});
+    await this.prisma.creditCardFee.deleteMany({});
+    await this.prisma.xmlImportLog.deleteMany({});
+    await this.prisma.quotation.deleteMany({});
+    await this.prisma.section.deleteMany({});
+    await this.prisma.landingPage.deleteMany({});
+    await this.prisma.media.deleteMany({});
+    await this.prisma.userSettings.deleteMany({});
+    await this.prisma.user.deleteMany({});
+    await this.prisma.pessoa.deleteMany({});
+    await this.prisma.organization.deleteMany({});
+    this.logger.log('Todas as tabelas foram limpas.');
+
+    // 2. Executar o comando de seed do Prisma
+    return new Promise((resolve, reject) => {
+      const seedProcess = exec('pnpm prisma db seed', (error, stdout, stderr) => {
+        if (error) {
+          this.logger.error(`Falha ao executar o seed: ${error.message}`);
+          this.logger.error(`Stderr: ${stderr}`);
+          reject({ message: 'Falha ao executar o seed do banco de dados.' });
+          return;
+        }
+        this.logger.log(`Saída do Seed: ${stdout}`);
+        resolve({ message: 'Banco de dados resetado e populado com sucesso!' });
+      });
+
+      if (seedProcess.stdout) {
+        seedProcess.stdout.on('data', (data) => {
+          this.logger.log(`[SEED STDOUT]: ${data.toString()}`);
+        });
+      }
+
+      if (seedProcess.stderr) {
+        seedProcess.stderr.on('data', (data) => {
+          this.logger.error(`[SEED STDERR]: ${data.toString()}`);
+        });
+      }
+    });
+  }
+
 
   private parseDecimal(value: string): number {
     if (!value) return 0;
@@ -194,34 +267,37 @@ export class JsonImportsService {
         const nome = conta.nome.trim();
         if (!nome) continue;
 
-        // Heurística para diferenciar conta de metal e conta corrente
-        // TODO: Refinar esta lógica se necessário
-        const isMetalAccount = ['METAL', 'RÓDIO', 'PRATA', 'FENIX'].includes(nome.toUpperCase());
+        let type: ContaCorrenteType = ContaCorrenteType.BANCO;
+        const upperCaseName = nome.toUpperCase();
 
-        if (isMetalAccount) {
-          // Lógica para ContaMetal (a ser implementada)
-          // Por enquanto, vamos pular para focar nas contas correntes
-        } else {
-          await this.prisma.contaCorrente.upsert({
-            where: { 
-              organizationId_numeroConta: {
-                organizationId: organizationId,
-                numeroConta: nome, // Usando nome como número da conta
-              }
-            },
-            update: {
-              initialBalanceBRL: this.parseDecimal(conta.saldoInicial),
-            },
-            create: {
-              organizationId: organizationId,
-              nome: nome,
-              numeroConta: nome, // Usando nome como número da conta
-              agencia: 'legacy',
-              initialBalanceBRL: this.parseDecimal(conta.saldoInicial),
-              moeda: 'BRL',
-            },
-          });
+        if (upperCaseName.includes('FORNECEDOR')) {
+          type = ContaCorrenteType.FORNECEDOR_METAL;
+        } else if (upperCaseName.includes('EMPRÉSTIMO')) {
+          type = ContaCorrenteType.EMPRESTIMO;
         }
+
+        await this.prisma.contaCorrente.upsert({
+          where: { 
+            organizationId_numeroConta: {
+              organizationId: organizationId,
+              numeroConta: nome, // Usando nome como número da conta
+            }
+          },
+          update: {
+            initialBalanceBRL: this.parseDecimal(conta.saldoInicial),
+            type: type,
+          },
+          create: {
+            organizationId: organizationId,
+            nome: nome,
+            numeroConta: nome, // Usando nome como número da conta
+            agencia: 'legacy',
+            initialBalanceBRL: this.parseDecimal(conta.saldoInicial),
+            moeda: 'BRL',
+            type: type,
+          },
+        });
+        
         processedCount++;
       }
 
@@ -489,11 +565,18 @@ export class JsonImportsService {
             continue;
           }
 
+          const orderNumberInt = parseInt(pedido.numero, 10);
+          if (isNaN(orderNumberInt)) {
+            this.logger.warn(`Número do pedido \"${pedido.numero}\" não é um número válido. Pulando.`);
+            skippedCount++;
+            continue;
+          }
+
           const newSale = await this.prisma.sale.create({
             data: {
               organizationId: organizationId,
               pessoaId: pessoa.id,
-              orderNumber: pedido.numero,
+              orderNumber: orderNumberInt,
               externalId: pedido['unique id'],
               totalAmount: this.parseDecimal(pedido.valorTotal),
               feeAmount: this.parseDecimal(pedido.valorFrete),

@@ -1,23 +1,18 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
+import { QuotationsModule } from '../quotations/quotations.module';
 import { ChemicalReactionsController } from './chemical-reactions.controller';
 import { CreateChemicalReactionUseCase } from './use-cases/create-chemical-reaction.use-case';
-import { PrismaChemicalReactionRepository } from './repositories/prisma-chemical-reaction.repository';
-import { PrismaPureMetalLotRepository } from '../recovery-orders/repositories/prisma-pure-metal-lot.repository';
+import { CompleteProductionStepUseCase } from './use-cases/complete-production-step.use-case';
+import { AdjustPurityUseCase } from './use-cases/adjust-purity.use-case';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, QuotationsModule],
   controllers: [ChemicalReactionsController],
   providers: [
     CreateChemicalReactionUseCase,
-    {
-      provide: 'IChemicalReactionRepository',
-      useClass: PrismaChemicalReactionRepository,
-    },
-    {
-      provide: 'IPureMetalLotRepository',
-      useClass: PrismaPureMetalLotRepository, // Reutilizando o repositório do módulo de recovery-orders
-    },
+    CompleteProductionStepUseCase,
+    AdjustPurityUseCase,
   ],
 })
 export class ChemicalReactionsModule {}

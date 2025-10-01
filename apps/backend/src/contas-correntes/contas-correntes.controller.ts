@@ -12,10 +12,8 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ContasCorrentesService } from './contas-correntes.service';
-import {
-  CreateContaCorrenteDto,
-  UpdateContaCorrenteDto,
-} from './dtos/contas-correntes.dto';
+import { CreateContaCorrenteDto } from './dtos/create-conta-corrente.dto';
+import { UpdateContaCorrenteDto } from './dtos/update-conta-corrente.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 

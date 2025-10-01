@@ -1,9 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  CreateContaCorrenteDto,
-  UpdateContaCorrenteDto,
-} from './dtos/contas-correntes.dto';
+import { CreateContaCorrenteDto } from './dtos/create-conta-corrente.dto';
+import { UpdateContaCorrenteDto } from './dtos/update-conta-corrente.dto';
 import { ContaCorrente, Prisma } from '@prisma/client';
 
 @Injectable()

@@ -188,6 +188,23 @@ export default function ImportPage() {
     }
   };
 
+  const handleResetAndSeed = async () => {
+    if (window.confirm('TEM CERTEZA? Esta ação apagará permanentemente TODOS os dados e executará o seed novamente. Esta ação não pode ser desfeita.')) {
+      setIsJsonImporting(true);
+      toast.info("Iniciando reset e seed do banco de dados...");
+      try {
+        const response = await api.post("/json-imports/reset-and-seed");
+        toast.success(response.data.message);
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || "Falha ao resetar e popular o banco de dados."
+        );
+      } finally {
+        setIsJsonImporting(false);
+      }
+    }
+  };
+
   const handleImportQuotations = async () => {
     if (!quotationFile) {
       toast.error("Por favor, selecione o arquivo pedidoItens.json.");
@@ -548,6 +565,28 @@ export default function ImportPage() {
               {isJsonImporting
                 ? "Excluindo..."
                 : "Excluir Todas as Vendas"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Card de Reset e Seed */}
+        <Card className="w-full max-w-lg border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">Resetar e Popular Banco de Dados</CardTitle>
+            <CardDescription>
+              Apaga permanentemente <strong>TODOS</strong> os dados e executa o seed novamente. Use com cuidado.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="destructive"
+              onClick={handleResetAndSeed}
+              disabled={isJsonImporting}
+              className="w-full"
+            >
+              {isJsonImporting
+                ? "Resetando..."
+                : "Excluir e Popular Dados"}
             </Button>
           </CardContent>
         </Card>

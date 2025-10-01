@@ -172,42 +172,23 @@ export class CreateSaleUseCase {
       };
 
       if (productGroup.isReactionProductGroup) {
-        // Comissão para produtos de reação (baseada em mão de obra em ouro)
-        // Assumindo que product.goldValue existe e representa gramas de ouro por unidade
         const goldGramsSold = new Decimal(item.quantity).times(new Decimal(product.goldValue || 0));
-        let chargedGoldGrams = new Decimal(0);
+        let commissionPercentage = new Decimal(2); // Fallback de 2%
 
         const laborEntry = laborCostTable.find(entry =>
           goldGramsSold.greaterThanOrEqualTo(entry.minGrams) &&
           (entry.maxGrams === null || goldGramsSold.lessThanOrEqualTo(entry.maxGrams))
         );
 
-        if (laborEntry) {
-          chargedGoldGrams = new Decimal(laborEntry.goldGramsCharged);
-          currentItemCommissionDetails.laborCostEntry = laborEntry;
-        } else {
-          // Caso não encontre faixa, pode definir uma regra padrão ou lançar erro
-          throw new BadRequestException(`Não foi possível determinar a mão de obra para o produto de reação "${product.name}".`);
+        if (laborEntry && laborEntry.commissionPercentage) {
+          commissionPercentage = new Decimal(laborEntry.commissionPercentage);
         }
 
-        // Subtrair custos operacionais aplicáveis (ex: motorista, etc.)
-        let totalOperationalCost = new Decimal(0);
-        for (const cost of operationalCosts) {
-          if (!cost.appliesToProductGroup || cost.appliesToProductGroup === productGroup.id) {
-            if (cost.type === 'FIXED') {
-              totalOperationalCost = totalOperationalCost.plus(cost.value);
-            }
-            // TODO: Adicionar outros tipos de custo (PER_GRAM, PERCENTAGE) conforme necessário
-          }
-        }
+        const commissionInGold = goldGramsSold.times(commissionPercentage).dividedBy(100);
+        itemCommission = commissionInGold.times(goldQuote.valorVenda);
 
-        // Converter gramas de ouro cobradas para valor em BRL
-        console.log('[DEBUG CREATE_SALE] goldQuote.valorVenda antes do cálculo:', goldQuote.valorVenda);
-        const goldValueInBRL = chargedGoldGrams.times(goldQuote.valorVenda);
-        itemCommission = goldValueInBRL.minus(totalOperationalCost);
-        currentItemCommissionDetails.chargedGoldGrams = chargedGoldGrams;
-        currentItemCommissionDetails.goldValueInBRL = goldValueInBRL;
-        currentItemCommissionDetails.totalOperationalCost = totalOperationalCost;
+        currentItemCommissionDetails.commissionPercentage = commissionPercentage;
+        currentItemCommissionDetails.commissionInGold = commissionInGold;
 
       } else {
         // Comissão para produtos de revenda (baseada em porcentagem do lucro bruto)
@@ -281,6 +262,8 @@ export class CreateSaleUseCase {
 
       // 2. Deduct stock and create stock movements
       for (const item of sale.saleItems) {
+        const product = productsInDb.find((p) => p.id.toString() === item.productId);
+        const productGroup = product.productGroup;
         if (!isImport) {
           if (item.inventoryLotId) {
             // Deduct from the specific lot specified in the sale item
@@ -310,6 +293,11 @@ export class CreateSaleUseCase {
               });
             }
           }
+          // Always decrement the product's overall stock
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } },
+          });
         }
 
         // Create stock movement record
@@ -433,6 +421,7 @@ export class CreateSaleUseCase {
 
       // 4. Adicionar ao pure_metal_lots da empresa
       // Criar um novo lote ou adicionar a um lote existente (simplificado para criar novo)
+      console.log('[DEBUG CREATE_SALE] goldValue antes de criar o lote de metal puro:', goldValue);
       await tx.pure_metal_lots.create({
         data: {
           organizationId,

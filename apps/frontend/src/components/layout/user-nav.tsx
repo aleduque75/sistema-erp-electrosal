@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Settings, User, LogOut, FileText } from "lucide-react";
+import { Settings, User, LogOut, FileText, Package, Upload } from "lucide-react";
 
 export function UserNav() {
   const { user, logout } = useAuth();
@@ -72,6 +72,36 @@ export function UserNav() {
             <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" /> {/* Reutilizando Settings, pode mudar para um ícone mais específico se tiver */} 
               <span>Editar Landing Page</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/estoque/adjust" passHref>
+            <DropdownMenuItem>
+              <Package className="mr-2 h-4 w-4" />
+              <span>Ajuste Manual de Estoque</span>
+            </DropdownMenuItem>
+          </Link>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">Importações</p>
+            </div>
+          </DropdownMenuLabel>
+          <Link href="/imports/sales" passHref>
+            <DropdownMenuItem>
+              <Upload className="mr-2 h-4 w-4" />
+              <span>Importar Vendas Antigas</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/imports" passHref>
+            <DropdownMenuItem>
+              <Upload className="mr-2 h-4 w-4" />
+              <span>Importar Extrato</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/dashboard/pdf-import" passHref>
+            <DropdownMenuItem>
+              <Upload className="mr-2 h-4 w-4" />
+              <span>Importar PDF (Fatura)</span>
             </DropdownMenuItem>
           </Link>
         </DropdownMenuGroup>
