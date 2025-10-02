@@ -16,6 +16,7 @@ import { CreateContaCorrenteDto } from './dtos/create-conta-corrente.dto';
 import { UpdateContaCorrenteDto } from './dtos/update-conta-corrente.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { ContaCorrenteType } from '@prisma/client'; // Adicionado
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('contas-correntes')
@@ -32,8 +33,11 @@ export class ContasCorrentesController {
   }
 
   @Get()
-  findAll(@CurrentUser('orgId') organizationId: string) {
-    return this.service.findAll(organizationId);
+  findAll(
+    @CurrentUser('orgId') organizationId: string,
+    @Query('type') type?: ContaCorrenteType, // Adicionado
+  ) {
+    return this.service.findAll(organizationId, type);
   }
 
   @Get(':id/extrato')

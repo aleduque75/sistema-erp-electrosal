@@ -27,6 +27,13 @@ export class PureMetalLotsService {
 
     return this.prisma.pure_metal_lots.findMany({
       where,
+      include: {
+        sale: {
+          include: {
+            pessoa: true, // Inclui os dados da pessoa (cliente)
+          },
+        },
+      },
       orderBy: { entryDate: 'asc' },
     });
   }

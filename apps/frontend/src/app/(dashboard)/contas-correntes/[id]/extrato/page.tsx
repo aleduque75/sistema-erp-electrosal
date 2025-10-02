@@ -18,13 +18,14 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, PlusCircle, ArrowRightLeft, MoreHorizontal } from "lucide-react"; // Adicionado ArrowRightLeft
+import { ArrowLeft, PlusCircle, ArrowRightLeft, MoreHorizontal } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -43,10 +44,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TransacaoForm } from "../../transacao-form";
-import { TransferModal } from "@/components/transfer-modal";
+// import { TransferModal } from "@/components/transfer-modal"; // Removido
 import { Combobox } from "@/components/ui/combobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatInTimeZone } from 'date-fns-tz';
+import { ContaCorrenteType } from '@prisma/client'; // Adicionado
+import { TransferFromSupplierAccountForm } from '../../components/transfer-from-supplier-account-form'; // Adicionado
 
 const formatCurrency = (value?: number | null) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -70,6 +73,7 @@ interface ContaCorrenteExtrato {
   moeda: string;
   initialBalanceBRL: number; // Updated
   initialBalanceGold: number; // Added
+  type: ContaCorrenteType; // Adicionado
 }
 
 interface TransacaoExtrato {
@@ -107,11 +111,10 @@ export default function ExtratoPage() {
 
   const [currencyView, setCurrencyView] = useState<"BRL" | "GOLD">("BRL");
 
-  // ✅ Estado para controlar o modal de novo lançamento
   const [isLancamentoModalOpen, setIsLancamentoModalOpen] = useState(false);
-const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo estado para o modal de transferência
-  const [contasContabeis, setContasContabeis] = useState<any[]>([]); // Novo estado para contas contábeis
-  const [editingTransacaoId, setEditingTransacaoId] = useState<string | null>(null); // Novo estado para edição inline
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo estado para o modal de transferência
+  const [contasContabeis, setContasContabeis] = useState<any[]>([]);
+  const [editingTransacaoId, setEditingTransacaoId] = useState<string | null>(null);
   const [editingTransacao, setEditingTransacao] = useState<TransacaoExtrato | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingTransacaoId, setDeletingTransacaoId] = useState<string | null>(null);
@@ -166,14 +169,14 @@ const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo e
   useEffect(() => {
     if (id) {
       fetchExtrato();
-      fetchContasContabeis(); // Buscar contas contábeis ao montar o componente
+      fetchContasContabeis();
     }
   }, [id, startDate, endDate]);
 
   const handleSaveLancamento = () => {
-    setIsLancamentoModalOpen(false); // Fecha o modal
-    setEditingTransacao(null); // Limpa a transação em edição
-    fetchExtrato(); // Atualiza os dados do extrato
+    setIsLancamentoModalOpen(false);
+    setEditingTransacao(null);
+    fetchExtrato();
   };
 
   const handleSaveTransfer = () => {
@@ -185,8 +188,8 @@ const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo e
     try {
       await api.patch(`/transacoes/${transacaoId}`, { contaContabilId: newContaContabilId });
       toast.success("Conta contábil atualizada com sucesso!");
-      setEditingTransacaoId(null); // Sai do modo de edição
-      fetchExtrato(); // Recarrega o extrato para refletir a mudança
+      setEditingTransacaoId(null);
+      fetchExtrato();
     } catch (err) {
       toast.error("Falha ao atualizar conta contábil.");
     }
@@ -257,7 +260,6 @@ const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo e
   }, [displayTransacoes, descriptionFilter]);
 
   if (isFetching && !extrato) {
-    // Mostra o carregando inicial
     return <p className="text-center p-10">Buscando extrato...</p>;
   }
 
@@ -296,9 +298,11 @@ const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo e
                 <Button onClick={() => setIsLancamentoModalOpen(true)}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Novo Lançamento
                 </Button>
-                <Button variant="outline" onClick={() => setIsTransferModalOpen(true)}> {/* Novo botão */}
-                  <ArrowRightLeft className="mr-2 h-4 w-4" /> Nova Transferência
-                </Button>
+                {extrato?.contaCorrente.type === ContaCorrenteType.FORNECEDOR_METAL && (
+                  <Button variant="outline" onClick={() => setIsTransferModalOpen(true)}> {/* Novo botão */}
+                    <ArrowRightLeft className="mr-2 h-4 w-4" /> Transferir Ouro
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -389,7 +393,7 @@ const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo e
                     </TableHead>
                     <TableHead>Data/Hora</TableHead>
                     <TableHead>Descrição</TableHead>
-                    <TableHead>Conta Contábil</TableHead> {/* Nova coluna */}
+                    <TableHead>Conta Contábil</TableHead>
                     <TableHead className="text-right">Valor ({currencyView === 'BRL' ? 'R$' : 'Au'})</TableHead>
                     <TableHead className="w-[50px]">Ações</TableHead>
                   </TableRow>
@@ -418,7 +422,7 @@ const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo e
                         <TableCell>{t.descricao}</TableCell>
                         <TableCell
                           onClick={(e) => {
-                            e.stopPropagation(); // Evita que o handleToggleReconciled seja chamado
+                            e.stopPropagation();
                             setEditingTransacaoId(t.id);
                           }}
                           className="cursor-pointer hover:bg-muted/50"
@@ -483,7 +487,7 @@ const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo e
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center h-24"> {/* Colspan ajustado */}
+                      <TableCell colSpan={6} className="text-center h-24">
                         Nenhuma transação no período selecionado.
                       </TableCell>
                     </TableRow>
@@ -499,7 +503,6 @@ const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo e
         </CardContent>
       </Card>
 
-      {/* ✅ Modal para o Novo Lançamento / Edição */}
       <Dialog
         open={isLancamentoModalOpen}
         onOpenChange={(isOpen) => {
@@ -524,7 +527,20 @@ const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo e
         </DialogContent>
       </Dialog>
 
-      {/* ✅ Modal de Confirmação de Exclusão */}
+      <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}> {/* Novo Dialog para transferência */}
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transferir Ouro para Lotes de Metal Puro</DialogTitle>
+            <DialogDescription>Realize a transferência de ouro desta conta para o estoque de lotes de metal puro.</DialogDescription>
+          </DialogHeader>
+          <TransferFromSupplierAccountForm
+            supplierMetalAccountId={id}
+            onSave={handleSaveTransfer}
+            onClose={() => setIsTransferModalOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -539,14 +555,6 @@ const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo e
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <TransferModal
-        isOpen={isTransferModalOpen}
-        onClose={() => setIsTransferModalOpen(false)}
-        onSave={handleSaveTransfer}
-        contaCorrenteId={id}
-        moeda={extrato?.contaCorrente.moeda}
-      />
     </>
   );
 }

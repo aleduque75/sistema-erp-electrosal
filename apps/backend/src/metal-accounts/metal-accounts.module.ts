@@ -8,8 +8,11 @@ import { FindAllMetalAccountsUseCase } from './use-cases/find-all-metal-accounts
 import { PrismaMetalAccountEntryRepository } from './repositories/prisma-metal-account-entry.repository';
 import { CreateMetalAccountEntryUseCase } from './use-cases/create-metal-account-entry.use-case';
 import { FindAllMetalAccountEntriesUseCase } from './use-cases/find-all-metal-account-entries.use-case';
+import { TransferFromSupplierAccountToPureMetalLotsUseCase } from './use-cases/transfer-from-supplier-account-to-pure-metal-lots.use-case';
+import { QuotationsModule } from '../quotations/quotations.module'; // Adicionado
 
 @Module({
+  imports: [QuotationsModule], // Adicionado
   controllers: [MetalAccountsController],
   providers: [
     PrismaService,
@@ -20,6 +23,7 @@ import { FindAllMetalAccountEntriesUseCase } from './use-cases/find-all-metal-ac
     FindAllMetalAccountsUseCase,
     CreateMetalAccountEntryUseCase,
     FindAllMetalAccountEntriesUseCase,
+    TransferFromSupplierAccountToPureMetalLotsUseCase,
   ],
   exports: [
     { provide: 'IMetalAccountRepository', useClass: PrismaMetalAccountRepository },

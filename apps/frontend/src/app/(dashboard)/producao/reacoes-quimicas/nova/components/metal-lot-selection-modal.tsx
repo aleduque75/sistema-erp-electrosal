@@ -30,6 +30,11 @@ interface MetalLot {
   sourceType: string;
   sourceId: string;
   notes?: string;
+  sale?: { // Adicionado
+    pessoa: { // Adicionado
+      name: string; // Adicionado
+    };
+  };
 }
 
 interface MetalLotSelectionModalProps {
@@ -64,7 +69,8 @@ export function MetalLotSelectionModal({
       (lot) =>
         lot.id.includes(searchTerm) ||
         lot.notes?.includes(searchTerm) ||
-        lot.sourceType.includes(searchTerm)
+        lot.sourceType.includes(searchTerm) ||
+        (lot.sourceType === 'SALE_PAYMENT' && lot.sale?.pessoa.name?.includes(searchTerm))
     );
     console.log("Filtered pure_metal_lots:", filtered);
     return filtered;
@@ -130,6 +136,7 @@ export function MetalLotSelectionModal({
                 <TableHead>ID do Lote</TableHead>
                 <TableHead>Notas</TableHead>
                 <TableHead>Tipo</TableHead>
+                <TableHead>Cliente</TableHead> {/* Nova coluna */}
                 <TableHead className="text-right">Disponível (g)</TableHead>
                 <TableHead className="text-right w-[150px]">Quantidade a Usar (g)</TableHead>
               </TableRow>
@@ -137,13 +144,13 @@ export function MetalLotSelectionModal({
             <TableBody>
               {isLoadingMetalLots ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     Carregando lotes...
                   </TableCell>
                 </TableRow>
               ) : filteredLots.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     Nenhum lote encontrado.
                   </TableCell>
                 </TableRow>
@@ -162,6 +169,7 @@ export function MetalLotSelectionModal({
                       <TableCell>{lot.id.substring(0, 8)}</TableCell>
                       <TableCell>{lot.notes || "-"}</TableCell>
                       <TableCell>{lot.sourceType}</TableCell>
+                      <TableCell>{lot.sourceType === 'SALE_PAYMENT' ? lot.sale?.pessoa.name || '-' : '-'}</TableCell> {/* Exibe o cliente */}
                       <TableCell className="text-right">
                         {lot.remainingGrams.toFixed(3)}
                       </TableCell>

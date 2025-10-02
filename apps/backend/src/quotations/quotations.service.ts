@@ -83,13 +83,16 @@ export class QuotationsService {
     });
   }
 
-  // New method to find the latest quotation
-  async findLatest(metal: TipoMetal, organizationId: string) {
+  async findLatest(metal: TipoMetal, organizationId: string, date?: Date) {
+    const where: Prisma.QuotationWhereInput = {
+      metal,
+      organizationId,
+    };
+    if (date) {
+      where.date = { lte: date }; // Latest on or before the provided date
+    }
     return this.prisma.quotation.findFirst({
-      where: {
-        metal,
-        organizationId,
-      },
+      where,
       orderBy: {
         date: 'desc',
       },

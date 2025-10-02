@@ -8,6 +8,8 @@ import { MetalAccountResponseDto } from './dtos/metal-account.response.dto';
 import { CreateMetalAccountEntryUseCase } from './use-cases/create-metal-account-entry.use-case';
 import { CreateMetalAccountEntryDto } from './dtos/create-metal-account-entry.dto';
 import { FindAllMetalAccountEntriesUseCase } from './use-cases/find-all-metal-account-entries.use-case';
+import { TransferFromSupplierAccountToPureMetalLotsUseCase } from './use-cases/transfer-from-supplier-account-to-pure-metal-lots.use-case'; // Adicionado
+import { TransferFromSupplierAccountDto } from './dtos/transfer-from-supplier-account.dto'; // Adicionado
 
 @UseGuards(JwtAuthGuard)
 @Controller('metal-accounts')
@@ -18,6 +20,7 @@ export class MetalAccountsController {
     private readonly findAllMetalAccountsUseCase: FindAllMetalAccountsUseCase,
     private readonly createMetalAccountEntryUseCase: CreateMetalAccountEntryUseCase,
     private readonly findAllMetalAccountEntriesUseCase: FindAllMetalAccountEntriesUseCase,
+    private readonly transferFromSupplierAccountToPureMetalLotsUseCase: TransferFromSupplierAccountToPureMetalLotsUseCase, // Adicionado
   ) {}
 
   @Post()
@@ -52,5 +55,15 @@ export class MetalAccountsController {
   @Get(':id/entries')
   async getEntries(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.findAllMetalAccountEntriesUseCase.execute(id);
+  }
+
+  @Post('transfer-from-supplier-account-to-pure-metal-lots') // Adicionado
+  async transferFromSupplierAccountToPureMetalLots(
+    @Body() dto: TransferFromSupplierAccountDto,
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    const command = { organizationId, dto };
+    return this.transferFromSupplierAccountToPureMetalLotsUseCase.execute(command);
   }
 }

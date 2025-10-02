@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContaCorrenteDto } from './dtos/create-conta-corrente.dto';
 import { UpdateContaCorrenteDto } from './dtos/update-conta-corrente.dto';
-import { ContaCorrente, Prisma } from '@prisma/client';
+import { ContaCorrente, Prisma, ContaCorrenteType } from '@prisma/client'; // Adicionado ContaCorrenteType
 
 @Injectable()
 export class ContasCorrentesService {
@@ -22,13 +22,18 @@ export class ContasCorrentesService {
         initialBalanceBRL: data.initialBalanceBRL || 0,
         initialBalanceGold: data.initialBalanceGold || 0,
         organizationId: organizationId,
+        type: data.type, // Adicionado
       },
     });
   }
 
-  async findAll(organizationId: string): Promise<ContaCorrente[]> {
+  async findAll(organizationId: string, type?: ContaCorrenteType): Promise<ContaCorrente[]> {
+    const where: Prisma.ContaCorrenteWhereInput = { organizationId, deletedAt: null };
+    if (type) {
+      where.type = type;
+    }
     return this.prisma.contaCorrente.findMany({
-      where: { organizationId, deletedAt: null },
+      where,
       orderBy: { nome: 'asc' },
     });
   }

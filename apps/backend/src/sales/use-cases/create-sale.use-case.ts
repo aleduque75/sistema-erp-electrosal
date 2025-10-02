@@ -432,6 +432,7 @@ export class CreateSaleUseCase {
           remainingGrams: goldValue.toNumber(),
           purity: 1, // Assumimos pureza 100% para pagamento em metal
           notes: `Metal recebido como pagamento da Venda #${orderNumber}`,
+          saleId: id, // Adiciona o saleId aqui
         },
       });
 
