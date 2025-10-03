@@ -30,44 +30,56 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { TipoMetal } from "@sistema-erp-electrosal/core"; // Updated import
+import { TipoMetal } from "@sistema-erp-electrosal/core"; 
 
-interface QuotationFormProps { // Renamed interface
+// 1. Array de Valores Literais (para o Zod)
+const METAL_TYPES = ['AU', 'AG', 'RH'] as const;
+
+// 2. CORREÇÃO DE TIPAGEM: Usamos a sintaxe `typeof` para referenciar o tipo do Enum na interface
+interface QuotationFormProps { 
   onSave: () => void;
   initialData?: {
-    metal: TipoMetal;
-    date: Date; // Renamed from data
-    buyPrice: number; // Renamed from valorCompra
-    sellPrice: number; // Renamed from valorVenda
+    metal: (typeof TipoMetal)[keyof typeof TipoMetal]; 
+    date: Date;
+    buyPrice: number; 
+    sellPrice: number; 
     tipoPagamento?: string;
   };
 }
 
 const formSchema = z.object({
-  metal: z.nativeEnum(TipoMetal, { required_error: "O metal é obrigatório." }),
-  date: z.date({ required_error: "A data é obrigatória." }), // Renamed from data
-  buyPrice: z.coerce.number().min(0.01, "O valor de compra deve ser maior que zero."), // Renamed from valorCompra
-  sellPrice: z.coerce.number().min(0.01, "O valor de venda deve ser maior que zero."), // Renamed from valorVenda
+  // 3. CORREÇÃO ZOD: Usando z.enum com o array literal
+  metal: z.enum(METAL_TYPES, { required_error: "O metal é obrigatório." }),
+  date: z.date({ required_error: "A data é obrigatória." }),
+  buyPrice: z.coerce.number().min(0.01, "O valor de compra deve ser maior que zero."),
+  sellPrice: z.coerce.number().min(0.01, "O valor de venda deve ser maior que zero."),
   tipoPagamento: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function QuotationForm({ onSave, initialData }: QuotationFormProps) { // Renamed function and props type
+export function QuotationForm({ onSave, initialData }: QuotationFormProps) { 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
-      metal: TipoMetal.AU,
-      date: new Date(), // Renamed from data
-      buyPrice: 0, // Renamed from valorCompra
-      sellPrice: 0, // Renamed from valorVenda
+      // 4. CORREÇÃO DEFAULT VALUE: Usando a string literal 'AU'
+      metal: 'AU', 
+      date: new Date(), 
+      buyPrice: 0, 
+      sellPrice: 0, 
       tipoPagamento: "",
     },
   });
 
   const onSubmit = async (data: FormValues) => {
     try {
-      await api.post("/quotations", data); // Updated API call
+      // Ajustar o formato da data para string ISO antes de enviar ao backend
+      const dataToSend = {
+          ...data,
+          date: data.date.toISOString(), 
+      };
+
+      await api.post("/quotations", dataToSend);
       toast.success("Cotação salva com sucesso!");
       onSave();
     } catch (err: any) {
@@ -91,7 +103,8 @@ export function QuotationForm({ onSave, initialData }: QuotationFormProps) { // 
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {Object.values(TipoMetal).map((metal) => (
+                  {/* Mapeando o array de strings literais */}
+                  {METAL_TYPES.map((metal) => (
                     <SelectItem key={metal} value={metal}>
                       {metal}
                     </SelectItem>
@@ -105,7 +118,7 @@ export function QuotationForm({ onSave, initialData }: QuotationFormProps) { // 
 
         <FormField
           control={form.control}
-          name="date" // Renamed from data
+          name="date"
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Data</FormLabel>
@@ -144,12 +157,18 @@ export function QuotationForm({ onSave, initialData }: QuotationFormProps) { // 
 
         <FormField
           control={form.control}
-          name="buyPrice" // Renamed from valorCompra
+          name="buyPrice"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Valor de Compra (R$)</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  placeholder="0.00" 
+                  {...field}
+                  onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -158,12 +177,18 @@ export function QuotationForm({ onSave, initialData }: QuotationFormProps) { // 
 
         <FormField
           control={form.control}
-          name="sellPrice" // Renamed from valorVenda
+          name="sellPrice"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Valor de Venda (R$)</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  placeholder="0.00" 
+                  {...field} 
+                  onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

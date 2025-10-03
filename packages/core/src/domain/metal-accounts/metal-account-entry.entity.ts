@@ -1,13 +1,13 @@
 import { Entity } from '../../_shared/domain/entity';
 import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
-import { TipoTransacaoPrisma } from '../enums/tipo-transacao.enum';
+// import { TipoTransacaoPrisma } from '../enums/tipo-transacao.enum'; // Remover ou ajustar se não for mais usado
 
 export interface MetalAccountEntryProps {
-  contaMetalId: UniqueEntityID;
-  tipo: TipoTransacaoPrisma;
-  valor: number;
-  data: Date;
-  relatedTransactionId?: string;
+  metalAccountId: UniqueEntityID; // Renomeado de contaMetalId
+  type: string; // Renomeado de tipo, e tipo ajustado para string (e.g., 'recovery', 'sale', 'transfer')
+  grams: number; // Renomeado de valor
+  date: Date;
+  sourceId?: string; // Renomeado de relatedTransactionId
   description?: string;
 }
 
@@ -20,10 +20,10 @@ export class MetalAccountEntry extends Entity<MetalAccountEntryProps> {
     return new MetalAccountEntry(props, id);
   }
 
-  get contaMetalId(): UniqueEntityID { return this.props.contaMetalId; }
-  get tipo(): TipoTransacaoPrisma { return this.props.tipo; }
-  get valor(): number { return this.props.valor; }
-  get data(): Date { return this.props.data; }
-  get relatedTransactionId(): string | undefined { return this.props.relatedTransactionId; }
+  get metalAccountId(): UniqueEntityID { return this.props.metalAccountId; } // Renomeado
+  get type(): string { return this.props.type; } // Renomeado
+  get grams(): number { return this.props.grams; } // Renomeado
+  get date(): Date { return this.props.date; }
+  get sourceId(): string | undefined { return this.props.sourceId; } // Renomeado
   get description(): string | undefined { return this.props.description; }
 }

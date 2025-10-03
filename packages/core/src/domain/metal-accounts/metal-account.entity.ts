@@ -49,4 +49,20 @@ export class MetalAccount extends AggregateRoot<MetalAccountProps> {
     Object.assign(this.props, dto);
     this.props.updatedAt = new Date();
   }
+
+  public credit(entry: MetalAccountEntry) {
+    this.props.entries?.push(entry);
+    this.props.updatedAt = new Date();
+  }
+
+  public debit(entry: MetalAccountEntry) {
+    // Antes de debitar, seria ideal ter uma lógica para verificar o saldo
+    // Por simplicidade, vamos apenas adicionar a entrada negativa
+    this.props.entries?.push(entry);
+    this.props.updatedAt = new Date();
+  }
+
+  public getBalance(): number {
+    return this.props.entries?.reduce((sum, entry) => sum + entry.grams, 0) || 0;
+  }
 }

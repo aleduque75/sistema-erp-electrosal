@@ -10,14 +10,18 @@ import { CreateMetalAccountEntryUseCase } from './use-cases/create-metal-account
 import { FindAllMetalAccountEntriesUseCase } from './use-cases/find-all-metal-account-entries.use-case';
 import { TransferFromSupplierAccountToPureMetalLotsUseCase } from './use-cases/transfer-from-supplier-account-to-pure-metal-lots.use-case';
 import { QuotationsModule } from '../quotations/quotations.module'; // Adicionado
+// NOTE: Você precisa ter certeza de que IMetalAccountRepository e IMetalAccountEntryRepository
+// estão disponíveis no pacote @sistema-erp-electrosal/core
 
 @Module({
-  imports: [QuotationsModule], // Adicionado
+  imports: [QuotationsModule],
   controllers: [MetalAccountsController],
   providers: [
     PrismaService,
+    // Provedores de Repositório (Necessário para injeção por token)
     { provide: 'IMetalAccountRepository', useClass: PrismaMetalAccountRepository },
     { provide: 'IMetalAccountEntryRepository', useClass: PrismaMetalAccountEntryRepository },
+    // Use Cases (Consumidores)
     CreateMetalAccountUseCase,
     FindMetalAccountByIdUseCase,
     FindAllMetalAccountsUseCase,
@@ -26,8 +30,10 @@ import { QuotationsModule } from '../quotations/quotations.module'; // Adicionad
     TransferFromSupplierAccountToPureMetalLotsUseCase,
   ],
   exports: [
+    // Exportamos os tokens de repositório para que outros módulos os consumam
     { provide: 'IMetalAccountRepository', useClass: PrismaMetalAccountRepository },
     { provide: 'IMetalAccountEntryRepository', useClass: PrismaMetalAccountEntryRepository },
+    // Exportamos os Use Cases/Services que podem ser injetados diretamente
     CreateMetalAccountEntryUseCase,
     FindAllMetalAccountsUseCase,
     FindAllMetalAccountEntriesUseCase,

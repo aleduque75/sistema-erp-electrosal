@@ -23,9 +23,9 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-import { AnaliseQuimica } from '@/types/analise-quimica';
+import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
+import { AnaliseQuimica } from "../../types/analise-quimica";
 import { getAnalisesQuimicas } from "@/services/analisesApi";
-import { StatusAnaliseQuimica } from '@/types/analise-quimica';
 import { createRecoveryOrder } from "@/services/recoveryOrdersApi";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -59,15 +59,15 @@ export function CreateRecoveryOrderModal({
   });
 
   useEffect(() => {
-    const fetchAvailableAnalyses = async () => {
-      setIsLoadingAnalyses(true);
-      try {
-        const fetchedAnalyses = await getAnalisesQuimicas();
-        const filtered = fetchedAnalyses.filter(
-          (analise) => analise.status === StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO
-        );
-        setAvailableAnalyses(filtered);
-      } catch (error) {
+      const fetchAvailableAnalyses = async () => {
+    try {
+      const fetchedAnalyses = await getAnalisesQuimicas();
+      const filtered = fetchedAnalyses.filter(
+        // CORREÇÃO: Usando a string literal
+        (analise) => analise.status === 'APROVADO_PARA_RECUPERACAO' 
+      );
+      setAvailableAnalyses(filtered);
+    } catch (error) {
         console.error("Erro ao buscar análises disponíveis:", error);
         toast.error("Erro ao carregar análises disponíveis.");
       } finally {

@@ -1,6 +1,6 @@
 import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
 import { AggregateRoot } from "../../_shared/domain/aggregate-root";
-import { TipoMetal } from './tipo-metal';
+import { TipoMetal } from '../enums/tipo-metal.enum';
 
 export interface QuotationProps {
   organizationId: string;

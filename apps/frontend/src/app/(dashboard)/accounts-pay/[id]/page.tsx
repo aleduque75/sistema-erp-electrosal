@@ -17,7 +17,8 @@ interface AccountPay {
 
 export default function AccountPayDetailPage() {
   const { user, loading } = useAuth();
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id;
   const [account, setAccount] = useState<AccountPay | null>(null);
   const [error, setError] = useState<string | null>(null);
 

@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ContaCorrenteType } from "@prisma/client";
+import { ContaCorrenteType } from "@sistema-erp-electrosal/core";
 
 const formSchema = z.object({
   supplierMetalAccountId: z.string().min(1, "Selecione a conta do fornecedor."),
@@ -45,7 +45,7 @@ type TransferFormValues = z.infer<typeof formSchema>;
 interface ContaCorrente {
   id: string;
   nome: string;
-  type: ContaCorrenteType;
+  type: typeof ContaCorrenteType;
   initialBalanceGold: number;
 }
 

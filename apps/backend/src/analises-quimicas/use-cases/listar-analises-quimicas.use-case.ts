@@ -3,7 +3,7 @@ import {
   FiltrosAnaliseQuimica,
   IAnaliseQuimicaRepository,
 } from '@sistema-erp-electrosal/core';
-import { AnaliseQuimicaResponseDto } from '../dtos/analise-quimica.response.dto';
+import { AnaliseQuimicaResponseDto } from '@sistema-erp-electrosal/core';
 
 @Injectable()
 export class ListarAnalisesQuimicasUseCase {
@@ -16,7 +16,11 @@ export class ListarAnalisesQuimicasUseCase {
     filtros?: FiltrosAnaliseQuimica;
     organizationId: string;
   }) {
-    const { filtros, organizationId } = command;
+    if (!command) {
+      throw new Error('Command object is required');
+    }
+    const filtros = command?.filtros;
+    const organizationId = command?.organizationId;
     const analises = await this.analiseRepo.findAll({
       ...filtros,
       organizationId,

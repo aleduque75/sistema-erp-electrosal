@@ -8,7 +8,8 @@ import api from '@/lib/api';
 
 export default function EditClientPage() {
   const { user, loading } = useAuth();
-  const { id } = useParams();
+  const params = useParams() as Record<string, string | string[]>;
+  const id = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',

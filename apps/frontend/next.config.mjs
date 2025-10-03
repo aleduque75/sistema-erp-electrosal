@@ -3,7 +3,8 @@
 const nextConfig = {
    output: 'standalone',
   
-
+    transpilePackages: ['@sistema-erp-electrosal/core'],
+    
   webpack: (config, { isServer }) => {
     // Adiciona uma regra para SVG
     config.module.rules.push({

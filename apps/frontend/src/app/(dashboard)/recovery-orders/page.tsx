@@ -38,7 +38,10 @@ export default function RecoveryOrdersPage() {
 
   return (
     <Shell>
-      <PageHeader>
+      <PageHeader
+        title="Ordens de Recuperação"
+        description="Gerencie as ordens de recuperação de metais."
+      >
         <PageHeaderHeading size="sm">Ordens de Recuperação</PageHeaderHeading>
         <PageHeaderDescription>
           Gerencie as ordens de recuperação de metais.

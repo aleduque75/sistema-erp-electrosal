@@ -1,8 +1,9 @@
-import { AnaliseQuimica, StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
+import { AnaliseQuimica } from '../analise-quimica.entity';
+import { StatusAnaliseQuimica } from '../../enums/status-analise-quimica.enum';
 
 export class AnaliseQuimicaResponseDto {
   id!: string;
-  clienteId!: string;
+  clienteId!: string | null | undefined;
   numeroAnalise!: string;
   dataEntrada!: Date;
   descricaoMaterial!: string;

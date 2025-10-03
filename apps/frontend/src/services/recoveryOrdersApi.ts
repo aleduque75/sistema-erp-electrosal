@@ -1,9 +1,5 @@
 import apiClient from '@/lib/api';
-import {
-  CreateRecoveryOrderDto,
-  UpdateRecoveryOrderPurityDto,
-  FinalizeRecoveryOrderDto,
-} from '@sistema-erp-electrosal/core';
+import type { CreateRecoveryOrderDto, UpdateRecoveryOrderPurityDto, FinalizeRecoveryOrderDto } from "@/types/recovery-order.dtos";
 import { RecoveryOrder } from '@/types/recovery-order';
 
 export const getRecoveryOrders = async (): Promise<RecoveryOrder[]> => {

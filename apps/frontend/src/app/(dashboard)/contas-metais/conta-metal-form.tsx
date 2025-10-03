@@ -1,3 +1,5 @@
+// apps/frontend/src/app/(dashboard)/contas-metais/conta-metal-form.tsx
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -24,51 +26,78 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { MetalAccountType } from "@prisma/client";
+// Importação correta: Usa o nome ContaMetalType
+import { ContaMetalType } from "@sistema-erp-electrosal/core";
 
-// Definir o enum TipoMetal no frontend para validação
+// 1. Definir o enum TipoMetal no frontend para validação (mantido, mas pode ser importado do core)
 enum TipoMetalFrontend {
   AU = "AU",
   AG = "AG",
   RH = "RH",
 }
 
+// 2. Definir o array de strings literais para o Zod (resolvendo o problema de runtime)
+const CONTA_METAL_TYPES = [
+  "CLIENTE",
+  "FORNECEDOR",
+  "INTERNA",
+  "EMPRESTIMO",
+] as const; // Baseado no seu schema.prisma (assumindo esses valores)
+
 const formSchema = z.object({
   name: z.string().min(3, "O nome da conta deve ter pelo menos 3 caracteres."),
   metalType: z.nativeEnum(TipoMetalFrontend, {
     errorMap: () => ({ message: "Tipo de metal inválido." }),
   }),
-  type: z.nativeEnum(MetalAccountType, {
-    errorMap: () => ({ message: "Tipo de conta inválido." }),
-  }),
-  initialBalance: z.coerce.number().min(0, "O saldo inicial não pode ser negativo.").optional(),
+  // 3. CORRIGIDO: Usando ContaMetalType e z.enum
+  type: z
+    .enum(CONTA_METAL_TYPES, {
+      // Usando z.enum para resolver o problema de transpilação
+      errorMap: () => ({ message: "Tipo de conta inválido." }),
+    })
+    .default("INTERNA"), // Default deve ser uma string literal
+
+  initialBalance: z.coerce
+    .number()
+    .min(0, "O saldo inicial não pode ser negativo.")
+    .default(0),
 });
 
 type ContaMetalFormValues = z.infer<typeof formSchema>;
 
 interface ContaMetalFormProps {
-  onSave: () => void; // Função para ser chamada após salvar
-  onCancel: () => void; // Função para ser chamada ao cancelar
+  onSave: () => void;
+  onCancel: () => void;
 }
 
 export function ContaMetalForm({ onSave, onCancel }: ContaMetalFormProps) {
+  // 4. CORRIGIDO: O defaultValues deve usar o Enum correto ou a string literal
   const form = useForm<ContaMetalFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       metalType: TipoMetalFrontend.AU, // Default para Ouro
-      type: MetalAccountType.INTERNAL_STOCK,
+      type: "INTERNA", // Usa o Enum importado, agora que Zod aceita
       initialBalance: 0,
     },
   });
 
   const onSubmit = async (data: ContaMetalFormValues) => {
     try {
-      await api.post("/contas-metais", data);
+      // Garante que o valor inicial seja um número antes de enviar
+      const dataToSend = {
+        ...data,
+        initialBalance: data.initialBalance ?? 0,
+      };
+
+      await api.post("/contas-metais", dataToSend);
       toast.success("Conta de metal criada com sucesso!");
       onSave();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Ocorreu um erro ao criar a conta de metal.");
+      toast.error(
+        err.response?.data?.message ||
+          "Ocorreu um erro ao criar a conta de metal."
+      );
     }
   };
 
@@ -127,11 +156,14 @@ export function ContaMetalForm({ onSave, onCancel }: ContaMetalFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {Object.values(MetalAccountType).map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
+                  {/* 5. CORRIGIDO: Mapeia os valores do Enum (agora com ContaMetalType) */}
+                  {Object.values(ContaMetalType)
+                    .filter((type): type is string => typeof type === "string")
+                    .map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -141,12 +173,18 @@ export function ContaMetalForm({ onSave, onCancel }: ContaMetalFormProps) {
 
         <FormField
           control={form.control}
-          name="initialBalance" // Corrigido para initialBalance
+          name="initialBalance"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Saldo Inicial (g)</FormLabel>
               <FormControl>
-                <Input type="number" step="0.0001" {...field} />
+                {/* 6. CORRIGIDO: Garante que o input lide com valores numéricos */}
+                <Input
+                  type="number"
+                  step="0.0001"
+                  {...field}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

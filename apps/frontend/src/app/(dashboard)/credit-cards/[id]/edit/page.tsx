@@ -22,7 +22,7 @@ interface CreditCard {
 export default function EditCreditCardPage() {
   const router = useRouter();
   const params = useParams();
-  const cardId = params.id as string;
+  const cardId = params?.id as string;
 
   const [card, setCard] = useState<CreditCard | null>(null);
   const [isLoading, setIsLoading] = useState(true);

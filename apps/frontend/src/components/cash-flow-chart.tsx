@@ -20,7 +20,13 @@ import {
 const formatCurrencyForChart = (value: number) =>
   `R$${(value / 1000).toFixed(0)}k`;
 
-export function CashFlowChart({ data }) {
+type CashFlowChartData = {
+  month: string;
+  incomes: number;
+  expenses: number;
+};
+
+export function CashFlowChart({ data }: { data: CashFlowChartData[] }) {
   return (
     <Card>
       <CardHeader>

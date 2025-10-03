@@ -42,4 +42,12 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
     });
     return this.mapToDomain(dbReaction);
   }
+
+  async findAll(organizationId: string): Promise<ChemicalReaction[]> {
+    const dbReactions = await this.prisma.chemical_reactions.findMany({
+      where: { organizationId },
+      orderBy: { reactionDate: 'desc' },
+    });
+    return dbReactions.map(this.mapToDomain);
+  }
 }

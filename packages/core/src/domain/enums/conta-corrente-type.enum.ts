@@ -3,3 +3,5 @@ export enum ContaCorrenteType {
   FORNECEDOR_METAL = 'FORNECEDOR_METAL',
   EMPRESTIMO = 'EMPRESTIMO',
 }
+
+export type ContaCorrenteTypeValue = `${ContaCorrenteType}`;

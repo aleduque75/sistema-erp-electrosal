@@ -7,9 +7,9 @@ import {
 } from '@nestjs/common';
 import {
   AnaliseQuimica,
-  ContaMetal,
+  MetalAccount,
   IAnaliseQuimicaRepository,
-  IContaMetalRepository,
+  IMetalAccountRepository,
   TipoMetal,
 } from '@sistema-erp-electrosal/core';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -22,8 +22,8 @@ export class AprovarRecuperacaoAnaliseUseCase {
     private readonly prisma: PrismaService,
     @Inject('IAnaliseQuimicaRepository')
     private readonly analiseRepo: IAnaliseQuimicaRepository,
-    @Inject('IContaMetalRepository')
-    private readonly contaMetalRepo: IContaMetalRepository,
+    @Inject('IMetalAccountRepository')
+    private readonly contaMetalRepo: IMetalAccountRepository,
   ) {}
 
   async execute(command: { id: string, organizationId: string }): Promise<AnaliseQuimica> {
@@ -32,6 +32,10 @@ export class AprovarRecuperacaoAnaliseUseCase {
       throw new NotFoundException(
         `Análise com ID ${command.id} não encontrada.`,
       );
+
+    if (!analise.clienteId) {
+      throw new BadRequestException('Análise Química não possui um cliente associado.');
+    }
 
     analise.aprovarParaRecuperacao();
     let valorACreditar: number | null = null; // MODIFIED to be mutable
@@ -56,16 +60,16 @@ export class AprovarRecuperacaoAnaliseUseCase {
       // Lógica correta: Credita o metal na conta de metal do cliente
       let contaCliente = await this.contaMetalRepo.findByPessoaIdAndMetal(
         analise.clienteId,
-        TipoMetal.OURO,
+        TipoMetal.AU,
         command.organizationId,
         tx,
       );
 
       if (!contaCliente) {
-        contaCliente = ContaMetal.create({
+        contaCliente = MetalAccount.create({
           pessoaId: analise.clienteId,
           name: analise.clienteId, // Using clienteId as name for now, assuming it's a client-specific account
-          metalType: TipoMetal.OURO,
+          metalType: TipoMetal.AU,
           organizationId: command.organizationId,
         });
         await this.contaMetalRepo.create(contaCliente, tx);

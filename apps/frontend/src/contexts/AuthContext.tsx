@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
             localStorage.removeItem('accessToken');
             setUser(null);
-            if (!publicPaths.includes(pathname)) {
+            if (!publicPaths.includes(pathname ?? "")) {
               toast.error("Sua sessão expirou. Por favor, faça login novamente.");
               router.push('/');
             }
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error('Failed to fetch profile:', error);
           localStorage.removeItem('accessToken');
           setUser(null);
-          if (!publicPaths.includes(pathname)) {
+          if (!publicPaths.includes(pathname ?? "")) {
             toast.error("Sua sessão expirou. Por favor, faça login novamente.");
             router.push('/');
           }

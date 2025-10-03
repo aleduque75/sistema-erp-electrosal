@@ -6,6 +6,6 @@ export * from './sale-installment-status.enum';
 export * from './tipo-metal.enum';
 export * from './metal-account-entry-type.enum';
 export * from './papel-usuario.enum';
-export * from './status-analise-quimica.enum';
 export * from './tipo-documento-fiscal.enum';
 export * from './tipo-pessoa.enum';
+export * from './conta-corrente-type.enum';

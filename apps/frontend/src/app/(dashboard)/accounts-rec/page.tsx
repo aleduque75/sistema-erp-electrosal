@@ -44,7 +44,16 @@ interface AccountRec {
 interface SaleDetails {
   id: string;
   orderNumber: string;
-  // Adicione todos os outros campos que a SaleDetailsView espera
+  pessoa: any; // Substitua 'any' pelo tipo correto se disponível
+  createdAt: string;
+  saleItems: any[]; // Substitua 'any' pelo tipo correto se disponível
+  totalAmount: number;
+  status: string;
+  paymentMethod: string;
+  feeAmount: number;
+  goldValue: number;
+  netAmount: number;
+  // Adicione outros campos conforme necessário para corresponder ao tipo 'Sale'
 }
 
 const formatCurrency = (value: number) =>

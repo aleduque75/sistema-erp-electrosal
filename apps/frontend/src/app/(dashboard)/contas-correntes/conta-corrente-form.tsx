@@ -1,3 +1,5 @@
+// apps/frontend/src/app/(dashboard)/contas-correntes/conta-corrente-form.tsx
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -15,8 +17,16 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ContaCorrenteType } from "@/types/enums";
+import { ContaCorrenteType } from "@sistema-erp-electrosal/core";
 
+// 1. DEFINIÇÃO DO ARRAY DE VALORES LITERAIS (Para o Zod)
+const CONTA_CORRENTE_TYPES = [
+  'BANCO',
+  'FORNECEDOR_METAL',
+  'EMPRESTIMO',
+] as const;
+
+// DEFINIÇÃO DO SCHEMA CORRIGIDA
 const formSchema = z.object({
   nome: z.string().min(3, "O nome da conta é obrigatório."),
   numeroConta: z.string().min(1, "O número/identificador é obrigatório."),
@@ -26,7 +36,8 @@ const formSchema = z.object({
     .min(0, "O saldo não pode ser negativo.")
     .default(0),
   limite: z.coerce.number().min(0).default(0).optional(),
-  type: z.nativeEnum(ContaCorrenteType).default(ContaCorrenteType.BANCO),
+  // 2. USANDO z.enum COM AS STRINGS LITERAIS
+  type: z.enum(CONTA_CORRENTE_TYPES).default('BANCO'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -38,22 +49,29 @@ interface ContaCorrenteFormProps {
     numeroConta: string;
     agencia?: string | null;
     saldoInicial: number;
-    limite?: number;
-    type?: ContaCorrenteType;
+    limite?: number | null;
+    // Tipagem ajustada para o tipo de string literal que o Enum representa
+    type?: (typeof ContaCorrenteType)[keyof typeof ContaCorrenteType] | null; 
   } | null;
   onSave: () => void;
 }
 
 export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nome: conta?.nome || "",
-      numeroConta: conta?.numeroConta || "",
-      agencia: conta?.agencia || "",
-      saldoInicial: 0,
-      limite: conta?.limite || 0,
-      type: conta?.type || ContaCorrenteType.BANCO,
+      nome: conta?.nome ?? "",
+      numeroConta: conta?.numeroConta ?? "",
+      agencia: conta?.agencia ?? "", 
+      
+      // O valor inicial é obtido da conta existente ou é 0
+      saldoInicial: conta?.saldoInicial ?? 0, 
+      
+      limite: conta?.limite ?? 0, 
+      
+      // 3. CORREÇÃO FINAL: Usa o valor da conta ou a string literal 'BANCO'
+      type: (conta?.type ?? 'BANCO') as (typeof ContaCorrenteType)[keyof typeof ContaCorrenteType],
     },
   });
 
@@ -69,7 +87,7 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
       }
       onSave();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Ocorreu um erro.");
+      toast.error(err.response?.data?.message || "Ocorreu um erro ao salvar a conta.");
     }
   };
 
@@ -133,9 +151,10 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value={ContaCorrenteType.BANCO}>Banco</SelectItem>
-                  <SelectItem value={ContaCorrenteType.FORNECEDOR_METAL}>Fornecedor de Metal</SelectItem>
-                  <SelectItem value={ContaCorrenteType.EMPRESTIMO}>Empréstimo</SelectItem>
+                  {/* USANDO AS STRINGS LITERAIS NOS SELECT ITEMS */}
+                  <SelectItem value="BANCO">Banco</SelectItem>
+                  <SelectItem value="FORNECEDOR_METAL">Fornecedor de Metal</SelectItem>
+                  <SelectItem value="EMPRESTIMO">Empréstimo</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -150,7 +169,12 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
               <FormItem>
                 <FormLabel>Saldo Inicial (R$)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} />
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    {...field} 
+                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -164,7 +188,12 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
             <FormItem>
               <FormLabel>Limite (Cheque Especial)</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" {...field} />
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  {...field} 
+                  onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

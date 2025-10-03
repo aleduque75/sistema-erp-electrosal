@@ -1,3 +1,5 @@
+// apps/frontend/src/app/(dashboard)/producao/reacoes-quimicas/[id]/page.tsx
+
 import { getChemicalReactionById, ChemicalReactionDetails } from "@/services/chemicalReactionsApi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +24,13 @@ const statusVariantMap: { [key in ChemicalReactionDetails['status']]: 'default' 
 };
 
 export default async function ReactionDetailPage({ params }: { params: { id: string } }) {
-  const reaction = await getChemicalReactionById(params.id).catch(() => notFound());
+  // Nota: A tipagem de `reaction` agora deve incluir `finishedAt` e `outputProductGrams`
+  // A lógica do lado do servidor (API) deve garantir que esses campos sejam retornados
+  type ReactionWithFinishedAt = ChemicalReactionDetails & { 
+    finishedAt?: string | null;
+    outputProductGrams?: number;
+  };
+  const reaction: ReactionWithFinishedAt = await getChemicalReactionById(params.id).catch(() => notFound());
 
   return (
     <div className="space-y-4 p-4 md:p-8">
@@ -50,7 +58,8 @@ export default async function ReactionDetailPage({ params }: { params: { id: str
               <Badge variant={statusVariantMap[reaction.status]} className="text-lg">{reaction.status.replace('_', ' ')}</Badge>
               <div className="text-sm text-muted-foreground">
                 <p>Iniciada em: {formatDate(reaction.createdAt)}</p>
-                <p>Finalizada em: {reaction.status === 'COMPLETED' ? formatDate(reaction.updatedAt) : '-'}</p>
+                {/* LÓGICA CORRIGIDA: Usa reaction.finishedAt */}
+                <p>Finalizada em: {reaction.status === 'COMPLETED' ? formatDate(reaction.finishedAt ?? null) : '-'}</p>
               </div>
             </CardContent>
           </Card>
@@ -85,7 +94,7 @@ export default async function ReactionDetailPage({ params }: { params: { id: str
                 <>
                   <p><strong>Lote Gerado:</strong> {reaction.productionBatch?.batchNumber}</p>
                   <p><strong>Produto:</strong> {reaction.productionBatch?.product.name}</p>
-                  <p><strong>Quantidade Produzida:</strong> {formatGrams(reaction.outputProductGrams)}</p>
+                  <p><strong>Quantidade Produzida:</strong> {reaction.outputProductGrams !== undefined ? formatGrams(reaction.outputProductGrams) : '-'}</p>
                   {/* ... (outros detalhes de resultados) */}
                 </>
               ) : (

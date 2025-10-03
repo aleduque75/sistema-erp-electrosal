@@ -19,7 +19,8 @@ interface Client {
 
 export default function ClientDetailPage() {
   const { user, loading } = useAuth();
-  const { id } = useParams();
+  const params = useParams();
+  const id = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params?.id[0] : undefined;
   const router = useRouter();
   const [client, setClient] = useState<Client | null>(null);
   const [error, setError] = useState<string | null>(null);

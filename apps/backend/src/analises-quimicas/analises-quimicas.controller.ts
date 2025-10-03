@@ -14,17 +14,14 @@ import {
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-// DTOs
-import { RegistrarNovaAnaliseDto } from './dtos/registrar-nova-analise.dto';
-import { LancarResultadoAnaliseDto } from './dtos/lancar-resultado-analise.dto';
-import { AnaliseQuimicaResponseDto } from './dtos/analise-quimica.response.dto';
+import { RegistrarNovaAnaliseDto, LancarResultadoAnaliseDto, AnaliseQuimicaResponseDto } from '@sistema-erp-electrosal/core';
 
 // Use Cases e Commands
 import { RegistrarNovaAnaliseUseCase } from './use-cases/registrar-nova-analise.use-case';
 import { ListarAnalisesQuimicasUseCase } from './use-cases/listar-analises-quimicas.use-case';
 import { LancarResultadoAnaliseUseCase } from './use-cases/lancar-resultado-analise.use-case';
 import { AprovarRecuperacaoAnaliseUseCase } from './use-cases/aprovar-recuperacao-analise.use-case';
-import { FiltrosAnaliseQuimica } from 'domain/analises-quimicas/analise-quimica.repository.interface';
+import { FiltrosAnaliseQuimica } from '@sistema-erp-electrosal/core';
 import { BuscarAnaliseQuimicaPorIdUseCase } from './use-cases/buscar-analise-quimica-por-id.use-case';
 import { GerarPdfAnaliseUseCase } from './use-cases/gerar-pdf-analise.use-case';
 import { AprovarAnaliseUseCase } from './use-cases/aprovar-analise.use-case';

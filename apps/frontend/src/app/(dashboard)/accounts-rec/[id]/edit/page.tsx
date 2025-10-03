@@ -8,7 +8,8 @@ import api from '@/lib/api';
 
 export default function EditAccountRecPage() {
   const { user, loading } = useAuth();
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id;
   const router = useRouter();
   const [formData, setFormData] = useState({
     description: '',

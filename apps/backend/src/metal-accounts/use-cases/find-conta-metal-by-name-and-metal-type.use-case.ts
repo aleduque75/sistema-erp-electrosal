@@ -1,34 +1,34 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { ContaMetal, IContaMetalRepository, TipoMetal } from '@sistema-erp-electrosal/core';
+import { MetalAccount, IMetalAccountRepository, TipoMetal } from '@sistema-erp-electrosal/core';
 
-export interface FindContaMetalByNameAndMetalTypeCommand {
-  name: string;
+export interface FindMetalAccountByPersonIdAndMetalTypeCommand {
+  personId: string;
   metalType: TipoMetal;
   organizationId: string;
 }
 
 @Injectable()
-export class FindContaMetalByNameAndMetalTypeUseCase {
+export class FindMetalAccountByPersonIdAndMetalTypeUseCase {
   constructor(
-    @Inject('IContaMetalRepository')
-    private readonly contaMetalRepository: IContaMetalRepository,
+    @Inject('IMetalAccountRepository')
+    private readonly metalAccountRepository: IMetalAccountRepository,
   ) {}
 
-  async execute(command: FindContaMetalByNameAndMetalTypeCommand): Promise<ContaMetal> {
-    const { name, metalType, organizationId } = command;
+  async execute(command: FindMetalAccountByPersonIdAndMetalTypeCommand): Promise<MetalAccount> {
+    const { personId, metalType, organizationId } = command;
 
-    const contaMetal = await this.contaMetalRepository.findByNameAndMetalType(
-      name,
+    const metalAccount = await this.metalAccountRepository.findByPersonId(
+      personId,
       metalType,
       organizationId,
     );
 
-    if (!contaMetal) {
+    if (!metalAccount) {
       throw new NotFoundException(
-        `Conta de Metal com nome '${name}' e tipo '${metalType}' não encontrada.`,
+        `Conta de Metal para pessoa '${personId}' e tipo '${metalType}' não encontrada.`,
       );
     }
 
-    return contaMetal;
+    return metalAccount;
   }
 }

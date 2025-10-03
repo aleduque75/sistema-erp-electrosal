@@ -1,3 +1,5 @@
+// src/components/recovery-orders/ProcessRecoveryFinalizationModal.tsx
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,7 +29,8 @@ import { RecoveryOrder } from "@/types/recovery-order";
 import { finalizeRecoveryOrder } from "@/services/recoveryOrdersApi";
 
 const finalizeSchema = z.object({
-  teorFinal: z.coerce.number()
+  teorFinal: z.coerce
+    .number()
     .min(0, "O teor não pode ser negativo.")
     .max(1, "O teor não pode ser maior que 1 (100%)."),
 });
@@ -73,7 +76,9 @@ export function ProcessRecoveryFinalizationModal({
       onOpenChange(false);
       form.reset();
     } catch (err: any) {
-      toast.error("Erro ao finalizar ordem de recuperação", { description: err.message });
+      toast.error("Erro ao finalizar ordem de recuperação", {
+        description: err.message,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -87,14 +92,19 @@ export function ProcessRecoveryFinalizationModal({
           <DialogDescription>
             Informe o teor de pureza final para a ordem ID:{" "}
             <strong>{recoveryOrder.id}</strong>. Esta ação é irreversível.
-             <br />
+            <br />
             <span className="text-sm text-muted-foreground">
-              Resultado do Processamento: {recoveryOrder.resultadoProcessamentoGramas}g
+              Resultado do Processamento:{" "}
+              {/* CORRIGIDO: Usa coalescência nula e confia que a interface RecoveryOrder foi atualizada */}
+              {recoveryOrder.resultadoProcessamentoGramas ?? "N/A"}g
             </span>
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4 py-2"
+          >
             <FormField
               control={form.control}
               name="teorFinal"
@@ -102,7 +112,14 @@ export function ProcessRecoveryFinalizationModal({
                 <FormItem>
                   <FormLabel>Teor Final (Ex: 0.995 para 99.5%)</FormLabel>
                   <FormControl>
-                    <Input type="number" step="any" placeholder="0.995" {...field} />
+                    <Input
+                      type="number"
+                      step="any"
+                      placeholder="0.995"
+                      {...field}
+                      // Adiciona um onChange para garantir que o valor seja numérico ou undefined (Zod)
+                      onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

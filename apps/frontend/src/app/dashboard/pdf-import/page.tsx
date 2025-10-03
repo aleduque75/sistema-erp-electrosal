@@ -152,7 +152,7 @@ export default function PdfImportPage() {
       const response = await api.post("/pdf-import/statement", {
         text: plainText,
       });
-      const parsedTransactions = response.data.data.map((tx) => ({
+      const parsedTransactions = (response.data.data as any[]).map((tx: any) => ({
         ...tx,
         creditCardId: selectedCreditCardId,
       }));
@@ -389,7 +389,6 @@ export default function PdfImportPage() {
                           onContaCreated={handleContaCreated}
                           contasContabeis={contasContabeis}
                           loadingContas={loadingContas}
-                          disabled={transaction.isDuplicate}
                         />
                       </TableCell>
                     </TableRow>

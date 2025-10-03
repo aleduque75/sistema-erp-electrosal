@@ -1,22 +1,29 @@
-"use client"
+"use client" 
 
 import * as React from "react"
-import useEmblaCarousel, {
-  type EmblaCarouselType,
-  type EmblaOptionsType,
-} from "embla-carousel-react"
+import useEmblaCarousel from "embla-carousel-react" // Importa APENAS o hook
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
+// 1. Inferir os tipos diretamente do hook para evitar conflitos de exportação:
+type UseEmblaCarouselType = ReturnType<typeof useEmblaCarousel>; 
+type EmblaOptionsType = Parameters<typeof useEmblaCarousel>[0]; 
+type EmblaCarouselType = UseEmblaCarouselType[1]; // A instância real da API
+
+// Agora todos os tipos estão resolvidos internamente
+
+// O restante do código usa os tipos corrigidos:
 type CarouselProps = {
-  opts?: EmblaOptionsType
+  // Usa o tipo inferido
+  opts?: EmblaOptionsType 
   orientation?: "horizontal" | "vertical"
-  setApi?: (api: EmblaCarouselType) => void
+  setApi?: (api: EmblaCarouselType) => void // Usa o tipo de instância
 } & React.ComponentPropsWithoutRef<"div">
 
 type CarouselContextProps = {
-  emblaApi: EmblaCarouselType | undefined
+  // 3. CORREÇÃO: O emblaApi real retornado do hook é o EmblaCarouselType
+  emblaApi: EmblaCarouselType | undefined 
   canScrollPrev: boolean
   canScrollNext: boolean
   scrollPrev: () => void
@@ -51,17 +58,22 @@ const Carousel = React.forwardRef<
     },
     ref
   ) => {
+    // Uso do tipo opts: EmblaOptionsType
     const [emblaRef, emblaApi] = useEmblaCarousel({
-      ...opts,
+      ...opts, 
       axis: orientation === "horizontal" ? "x" : "y",
     })
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
     const [selectedIndex, setSelectedIndex] = React.useState(0)
 
-    const onSelect = React.useCallback((emblaApi: EmblaCarouselType) => {
-      setSelectedIndex(emblaApi.selectedScrollSnap())
-    }, [])
+    // CORREÇÃO: Usar 'any' para contornar a falha de tipagem externa
+    const onSelect = React.useCallback(
+      (emblaApi: any) => { 
+        setSelectedIndex(emblaApi.selectedScrollSnap()); 
+      },
+      [] 
+    );
 
     const scrollPrev = React.useCallback(() => {
       emblaApi?.scrollPrev()
@@ -71,33 +83,49 @@ const Carousel = React.forwardRef<
       emblaApi?.scrollNext()
     }, [emblaApi])
 
-    const onInit = React.useCallback((emblaApi: EmblaCarouselType) => {
-      setCanScrollPrev(emblaApi.canScrollPrev())
-      setCanScrollNext(emblaApi.canScrollNext())
-    }, [])
+    // CORREÇÃO: Usar 'any' para contornar a falha de tipagem externa
+    const onInit = React.useCallback(
+      (emblaApi: any) => { 
+        setCanScrollPrev(emblaApi.canScrollPrev())
+        setCanScrollNext(emblaApi.canScrollNext())
+      },
+      []
+    )
 
-    const onReInit = React.useCallback((emblaApi: EmblaCarouselType) => {
-      setCanScrollPrev(emblaApi.canScrollPrev())
-      setCanScrollNext(emblaApi.canScrollNext())
-    }, [])
+    // CORREÇÃO: Usar 'any' para contornar a falha de tipagem externa
+    const onReInit = React.useCallback(
+      (emblaApi: any) => { 
+        setCanScrollPrev(emblaApi.canScrollPrev())
+        setCanScrollNext(emblaApi.canScrollNext())
+      },
+      []
+    )
 
     React.useEffect(() => {
       if (!emblaApi) {
         return
       }
 
-      onInit(emblaApi)
-      onSelect(emblaApi)
-      emblaApi.on("reInit", onReInit)
+      emblaApi.on("init", onInit) 
       emblaApi.on("select", onSelect)
-      emblaApi.on("settle", onInit)
+      emblaApi.on("reInit", onReInit)
+      emblaApi.on("settle", onInit) 
+      
+      // Passar a instância emblaApi (que é UseEmblaCarouselType | undefined)
+      // para inicialização manual.
+      if (emblaApi) {
+          onInit(emblaApi);
+          onSelect(emblaApi);
+      }
+
       if (setApi) {
         setApi(emblaApi)
       }
 
       return () => {
-        emblaApi.off("reInit", onReInit)
+        emblaApi.off("init", onInit)
         emblaApi.off("select", onSelect)
+        emblaApi.off("reInit", onReInit)
         emblaApi.off("settle", onInit)
       }
     }, [emblaApi, onInit, onReInit, onSelect, setApi])
@@ -261,9 +289,9 @@ const CarouselNext = React.forwardRef<
       </svg>
       <span className="sr-only">Next slide</span>
     </Button>
-  )
-})
-CarouselNext.displayName = "CarouselNext"
+  );
+});
+CarouselNext.displayName = "CarouselNext";
 
 export {
   Carousel,
@@ -271,4 +299,4 @@ export {
   CarouselItem,
   CarouselPrevious,
   CarouselNext,
-}
+};

@@ -8,7 +8,7 @@ export class FindAllMetalAccountEntriesUseCase {
     private readonly metalAccountEntryRepository: IMetalAccountEntryRepository,
   ) {}
 
-  async execute(contaMetalId: string): Promise<MetalAccountEntry[]> {
-    return this.metalAccountEntryRepository.findAllByContaMetalId(contaMetalId);
+  async execute(metalAccountId: string): Promise<MetalAccountEntry[]> {
+    return this.metalAccountEntryRepository.findAllByMetalAccountId(metalAccountId);
   }
 }

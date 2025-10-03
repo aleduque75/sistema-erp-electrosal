@@ -1,18 +1,32 @@
-import { Recuperacao, StatusRecuperacao } from '@sistema-erp-electrosal/core';
+export enum StatusRecuperacao {
+  PENDENTE = 'PENDENTE',
+  EM_ANDAMENTO = 'EM_ANDAMENTO',
+  FINALIZADA = 'FINALIZADA',
+  CANCELADA = 'CANCELADA',
+}
+
+export interface Recuperacao {
+  id?: string;
+  organizationId: string;
+  analiseQuimicaId: string;
+  dataInicio: Date;
+  dataFim: Date | null;
+  descricaoProcesso: string | null;
+  volumeProcessado: number | null;
+  unidadeProcessada: string | null;
+  resultadoFinal: number | null;
+  unidadeResultado: string | null;
+  status: StatusRecuperacao;
+  observacoes: string | null;
+  dataCriacao: Date;
+  dataAtualizacao: Date;
+}
 
 export type RecuperacaoDto = {
   id: string;
-  organizationId: string;
   analiseQuimicaId: string;
-  status: StatusRecuperacao;
   dataInicio: string;
-  dataFim?: string;
-  descricaoProcesso?: string;
-  volumeProcessado?: number;
-  unidadeProcessada?: string;
-  resultadoFinal?: number;
-  unidadeResultado?: string;
-  observacoes?: string;
-  dataCriacao: string;
-  dataAtualizacao: string;
+  dataFim: string | null;
+  descricaoProcesso: string | null;
+  status: StatusRecuperacao;
 };

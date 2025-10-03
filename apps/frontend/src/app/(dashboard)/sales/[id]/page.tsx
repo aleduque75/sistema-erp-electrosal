@@ -24,7 +24,8 @@ interface Sale {
 
 export default function SaleDetailPage() {
   const { user, loading } = useAuth();
-  const { id } = useParams();
+  const params = useParams() as Record<string, string | string[]>;
+  const id = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : undefined;
   const [sale, setSale] = useState<Sale | null>(null);
   const [error, setError] = useState<string | null>(null);
 

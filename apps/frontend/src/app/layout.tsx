@@ -1,3 +1,4 @@
+import "@/lib/reflect-metadata";
 import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
 import { ThemeProvider } from "../contexts/ThemeContext"; // Corrigido para usar o nosso ThemeProvider

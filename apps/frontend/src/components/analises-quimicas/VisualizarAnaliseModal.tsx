@@ -34,8 +34,8 @@ const DetailItem = ({ label, value, unit = '', className = '' }: { label: string
 );
 
 // Componente de Legenda (mantido para compatibilidade, embora não usado diretamente aqui)
-const StatusBadge = ({ status }: { status: AnaliseQuimica['status'] }) => {
-  const statusVariant: Record<AnaliseQuimica['status'], "default" | "secondary" | "success" | "destructive"> = {
+const StatusBadge = ({ status }: { status: string }) => {
+  const statusVariant: Record<string, "default" | "secondary" | "success" | "destructive"> = {
     PENDENTE: "default",
     EM_ANALISE: "secondary",
     CONCLUIDA: "success",

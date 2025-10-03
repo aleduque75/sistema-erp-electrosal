@@ -22,7 +22,29 @@ const formatCurrency = (value: number) =>
 const formatDate = (dateString: string) =>
   new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 
-export function SaleDetailsView({ sale }) {
+interface SaleItem {
+  id: string;
+  product: {
+    name: string;
+  };
+  inventoryLotId?: string;
+  quantity: number;
+  price: number;
+}
+
+interface Sale {
+  pessoa: {
+    name: string;
+  };
+  createdAt: string;
+  saleItems: SaleItem[];
+  totalAmount: number;
+  feeAmount: number;
+  goldValue: number;
+  netAmount: number;
+}
+
+export function SaleDetailsView({ sale }: { sale: Sale }) {
   if (!sale) return null;
 
   return (

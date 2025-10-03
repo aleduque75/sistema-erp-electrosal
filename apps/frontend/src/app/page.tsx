@@ -8,7 +8,7 @@ import api from "@/lib/api";
 
 
 // Importações dos novos componentes e tipos de configuração
-import { LandingPageData, SectionConfig, HeroSectionConfig } from "@/config/landing-page";
+import { LandingPageData, SectionConfig, HeroSectionConfig, FeaturesSectionConfig } from "@/config/landing-page";
 import { HeroSection } from "@/components/landing-page/HeroSection";
 import { FeaturesSection } from "@/components/landing-page/FeaturesSection";
 
@@ -23,14 +23,12 @@ export default function HomePage() {
       try {
         const response = await api.get("/landing-page");
         const processedData: LandingPageData = { // Explicitamente tipando
-          ...response.data,
-          logoImage: response.data.logoImage,
-          sections: response.data.sections.map(section => {
-            if (section.type === 'hero' && section.content) {
-              return section; // Retorna a seção hero como está, pois os caminhos já vêm prontos
-            }
-            return section;
-          }),
+            ...response.data,
+            logoImage: response.data.logoImage as string | undefined,
+            sections: response.data.sections.map((section: any) => {
+              // section is any here because API returns a generic object
+              return section;
+            }),
           // Garantir que logoText e logoImage estejam no nível superior
           logoText: response.data.logoText || undefined,
         };
@@ -63,7 +61,6 @@ export default function HomePage() {
       <PublicNavbar
         logoText={landingPageData.logoText}
         logoImage={landingPageData.logoImage}
-        customThemeName={landingPageData.customThemeName}
       />
 
       <main className="flex-1">

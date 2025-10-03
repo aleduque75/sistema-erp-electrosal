@@ -1,3 +1,5 @@
+// apps/frontend/src/app/(dashboard)/producao/reacoes-quimicas/page.tsx
+
 'use client';
 
 import { useState, useEffect } from "react";
@@ -15,19 +17,17 @@ import { Badge } from "@/components/ui/badge";
 import { ReactionDetailsModal } from "./components/reaction-details-modal";
 import { ProductionStepClientBlock } from "./[id]/components/production-step-client-block";
 import { AdjustPurityClientBlock } from "./[id]/components/adjust-purity-client-block";
-import { ChemicalReactionDetails } from "@/services/chemicalReactionsApi";
 
-// O tipo de dados que a tabela espera
-export type Reaction = {
-  id: string;
-  status: 'STARTED' | 'PROCESSING' | 'PENDING_PURITY' | 'PENDING_PURITY_ADJUSTMENT' | 'COMPLETED' | 'CANCELED';
-  auUsedGrams: number;
-  createdAt: string;
-  productionBatch: { id: string; batchNumber: string; product: { name: string } } | null;
-  lots: { id: string; notes?: string; initialGrams: number; remainingGrams: number; }[]; // Adicionado
-};
+// NOTA: ChemicalReactionDetails deve ser exportada do seu service file.
+// Para fins de unificação e garantia de que o `selectedReaction` é do tipo correto:
+import { ChemicalReactionDetails } from "@/types/chemical-reaction";
 
-const statusVariantMap: { [key in Reaction['status']]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
+
+// O tipo de dados que a tabela espera agora é a interface COMPLETA que o modal exige.
+// Isso resolve o erro de tipagem no `selectedReaction`.
+// Removido o alias Reaction, use ChemicalReactionDetails diretamente
+
+const statusVariantMap: { [key in ChemicalReactionDetails['status']]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
   STARTED: 'secondary',
   PROCESSING: 'secondary',
   PENDING_PURITY: 'secondary',
@@ -37,7 +37,8 @@ const statusVariantMap: { [key in Reaction['status']]: 'default' | 'secondary' |
 };
 
 export default function ChemicalReactionsPage() {
-  const [reactions, setReactions] = useState<Reaction[]>([]);
+  // O tipo do estado agora é a interface completa
+  const [reactions, setReactions] = useState<ChemicalReactionDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedReaction, setSelectedReaction] = useState<ChemicalReactionDetails | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -60,7 +61,8 @@ export default function ChemicalReactionsPage() {
 
   const handleOpenDetails = async (reactionId: string) => {
     try {
-      const response = await api.get(`/chemical-reactions/${reactionId}`);
+      // Aqui, garantimos que a resposta da API (ChemicalReactionDetails) é usada
+      const response = await api.get<ChemicalReactionDetails>(`/chemical-reactions/${reactionId}`);
       setSelectedReaction(response.data);
       setIsDetailsModalOpen(true);
     } catch (error) {
@@ -68,12 +70,12 @@ export default function ChemicalReactionsPage() {
     }
   };
 
-  const columns: ColumnDef<Reaction>[] = [
+  const columns: ColumnDef<ChemicalReactionDetails>[] = [
     {
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }) => {
-        const status = row.getValue('status') as Reaction['status'];
+        const status = row.getValue('status') as ChemicalReactionDetails['status'];
         const displayStatus = status ? status.replace('_', ' ') : 'Desconhecido';
         const variant = status && statusVariantMap[status] ? statusVariantMap[status] : 'outline';
         return <Badge variant={variant}>{displayStatus}</Badge>;
@@ -83,7 +85,7 @@ export default function ChemicalReactionsPage() {
       accessorKey: 'auUsedGrams',
       header: () => <div className="text-right">Ouro Utilizado</div>,
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue('auUsedGrams'));
+        const amount = parseFloat(row.getValue('auUsedGrams') as string);
         const formatted = new Intl.NumberFormat('pt-BR', { style: 'unit', unit: 'gram' }).format(amount);
         return <div className="text-right font-medium">{formatted}</div>;
       },
@@ -92,7 +94,7 @@ export default function ChemicalReactionsPage() {
       accessorKey: 'productionBatch',
       header: 'Lote Gerado',
       cell: ({ row }) => {
-        const batch = row.getValue('productionBatch') as Reaction['productionBatch'];
+        const batch = row.original.productionBatch; // Acessa diretamente o objeto
         return <div>{batch?.batchNumber || '-'}</div>;
       },
     },
@@ -100,7 +102,7 @@ export default function ChemicalReactionsPage() {
       accessorKey: 'createdAt',
       header: 'Data de Início',
       cell: ({ row }) => {
-        const date = new Date(row.getValue('createdAt'));
+        const date = new Date(row.getValue('createdAt') as string);
         return <div>{date.toLocaleDateString('pt-BR')}</div>;
       },
     },
@@ -120,6 +122,10 @@ export default function ChemicalReactionsPage() {
                 Ver Detalhes
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              {/* NOTA: Estes componentes devem ser encapsulados em DropdownMenuItem ou similar, 
+              pois o DropdownMenuContent só aceita DropdownMenuItems diretamente. */}
+              {/* Deixando-os como estavam no seu código para evitar novos erros JSX, mas idealmente seria:
+              <DropdownMenuItem asChild><ProductionStepClientBlock ... /></DropdownMenuItem> */}
               {(reaction.status === 'STARTED' || reaction.status === 'PROCESSING') && (
                 <ProductionStepClientBlock reactionId={reaction.id} auUsedGrams={reaction.auUsedGrams} />
               )}
@@ -135,6 +141,7 @@ export default function ChemicalReactionsPage() {
 
   return (
     <>
+      {/* Agora selectedReaction é do tipo ChemicalReactionDetails completo */}
       <ReactionDetailsModal
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
@@ -160,7 +167,7 @@ export default function ChemicalReactionsPage() {
               columns={columns} 
               data={reactions} 
               filterColumnId="productionBatch"
-              loading={isLoading}
+              isLoading={isLoading}
             />
           </CardContent>
         </Card>

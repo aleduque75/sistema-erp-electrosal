@@ -13,7 +13,8 @@ import { ThirdPartyLoansCard } from "./third-party-loans-card";
 import { QuotationChart } from "@/components/quotation-chart";
 
 export default function DashboardPage() {
-  const [summaryData, setSummaryData] = useState(null);
+  // Replace 'any' with the actual KpiData type if available
+  const [summaryData, setSummaryData] = useState<any>(null);
   const [cashFlowData, setCashFlowData] = useState([]);
   const [recentSales, setRecentSales] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +50,8 @@ export default function DashboardPage() {
       <h1 className="text-3xl font-bold">Dashboard</h1>
 
       {/* Grid principal que organiza os elementos */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div>
+        {summaryData && <KpiCards data={summaryData} />}
         <KpiCards data={summaryData} />
         <ThirdPartyLoansCard />
       </div>

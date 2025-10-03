@@ -348,7 +348,7 @@ export function NewSaleForm({ onSave }: any) {
 onChange={field.onChange}
                       placeholder="Selecione..."
                     />
-                    <p className="text-sm text-destructive">{errors.clientId?.message}</p>
+                    <p className="text-sm text-destructive">{typeof errors.clientId?.message === "string" ? errors.clientId.message : ""}</p>
                   </div>
                 )}
               />
@@ -368,7 +368,7 @@ onChange={field.onChange}
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-destructive">{errors.paymentConditionId?.message}</p>
+                    <p className="text-sm text-destructive">{typeof errors.paymentConditionId?.message === "string" ? errors.paymentConditionId.message : ""}</p>
                   </div>
                 )}
               />
@@ -424,7 +424,7 @@ onChange={field.onChange}
                           ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-sm text-destructive">{errors.contaCorrenteId?.message}</p>
+                      <p className="text-sm text-destructive">{typeof errors.contaCorrenteId?.message === "string" ? errors.contaCorrenteId.message : ""}</p>
                     </div>
                   )}
                 />

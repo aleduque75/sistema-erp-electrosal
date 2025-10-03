@@ -1,7 +1,6 @@
 import { Inject, Injectable, ConflictException } from '@nestjs/common';
 import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core/domain/enums/status-analise-quimica.enum';
-import { AnaliseQuimica, AnaliseQuimicaProps, IAnaliseQuimicaRepository } from '@sistema-erp-electrosal/core';
-import { RegistrarNovaAnaliseDto } from '../dtos/registrar-nova-analise.dto';
+import { AnaliseQuimica, AnaliseQuimicaProps, IAnaliseQuimicaRepository, RegistrarNovaAnaliseDto } from '@sistema-erp-electrosal/core';
 
 export interface RegistrarNovaAnaliseCommand {
   dto: RegistrarNovaAnaliseDto;

@@ -2,7 +2,7 @@ import { PrismaPessoaRepository } from '../pessoa/repositories/prisma-pessoa.rep
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PessoaModule } from '../pessoa/pessoa.module';
-// import { ContasMetaisModule } from '../contas-metais/contas-metais.module'; // Não existe na estrutura
+import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module'; // 1. IMPORTAR O MÓDULO CORRETO
 
 import { AnalisesQuimicasController } from './analises-quimicas.controller';
 import { PrismaAnaliseQuimicaRepository } from './repositories/prisma-analise-quimica.repository';
@@ -23,33 +23,45 @@ import { ReprovarAnaliseUseCase } from './use-cases/reprovar-analise.use-case';
 import { RefazerAnaliseUseCase } from './use-cases/refazer-analise.use-case';
 
 @Module({
-	imports: [PrismaModule, PessoaModule, MetalCreditsModule],
-	controllers: [AnalisesQuimicasController],
-	providers: [
-		// --- Adicionando TODOS os use cases aos providers ---
-		RegistrarNovaAnaliseUseCase,
-		ListarAnalisesQuimicasUseCase,
-		BuscarAnaliseQuimicaPorIdUseCase,
-		LancarResultadoAnaliseUseCase,
-		AprovarRecuperacaoAnaliseUseCase,
-		GerarPdfAnaliseUseCase,
-		AtualizarAnaliseUseCase,
-		AprovarAnaliseUseCase,
-		ReprovarAnaliseUseCase,
-		RefazerAnaliseUseCase,
-		{
-			provide: 'IAnaliseQuimicaRepository',
-			useClass: PrismaAnaliseQuimicaRepository,
-		},
-		{
-			provide: 'IContaMetalRepository',
-			useClass: PrismaMetalAccountRepository,
-		},
-		{
-			provide: 'IPessoaRepository',
-			useClass: PrismaPessoaRepository,
-		},
-	],
-	exports: ['IAnaliseQuimicaRepository'],
+  // 2. ADICIONAR O MÓDULO NAS IMPORTAÇÕES
+  imports: [
+    PrismaModule,
+    PessoaModule,
+    MetalCreditsModule,
+    MetalAccountsModule,
+  ],
+  controllers: [AnalisesQuimicasController],
+  providers: [
+    // --- Use Cases e Services ---
+    RegistrarNovaAnaliseUseCase,
+    ListarAnalisesQuimicasUseCase,
+    BuscarAnaliseQuimicaPorIdUseCase,
+    LancarResultadoAnaliseUseCase,
+    AprovarRecuperacaoAnaliseUseCase,
+    GerarPdfAnaliseUseCase,
+    AtualizarAnaliseUseCase,
+    AprovarAnaliseUseCase,
+    ReprovarAnaliseUseCase,
+    RefazerAnaliseUseCase,
+    // --- Repositórios ---
+    {
+      provide: 'IAnaliseQuimicaRepository',
+      useClass: PrismaAnaliseQuimicaRepository,
+    },
+    // NOTA: O 'IContaMetalRepository' (que é IMetalAccountRepository)
+    // NÃO precisa ser declarado aqui se ele estiver sendo importado corretamente
+    // via MetalAccountsModule, mas como você o declarou para o PrismaMetalAccountRepository,
+    // vamos DEIXAR a declaração de provedor, mas a importação do módulo é CRUCIAL.
+    {
+      provide: 'IContaMetalRepository',
+      useClass: PrismaMetalAccountRepository,
+    },
+    {
+      provide: 'IPessoaRepository',
+      useClass: PrismaPessoaRepository,
+    },
+  ],
+  // 3. EXPORTAR APENAS AS PRÓPRIAS INTERFACES
+  exports: ['IAnaliseQuimicaRepository'],
 })
 export class AnalisesQuimicasModule {}

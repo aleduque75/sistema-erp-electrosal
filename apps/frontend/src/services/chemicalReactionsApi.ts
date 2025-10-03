@@ -1,5 +1,5 @@
 import apiClient from '@/lib/api';
-import { Reaction } from '@/app/(dashboard)/producao/reacoes-quimicas/page'; // Reusing the Reaction type from page.tsx
+import { ChemicalReactionDetails as Reaction } from '@/types/chemical-reaction';
 
 export type ChemicalReactionDetails = Reaction; // Alias for clarity if needed
 

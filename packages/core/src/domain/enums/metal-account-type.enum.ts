@@ -1,0 +1,5 @@
+export enum MetalAccountType {
+  INTERNAL_STOCK = "INTERNAL_STOCK",
+  SUPPLIER = "SUPPLIER",
+  CUSTOMER = "CUSTOMER",
+}

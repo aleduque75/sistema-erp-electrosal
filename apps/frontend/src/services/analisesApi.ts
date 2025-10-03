@@ -1,33 +1,31 @@
-import apiClient from '@/lib/api';
-import {
-  AnaliseQuimica,
-  CreateAnaliseQuimicaDto,
-  UpdateAnaliseQuimicaDto,
-  LancarResultadoDto,
-} from '@sistema-erp-electrosal/core';
+import apiClient from "@/lib/api";
+// Importa o tipo AnaliseQuimica do arquivo local de tipos (frontend)
+import type { AnaliseQuimica } from "@/types/analise-quimica";
+import type { CreateAnaliseQuimicaDto, UpdateAnaliseQuimicaDto, LancarResultadoDto } from "@/types/analise-quimica.dtos";
+
 
 export const getAnalisesQuimicas = async (): Promise<AnaliseQuimica[]> => {
-  const response = await apiClient.get('/analises-quimicas');
+  const response = await apiClient.get("/analises-quimicas");
   return response.data;
 };
 
 export const getAnaliseQuimicaById = async (
-  id: string,
+  id: string
 ): Promise<AnaliseQuimica> => {
   const response = await apiClient.get(`/analises-quimicas/${id}`);
   return response.data;
 };
 
 export const createAnaliseQuimica = async (
-  data: CreateAnaliseQuimicaDto,
+  data: CreateAnaliseQuimicaDto
 ): Promise<AnaliseQuimica> => {
-  const response = await apiClient.post('/analises-quimicas', data);
+  const response = await apiClient.post("/analises-quimicas", data);
   return response.data;
 };
 
 export const updateAnaliseQuimica = async (
   id: string,
-  data: UpdateAnaliseQuimicaDto,
+  data: UpdateAnaliseQuimicaDto
 ): Promise<AnaliseQuimica> => {
   const response = await apiClient.patch(`/analises-quimicas/${id}`, data);
   return response.data;
@@ -35,17 +33,17 @@ export const updateAnaliseQuimica = async (
 
 export const lancarResultadoAnaliseApi = async (
   id: string,
-  data: LancarResultadoDto,
+  data: LancarResultadoDto
 ): Promise<AnaliseQuimica> => {
   const response = await apiClient.patch(
     `/analises-quimicas/${id}/resultado`,
-    data,
+    data
   );
   return response.data;
 };
 
 export const aprovarAnaliseQuimica = async (
-  id: string,
+  id: string
 ): Promise<AnaliseQuimica> => {
   const response = await apiClient.patch(`/analises-quimicas/${id}/aprovar`);
   return response.data;
@@ -61,7 +59,7 @@ export const refazerAnaliseQuimica = async (id: string): Promise<void> => {
 
 export const getAnaliseQuimicaPdf = async (id: string): Promise<Blob> => {
   const response = await apiClient.get(`/analises-quimicas/${id}/pdf`, {
-    responseType: 'blob',
+    responseType: "blob",
   });
   return response.data;
 };

@@ -1,6 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { IAnaliseQuimicaRepository } from 'domain/analises-quimicas';
-import { LancarResultadoAnaliseDto } from '../dtos/lancar-resultado-analise.dto';
+import { IAnaliseQuimicaRepository, LancarResultadoAnaliseDto } from '@sistema-erp-electrosal/core';
 
 export interface LancarResultadoAnaliseCommand {
   id: string;

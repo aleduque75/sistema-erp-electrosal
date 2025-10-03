@@ -25,7 +25,18 @@ export function CategoryChart() {
         const response = await api.get('/accounts-pay/summary/by-category');
         
         // Formata os dados para o que o Recharts espera
-        const formattedData = response.data.map(item => ({
+        interface ApiCategory {
+          contaContabil?: {
+            nome?: string;
+          };
+          _sum: {
+            amount: number | string;
+          };
+        }
+
+        const responseTyped: { data: ApiCategory[] } = response;
+
+        const formattedData: ChartData[] = responseTyped.data.map((item: ApiCategory) => ({
           name: item.contaContabil?.nome || 'Sem Categoria', // Usa o nome da conta contábil
           total: Number(item._sum.amount),
         }));

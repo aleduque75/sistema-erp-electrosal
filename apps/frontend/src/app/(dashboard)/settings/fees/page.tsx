@@ -47,6 +47,19 @@ export default function FeesPage() {
     }
   };
 
+  // Fetch the list of fees from the API
+  const fetchFees = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get('/credit-card-fees');
+      setFees(response.data);
+    } catch (error) {
+      toast.error("Erro ao carregar taxas.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchFees();
     fetchOrgSettings();

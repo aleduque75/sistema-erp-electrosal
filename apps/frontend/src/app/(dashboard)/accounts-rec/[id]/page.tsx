@@ -17,7 +17,8 @@ interface AccountRec {
 
 export default function AccountRecDetailPage() {
   const { user, loading } = useAuth();
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id;
   const [account, setAccount] = useState<AccountRec | null>(null);
   const [error, setError] = useState<string | null>(null);
 

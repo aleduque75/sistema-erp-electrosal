@@ -1,7 +1,5 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { IAnaliseQuimicaRepository } from 'domain/analises-quimicas';
-import { AnaliseQuimica, AnaliseQuimicaProps } from '@sistema-erp-electrosal/core';
-import { AtualizarAnaliseDto } from '../dtos/atualizar-analise.dto';
+import { IAnaliseQuimicaRepository, AnaliseQuimica, AnaliseQuimicaProps, AtualizarAnaliseDto } from '@sistema-erp-electrosal/core';
 
 @Injectable()
 export class AtualizarAnaliseUseCase {

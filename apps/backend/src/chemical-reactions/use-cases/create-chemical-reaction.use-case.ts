@@ -120,7 +120,13 @@ export class CreateChemicalReactionUseCase {
           organizationId,
           notes,
           auUsedGrams: totalGoldGrams.toNumber(),
-          outputProductGrams: 0,
+          inputGoldGrams: totalGoldGrams.toNumber(),
+          inputRawMaterialGrams: inputRawMaterialGrams.toNumber(),
+          inputBasketLeftoverGrams: undefined,
+          inputDistillateLeftoverGrams: undefined,
+          outputProductGrams: outputProductGrams.toNumber(),
+          outputBasketLeftoverGrams: undefined,
+          outputDistillateLeftoverGrams: undefined,
           lots: {
             connect: sourceLotIds.map(id => ({ id }))
           },

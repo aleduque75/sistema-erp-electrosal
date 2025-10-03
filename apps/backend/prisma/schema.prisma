@@ -736,8 +736,14 @@ model chemical_reactions {
   id                 String                       @id @default(uuid())
   organizationId     String
   auUsedGrams        Float
+  inputGoldGrams     Float
+  inputRawMaterialGrams Float
+  inputBasketLeftoverGrams Float?
+  inputDistillateLeftoverGrams Float?
   notes              String?
   outputProductGrams Float
+  outputBasketLeftoverGrams Float?
+  outputDistillateLeftoverGrams Float?
   status             ChemicalReactionStatusPrisma @default(STARTED)
   reactionDate       DateTime                     @default(now())
   createdAt          DateTime                     @default(now())

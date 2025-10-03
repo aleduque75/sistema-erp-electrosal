@@ -20,7 +20,20 @@ const formatCurrency = (value: number) =>
     value || 0
   );
 
-export function RecentSales({ data }) {
+type Sale = {
+  id: string | number;
+  pessoa: {
+    name: string;
+    email: string;
+  };
+  netAmount: number;
+};
+
+interface RecentSalesProps {
+  data: Sale[];
+}
+
+export function RecentSales({ data }: RecentSalesProps) {
   return (
     <Card>
       <CardHeader>

@@ -1,6 +1,10 @@
+// src/components/landing-page/FeaturesSection.tsx
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FeaturesSectionConfig } from "@/config/landing-page";
 import * as LucideIcons from "lucide-react";
+// Importar o tipo de Icone para tipagem correta
+import { LucideIcon } from "lucide-react"; 
 
 interface FeaturesSectionProps {
   config: FeaturesSectionConfig;
@@ -20,13 +24,15 @@ export function FeaturesSection({ config }: FeaturesSectionProps) {
         </div>
         <div className="grid items-start gap-8 sm:grid-cols-2 md:grid-cols-3 lg:gap-12">
           {config.items.map((item, index) => {
-            const Icon = LucideIcons[item.icon as keyof typeof LucideIcons];
+            // 1. OBTEMOS O COMPONENTE E TIPAMOS ELE CORRETAMENTE
+            const IconComponent = LucideIcons[item.icon as keyof typeof LucideIcons] as LucideIcon;
 
             return (
               <Card key={index} className="hover:shadow-lg transition-shadow duration-300">
                 <CardHeader className="flex flex-row items-center gap-4">
                   <div className="bg-primary/10 rounded-full p-3">
-                    {Icon && <Icon className="w-6 h-6 text-primary" />}
+                    {/* 2. USAMOS O NOME COM LETRA MAIÚSCULA DENTRO DO JSX */}
+                    {IconComponent && <IconComponent className="w-6 h-6 text-primary" />}
                   </div>
                   <CardTitle>{item.title}</CardTitle>
                 </CardHeader>

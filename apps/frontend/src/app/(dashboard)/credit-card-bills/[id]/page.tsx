@@ -51,7 +51,7 @@ const formatDate = (dateString: string) =>
 export default function BillDetailsPage() {
   const router = useRouter();
   const params = useParams();
-  const billId = params.id as string;
+  const billId = params?.id as string;
 
   const [bill, setBill] = useState<CreditCardBill | null>(null);
   const [isLoading, setIsLoading] = useState(true);

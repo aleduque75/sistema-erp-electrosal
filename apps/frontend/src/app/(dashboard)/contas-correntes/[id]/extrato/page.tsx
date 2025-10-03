@@ -1,3 +1,5 @@
+// apps/frontend/src/app/(dashboard)/contas-correntes/[id]/extrato/page.tsx
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -18,7 +20,12 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, PlusCircle, ArrowRightLeft, MoreHorizontal } from "lucide-react";
+import {
+  ArrowLeft,
+  PlusCircle,
+  ArrowRightLeft,
+  MoreHorizontal,
+} from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
@@ -47,9 +54,9 @@ import { TransacaoForm } from "../../transacao-form";
 // import { TransferModal } from "@/components/transfer-modal"; // Removido
 import { Combobox } from "@/components/ui/combobox";
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatInTimeZone } from 'date-fns-tz';
-import { ContaCorrenteType } from '@prisma/client'; // Adicionado
-import { TransferFromSupplierAccountForm } from '../../components/transfer-from-supplier-account-form'; // Adicionado
+import { formatInTimeZone } from "date-fns-tz";
+import { ContaCorrenteType } from "@sistema-erp-electrosal/core"; // Importamos o objeto Enum (valor)
+import { TransferFromSupplierAccountForm } from "../../components/transfer-from-supplier-account-form"; // Adicionado
 
 const formatCurrency = (value?: number | null) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -58,13 +65,16 @@ const formatCurrency = (value?: number | null) =>
 
 const formatGold = (value?: number | null) => {
   if (value == null) return "-";
-  return `${value.toFixed(4).replace('.', ',')} g`;
+  return `${value.toFixed(4).replace(".", ",")} g`;
 };
 
 const formatDateTime = (dateString?: string | null) =>
   dateString
     ? new Date(dateString).toLocaleString("pt-BR", { timeZone: "UTC" })
     : "N/A";
+
+// Define o TIPO STRING LITERAL do Enum para uso nas interfaces
+type ContaCorrenteTypeLiteral = "BANCO" | "FORNECEDOR_METAL" | "EMPRESTIMO";
 
 interface ContaCorrenteExtrato {
   id: string;
@@ -73,7 +83,8 @@ interface ContaCorrenteExtrato {
   moeda: string;
   initialBalanceBRL: number; // Updated
   initialBalanceGold: number; // Added
-  type: ContaCorrenteType; // Adicionado
+  // Usa o tipo string literal (CORRIGIDO)
+  type: ContaCorrenteTypeLiteral;
 }
 
 interface TransacaoExtrato {
@@ -99,7 +110,7 @@ interface ExtratoData {
 export default function ExtratoPage() {
   const params = useParams();
   const router = useRouter();
-  const id = params.id as string;
+  const id = (params?.id ?? "") as string;
 
   const [extrato, setExtrato] = useState<ExtratoData | null>(null);
   const [isFetching, setIsFetching] = useState(true);
@@ -114,19 +125,26 @@ export default function ExtratoPage() {
   const [isLancamentoModalOpen, setIsLancamentoModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo estado para o modal de transferência
   const [contasContabeis, setContasContabeis] = useState<any[]>([]);
-  const [editingTransacaoId, setEditingTransacaoId] = useState<string | null>(null);
-  const [editingTransacao, setEditingTransacao] = useState<TransacaoExtrato | null>(null);
+  const [editingTransacaoId, setEditingTransacaoId] = useState<string | null>(
+    null
+  );
+  const [editingTransacao, setEditingTransacao] =
+    useState<TransacaoExtrato | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deletingTransacaoId, setDeletingTransacaoId] = useState<string | null>(null);
+  const [deletingTransacaoId, setDeletingTransacaoId] = useState<string | null>(
+    null
+  );
   const [reconciledIds, setReconciledIds] = useState<string[]>([]);
-  const [displayTransacoes, setDisplayTransacoes] = useState<TransacaoExtrato[]>([]);
+  const [displayTransacoes, setDisplayTransacoes] = useState<
+    TransacaoExtrato[]
+  >([]);
   const [descriptionFilter, setDescriptionFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newContaContabilId, setNewContaContabilId] = useState<string>("");
 
   const fetchContasContabeis = async () => {
     try {
-      const response = await api.get('/contas-contabeis');
+      const response = await api.get("/contas-contabeis");
       setContasContabeis(response.data);
     } catch (err) {
       toast.error("Falha ao carregar contas contábeis.");
@@ -153,8 +171,12 @@ export default function ExtratoPage() {
         saldoFinalGold: parseFloat(response.data.saldoFinalGold),
         contaCorrente: {
           ...response.data.contaCorrente,
-          initialBalanceBRL: parseFloat(response.data.contaCorrente.initialBalanceBRL),
-          initialBalanceGold: parseFloat(response.data.contaCorrente.initialBalanceGold),
+          initialBalanceBRL: parseFloat(
+            response.data.contaCorrente.initialBalanceBRL
+          ),
+          initialBalanceGold: parseFloat(
+            response.data.contaCorrente.initialBalanceGold
+          ),
         },
         transacoes: formattedTransacoes,
       });
@@ -184,9 +206,14 @@ export default function ExtratoPage() {
     fetchExtrato();
   };
 
-  const handleUpdateContaContabil = async (transacaoId: string, newContaContabilId: string) => {
+  const handleUpdateContaContabil = async (
+    transacaoId: string,
+    newContaContabilId: string
+  ) => {
     try {
-      await api.patch(`/transacoes/${transacaoId}`, { contaContabilId: newContaContabilId });
+      await api.patch(`/transacoes/${transacaoId}`, {
+        contaContabilId: newContaContabilId,
+      });
       toast.success("Conta contábil atualizada com sucesso!");
       setEditingTransacaoId(null);
       fetchExtrato();
@@ -202,13 +229,13 @@ export default function ExtratoPage() {
     }
 
     try {
-      await api.post('/transacoes/bulk-update-conta-contabil', {
+      await api.post("/transacoes/bulk-update-conta-contabil", {
         transactionIds: selectedIds,
         contaContabilId: newContaContabilId,
       });
       toast.success("Transações atualizadas com sucesso!");
       setSelectedIds([]);
-      setNewContaContabilId('');
+      setNewContaContabilId("");
       fetchExtrato();
     } catch (err) {
       toast.error("Falha ao atualizar transações.");
@@ -216,7 +243,7 @@ export default function ExtratoPage() {
   };
 
   const handleMove = (transactionId: string, direction: "up" | "down") => {
-    const index = displayTransacoes.findIndex(t => t.id === transactionId);
+    const index = displayTransacoes.findIndex((t) => t.id === transactionId);
     if (index === -1) return;
 
     const newIndex = direction === "up" ? index - 1 : index + 1;
@@ -254,7 +281,7 @@ export default function ExtratoPage() {
     if (!descriptionFilter) {
       return displayTransacoes;
     }
-    return displayTransacoes.filter(t =>
+    return displayTransacoes.filter((t) =>
       t.descricao.toLowerCase().includes(descriptionFilter.toLowerCase())
     );
   }, [displayTransacoes, descriptionFilter]);
@@ -280,7 +307,9 @@ export default function ExtratoPage() {
               <ToggleGroup
                 type="single"
                 value={currencyView}
-                onValueChange={(value: "BRL" | "GOLD") => value && setCurrencyView(value)}
+                onValueChange={(value: "BRL" | "GOLD") =>
+                  value && setCurrencyView(value)
+                }
                 aria-label="Visualização de Moeda"
               >
                 <ToggleGroupItem value="BRL" aria-label="Visualizar em Reais">
@@ -298,8 +327,14 @@ export default function ExtratoPage() {
                 <Button onClick={() => setIsLancamentoModalOpen(true)}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Novo Lançamento
                 </Button>
-                {extrato?.contaCorrente.type === ContaCorrenteType.FORNECEDOR_METAL && (
-                  <Button variant="outline" onClick={() => setIsTransferModalOpen(true)}> {/* Novo botão */}
+                {/* CORRIGIDO: Usa a string literal 'FORNECEDOR_METAL' */}
+                {extrato?.contaCorrente.type === "FORNECEDOR_METAL" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsTransferModalOpen(true)}
+                  >
+                    {" "}
+                    {/* Novo botão */}
                     <ArrowRightLeft className="mr-2 h-4 w-4" /> Transferir Ouro
                   </Button>
                 )}
@@ -341,7 +376,9 @@ export default function ExtratoPage() {
 
           {selectedIds.length > 0 && (
             <div className="flex items-center gap-4 my-4 p-4 border rounded-lg bg-muted/50">
-              <p className="text-sm font-medium">{selectedIds.length} transações selecionadas</p>
+              <p className="text-sm font-medium">
+                {selectedIds.length} transações selecionadas
+              </p>
               <div className="w-[300px]">
                 <Combobox
                   options={contasContabeis.map((cc) => ({
@@ -365,14 +402,18 @@ export default function ExtratoPage() {
                 <div>
                   <strong>Saldo Anterior:</strong>
                   <p className="font-semibold text-lg">
-                    {currencyView === 'BRL' ? formatCurrency(extrato.saldoAnteriorBRL) : formatGold(extrato.saldoAnteriorGold)}
+                    {currencyView === "BRL"
+                      ? formatCurrency(extrato.saldoAnteriorBRL)
+                      : formatGold(extrato.saldoAnteriorGold)}
                   </p>
                 </div>
-                
+
                 <div>
                   <strong>Saldo Final do Período:</strong>
                   <p className="font-semibold text-lg">
-                    {currencyView === 'BRL' ? formatCurrency(extrato.saldoFinalBRL) : formatGold(extrato.saldoFinalGold)}
+                    {currencyView === "BRL"
+                      ? formatCurrency(extrato.saldoFinalBRL)
+                      : formatGold(extrato.saldoFinalGold)}
                   </p>
                 </div>
               </div>
@@ -381,10 +422,13 @@ export default function ExtratoPage() {
                   <TableRow>
                     <TableHead className="w-[50px]">
                       <Checkbox
-                        checked={selectedIds.length === filteredTransacoes.length && filteredTransacoes.length > 0}
+                        checked={
+                          selectedIds.length === filteredTransacoes.length &&
+                          filteredTransacoes.length > 0
+                        }
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setSelectedIds(filteredTransacoes.map(t => t.id));
+                            setSelectedIds(filteredTransacoes.map((t) => t.id));
                           } else {
                             setSelectedIds([]);
                           }
@@ -394,7 +438,9 @@ export default function ExtratoPage() {
                     <TableHead>Data/Hora</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Conta Contábil</TableHead>
-                    <TableHead className="text-right">Valor ({currencyView === 'BRL' ? 'R$' : 'Au'})</TableHead>
+                    <TableHead className="text-right">
+                      Valor ({currencyView === "BRL" ? "R$" : "Au"})
+                    </TableHead>
                     <TableHead className="w-[50px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -404,7 +450,11 @@ export default function ExtratoPage() {
                       <TableRow
                         key={t.id}
                         onClick={() => handleToggleReconciled(t.id)}
-                        className={reconciledIds.includes(t.id) ? "bg-green-800/50 dark:bg-green-800 hover:bg-green-600/50 dark:hover:bg-green-700" : ""}
+                        className={
+                          reconciledIds.includes(t.id)
+                            ? "bg-green-800/50 dark:bg-green-800 hover:bg-green-600/50 dark:hover:bg-green-700"
+                            : ""
+                        }
                       >
                         <TableCell>
                           <Checkbox
@@ -413,7 +463,9 @@ export default function ExtratoPage() {
                               if (checked) {
                                 setSelectedIds([...selectedIds, t.id]);
                               } else {
-                                setSelectedIds(selectedIds.filter(id => id !== t.id));
+                                setSelectedIds(
+                                  selectedIds.filter((id) => id !== t.id)
+                                );
                               }
                             }}
                           />
@@ -447,21 +499,38 @@ export default function ExtratoPage() {
                           className={`text-right font-semibold ${t.tipo === "CREDITO" ? "text-green-600" : "text-red-600"}`}
                         >
                           {t.tipo === "DEBITO" && "- "}
-                          {currencyView === 'BRL' ? formatCurrency(t.valor) : formatGold(t.goldAmount)}
+                          {currencyView === "BRL"
+                            ? formatCurrency(t.valor)
+                            : formatGold(t.goldAmount)}
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <span className="sr-only">Abrir menu</span>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                              <DropdownMenuItem onClick={() => handleMove(t.id, "up")} disabled={index === 0}>
+                            <DropdownMenuContent
+                              align="end"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <DropdownMenuItem
+                                onClick={() => handleMove(t.id, "up")}
+                                disabled={index === 0}
+                              >
                                 Mover para Cima
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleMove(t.id, "down")} disabled={index === filteredTransacoes.length - 1}>
+                              <DropdownMenuItem
+                                onClick={() => handleMove(t.id, "down")}
+                                disabled={
+                                  index === filteredTransacoes.length - 1
+                                }
+                              >
                                 Mover para Baixo
                               </DropdownMenuItem>
                               <DropdownMenuItem
@@ -515,7 +584,9 @@ export default function ExtratoPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingTransacao ? "Editar Lançamento" : `Novo Lançamento em ${extrato?.contaCorrente.nome}`}
+              {editingTransacao
+                ? "Editar Lançamento"
+                : `Novo Lançamento em ${extrato?.contaCorrente.nome}`}
             </DialogTitle>
           </DialogHeader>
           <TransacaoForm
@@ -527,11 +598,16 @@ export default function ExtratoPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}> {/* Novo Dialog para transferência */}
+      <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+        {" "}
+        {/* Novo Dialog para transferência */}
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Transferir Ouro para Lotes de Metal Puro</DialogTitle>
-            <DialogDescription>Realize a transferência de ouro desta conta para o estoque de lotes de metal puro.</DialogDescription>
+            <DialogDescription>
+              Realize a transferência de ouro desta conta para o estoque de
+              lotes de metal puro.
+            </DialogDescription>
           </DialogHeader>
           <TransferFromSupplierAccountForm
             supplierMetalAccountId={id}
@@ -546,12 +622,15 @@ export default function ExtratoPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza de que deseja excluir esta transação? Esta ação não pode ser desfeita.
+              Tem certeza de que deseja excluir esta transação? Esta ação não
+              pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Confirmar</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete}>
+              Confirmar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

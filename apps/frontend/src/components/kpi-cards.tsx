@@ -11,7 +11,14 @@ const formatCurrency = (value: number) =>
     value || 0
   );
 
-export function KpiCards({ data }) {
+interface KpiData {
+  totalSales: number;
+  totalAccountsRec: number;
+  totalAccountsPay: number;
+  totalProducts: number;
+}
+
+export function KpiCards({ data }: { data: KpiData }) {
   if (!data) return null;
 
   return (

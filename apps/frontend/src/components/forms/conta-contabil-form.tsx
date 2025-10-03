@@ -66,7 +66,13 @@ export function ContaContabilForm({
   useEffect(() => {
     // Busca todas as contas que NÃO aceitam lançamento para serem "contas pai"
     api.get("/contas-contabeis").then((res) => {
-      const contasAgrupadoras = res.data.filter((c) => !c.aceitaLancamento);
+      interface ContaContabilApi {
+        id: string;
+        nome: string;
+        codigo: string;
+        aceitaLancamento: boolean;
+      }
+      const contasAgrupadoras: ContaContabilApi[] = (res.data as ContaContabilApi[]).filter((c: ContaContabilApi) => !c.aceitaLancamento);
       setContasPai(contasAgrupadoras);
     });
   }, []);

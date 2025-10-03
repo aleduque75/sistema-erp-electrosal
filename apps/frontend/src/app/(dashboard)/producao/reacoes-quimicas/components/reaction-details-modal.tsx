@@ -1,9 +1,33 @@
+// apps/frontend/src/app/(dashboard)/producao/reacoes-quimicas/components/reaction-details-modal.tsx
 'use client';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from "@/components/ui/badge";
-import { ChemicalReactionDetails } from "@/services/chemicalReactionsApi";
 import { Separator } from "@/components/ui/separator";
+
+// NOTA: Esta interface DEVE existir em '@/services/chemicalReactionsApi.ts'
+// Garanta que ela tenha todos os campos abaixo, especialmente outputProductGrams e updatedAt.
+export interface ChemicalReactionDetails {
+    id: string;
+    createdAt: string;
+    updatedAt: string | null;
+    status: 'STARTED' | 'PROCESSING' | 'PENDING_PURITY' | 'PENDING_PURITY_ADJUSTMENT' | 'COMPLETED' | 'CANCELED' | string;
+    auUsedGrams: number;
+    outputProductGrams: number; // CAMPO QUE ESTAVA FALTANDO
+    
+    productionBatch?: {
+        batchNumber: string;
+        product: { name: string; };
+    } | null;
+
+    lots: Array<{
+        id: string;
+        initialGrams: number;
+        remainingGrams: number;
+        notes: string | null;
+    }>;
+}
+
 
 const formatGrams = (grams: number) => new Intl.NumberFormat('pt-BR', { style: 'unit', unit: 'gram', minimumFractionDigits: 2 }).format(grams);
 const formatDate = (date: string | null) => date ? new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';

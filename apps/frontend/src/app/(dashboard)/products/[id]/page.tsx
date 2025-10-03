@@ -16,7 +16,8 @@ interface Product {
 
 export default function ProductDetailPage() {
   const { user, loading } = useAuth();
-  const { id } = useParams();
+  const params = useParams() as Record<string, string | string[]>;
+  const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [error, setError] = useState<string | null>(null);

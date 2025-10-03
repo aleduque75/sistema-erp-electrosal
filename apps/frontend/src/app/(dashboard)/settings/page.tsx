@@ -177,7 +177,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Conta Caixa/Banco Padrão</Label>
                 <Combobox
-                  value={field.value}
+                  value={field.value ?? undefined}
                   onChange={field.onChange}
                   options={caixaOptions}
                   placeholder="Selecione a conta de caixa..."
@@ -197,7 +197,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Conta de Receita de Vendas Padrão</Label>
                 <Combobox
-                  value={field.value}
+                  value={field.value ?? undefined}
                   onChange={field.onChange}
                   options={receitaOptions}
                   placeholder="Selecione a conta de receita..."
@@ -217,7 +217,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Conta de Despesa Padrão</Label>
                 <Combobox
-                  value={field.value}
+                  value={field.value ?? undefined}
                   onChange={field.onChange}
                   options={despesaOptions}
                   placeholder="Selecione a conta de despesa..."
@@ -237,7 +237,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Conta de Estoque de Metal Padrão</Label>
                 <Combobox
-                  value={field.value}
+                  value={field.value ?? undefined}
                   onChange={field.onChange}
                   options={metalStockOptions}
                   placeholder="Selecione a conta de estoque de metal..."
@@ -256,7 +256,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Conta de Custo de Produção Padrão</Label>
                 <Combobox
-                  value={field.value}
+                  value={field.value ?? undefined}
                   onChange={field.onChange}
                   options={productionCostOptions}
                   placeholder="Selecione a conta de custo de produção..."

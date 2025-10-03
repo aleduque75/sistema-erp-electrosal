@@ -37,7 +37,7 @@ import {
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { ContaCorrenteForm } from "./conta-corrente-form";
 import { TransacaoForm } from "./transacao-form";
-import { ContaCorrenteType } from "@/types/enums";
+import { ContaCorrenteType } from "@sistema-erp-electrosal/core";
 
 // ✅ 2. A importação do ExtratoModal não é mais necessária aqui
 // import { ExtratoModal } from './extrato-modal';
@@ -48,7 +48,7 @@ interface ContaCorrente {
   numeroConta: string;
   agencia?: string;
   saldo: number;
-  type: ContaCorrenteType;
+  type: (typeof ContaCorrenteType)[keyof typeof ContaCorrenteType]; 
 }
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -197,7 +197,19 @@ export default function ContasCorrentesPage() {
         description="Preencha os detalhes da sua conta corrente, caixa ou carteira."
       >
                   <ContaCorrenteForm
-                    conta={contaToEdit}
+                    conta={
+                      contaToEdit
+                        ? {
+                            ...contaToEdit,
+                            saldoInicial:
+                              (contaToEdit as any).saldoInicial ??
+                              contaToEdit.saldo ??
+                              0,
+                            limite: (contaToEdit as any).limite ?? null,
+                            type: (contaToEdit as any).type ?? null,
+                          }
+                        : null
+                    }
                     onSave={handleSave}
                   />      </ResponsiveDialog>
 
