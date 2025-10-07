@@ -24,13 +24,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { Trash2 } from "lucide-react";
+import { PlusCircle, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AddItemModal } from "./AddItemModal";
 
 // --- Interfaces ---
 interface Client { id: string; name: string; }
-interface InventoryLot { id: string; remainingQuantity: number; sourceType: string; }
-interface Product { id: string; name: string; price: number; stock: number; inventoryLots: InventoryLot[] }
+interface Product { id: string; name: string; price: number; stock: number; inventoryLots: any[] }
 interface SaleItem { productId: string; name: string; quantity: number; price: number; stock: number; inventoryLotId?: string; }
 interface ContaCorrente { id: string; nome: string; }
 interface Fee { id: string; installments: number; feePercentage: number; }
@@ -53,30 +53,12 @@ export function NewSaleForm({ onSave }: any) {
   const [fees, setFees] = useState<Fee[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
   const [items, setItems] = useState<SaleItem[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedLot, setSelectedLot] = useState<string | null>(null);
-  const [itemPrice, setItemPrice] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feePercentage, setFeePercentage] = useState(0);
   const [absorbCreditCardFee, setAbsorbCreditCardFee] = useState(false);
-  const [latestGoldQuote, setLatestGoldQuote] = useState<any>(null);
   const [saleGoldQuote, setSaleGoldQuote] = useState(0);
   const [laborCostTable, setLaborCostTable] = useState<any[]>([]);
-  const [laborGramsInput, setLaborGramsInput] = useState<number | string>(0);
-
-  // States for unit conversion
-  const [entryUnit, setEntryUnit] = useState('sal'); // 'sal' or 'au'
-  const [entryQuantity, setEntryQuantity] = useState<number | string>(1);
-
-  const GOLD_SALT_PRODUCT_NAME = 'El Sal 68%';
-  const GOLD_SALT_CONVERSION_RATE = 1.47;
-
-  const isGoldSaltProduct = useMemo(() => 
-    selectedProduct?.name.includes(GOLD_SALT_PRODUCT_NAME), 
-    [selectedProduct]
-  );
-
-
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
 
   const {
     control,
@@ -118,13 +100,11 @@ export function NewSaleForm({ onSave }: any) {
         ]);
         setClients(clientsRes.data.map((c: any) => ({ id: c.id, name: c.name })));
         setProducts(productsRes.data);
-        console.log("Fetched Products:", productsRes.data);
         setContasCorrentes(contasRes.data);
         setFees(feesRes.data);
         setAbsorbCreditCardFee(orgSettingsRes.data.absorbCreditCardFee);
         setPaymentTerms(paymentTermsRes.data);
         setLaborCostTable(laborTableRes.data);
-        setLatestGoldQuote(quoteRes.data);
         if (quoteRes.data?.sellPrice) {
           setSaleGoldQuote(quoteRes.data.sellPrice);
           toast.info(`Cotação do Ouro carregada: ${formatCurrency(quoteRes.data?.sellPrice)}`);
@@ -147,120 +127,22 @@ export function NewSaleForm({ onSave }: any) {
     }
   }, [paymentConditionId, numberOfInstallments, fees]);
 
-  const goldAmount = useMemo(() => {
-    if (!isGoldSaltProduct) return 0;
-    const quant = typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity;
-    if (isNaN(quant)) return 0;
-    return entryUnit === 'au' ? quant : quant / GOLD_SALT_CONVERSION_RATE;
-  }, [entryQuantity, entryUnit, isGoldSaltProduct]);
-
-  const laborGramsCharged = useMemo(() => {
-    if (!isGoldSaltProduct || goldAmount <= 0) return 0;
-
-    const entry = laborCostTable.find(e => 
-      goldAmount >= e.minGrams && (e.maxGrams === null || goldAmount <= e.maxGrams)
-    );
-
-    return entry ? entry.goldGramsCharged : 0;
-  }, [goldAmount, isGoldSaltProduct, laborCostTable]);
-
-  useEffect(() => {
-    setLaborGramsInput(laborGramsCharged);
-  }, [laborGramsCharged]);
-
-  const totalGoldAmount = useMemo(() => {
-    const laborGrams = typeof laborGramsInput === 'string' ? parseFloat(laborGramsInput) : (laborGramsInput || 0);
-    return goldAmount + laborGrams;
-  }, [goldAmount, laborGramsInput]);
-
-  const finalQuantity = useMemo(() => {
-    const quant = typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity;
-    if (isNaN(quant)) return 0;
-
-    if (isGoldSaltProduct) {
-      if (entryUnit === 'au') {
-        return quant * GOLD_SALT_CONVERSION_RATE;
-      }
-      return quant;
-    }
-
-    return quant;
-  }, [entryQuantity, entryUnit, isGoldSaltProduct]);
-
-  const calculatedItemPrice = useMemo(() => {
-    if (!selectedProduct) return 0;
-
-    if (isGoldSaltProduct) {
-      if (!saleGoldQuote || saleGoldQuote <= 0) return 0;
-      if (goldAmount <= 0) return 0;
-
-      const laborGrams = typeof laborGramsInput === 'string' ? parseFloat(laborGramsInput) : laborGramsInput;
-      if (isNaN(laborGrams)) return 0;
-
-      const goldWithLabor = goldAmount + laborGrams;
-      const totalBRL = goldWithLabor * saleGoldQuote;
-      
-      // The price is per unit of SAL, so we divide the total BRL value by the final quantity in SAL
-      if (finalQuantity === 0) return 0; // Avoid division by zero
-      return totalBRL / finalQuantity;
-    } else {
-      return Number(selectedProduct.price);
-    }
-  }, [selectedProduct, isGoldSaltProduct, saleGoldQuote, goldAmount, laborGramsInput, finalQuantity]);
-
-  useEffect(() => {
-    setItemPrice(calculatedItemPrice);
-  }, [calculatedItemPrice]);
-
-  const handleAddItem = () => {
-    if (!selectedProduct || finalQuantity <= 0 || calculatedItemPrice <= 0) {
-      toast.error("Selecione um produto, quantidade e preço válidos.");
-      return;
-    }
-
-    const isManufactured = selectedProduct.inventoryLots.some(lot => lot.sourceType === 'REACTION');
-    if (isManufactured && !selectedLot) {
-      toast.error("Para produtos manufaturados, selecione um lote.");
-      return;
-    }
-
-    const lot = selectedProduct.inventoryLots.find(l => l.id === selectedLot);
-    const stockAvailable = isManufactured ? (lot?.remainingQuantity || 0) : selectedProduct.stock;
-
-    if (finalQuantity > stockAvailable) {
-      toast.error(`Estoque insuficiente. Disponível: ${stockAvailable}`);
-      return;
-    }
-
-    const existingItem = items.find(
-      (item) => item.productId === selectedProduct.id && item.inventoryLotId === selectedLot
-    );
-
-    if (existingItem) {
-      setItems(
-        items.map((item) =>
-          item.productId === selectedProduct.id && item.inventoryLotId === selectedLot
-            ? { ...item, quantity: item.quantity + finalQuantity }
-            : item
-        )
+  const handleUpsertItem = (newItem: Omit<SaleItem, 'stock'>) => {
+    setItems(currentItems => {
+      const existingItem = currentItems.find(
+        (item) => item.productId === newItem.productId && item.inventoryLotId === newItem.inventoryLotId
       );
-    } else {
-      setItems([
-        ...items,
-        {
-          productId: selectedProduct.id,
-          name: selectedProduct.name,
-          quantity: finalQuantity,
-          price: calculatedItemPrice,
-          stock: stockAvailable,
-          inventoryLotId: selectedLot || undefined,
-        },
-      ]);
-    }
-    setSelectedProduct(null);
-    setSelectedLot(null);
-    setEntryQuantity(1);
-    setItemPrice(0);
+
+      if (existingItem) {
+        return currentItems.map((item) =>
+          item.productId === newItem.productId && item.inventoryLotId === newItem.inventoryLotId
+            ? { ...item, quantity: Number(item.quantity) + Number(newItem.quantity) }
+            : item
+        );
+      } else {
+        return [...currentItems, { ...newItem, stock: 0 }]; // stock is not relevant here
+      }
+    });
   };
 
   const handleRemoveItem = (productId: string, inventoryLotId?: string) =>
@@ -308,7 +190,7 @@ export function NewSaleForm({ onSave }: any) {
       feeAmount: totalAmount * (feePercentage / 100),
       paymentMethod,
       paymentTermId,
-      goldQuoteValue: saleGoldQuote, // Adicionado
+      goldQuoteValue: saleGoldQuote,
       numberOfInstallments: formData.numberOfInstallments,
       contaCorrenteId: formData.contaCorrenteId,
     };
@@ -329,6 +211,15 @@ export function NewSaleForm({ onSave }: any) {
       onSubmit={handleSubmit(onFinalizeSale)}
       className="flex flex-col h-full bg-background p-1 rounded-lg"
     >
+      <AddItemModal
+        open={isAddItemModalOpen}
+        onOpenChange={setIsAddItemModalOpen}
+        products={products}
+        items={items}
+        onAddItem={handleUpsertItem}
+        saleGoldQuote={saleGoldQuote}
+        laborCostTable={laborCostTable}
+      />
       <div className="flex flex-col lg:flex-row flex-1 gap-4">
         <div className="w-full lg:w-1/3 space-y-4">
           <Card className="h-full">
@@ -345,7 +236,7 @@ export function NewSaleForm({ onSave }: any) {
                     <Combobox
                       options={clients.map((c) => ({ value: c.id, label: c.name }))}
                       value={field.value}
-onChange={field.onChange}
+                      onChange={field.onChange}
                       placeholder="Selecione..."
                     />
                     <p className="text-sm text-destructive">{typeof errors.clientId?.message === "string" ? errors.clientId.message : ""}</p>
@@ -421,120 +312,27 @@ onChange={field.onChange}
                         <SelectContent>
                           {contasCorrentes.map((c) => (
                             <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
+                          ))}</SelectContent>
                       </Select>
                       <p className="text-sm text-destructive">{typeof errors.contaCorrenteId?.message === "string" ? errors.contaCorrenteId.message : ""}</p>
                     </div>
                   )}
                 />
               )}
+               <Button type="button" variant="outline" onClick={() => setIsAddItemModalOpen(true)} className="w-full">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Adicionar Produto
+              </Button>
             </CardContent>
           </Card>
         </div>
         <div className="w-full lg:w-2/3 space-y-4 flex flex-col">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">2. Adicionar Produtos</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
-              <div className="sm:col-span-4">
-                <Label>Produto</Label>
-                <Combobox
-                  options={products.map((p) => ({ value: p.id, label: `${p.name} (Estoque: ${p.stock})` }))}
-                  value={selectedProduct?.id}
-                  onChange={(value) => {
-                    const product = products.find((p) => p.id === value) || null;
-                    setSelectedProduct(product);
-                    setEntryUnit('sal'); // Reset to default unit on product change
-                    setEntryQuantity(1);
-                  }}
-                  placeholder="Pesquise..."
-                />
-              </div>
-
-              {isGoldSaltProduct ? (
-                <>
-                  <div className="sm:col-span-2">
-                    <Label>Qtd. Lançada</Label>
-                    <Input
-                      type="number"
-                      value={entryQuantity}
-                      onChange={(e) => setEntryQuantity(e.target.value)}
-                      min="0.01"
-                      step="0.01"
-                    />
-                  </div>
-                  <div className="sm:col-span-1">
-                    <Label>Unidade</Label>
-                    <Select onValueChange={setEntryUnit} value={entryUnit}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="sal">g Sal</SelectItem>
-                        <SelectItem value="au">g Au</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label>Mão de Obra (g)</Label>
-                    <Input 
-                      type="number"
-                      value={laborGramsInput}
-                      onChange={(e) => setLaborGramsInput(e.target.value)}
-                      step="0.01"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label>Total Ouro (g)</Label>
-                    <Input type="number" value={totalGoldAmount.toFixed(4)} readOnly disabled className="font-bold" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label>Qtd. Final (Sal)</Label>
-                    <Input type="number" value={finalQuantity.toFixed(4)} readOnly disabled />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="sm:col-span-3">
-                    <Label>Preço Unit.</Label>
-                    <Input type="number" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))} min="0" step="0.01" />
-                  </div>
-                  <div className="sm:col-span-3">
-                    <Label>Qtd.</Label>
-                    <Input type="number" value={entryQuantity} onChange={(e) => setEntryQuantity(Number(e.target.value))} min="1" />
-                  </div>
-                </>
-              )}
-
-              {selectedProduct && selectedProduct.inventoryLots.some(lot => lot.sourceType === 'REACTION') && (
-                <div className="sm:col-span-2">
-                  <Label>Lote de Produção</Label>
-                  <Select onValueChange={setSelectedLot} value={selectedLot || ""}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o lote..." /></SelectTrigger>
-                    <SelectContent>
-                      {selectedProduct.inventoryLots
-                        .filter(lot => (lot.sourceType === 'REACTION' || lot.sourceType === 'MANUAL_ADJUSTMENT') && lot.remainingQuantity > 0)
-                        .map(lot => (
-                          <SelectItem key={lot.id} value={lot.id}>
-                            Lote #{lot.id.substring(0, 8)} (Disponível: {lot.remainingQuantity})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="sm:col-span-2">
-                <Button type="button" onClick={handleAddItem} className="w-full">Adicionar</Button>
-              </div>
-            </CardContent>
-          </Card>
           <Card className="flex-1 flex flex-col">
             <CardHeader>
-              <CardTitle className="text-lg">3. Itens da Venda</CardTitle>
+              <CardTitle className="text-lg">Itens da Venda</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-[250px]">
+              <ScrollArea className="h-[350px]">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -550,7 +348,7 @@ onChange={field.onChange}
                       items.map((item) => (
                         <TableRow key={`${item.productId}-${item.inventoryLotId || 'stock'}`}>
                           <TableCell>{item.name}{item.inventoryLotId && ` (Lote: ${item.inventoryLotId.substring(0,8)})`}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>{Number(item.quantity).toFixed(4)}</TableCell>
                           <TableCell>{formatCurrency(item.price)}</TableCell>
                           <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
                           <TableCell>
@@ -562,7 +360,12 @@ onChange={field.onChange}
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24">Nenhum item adicionado</TableCell>
+                        <TableCell colSpan={5} className="text-center h-full">
+                          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                            <p>Nenhum item adicionado.</p>
+                            <p className="text-sm">Clique em "Adicionar Produto" para começar.</p>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     )}
                   </TableBody>

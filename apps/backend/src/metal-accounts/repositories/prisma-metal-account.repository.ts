@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MetalAccount, IMetalAccountRepository, TipoMetal } from '@sistema-erp-electrosal/core';
+import Decimal from 'decimal.js';
 
 @Injectable()
 export class PrismaMetalAccountRepository implements IMetalAccountRepository {
@@ -29,14 +30,27 @@ export class PrismaMetalAccountRepository implements IMetalAccountRepository {
     return MetalAccount.create(metalAccount, metalAccount.id);
   }
 
-  async findAll(organizationId: string): Promise<MetalAccount[]> {
+  async findAll(organizationId: string): Promise<any[]> { // Return a DTO shape
     const metalAccounts = await this.prisma.metalAccount.findMany({
       where: { organizationId },
+      include: {
+        entries: true, // Include entries to calculate balance
+        person: true, // Include person to get the name
+      },
     });
 
-    return metalAccounts.map((metalAccount) =>
-      MetalAccount.create(metalAccount, metalAccount.id),
-    );
+    return metalAccounts.map((account) => {
+      const balance = account.entries.reduce((sum, entry) => {
+        return sum.add(new Decimal(entry.grams));
+      }, new Decimal(0));
+
+      return {
+        id: account.id,
+        name: account.person.name,
+        metalType: account.type,
+        balance: balance.toNumber(),
+      };
+    });
   }
 
   async findByPersonId(personId: string, metalType: TipoMetal, organizationId: string): Promise<MetalAccount | null> {

@@ -42,3 +42,31 @@ export class CreateSaleDto {
 }
 
 export class UpdateSaleDto extends PartialType(CreateSaleDto) {}
+
+export class ConfirmSaleDto {
+  @IsString()
+  @IsNotEmpty()
+  paymentMethod: 'A_VISTA' | 'A_PRAZO' | 'CREDIT_CARD' | 'METAL';
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  numberOfInstallments?: number;
+
+  @IsUUID()
+  @IsOptional()
+  contaCorrenteId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  clientMetalAccountId?: string;
+
+  @IsNumber()
+  @IsOptional()
+  updatedNetAmount?: number;
+
+  @IsNumber()
+  @IsOptional()
+  updatedGoldPrice?: number;
+}
+

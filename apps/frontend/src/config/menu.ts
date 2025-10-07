@@ -17,8 +17,9 @@ import {
   Settings,
   LayoutPanelLeft,
   Percent,
-  FlaskConical, // Ícone para Análise Química
-  Scale, // Ícone para Cotações
+  FlaskConical,
+  Scale,
+  ClipboardList, // Ícone para PCP
 } from "lucide-react";
 import React from "react";
 
@@ -65,7 +66,7 @@ export const menuConfig: NavItem[] = [
       {
         title: "Grupos de Produtos",
         href: "/product-groups",
-        icon: Package, // Reutilizando o ícone de Package, ou encontrar um mais adequado
+        icon: Package,
         description: "Gerencie os grupos de produtos para comissionamento.",
       },
     ],
@@ -102,7 +103,7 @@ export const menuConfig: NavItem[] = [
       {
         title: "Recuperações",
         href: "/recovery-orders",
-        icon: FlaskConical, // Reusing FlaskConical for now, or find a more appropriate icon
+        icon: FlaskConical,
         description: "Gerencie as ordens de recuperação de metais.",
       },
       {
@@ -116,6 +117,19 @@ export const menuConfig: NavItem[] = [
         href: "/credit-card-transactions",
         icon: ArrowRightLeft,
         description: "Registre uma nova compra ou despesa no cartão.",
+      },
+    ],
+  },
+  {
+    title: "PCP",
+    href: "#",
+    icon: ClipboardList,
+    subItems: [
+      {
+        title: "Pedidos a Separar",
+        href: "/pcp/a-separar",
+        icon: ListChecks,
+        description: "Visualize e processe pedidos prontos para separação.",
       },
     ],
   },
@@ -154,12 +168,18 @@ export const menuConfig: NavItem[] = [
         icon: ArrowRightLeft,
         description: "Visualize todos os lançamentos financeiros.",
       },
-      { // ADDED
-        title: "Contas de Metais", // ADDED
-        href: "/contas-metais", // ADDED
-        icon: Wallet, // ADDED - Reusing Wallet icon for now, or find a more appropriate one
-        description: "Gerencie suas contas de metais preciosos.", // ADDED
-      }, // ADDED
+      { 
+        title: "Contas de Metais",
+        href: "/contas-metais",
+        icon: Wallet,
+        description: "Gerencie suas contas de metais preciosos.",
+      },
+      {
+        title: "Registrar Depósito em Metal",
+        href: "/metal-deposits/new",
+        icon: ArrowUpToLine, // Placeholder icon
+        description: "Converta um pagamento em R$ para um crédito em metal na conta de um cliente.",
+      },
       {
         title: "Cotações",
         href: "/quotations",
@@ -172,31 +192,11 @@ export const menuConfig: NavItem[] = [
         icon: FilePlus2,
         description: "Agrupe transações em aberto para criar uma nova fatura.",
       },
-    ],
-  },
-  {
-    title: "Administração",
-    href: "#",
-    icon: Settings,
-    subItems: [
       {
-        title: "Editar Landing Page",
-        href: "/landing-page-manager",
-        icon: LayoutPanelLeft,
-        description: "Gerencie o conteúdo da página inicial do sistema.",
-      },
-      // 👇 2. NOVO ITEM ADICIONADO AQUI 👇
-      {
-        title: "Taxas de Cartão",
-        href: "/settings/fees",
-        icon: Percent,
-        description: "Configure as taxas para vendas no cartão de crédito.",
-      },
-      {
-        title: "Configurar Prazos",
-        href: "/settings/payment-terms",
-        icon: Settings,
-        description: "Ajuste as configurações gerais do sistema.",
+        title: "Recebimentos de Metal",
+        href: "/financeiro/recebimentos-metais",
+        icon: Wallet, // Re-using icon, can be changed
+        description: "Gerencie os recebimentos de metal pendentes.",
       },
     ],
   },

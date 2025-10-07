@@ -89,6 +89,8 @@ export default function ImportPage() {
 
   const [isJsonImporting, setIsJsonImporting] = useState(false);
   const [quotationFile, setQuotationFile] = useState<File | null>(null);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+  const [isBackfillingTransactions, setIsBackfillingTransactions] = useState(false);
 
   const fetchContas = async () => {
     try {
@@ -101,6 +103,28 @@ export default function ImportPage() {
     } catch {
       toast.error("Erro ao recarregar o plano de contas.");
     }
+  };
+
+  const handleBackfillReceivables = async () => {
+    setIsBackfilling(true);
+    const promise = api.post("/sale-adjustments/backfill-receivables");
+    toast.promise(promise, {
+      loading: "Corrigindo vínculos de recebimentos...",
+      success: (response) => response.data.message,
+      error: (err) => err.response?.data?.message || "Falha ao corrigir vínculos.",
+      finally: () => setIsBackfilling(false),
+    });
+  };
+
+  const handleBackfillTransactions = async () => {
+    setIsBackfillingTransactions(true);
+    const promise = api.post("/sale-adjustments/backfill-transactions");
+    toast.promise(promise, {
+      loading: "Corrigindo vínculos de transações...",
+      success: (response) => response.data.message,
+      error: (err) => err.response?.data?.message || "Falha ao corrigir vínculos.",
+      finally: () => setIsBackfillingTransactions(false),
+    });
   };
 
   const handleImportCompanies = async () => {
@@ -587,6 +611,50 @@ export default function ImportPage() {
               {isJsonImporting
                 ? "Resetando..."
                 : "Excluir e Popular Dados"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Card de Correção de Vínculos */}
+        <Card className="w-full max-w-lg border-blue-500">
+          <CardHeader>
+            <CardTitle className="text-blue-700">Corrigir Vínculos de Recebimentos</CardTitle>
+            <CardDescription>
+              Esta ação verifica todos os recebimentos pagos e preenche a informação da conta corrente caso esteja faltando, baseado na transação original.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={handleBackfillReceivables}
+              disabled={isBackfilling}
+              className="w-full"
+            >
+              {isBackfilling
+                ? "Corrigindo..."
+                : "Corrigir Vínculos de Contas (Recebimentos)"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Card de Correção de Vínculos de Transações */}
+        <Card className="w-full max-w-lg border-purple-500">
+          <CardHeader>
+            <CardTitle className="text-purple-700">Corrigir Vínculos de Transações</CardTitle>
+            <CardDescription>
+              Esta ação verifica todas as transações e preenche a conta corrente caso esteja faltando, baseado no recebimento associado.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={handleBackfillTransactions}
+              disabled={isBackfillingTransactions}
+              className="w-full"
+            >
+              {isBackfillingTransactions
+                ? "Corrigindo..."
+                : "Corrigir Vínculos de Contas (Transações)"}
             </Button>
           </CardContent>
         </Card>

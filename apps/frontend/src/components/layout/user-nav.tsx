@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,14 +13,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Settings, User, LogOut, FileText, Package, Upload } from "lucide-react";
+import { Settings, User, LogOut, FileText, Package, Upload, LayoutPanelLeft, Percent, ArrowRightLeft } from "lucide-react";
 
 export function UserNav() {
   const { user, logout } = useAuth();
 
-  // Função para pegar as iniciais do nome para o Avatar
   const getInitials = (name: string | null | undefined) => {
-    if (!name) return "U"; // Usuário
+    if (!name) return "U";
     const names = name.split(" ");
     if (names.length > 1) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
@@ -33,8 +32,6 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
-            {/* Você pode adicionar um campo de URL de imagem ao seu usuário no futuro */}
-            {/* <AvatarImage src={user?.imageUrl} alt={user?.name || 'Avatar'} /> */}
             <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
           </Avatar>
         </Button>
@@ -68,24 +65,38 @@ export function UserNav() {
               <span>Logs de Auditoria</span>
             </DropdownMenuItem>
           </Link>
-          <Link href="/landing-page-manager" passHref>
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" /> {/* Reutilizando Settings, pode mudar para um ícone mais específico se tiver */} 
-              <span>Editar Landing Page</span>
-            </DropdownMenuItem>
-          </Link>
           <Link href="/estoque/adjust" passHref>
             <DropdownMenuItem>
               <Package className="mr-2 h-4 w-4" />
               <span>Ajuste Manual de Estoque</span>
             </DropdownMenuItem>
           </Link>
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">Importações</p>
-            </div>
-          </DropdownMenuLabel>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Administração</DropdownMenuLabel>
+          <Link href="/landing-page-manager" passHref>
+            <DropdownMenuItem>
+              <LayoutPanelLeft className="mr-2 h-4 w-4" />
+              <span>Editar Landing Page</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/settings/fees" passHref>
+            <DropdownMenuItem>
+              <Percent className="mr-2 h-4 w-4" />
+              <span>Taxas de Cartão</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/settings/payment-terms" passHref>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Configurar Prazos</span>
+            </DropdownMenuItem>
+          </Link>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Importações</DropdownMenuLabel>
           <Link href="/imports/sales" passHref>
             <DropdownMenuItem>
               <Upload className="mr-2 h-4 w-4" />
@@ -102,6 +113,18 @@ export function UserNav() {
             <DropdownMenuItem>
               <Upload className="mr-2 h-4 w-4" />
               <span>Importar PDF (Fatura)</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/sales-adjustments" passHref>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Ajuste de Vendas</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/transacoes/reconcile" passHref>
+            <DropdownMenuItem>
+              <ArrowRightLeft className="mr-2 h-4 w-4" />
+              <span>Conciliar Transações</span>
             </DropdownMenuItem>
           </Link>
         </DropdownMenuGroup>

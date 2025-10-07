@@ -65,6 +65,20 @@ export class TransacoesController {
     return this.transacoesService.findOne(id, organizationId);
   }
 
+  @Get('unlinked/all')
+  findUnlinked(@CurrentUser('orgId') organizationId: string) {
+    return this.transacoesService.findUnlinked(organizationId);
+  }
+
+  @Patch(':id/link-account')
+  linkAccount(
+    @Param('id') id: string,
+    @CurrentUser('orgId') organizationId: string,
+    @Body() body: { contaCorrenteId: string },
+  ) {
+    return this.transacoesService.linkAccount(organizationId, id, body.contaCorrenteId);
+  }
+
   @Patch(':id')
   update(
     @Param('id') id: string,

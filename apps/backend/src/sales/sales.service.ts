@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSaleDto, UpdateSaleDto } from './dtos/sales.dto';
-import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma } from '@prisma/client'; // Keep Sale for now, will refactor later
+import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma, SaleStatus } from '@prisma/client'; // Keep Sale for now, will refactor later
 import { addMonths, addDays } from 'date-fns';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case'; // Added
@@ -25,9 +25,17 @@ export class SalesService {
   }
 
   // Recebe organizationId
-  async findAll(organizationId: string, limit?: number): Promise<Sale[]> {
+  async findAll(organizationId: string, limit?: number, status?: SaleStatus, orderNumber?: string): Promise<Sale[]> {
+    const whereClause: Prisma.SaleWhereInput = { organizationId };
+    if (status) {
+      whereClause.status = status;
+    }
+    if (orderNumber) {
+      whereClause.orderNumber = Number(orderNumber);
+    }
+
     const prismaSales = await this.prisma.sale.findMany({
-      where: { organizationId }, // Usa no 'where'
+      where: whereClause,
       include: {
         pessoa: true, // Inclui o nome do cliente na listagem
         saleItems: {
@@ -61,8 +69,14 @@ export class SalesService {
           // Inclui os itens da venda
           include: {
             product: true, // Para cada item, inclui os dados do produto
+            inventoryLot: true,
           },
         },
+        accountsRec: { // Inclui os recebíveis associados
+          include: {
+            contaCorrente: true // Para cada recebível, inclui a conta corrente
+          }
+        }
       },
     });
 

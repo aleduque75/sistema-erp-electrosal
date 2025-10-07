@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -27,20 +28,24 @@ const CONTA_CORRENTE_TYPES = [
 ] as const;
 
 // DEFINIÇÃO DO SCHEMA CORRIGIDA
-const formSchema = z.object({
+const baseSchema = z.object({
   nome: z.string().min(3, "O nome da conta é obrigatório."),
   numeroConta: z.string().min(1, "O número/identificador é obrigatório."),
   agencia: z.string().optional(),
+  limite: z.coerce.number().min(0).default(0).optional(),
+  type: z.enum(CONTA_CORRENTE_TYPES).default('BANCO'),
+});
+
+const createSchema = baseSchema.extend({
   saldoInicial: z.coerce
     .number()
     .min(0, "O saldo não pode ser negativo.")
     .default(0),
-  limite: z.coerce.number().min(0).default(0).optional(),
-  // 2. USANDO z.enum COM AS STRINGS LITERAIS
-  type: z.enum(CONTA_CORRENTE_TYPES).default('BANCO'),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+const editSchema = baseSchema;
+
+type FormValues = z.infer<typeof createSchema>;
 
 interface ContaCorrenteFormProps {
   conta?: {
@@ -50,7 +55,6 @@ interface ContaCorrenteFormProps {
     agencia?: string | null;
     saldoInicial: number;
     limite?: number | null;
-    // Tipagem ajustada para o tipo de string literal que o Enum representa
     type?: (typeof ContaCorrenteType)[keyof typeof ContaCorrenteType] | null; 
   } | null;
   onSave: () => void;
@@ -59,18 +63,13 @@ interface ContaCorrenteFormProps {
 export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
   
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(conta ? editSchema : createSchema),
     defaultValues: {
       nome: conta?.nome ?? "",
       numeroConta: conta?.numeroConta ?? "",
       agencia: conta?.agencia ?? "", 
-      
-      // O valor inicial é obtido da conta existente ou é 0
       saldoInicial: conta?.saldoInicial ?? 0, 
-      
       limite: conta?.limite ?? 0, 
-      
-      // 3. CORREÇÃO FINAL: Usa o valor da conta ou a string literal 'BANCO'
       type: (conta?.type ?? 'BANCO') as (typeof ContaCorrenteType)[keyof typeof ContaCorrenteType],
     },
   });
@@ -78,8 +77,8 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
   const onSubmit = async (data: FormValues) => {
     try {
       if (conta) {
-        const { saldoInicial, ...updateData } = data;
-        await api.patch(`/contas-correntes/${conta.id}`, updateData);
+        // In edit mode, saldoInicial is not in the validated data, so we send `data` directly.
+        await api.patch(`/contas-correntes/${conta.id}`, data);
         toast.success("Conta atualizada com sucesso!");
       } else {
         await api.post("/contas-correntes", data);
@@ -161,26 +160,26 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
             </FormItem>
           )}
         />
-        {!conta && (
-          <FormField
-            name="saldoInicial"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Saldo Inicial (R$)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    step="0.01" 
-                    {...field} 
-                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        <FormField
+          name="saldoInicial"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Saldo Inicial (R$)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  readOnly={!!conta} // Use readOnly instead of disabled
+                  className={conta ? 'bg-gray-100' : ''} // Add visual feedback for readOnly
+                  {...field} 
+                />
+              </FormControl>
+              {conta && <FormDescription>O saldo inicial não pode ser editado. Para ajustar o saldo, crie uma nova transação.</FormDescription>}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           name="limite"
           control={form.control}

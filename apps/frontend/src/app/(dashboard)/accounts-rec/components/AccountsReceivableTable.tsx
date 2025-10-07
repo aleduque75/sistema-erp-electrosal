@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -8,6 +10,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format } from "date-fns";
+import { ArrowUpDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface AccountRec {
   id: string;
@@ -23,7 +27,42 @@ interface AccountsReceivableTableProps {
   accountsRec: AccountRec[];
 }
 
+type SortKey = keyof AccountRec;
+
 export function AccountsReceivableTable({ accountsRec }: AccountsReceivableTableProps) {
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'ascending' | 'descending' } | null>(null);
+
+  const sortedAccountsRec = useMemo(() => {
+    let sortableItems = [...accountsRec];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [accountsRec, sortConfig]);
+
+  const requestSort = (key: SortKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIndicator = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return sortConfig.direction === 'ascending' ? ' 🔼' : ' 🔽';
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -31,20 +70,30 @@ export function AccountsReceivableTable({ accountsRec }: AccountsReceivableTable
           <TableRow>
             <TableHead>ID</TableHead>
             <TableHead>Descrição</TableHead>
-            <TableHead>Valor</TableHead>
-            <TableHead>Vencimento</TableHead>
+            <TableHead>
+              <Button variant="ghost" onClick={() => requestSort('amount')}>
+                Valor
+                {getSortIndicator('amount')}
+              </Button>
+            </TableHead>
+            <TableHead>
+              <Button variant="ghost" onClick={() => requestSort('dueDate')}>
+                Vencimento
+                {getSortIndicator('dueDate')}
+              </Button>
+            </TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {accountsRec.length === 0 ? (
+          {sortedAccountsRec.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} className="h-24 text-center">
                 Nenhuma conta a receber encontrada.
               </TableCell>
             </TableRow>
           ) : (
-            accountsRec.map((account) => (
+            sortedAccountsRec.map((account) => (
               <TableRow key={account.id}>
                 <TableCell className="font-medium">{account.id}</TableCell>
                 <TableCell>{account.description}</TableCell>

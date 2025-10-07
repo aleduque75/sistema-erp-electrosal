@@ -1,11 +1,14 @@
 "use client";
 
+import React from "react";
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
+  getSortedRowModel,
+  SortingState,
   useReactTable,
 } from "@tanstack/react-table";
 
@@ -35,15 +38,22 @@ export function DataTable<TData, TValue>({
   filterPlaceholder,
   isLoading = false,
 }: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    state: {
+      sorting,
+    },
     initialState: {
       pagination: {
-        pageSize: 20, // Voltamos para um padrão de 20 itens por página
+        pageSize: 20,
       },
     },
   });

@@ -57,7 +57,7 @@ export default function ContasMetaisPage() {
     {
       accessorKey: "balance",
       header: "Saldo (g)",
-      cell: ({ row }: any) => row.original.balance.toFixed(4),
+      cell: ({ row }: any) => Number(row.original.balance || 0).toFixed(4),
     },
     // TODO: Adicionar coluna de ações (editar, excluir)
   ];

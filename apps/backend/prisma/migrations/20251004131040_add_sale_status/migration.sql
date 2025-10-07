@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "SaleStatus" AS ENUM ('PENDENTE', 'CONFIRMADO', 'A_SEPARAR', 'FINALIZADO', 'CANCELADO');
+
+-- AlterTable
+ALTER TABLE "Sale" ADD COLUMN     "status" "SaleStatus" NOT NULL DEFAULT 'PENDENTE';

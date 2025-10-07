@@ -6,6 +6,11 @@ import { ProductsModule } from '../products/products.module';
 import { SettingsModule } from '../settings/settings.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case';
+import { ConfirmSaleUseCase } from './use-cases/confirm-sale.use-case';
+import { CancelSaleUseCase } from './use-cases/cancel-sale.use-case';
+import { FinalizeSaleUseCase } from './use-cases/finalize-sale.use-case';
+import { RevertSaleUseCase } from './use-cases/revert-sale.use-case';
+import { ReleaseToPcpUseCase } from './use-cases/release-to-pcp.use-case';
 import { QuotationsModule } from '../quotations/quotations.module';
 import { ProcessClientMetalPaymentToSupplierUseCase } from './use-cases/process-client-metal-payment-to-supplier.use-case'; // New Use Case
 import { PrismaMetalAccountRepository } from '../metal-accounts/repositories/prisma-metal-account.repository'; // Assuming path
@@ -25,6 +30,11 @@ import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositorie
   providers: [
     SalesService,
     CreateSaleUseCase,
+    ConfirmSaleUseCase,
+    CancelSaleUseCase,
+    FinalizeSaleUseCase,
+    RevertSaleUseCase,
+    ReleaseToPcpUseCase,
     ProcessClientMetalPaymentToSupplierUseCase, // Add new use case
     {
       provide: 'IMetalAccountRepository',

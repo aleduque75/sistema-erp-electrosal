@@ -2,12 +2,12 @@ import { SaleItem, Product } from '@sistema-erp-electrosal/core';
 import { SaleItem as PrismaSaleItem, Prisma } from '@prisma/client';
 import { ProductMapper } from '../../products/mappers/product.mapper';
 
-type PrismaSaleItemWithProduct = Prisma.SaleItemGetPayload<{
-  include: { product: true };
+type PrismaSaleItemWithDetails = Prisma.SaleItemGetPayload<{
+  include: { product: true; inventoryLot: true };
 }>;
 
 export class SaleItemMapper {
-  static toDomain(raw: PrismaSaleItemWithProduct): SaleItem {
+  static toDomain(raw: PrismaSaleItemWithDetails): SaleItem {
     const product = raw.product ? ProductMapper.toDomain(raw.product) : undefined;
 
     return SaleItem.create(
@@ -17,6 +17,8 @@ export class SaleItemMapper {
         quantity: raw.quantity,
         price: raw.price.toNumber(),
         product: product,
+        inventoryLotId: raw.inventoryLotId,
+        inventoryLot: raw.inventoryLot, // Pass the full inventoryLot object
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
       },

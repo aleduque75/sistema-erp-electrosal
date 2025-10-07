@@ -41,6 +41,7 @@ import { AnalisesQuimicasModule } from './analises-quimicas';
 import { RecuperacoesModule } from './recuperacoes';
 import { RecoveryOrdersModule } from './recovery-orders/recovery-orders.module';
 import { MetalAccountsModule } from './metal-accounts/metal-accounts.module';
+import { MetalReceivablesModule } from './metal-receivables/metal-receivables.module';
 import { QuotationsModule } from './quotations/quotations.module';
 import { QuotationImportsModule } from './quotation-imports/quotation-imports.module';
 import { ProductGroupsModule } from './product-groups/product-groups.module';
@@ -48,6 +49,8 @@ import { ChemicalReactionsModule } from './chemical-reactions/chemical-reactions
 import { LaborCostTableEntriesModule } from './labor-cost-table-entries/labor-cost-table-entries.module';
 import { PureMetalLotsModule } from './pure-metal-lots/pure-metal-lots.module';
 import { StockModule } from './stock/stock.module';
+import { SaleAdjustmentsModule } from './sale-adjustments/sale-adjustments.module';
+import { MetalDepositsModule } from './metal-deposits/metal-deposits.module';
 
 @Module({
   imports: [
@@ -97,6 +100,8 @@ import { StockModule } from './stock/stock.module';
     LaborCostTableEntriesModule,
     PureMetalLotsModule,
     StockModule,
+    SaleAdjustmentsModule,
+    MetalDepositsModule,
   ],
   controllers: [AppController],
   providers: [

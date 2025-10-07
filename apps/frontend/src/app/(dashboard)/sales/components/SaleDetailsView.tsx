@@ -14,13 +14,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value || 0
   );
-const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+const formatDate = (dateString?: string | null) => {
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+}
 
 interface SaleItem {
   id: string;
@@ -32,20 +35,31 @@ interface SaleItem {
   price: number;
 }
 
+interface AccountRec {
+  id: string;
+  received: boolean;
+  receivedAt: string | null;
+  amount: number;
+  contaCorrente?: { name: string } | null;
+}
+
 interface Sale {
   pessoa: {
     name: string;
   };
   createdAt: string;
   saleItems: SaleItem[];
+  accountsRec: AccountRec[];
   totalAmount: number;
   feeAmount: number;
-  goldValue: number;
+  goldValue: number | null;
   netAmount: number;
 }
 
 export function SaleDetailsView({ sale }: { sale: Sale }) {
   if (!sale) return null;
+
+  const receivedPayments = sale.accountsRec.filter(ar => ar.received);
 
   return (
     <div className="space-y-4">
@@ -94,6 +108,34 @@ export function SaleDetailsView({ sale }: { sale: Sale }) {
         </CardContent>
       </Card>
 
+      {receivedPayments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recebimentos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data Recebimento</TableHead>
+                  <TableHead>Conta</TableHead>
+                  <TableHead className="text-right">Valor Recebido</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {receivedPayments.map((ar) => (
+                  <TableRow key={ar.id}>
+                    <TableCell>{formatDate(ar.receivedAt)}</TableCell>
+                    <TableCell>{ar.contaCorrente?.name || 'N/A'}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(ar.amount)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex flex-col items-end space-y-2 pt-4 border-t">
         <div className="flex justify-between w-full max-w-xs">
           <span className="text-muted-foreground">Subtotal</span>
@@ -105,7 +147,7 @@ export function SaleDetailsView({ sale }: { sale: Sale }) {
         </div>
         <div className="flex justify-between w-full max-w-xs">
           <span className="text-muted-foreground">Valor em Ouro</span>
-          <span>{sale.goldValue.toFixed(4)} g</span>
+          <span>{sale.goldValue ? `${sale.goldValue.toFixed(4)} g` : 'N/A'}</span>
         </div>
         <div className="flex justify-between w-full max-w-xs font-bold text-lg">
           <span>Total</span>

@@ -16,6 +16,7 @@ model Organization {
   creditCardReceiveDays Int?                  @default(30)
   accountsRec           AccountRec[]
   metalAccounts         MetalAccount[]
+  metalReceivables      MetalReceivable[]
   landingPages          LandingPage[]
   media                 Media[]
   products              Product[]
@@ -47,6 +48,7 @@ model Organization {
   recoveryOrders        RecoveryOrder[]
   recuperacoes          Recuperacao[]
   transacoes            Transacao[]
+  metalReceivablePayments MetalReceivablePayment[]
 }
 
 model User {
@@ -105,6 +107,7 @@ model Pessoa {
   metalCredits                MetalCredit[]
   organization                Organization     @relation(fields: [organizationId], references: [id])
   metalAccounts               MetalAccount[]
+  metalReceivables            MetalReceivable[]
 
   @@map("pessoas")
 }
@@ -222,6 +225,7 @@ model Sale {
   feeAmount         Decimal?          @db.Decimal(10, 2)
   netAmount         Decimal?          @db.Decimal(10, 2)
   paymentMethod     String?
+  status            SaleStatus        @default(PENDENTE)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   organizationId    String
@@ -240,6 +244,7 @@ model Sale {
   saleItems         SaleItem[]
   installments      SaleInstallment[]
   pureMetalLots     pure_metal_lots[]
+  metalReceivable   MetalReceivable?  
 }
 
 model PaymentTerm {
@@ -333,6 +338,45 @@ model AccountRec {
   sale             Sale?             @relation(fields: [saleId], references: [id])
   transacao        Transacao?        @relation(fields: [transacaoId], references: [id])
   saleInstallments SaleInstallment[]
+}
+
+model MetalReceivable {
+  id             String   @id @default(uuid())
+  organizationId String
+  saleId         String   @unique
+  pessoaId       String
+  metalType      TipoMetal
+  grams          Decimal  @db.Decimal(10, 4)
+  remainingGrams Decimal  @db.Decimal(10, 4)
+  status         ReceivableStatus @default(PENDENTE)
+  dueDate        DateTime
+  receivedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  sale           Sale         @relation(fields: [saleId], references: [id])
+  pessoa         Pessoa       @relation(fields: [pessoaId], references: [id])
+  payments       MetalReceivablePayment[]
+
+  @@map("metal_receivables")
+}
+
+model MetalReceivablePayment {
+  id                 String   @id @default(uuid())
+  organizationId     String
+  metalReceivableId  String
+  paymentDate        DateTime
+  paidAmountBRL      Decimal  @db.Decimal(10, 2)
+  quotationUsed      Decimal  @db.Decimal(10, 2)
+  paidAmountGrams    Decimal  @db.Decimal(10, 4)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  organization      Organization    @relation(fields: [organizationId], references: [id])
+  metalReceivable   MetalReceivable @relation(fields: [metalReceivableId], references: [id])
+
+  @@map("metal_receivable_payments")
 }
 
 model ContaContabil {
@@ -677,7 +721,7 @@ model MetalAccountEntry {
   metalAccount   MetalAccount @relation(fields: [metalAccountId], references: [id])
   date           DateTime
   description    String
-  grams          Float
+  grams          Decimal @db.Decimal(10, 4)
   type           String // e.g., 'recovery', 'sale', 'transfer'
   sourceId       String? // ID of the source entity (e.g., RecoveryOrder, Sale)
   createdAt      DateTime     @default(now())
@@ -736,7 +780,9 @@ model chemical_reactions {
   id                 String                       @id @default(uuid())
   organizationId     String
   auUsedGrams        Float
-  inputGoldGrams     Float
+  outputGoldGrams   Decimal @db.Decimal(10, 3)
+  outputSilverGrams Decimal @db.Decimal(10, 3)
+  inputGoldGrams      Decimal @db.Decimal(10, 3)
   inputRawMaterialGrams Float
   inputBasketLeftoverGrams Float?
   inputDistillateLeftoverGrams Float?
@@ -800,6 +846,14 @@ enum SaleInstallmentStatus {
   PENDING
   PAID
   OVERDUE
+}
+
+enum ReceivableStatus {
+  PENDENTE
+  PAGO
+  PAGO_PARCIALMENTE
+  ATRASADO
+  CANCELADO
 }
 
 enum TipoContaContabilPrisma {
@@ -886,4 +940,12 @@ enum ContaMetalType {
   FORNECEDOR
   INTERNA
   EMPRESTIMO
+}
+
+enum SaleStatus {
+  PENDENTE
+  CONFIRMADO
+  A_SEPARAR
+  FINALIZADO
+  CANCELADO
 }

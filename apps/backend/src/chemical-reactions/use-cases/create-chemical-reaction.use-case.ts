@@ -28,7 +28,7 @@ export class CreateChemicalReactionUseCase {
 
   async execute(command: CreateChemicalReactionCommand): Promise<any> {
     const { organizationId, dto } = command;
-    const { sourceLots, notes, outputProductId, batchNumber: manualBatchNumber } = dto; // Captura manualBatchNumber
+    const { sourceLots, notes, outputProductId, batchNumber: manualBatchNumber, outputProductGrams, outputBasketLeftoverGrams } = dto; // Captura manualBatchNumber e novos campos
 
     if (!sourceLots || sourceLots.length === 0) {
       throw new BadRequestException('Pelo menos um lote de origem deve ser fornecido.');
@@ -36,6 +36,10 @@ export class CreateChemicalReactionUseCase {
 
     if (!outputProductId) {
       throw new BadRequestException('O produto de saída deve ser especificado.');
+    }
+
+    if (!outputProductGrams || outputProductGrams <= 0) {
+      throw new BadRequestException('A quantidade de produto de saída (sal) deve ser informada e ser maior que zero.');
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -83,8 +87,15 @@ export class CreateChemicalReactionUseCase {
         sourceLotIds.push(lot.id);
       }
 
-      const inputRawMaterialGrams = totalGoldGrams.times(0.899);
-      const outputProductGrams = totalGoldGrams.times(1.47);
+      const inputRawMaterialGrams = totalGoldGrams.times(0.899); // Mantido, pois é um input calculado
+
+      // Calcular ouro no produto de saída e no cesto
+      const goldInOutputProduct = new Decimal(outputProductGrams).times(0.68); // 0.68 para Sal 68%
+      const goldInBasketLeftover = new Decimal(outputBasketLeftoverGrams || 0);
+
+      // Calcular o destilado para fechar o balanço de massa do ouro
+      const goldRemaining = totalGoldGrams.minus(goldInOutputProduct).minus(goldInBasketLeftover);
+      const outputDistillateLeftoverGrams = goldRemaining.greaterThan(0) ? goldRemaining.toNumber() : 0;
 
       // Determine batchNumber: use manual if provided, otherwise generate
       let batchNumber: string;
@@ -106,8 +117,8 @@ export class CreateChemicalReactionUseCase {
           organizationId,
           productId: outputProductId,
           batchNumber,
-          quantity: outputProductGrams.toNumber(),
-          remainingQuantity: outputProductGrams.toNumber(),
+          quantity: outputProductGrams, // Usar o valor do DTO
+          remainingQuantity: outputProductGrams, // Usar o valor do DTO
           costPrice: new Decimal(0), // Será atualizado abaixo
           sourceType: 'REACTION',
           sourceId: '', // Será atualizado abaixo
@@ -124,9 +135,11 @@ export class CreateChemicalReactionUseCase {
           inputRawMaterialGrams: inputRawMaterialGrams.toNumber(),
           inputBasketLeftoverGrams: undefined,
           inputDistillateLeftoverGrams: undefined,
-          outputProductGrams: outputProductGrams.toNumber(),
-          outputBasketLeftoverGrams: undefined,
-          outputDistillateLeftoverGrams: undefined,
+          outputProductGrams: outputProductGrams, // Peso total do produto de saída (sal)
+          outputGoldGrams: goldInOutputProduct.toNumber(), // Ouro contido no produto de saída
+          outputSilverGrams: 0, // Assumindo 0 prata por enquanto
+          outputBasketLeftoverGrams: goldInBasketLeftover.toNumber(), // Ouro contido no cesto de saída
+          outputDistillateLeftoverGrams: outputDistillateLeftoverGrams, // Ouro contido no destilado de saída (calculado)
           lots: {
             connect: sourceLotIds.map(id => ({ id }))
           },
@@ -135,7 +148,7 @@ export class CreateChemicalReactionUseCase {
       });
 
       const totalCost = totalGoldGrams.times(goldCostPerGram);
-      const costPricePerGram = totalCost.dividedBy(outputProductGrams);
+      const costPricePerGram = totalCost.dividedBy(goldInOutputProduct); // Dividir pelo ouro no produto, não pelo peso total do produto
 
       const updatedInventoryLot = await tx.inventoryLot.update({
         where: { id: newInventoryLot.id },

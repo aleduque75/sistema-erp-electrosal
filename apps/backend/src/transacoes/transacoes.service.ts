@@ -174,4 +174,38 @@ export class TransacoesService {
       },
     });
   }
+
+  async findUnlinked(organizationId: string): Promise<Transacao[]> {
+    return this.prisma.transacao.findMany({
+      where: {
+        organizationId,
+        contaCorrenteId: null,
+      },
+      orderBy: {
+        dataHora: 'desc',
+      },
+    });
+  }
+
+  async linkAccount(organizationId: string, transacaoId: string, contaCorrenteId: string): Promise<Transacao> {
+    // First, ensure the transaction and account belong to the organization
+    const transacao = await this.prisma.transacao.findFirst({
+      where: { id: transacaoId, organizationId },
+    });
+    if (!transacao) {
+      throw new NotFoundException(`Transação com ID ${transacaoId} não encontrada.`);
+    }
+
+    const contaCorrente = await this.prisma.contaCorrente.findFirst({
+      where: { id: contaCorrenteId, organizationId },
+    });
+    if (!contaCorrente) {
+      throw new NotFoundException(`Conta corrente com ID ${contaCorrenteId} não encontrada.`);
+    }
+
+    return this.prisma.transacao.update({
+      where: { id: transacaoId },
+      data: { contaCorrenteId },
+    });
+  }
 }

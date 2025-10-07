@@ -1,8 +1,17 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TipoMetal, TipoTransacaoPrisma } from '@prisma/client';
 import { Decimal } from 'decimal.js';
-import { IMetalAccountRepository, IMetalAccountEntryRepository, MetalAccountEntry } from '@sistema-erp-electrosal/core';
+import {
+  IMetalAccountRepository,
+  IMetalAccountEntryRepository,
+  MetalAccountEntry,
+} from '@sistema-erp-electrosal/core';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { SettingsService } from '../../settings/settings.service';
 
@@ -26,11 +35,15 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
     private readonly settingsService: SettingsService,
   ) {}
 
-  async execute(command: ProcessClientMetalPaymentToSupplierCommand): Promise<void> {
+  async execute(
+    command: ProcessClientMetalPaymentToSupplierCommand,
+  ): Promise<void> {
     const { organizationId, saleId, supplierPessoaId, grams, notes } = command;
 
     if (grams <= 0) {
-      throw new BadRequestException('A quantidade de metal deve ser maior que zero.');
+      throw new BadRequestException(
+        'A quantidade de metal deve ser maior que zero.',
+      );
     }
 
     // 1. Encontrar a venda
@@ -44,14 +57,17 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
     }
 
     // 2. Encontrar a MetalAccount do fornecedor
-    const supplierMetalAccount = await this.metalAccountRepository.findByPersonId(
-      supplierPessoaId,
-      TipoMetal.AU, // Assumindo pagamento em ouro
-      organizationId,
-    );
+    const supplierMetalAccount =
+      await this.metalAccountRepository.findByPersonId(
+        supplierPessoaId,
+        TipoMetal.AU, // Assumindo pagamento em ouro
+        organizationId,
+      );
 
     if (!supplierMetalAccount) {
-      throw new NotFoundException(`Conta de metal do fornecedor ${supplierPessoaId} não encontrada.`);
+      throw new NotFoundException(
+        `Conta de metal do fornecedor ${supplierPessoaId} não encontrada.`,
+      );
     }
 
     // 3. Encontrar a MetalAccount do cliente (para deduzir o saldo, se aplicável)
@@ -62,7 +78,9 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
     );
 
     if (!clientMetalAccount) {
-      throw new NotFoundException(`Conta de metal do cliente ${sale.pessoaId} não encontrada.`);
+      throw new NotFoundException(
+        `Conta de metal do cliente ${sale.pessoaId} não encontrada.`,
+      );
     }
 
     // 4. Verificar saldo do cliente (simplificado, idealmente buscar saldo agregado)
@@ -72,7 +90,9 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
     const supplierMetalAccountEntry = MetalAccountEntry.create({
       metalAccountId: supplierMetalAccount.id.toString(),
       date: new Date(),
-      description: notes || `Recebimento de metal do cliente ${sale.pessoaId} para a Venda #${sale.orderNumber}`,
+      description:
+        notes ||
+        `Recebimento de metal do cliente ${sale.pessoaId} para a Venda #${sale.orderNumber}`,
       grams: new Decimal(grams), // Valor positivo para aumentar o saldo do fornecedor
       type: 'CLIENT_PAYMENT_TO_SUPPLIER',
       sourceId: saleId,
@@ -83,7 +103,9 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
     const clientMetalAccountEntry = MetalAccountEntry.create({
       metalAccountId: clientMetalAccount.id.toString(),
       date: new Date(),
-      description: notes || `Pagamento da Venda #${sale.orderNumber} para o fornecedor ${supplierPessoaId}`,
+      description:
+        notes ||
+        `Pagamento da Venda #${sale.orderNumber} para o fornecedor ${supplierPessoaId}`,
       grams: new Decimal(grams).negated(), // Valor negativo para deduzir do cliente
       type: 'CLIENT_PAYMENT_TO_SUPPLIER',
       sourceId: saleId,
@@ -91,16 +113,26 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
     });
 
     // 7. Criar Transação Financeira (em BRL) para registrar o pagamento da venda
-    const latestGoldQuote = await this.quotationsService.findLatest(TipoMetal.AU, organizationId);
+    const latestGoldQuote = await this.quotationsService.findLatest(
+      TipoMetal.AU,
+      organizationId,
+    );
     if (!latestGoldQuote || latestGoldQuote.sellPrice.lessThanOrEqualTo(0)) {
-      throw new BadRequestException('Nenhuma cotação de ouro de venda encontrada para hoje.');
+      throw new BadRequestException(
+        'Nenhuma cotação de ouro de venda encontrada para hoje.',
+      );
     }
 
     const valorBRL = new Decimal(grams).times(latestGoldQuote.sellPrice);
 
     const settings = await this.settingsService.findOne(organizationId); // Assumindo que findOne pode buscar por organizationId
-    if (!settings?.defaultReceitaContaId || !settings?.defaultContasAPagarContaId) {
-      throw new BadRequestException('Contas contábeis padrão para Receita ou Contas a Pagar não configuradas.');
+    if (
+      !settings?.defaultReceitaContaId ||
+      !settings?.defaultContasAPagarContaId
+    ) {
+      throw new BadRequestException(
+        'Contas contábeis padrão para Receita ou Contas a Pagar não configuradas.',
+      );
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -131,7 +163,9 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
           tipo: TipoTransacaoPrisma.CREDITO, // Receita da venda
           valor: valorBRL,
           moeda: 'BRL',
-          descricao: notes || `Pagamento de Venda #${sale.orderNumber} via fornecedor ${supplierPessoaId}`,
+          descricao:
+            notes ||
+            `Pagamento de Venda #${sale.orderNumber} via fornecedor ${supplierPessoaId}`,
           contaContabilId: settings.defaultReceitaContaId, // Conta de Receita
           dataHora: new Date(),
         },
@@ -144,7 +178,9 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
           tipo: TipoTransacaoPrisma.CREDITO, // Aumenta o passivo (dívida com fornecedor)
           valor: valorBRL,
           moeda: 'BRL',
-          descricao: notes || `Aumento de dívida com fornecedor ${supplierPessoaId} por pagamento de cliente`,
+          descricao:
+            notes ||
+            `Aumento de dívida com fornecedor ${supplierPessoaId} por pagamento de cliente`,
           contaContabilId: settings.defaultContasAPagarContaId, // Conta de Contas a Pagar
           dataHora: new Date(),
         },
