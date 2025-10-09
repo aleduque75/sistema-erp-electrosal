@@ -1,19 +1,23 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSaleDto, UpdateSaleDto } from './dtos/sales.dto';
-import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma, SaleStatus } from '@prisma/client'; // Keep Sale for now, will refactor later
+import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma, SaleStatus, Transacao } from '@prisma/client'; // Keep Sale for now, will refactor later
 import { addMonths, addDays } from 'date-fns';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case'; // Added
 import { StockMovement, SaleItem } from '@sistema-erp-electrosal/core'; // Added SaleItem
 import { StockMovementMapper } from '../products/mappers/stock-movement.mapper'; // Added
 import { SaleItemMapper } from './mappers/sale-item.mapper'; // Added
+import { CalculateSaleAdjustmentUseCase } from './use-cases/calculate-sale-adjustment.use-case';
 
 @Injectable()
 export class SalesService {
+  private readonly logger = new Logger(SalesService.name);
+
   constructor(
     private prisma: PrismaService,
     private createSaleUseCase: CreateSaleUseCase, // Injected
+    private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
   ) {}
 
   async create(
@@ -25,13 +29,34 @@ export class SalesService {
   }
 
   // Recebe organizationId
-  async findAll(organizationId: string, limit?: number, status?: SaleStatus, orderNumber?: string): Promise<Sale[]> {
+  async findAll(
+    organizationId: string,
+    options: {
+      limit?: number;
+      status?: SaleStatus;
+      orderNumber?: string;
+      startDate?: string;
+      endDate?: string;
+      clientId?: string;
+    } = {},
+  ): Promise<Sale[]> {
+    const { limit, status, orderNumber, startDate, endDate, clientId } = options;
+
     const whereClause: Prisma.SaleWhereInput = { organizationId };
     if (status) {
       whereClause.status = status;
     }
     if (orderNumber) {
       whereClause.orderNumber = Number(orderNumber);
+    }
+    if (startDate) {
+      whereClause.createdAt = { ...whereClause.createdAt as Prisma.DateTimeFilter, gte: new Date(startDate) };
+    }
+    if (endDate) {
+      whereClause.createdAt = { ...whereClause.createdAt as Prisma.DateTimeFilter, lte: new Date(endDate) };
+    }
+    if (clientId) {
+      whereClause.pessoaId = clientId;
     }
 
     const prismaSales = await this.prisma.sale.findMany({
@@ -43,16 +68,38 @@ export class SalesService {
             product: true, // Inclui detalhes do produto em cada item
           },
         },
+        adjustment: true, // Include the sale adjustment data
+        accountsRec: {
+          include: {
+            transacao: {
+              include: {
+                contaCorrente: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
       },
       take: limit,
     });
-    const result = prismaSales.map(sale => ({
-      ...sale,
-      saleItems: sale.saleItems.map(SaleItemMapper.toDomain),
-    })) as any;
+
+    const result = prismaSales.map(sale => {
+      const paymentAccountName = sale.accountsRec[0]?.transacao?.contaCorrente?.nome || null;
+
+      return {
+        ...sale,
+        paymentAccountName,
+        saleItems: sale.saleItems.map((item) => ({
+          ...item,
+          price: item.price.toNumber(),
+          product: item.product
+            ? { id: item.product.id, name: item.product.name }
+            : null,
+        })),
+      };
+    });
 
     console.log('[DEBUG sales.service.ts findAll] returning:', JSON.stringify(result, null, 2));
 
@@ -74,9 +121,13 @@ export class SalesService {
         },
         accountsRec: { // Inclui os recebíveis associados
           include: {
-            contaCorrente: true // Para cada recebível, inclui a conta corrente
-          }
-        }
+            transacao: { // Para cada recebível, inclui a transação
+              include: {
+                contaCorrente: true, // Para cada transação, inclui a conta corrente
+              },
+            },
+          },
+        },
       },
     });
 
@@ -86,8 +137,14 @@ export class SalesService {
 
     const result = {
       ...prismaSale,
-      saleItems: prismaSale.saleItems.map(SaleItemMapper.toDomain),
-    } as any;
+      saleItems: prismaSale.saleItems.map((item) => ({
+        ...item,
+        price: item.price.toNumber(),
+        product: item.product
+          ? { id: item.product.id, name: item.product.name }
+          : null,
+      })),
+    };
 
     console.log('[DEBUG sales.service.ts findOne] returning:', JSON.stringify(result, null, 2));
 
@@ -186,5 +243,252 @@ export class SalesService {
         where: { id },
       });
     });
+  }
+
+  async backfillCosts(organizationId: string): Promise<{ message: string; updatedCount: number }> {
+    const salesToProcess = await this.prisma.sale.findMany({
+      where: {
+        organizationId,
+        saleItems: {
+          some: {
+            product: {
+              productGroup: {
+                isReactionProductGroup: true,
+              },
+            },
+          },
+        },
+      },
+      include: {
+        saleItems: {
+          include: {
+            product: {
+              include: {
+                productGroup: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    let updatedCount = 0;
+
+    for (const sale of salesToProcess) {
+      let newTotalCost = new Decimal(0);
+
+      for (const item of sale.saleItems) {
+        const product = item.product;
+        const productGroup = product?.productGroup;
+        const itemQuantity = new Decimal(item.quantity);
+        const costPrice = new Decimal(item.costPriceAtSale || product?.costPrice || 0);
+
+        let itemCost: Decimal;
+        if (productGroup?.isReactionProductGroup) {
+          itemCost = costPrice.times(itemQuantity).plus(itemQuantity);
+        } else {
+          itemCost = costPrice.times(itemQuantity);
+        }
+        newTotalCost = newTotalCost.plus(itemCost);
+      }
+
+      if (!newTotalCost.equals(sale.totalCost || 0)) {
+        await this.prisma.sale.update({
+          where: { id: sale.id },
+          data: { totalCost: newTotalCost },
+        });
+        updatedCount++;
+      }
+    }
+
+    return {
+      message: `${updatedCount} de ${salesToProcess.length} vendas com produtos de reação tiveram seus custos corrigidos.`,
+      updatedCount,
+    };
+  }
+
+  async backfillSaleAdjustments(organizationId: string): Promise<{ message: string; processedCount: number; }> {
+    this.logger.log('Iniciando backfill de ajustes de vendas...');
+    const salesToProcess = await this.prisma.sale.findMany({
+      where: {
+        organizationId,
+        status: SaleStatus.FINALIZADO,
+      },
+      include: { // Otimização: buscar todos os dados necessários de uma vez
+        accountsRec: {
+          include: {
+            transacao: true,
+          },
+        },
+        saleItems: {
+          include: {
+            product: {
+              include: {
+                productGroup: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    this.logger.log(`${salesToProcess.length} vendas finalizadas encontradas para processar.`);
+
+    let processedCount = 0;
+    for (const [index, sale] of salesToProcess.entries()) {
+      this.logger.log(`Processando venda ${index + 1} de ${salesToProcess.length} (ID: ${sale.id})...`);
+      try {
+        // Simplificado para passar apenas o ID e evitar erro de tipo
+        await this.calculateSaleAdjustmentUseCase.execute(sale.id, organizationId);
+        processedCount++;
+      } catch (error) {
+        this.logger.error(`Falha ao processar o ajuste para a venda ${sale.id}:`, error);
+      }
+    }
+
+    this.logger.log('Backfill de ajustes de vendas concluído.');
+    return {
+      message: `${processedCount} de ${salesToProcess.length} vendas finalizadas foram processadas para ajuste.`,
+      processedCount,
+    };
+  }
+
+  async updateFinancials(organizationId: string, saleId: string, data: { goldPrice?: number; feeAmount?: number }): Promise<Sale> {
+    const dataToUpdate: { goldPrice?: number; feeAmount?: number } = {};
+
+    if (data.goldPrice !== undefined) {
+      dataToUpdate.goldPrice = data.goldPrice;
+    }
+    if (data.feeAmount !== undefined) {
+      dataToUpdate.feeAmount = data.feeAmount;
+    }
+
+    const updatedSale = await this.prisma.sale.update({
+      where: { id: saleId, organizationId },
+      data: dataToUpdate,
+    });
+
+    // After updating, always recalculate the adjustment
+    await this.calculateSaleAdjustmentUseCase.execute(saleId, organizationId);
+
+    return updatedSale;
+  }
+
+  async backfillQuotations(organizationId: string): Promise<{ message: string; processedCount: number; notFoundCount: number; }> {
+    const salesToProcess = await this.prisma.sale.findMany({
+      where: {
+        organizationId,
+        goldPrice: null,
+        accountsRec: {
+          some: { transacaoId: { not: null } },
+        },
+      },
+      include: {
+        accountsRec: {
+          include: {
+            transacao: true,
+          },
+        },
+      },
+    });
+
+    let processedCount = 0;
+    let notFoundCount = 0;
+
+    for (const sale of salesToProcess) {
+      const mainTransaction = sale.accountsRec.map(ar => ar.transacao).find(t => t && t.valor.isPositive() && t.goldAmount?.isPositive());
+
+      if (mainTransaction) {
+        const effectiveQuotation = mainTransaction.valor.dividedBy(mainTransaction.goldAmount!);
+
+        if (effectiveQuotation.isFinite()) {
+          await this.prisma.sale.update({
+            where: { id: sale.id },
+            data: { goldPrice: effectiveQuotation },
+          });
+          processedCount++;
+        } else {
+          console.error(`Cotação inválida calculada para a venda ${sale.id}. Valor: ${mainTransaction.valor}, Ouro: ${mainTransaction.goldAmount}`);
+          notFoundCount++;
+        }
+      } else {
+        notFoundCount++;
+      }
+    }
+
+    return {
+      message: `${processedCount} de ${salesToProcess.length} vendas tiveram suas cotações preenchidas a partir de suas transações. Para ${notFoundCount}, a transação não foi encontrada ou era inválida.`,
+      processedCount,
+      notFoundCount,
+    };
+  }
+
+  async diagnoseSale(organizationId: string, orderNumber: number): Promise<any> {
+    const sale = await this.prisma.sale.findFirst({
+      where: { 
+        orderNumber: orderNumber,
+        organizationId: organizationId
+      },
+      include: {
+        saleItems: { select: { quantity: true, product: { select: { name: true }} } },
+        accountsRec: {
+          include: {
+            transacao: true,
+          },
+        },
+        adjustment: true,
+      },
+    });
+
+    if (!sale) {
+      throw new NotFoundException(`Venda com Nº ${orderNumber} não encontrada.`);
+    }
+
+    const paymentTransactions = sale.accountsRec.map(ar => ar.transacao).filter((t): t is Transacao => !!t);
+
+    const totalPaymentBRL = paymentTransactions.reduce((sum, t) => sum.plus(t.valor), new Decimal(0));
+    const totalPaymentGold = paymentTransactions.reduce((sum, t) => sum.plus(t.goldAmount || 0), new Decimal(0));
+
+    return {
+      saleId: sale.id,
+      orderNumber: sale.orderNumber,
+      saleExpectedGold: sale.goldValue,
+      saleItems: sale.saleItems,
+      totalPaymentBRL: totalPaymentBRL,
+      totalPaymentGold: totalPaymentGold,
+      transactions: paymentTransactions.map(t => ({
+        id: t.id,
+        valor: t.valor,
+        goldAmount: t.goldAmount,
+        data: t.dataHora,
+      })),
+      currentAdjustment: sale.adjustment,
+    };
+  }
+
+  async findByOrderNumberWithTransactions(organizationId: string, orderNumber: number): Promise<Sale | null> {
+    const sale = await this.prisma.sale.findFirst({
+      where: {
+        orderNumber: orderNumber,
+        organizationId: organizationId,
+      },
+      include: {
+        accountsRec: {
+          include: {
+            transacao: {
+              include: {
+                contaCorrente: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!sale) {
+      throw new NotFoundException(`Venda com Nº ${orderNumber} não encontrada.`);
+    }
+
+    return sale;
   }
 }

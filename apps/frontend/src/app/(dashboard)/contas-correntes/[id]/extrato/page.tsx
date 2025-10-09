@@ -4,6 +4,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { subDays, format } from "date-fns";
@@ -57,6 +58,35 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { formatInTimeZone } from "date-fns-tz";
 import { ContaCorrenteType } from "@sistema-erp-electrosal/core"; // Importamos o objeto Enum (valor)
 import { TransferFromSupplierAccountForm } from "../../components/transfer-from-supplier-account-form"; // Adicionado
+import { SaleDetailsModal } from "../../../sales/sale-details-modal";
+
+// Copied from sales/page.tsx
+
+// Copied from sales/page.tsx
+export interface Sale {
+  id: string;
+  orderNumber: string;
+  pessoa: { name: string };
+  totalAmount: number;
+  feeAmount: number;
+  netAmount: number;
+  goldPrice: number;
+  goldValue: number;
+  paymentMethod: string;
+  createdAt: string;
+  status: 'PENDENTE' | 'CONFIRMADO' | 'A_SEPARAR' | 'FINALIZADO' | 'CANCELADO';
+  lucro?: number;
+  paymentAccountName?: string;
+  saleItems: {
+    id: string;
+    productId: string;
+    quantity: number;
+    price: number;
+    product: { name: string };
+    inventoryLotId?: string;
+  }[];
+}
+
 
 const formatCurrency = (value?: number | null) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -96,6 +126,10 @@ interface TransacaoExtrato {
   tipo: "CREDITO" | "DEBITO";
   contaContabilId: string; // Adicionado
   contaContabilNome: string; // Adicionado
+  sale?: {
+    id: string;
+    orderNumber: number;
+  };
 }
 
 interface ExtratoData {
@@ -141,6 +175,16 @@ export default function ExtratoPage() {
   const [descriptionFilter, setDescriptionFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newContaContabilId, setNewContaContabilId] = useState<string>("");
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+
+  const handleViewSaleDetails = async (saleId: string) => {
+    try {
+      const response = await api.get(`/sales/${saleId}`);
+      setSelectedSale(response.data);
+    } catch (err) {
+      toast.error("Falha ao buscar detalhes da venda.");
+    }
+  };
 
   const fetchContasContabeis = async () => {
     try {
@@ -471,7 +515,20 @@ export default function ExtratoPage() {
                           />
                         </TableCell>
                         <TableCell>{formatDateTime(t.dataHora)}</TableCell>
-                        <TableCell>{t.descricao}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <span>{t.descricao}</span>
+                            {t.sale && (
+                              <Button
+                                variant="link"
+                                className="h-auto p-1 ml-2 whitespace-nowrap"
+                                onClick={() => handleViewSaleDetails(t.sale.id)}
+                              >
+                                (Venda #{t.sale.orderNumber})
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell
                           onClick={(e) => {
                             e.stopPropagation();
@@ -634,6 +691,14 @@ export default function ExtratoPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {selectedSale && (
+        <SaleDetailsModal
+          sale={selectedSale}
+          open={!!selectedSale}
+          onOpenChange={(open) => !open && setSelectedSale(null)}
+        />
+      )}
     </>
   );
 }

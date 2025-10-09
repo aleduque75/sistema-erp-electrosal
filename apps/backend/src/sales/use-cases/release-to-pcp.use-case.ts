@@ -24,9 +24,35 @@ export class ReleaseToPcpUseCase {
       );
     }
 
-    return this.prisma.sale.update({
-      where: { id: saleId },
-      data: { status: SaleStatus.A_SEPARAR },
+    return this.prisma.$transaction(async (tx) => {
+      const saleWithItems = await tx.sale.findUnique({
+        where: { id: saleId },
+        include: { saleItems: true },
+      });
+
+      if (!saleWithItems) {
+        // This should technically not happen due to the check above, but it is a good safeguard
+        throw new NotFoundException(`Venda com ID ${saleId} não encontrada na transação.`);
+      }
+
+      for (const item of saleWithItems.saleItems) {
+        if (item.inventoryLotId) {
+          await tx.inventoryLot.update({
+            where: { id: item.inventoryLotId },
+            data: { remainingQuantity: { decrement: item.quantity } },
+          });
+        } else {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } },
+          });
+        }
+      }
+
+      return tx.sale.update({
+        where: { id: saleId },
+        data: { status: SaleStatus.A_SEPARAR },
+      });
     });
   }
 }

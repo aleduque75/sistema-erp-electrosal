@@ -18,11 +18,16 @@ import { BulkUpdateTransacaoDto } from './dtos/bulk-update-transacao.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateTransferDto } from './dtos/create-transfer.dto';
+import { UpdateTransactionUseCase } from './use-cases/update-transaction.use-case';
+import { AdjustTransactionDto } from './dtos/adjust-transacao.dto';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('transacoes')
 export class TransacoesController {
-  constructor(private readonly transacoesService: TransacoesService) {}
+  constructor(
+    private readonly transacoesService: TransacoesService,
+    private readonly updateTransactionUseCase: UpdateTransactionUseCase,
+  ) {}
 
   @Post()
   create(
@@ -68,6 +73,19 @@ export class TransacoesController {
   @Get('unlinked/all')
   findUnlinked(@CurrentUser('orgId') organizationId: string) {
     return this.transacoesService.findUnlinked(organizationId);
+  }
+
+  @Patch(':id/adjust')
+  adjust(
+    @Param('id') id: string,
+    @CurrentUser('organizationId') organizationId: string,
+    @Body() adjustTransactionDto: AdjustTransactionDto,
+  ) {
+    return this.updateTransactionUseCase.execute({
+      transactionId: id,
+      organizationId,
+      ...adjustTransactionDto,
+    });
   }
 
   @Patch(':id/link-account')

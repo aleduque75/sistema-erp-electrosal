@@ -66,8 +66,12 @@ export class CreateSaleUseCase {
       const itemQuantity = new Decimal(item.quantity);
       totalAmount = totalAmount.plus(itemPrice.times(itemQuantity));
       
-      // Simplified cost calculation for now. Detailed cost can be calculated upon confirmation.
-      const itemCost = new Decimal(product.costPrice || 0).times(itemQuantity);
+      let itemCost: Decimal;
+      if (productGroup.isReactionProductGroup) {
+        itemCost = new Decimal(product.costPrice || 0).times(itemQuantity).plus(itemQuantity);
+      } else {
+        itemCost = new Decimal(product.costPrice || 0).times(itemQuantity);
+      }
       totalCost = totalCost.plus(itemCost);
 
       // --- Commission Calculation Logic ---

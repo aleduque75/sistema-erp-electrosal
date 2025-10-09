@@ -69,23 +69,7 @@ interface ProductGroup {
 }
 
 export function ProductForm({ product, onSave }: ProductFormProps) {
-  const [productGroups, setProductGroups] = useState<ProductGroup[]>([]);
-  const [isLoadingGroups, setIsLoadingGroups] = useState(true);
 
-  useEffect(() => {
-    const fetchProductGroups = async () => {
-      try {
-        const response = await api.get<ProductGroup[]>("/product-groups");
-        setProductGroups(response.data);
-      } catch (error) {
-        toast.error("Falha ao carregar grupos de produtos.");
-        console.error("Erro ao carregar grupos de produtos:", error);
-      } finally {
-        setIsLoadingGroups(false);
-      }
-    };
-    fetchProductGroups();
-  }, []);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -174,43 +158,7 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="productGroupId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Grupo de Produto</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value} // CORRIGIDO: Use field.value sem o '|| undefined'
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um grupo" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {isLoadingGroups ? (
-                      <SelectItem value="loading" disabled>
-                        Carregando grupos...
-                      </SelectItem>
-                    ) : (
-                      <>
-                        <SelectItem value="">Nenhum</SelectItem>{" "}
-                        {/* CORRIGIDO: O valor para 'Nenhum' deve ser uma string vazia "" */}
-                        {productGroups.map((group) => (
-                          <SelectItem key={group.id} value={group.id}>
-                            {group.name}
-                          </SelectItem>
-                        ))}
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+
 
           <FormField
             control={form.control}

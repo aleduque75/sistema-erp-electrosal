@@ -112,7 +112,7 @@ export class ConfirmSaleUseCase {
       return tx.sale.update({
         where: { id: saleId },
         data: {
-          status: SaleStatus.CONFIRMADO,
+          status: sale.status === SaleStatus.A_SEPARAR ? SaleStatus.FINALIZADO : SaleStatus.CONFIRMADO,
           paymentMethod: confirmSaleDto.paymentMethod,
           netAmount: finalNetAmount,
           totalAmount: finalTotalAmount, // This should also be recalculated

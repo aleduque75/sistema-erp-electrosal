@@ -47,7 +47,7 @@ export class ImportProductsUseCase {
                 organizationId,
                 name: oldProduct.produtoGrupo,
                 description: `Grupo importado de ${oldProduct.produtoGrupo}`,
-                isReactionProductGroup: false, // Default to false, adjust if needed
+                isReactionProductGroup: oldProduct.produtoGrupo === 'Aurocianeto de Potassio',
               },
             });
           }

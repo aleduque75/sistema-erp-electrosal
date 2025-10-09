@@ -103,7 +103,19 @@ export class ContasCorrentesService {
           lte: endDate,
         },
       },
-      include: { contaContabil: true },
+      include: {
+        contaContabil: true,
+        AccountRec: {
+          include: {
+            sale: {
+              select: {
+                id: true,
+                orderNumber: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: { dataHora: 'asc' },
     });
 
@@ -133,6 +145,7 @@ export class ContasCorrentesService {
       transacoes: transacoesNoPeriodo.map(t => ({
         ...t,
         contaContabilNome: t.contaContabil?.nome,
+        sale: t.AccountRec?.sale,
       })),
     };
   }

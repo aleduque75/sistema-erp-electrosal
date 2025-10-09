@@ -11,6 +11,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -44,13 +46,43 @@ interface SaleDetailsModalProps {
   sale: Sale | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSave: () => void; // Callback to refresh the list
 }
 
 export function SaleDetailsModal({
   sale,
   open,
   onOpenChange,
+  onSave,
 }: SaleDetailsModalProps) {
+  const [freightCost, setFreightCost] = useState(sale?.feeAmount || 0);
+  const [goldPrice, setGoldPrice] = useState(sale?.goldPrice || 0);
+
+  useEffect(() => {
+    if (sale) {
+      setFreightCost(sale.feeAmount || 0);
+      setGoldPrice(sale.goldPrice || 0);
+    }
+  }, [sale]);
+
+  const handleSaveAndRecalculate = async () => {
+    if (!sale) return;
+
+    const promise = api.patch(`/sales/${sale.id}/financials`, { 
+      goldPrice,
+      feeAmount: freightCost
+    });
+
+    toast.promise(promise, {
+      loading: 'Salvando dados e recalculando ajuste...',
+      success: () => {
+        onSave(); // This will refresh the list on the parent page
+        onOpenChange(false); // Close the modal
+        return 'Dados financeiros atualizados com sucesso!';
+      },
+      error: 'Falha ao atualizar dados financeiros.',
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,6 +117,28 @@ export function SaleDetailsModal({
                 value={formatCurrency(sale.netAmount)}
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="goldPrice">Cotação da Venda (R$)</Label>
+                <Input
+                  id="goldPrice"
+                  type="number"
+                  value={goldPrice}
+                  onChange={(e) => setGoldPrice(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="freightCost">Custo de Frete (R$)</Label>
+                <Input
+                  id="freightCost"
+                  type="number"
+                  value={freightCost}
+                  onChange={(e) => setFreightCost(Number(e.target.value))}
+                />
+              </div>
+            </div>
+
             <div>
               <h4 className="font-semibold mb-2">Itens da Venda</h4>
               <Table>
@@ -114,6 +168,38 @@ export function SaleDetailsModal({
                 </TableBody>
               </Table>
             </div>
+
+            {sale.accountsRec && sale.accountsRec.length > 0 && (
+              <div>
+                <h4 className="font-semibold mb-2">Recebimentos</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Vencimento</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Conta Pagamento</TableHead>
+                      <TableHead className="text-right">Valor (BRL)</TableHead>
+                      <TableHead className="text-right">Valor (Au)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sale.accountsRec.map((ar) => (
+                      <TableRow key={ar.id}>
+                        <TableCell>{ar.description}</TableCell>
+                        <TableCell>{formatDate(ar.dueDate)}</TableCell>
+                        <TableCell>{ar.received ? 'Recebido' : 'Pendente'}</TableCell>
+                        <TableCell>{ar.transacao?.contaCorrente?.nome || 'N/A'}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(ar.amount)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {ar.transacao?.goldAmount ? `${Number(ar.transacao.goldAmount).toFixed(4)}g` : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         ) : (
           <p className="py-8 text-center">
@@ -124,6 +210,7 @@ export function SaleDetailsModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
+          <Button onClick={handleSaveAndRecalculate}>Salvar e Recalcular</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

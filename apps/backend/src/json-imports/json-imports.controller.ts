@@ -1,8 +1,7 @@
 
-import { Controller, Post, HttpCode, HttpStatus, Logger, Delete, Req, UseGuards } from '@nestjs/common';
-import { Request } from 'express'; // Import Request
+import { Controller, Post, HttpCode, HttpStatus, Logger, Delete, UseGuards, Get } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JsonImportsService } from './json-imports.service';
 
 @Controller('json-imports')
@@ -14,18 +13,14 @@ export class JsonImportsController {
 
   @Post('contas')
   @HttpCode(HttpStatus.OK)
-  async importContas(@Req() req: Request) {
-    // @ts-ignore
-    const organizationId = req.user.organizationId;
+  async importContas(@CurrentUser('organizationId') organizationId: string) {
     this.logger.log(`Recebida requisição para importar contas para a organização ${organizationId}`);
     return this.jsonImportsService.importContas(organizationId);
   }
 
   @Post('sales-finance')
   @HttpCode(HttpStatus.OK)
-  async importSalesAndFinance(@Req() req: Request) {
-    // @ts-ignore
-    const organizationId = req.user.organizationId;
+  async importSalesAndFinance(@CurrentUser('organizationId') organizationId: string) {
     this.logger.log(`Recebida requisição para importação completa de vendas para a organização ${organizationId}`);
     return this.jsonImportsService.importSalesAndFinance(organizationId);
   }
@@ -39,9 +34,7 @@ export class JsonImportsController {
 
   @Post('companies')
   @HttpCode(HttpStatus.OK)
-  async importCompanies(@Req() req: Request) {
-    // @ts-ignore
-    const organizationId = req.user.organizationId;
+  async importCompanies(@CurrentUser('organizationId') organizationId: string) {
     this.logger.log(`Recebida requisição para importar/atualizar empresas para a organização ${organizationId}`);
     return this.jsonImportsService.importOrUpdateCompanies(organizationId);
   }
@@ -55,10 +48,29 @@ export class JsonImportsController {
 
   @Post('products')
   @HttpCode(HttpStatus.OK)
-  async importProducts(@Req() req: Request) {
-    // @ts-ignore
-    const organizationId = req.user.organizationId;
+  async importProducts(@CurrentUser('organizationId') organizationId: string) {
     this.logger.log(`Recebida requisição para importar produtos para a organização ${organizationId}`);
     return this.jsonImportsService.importProducts(organizationId);
+  }
+
+  @Post('link-sales-receivables')
+  @HttpCode(HttpStatus.OK)
+  async linkSalesAndReceivables(@CurrentUser('organizationId') organizationId: string) {
+    this.logger.log(`Recebida requisição para vincular vendas e recebimentos para a organização ${organizationId}`);
+    return this.jsonImportsService.linkSalesAndReceivables(organizationId);
+  }
+
+  @Post('full-legacy-import')
+  @HttpCode(HttpStatus.OK)
+  async runFullLegacyImport(@CurrentUser('organizationId') organizationId: string) {
+    this.logger.warn(`Recebida requisição para IMPORTAÇÃO COMPLETA DO LEGADO para a organização ${organizationId}`);
+    return this.jsonImportsService.runFullLegacyImport(organizationId);
+  }
+
+  @Get('audit-import-files')
+  @HttpCode(HttpStatus.OK)
+  async auditImportFiles() {
+    this.logger.log('Recebida requisição para auditar arquivos de importação.');
+    return this.jsonImportsService.auditImportFiles();
   }
 }

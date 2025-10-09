@@ -3,13 +3,17 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SaleStatus, TipoMetal, ReceivableStatus } from '@prisma/client';
 import { addDays, addMonths } from 'date-fns';
 import Decimal from 'decimal.js';
+import { CalculateSaleAdjustmentUseCase } from './calculate-sale-adjustment.use-case';
 
 @Injectable()
 export class FinalizeSaleUseCase {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
+  ) {}
 
   async execute(organizationId: string, saleId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    const finalizedSale = await this.prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findFirst({
         where: { id: saleId, organizationId },
         include: { saleItems: true },
@@ -86,5 +90,11 @@ export class FinalizeSaleUseCase {
       // Fallback for any other unexpected status
       throw new BadRequestException('Status da venda inválido para finalização.');
     });
+
+    if (finalizedSale) {
+      await this.calculateSaleAdjustmentUseCase.execute(saleId, organizationId);
+    }
+
+    return finalizedSale;
   }
 }

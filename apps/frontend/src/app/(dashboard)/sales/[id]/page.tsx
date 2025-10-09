@@ -20,6 +20,19 @@ interface Sale {
   saleDate: string;
   paymentMethod?: string; // Add paymentMethod to the interface
   saleItems: SaleItem[];
+  accountsRec: {
+    id: string;
+    amount: number;
+    receivedAt: string;
+    transacao?: {
+      id: string;
+      valor: number;
+      goldAmount?: number;
+      contaCorrente: {
+        nome: string;
+      };
+    };
+  }[];
 }
 
 export default function SaleDetailPage() {
@@ -99,6 +112,28 @@ export default function SaleDetailPage() {
               <td>{item.quantity}</td>
               <td>{item.price.toFixed(2)}</td>
               <td>{(item.quantity * item.price).toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 class="text-xl font-bold mt-6 mb-2">Recebimentos</h2>
+      <table className="table-auto mb-4">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Conta</th>
+            <th>Valor (BRL)</th>
+            <th>Valor (Au)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sale.accountsRec.map((rec) => (
+            <tr key={rec.id}>
+              <td>{rec.receivedAt ? new Date(rec.receivedAt).toLocaleDateString() : 'Pendente'}</td>
+              <td>{rec.transacao?.contaCorrente?.nome}</td>
+              <td>{rec.transacao?.valor.toFixed(2)}</td>
+              <td>{rec.transacao?.goldAmount?.toFixed(4)}</td>
             </tr>
           ))}
         </tbody>

@@ -198,6 +198,12 @@ export const menuConfig: NavItem[] = [
         icon: Wallet, // Re-using icon, can be changed
         description: "Gerencie os recebimentos de metal pendentes.",
       },
+      {
+        title: "Ajuste de Transação",
+        href: "/financeiro/ajuste-transacao",
+        icon: Settings, // Re-using icon
+        description: "Corrija o valor ou a conta de uma transação de recebimento existente.",
+      },
     ],
   },
 ];

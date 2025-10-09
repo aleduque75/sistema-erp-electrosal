@@ -1,20 +1,11 @@
+import { Transacao } from './transacao';
+
 export interface Sale {
   id: string;
-  orderNumber: string;
-  pessoa: { name: string };
-  totalAmount: number;
-  feeAmount: number;
-  netAmount: number;
-  goldPrice: number;
-  goldValue: number;
-  paymentMethod: string;
-  createdAt: string;
-  saleItems: {
+  orderNumber: number;
+  goldPrice?: number;
+  accountsRec?: {
     id: string;
-    productId: string;
-    quantity: number;
-    price: number;
-    product: { name: string };
-    inventoryLotId?: string;
+    transacao?: Transacao;
   }[];
 }

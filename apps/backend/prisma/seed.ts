@@ -357,7 +357,8 @@ async function main() {
 
   // --- SEÇÃO DE LIMPEZA COMPLETA ---
   console.log('Limpando dados antigos...');
-  // O Prisma não tem uma ordem de deleção garantida, então deletar em uma ordem lógica pode ajudar a evitar erros de constraint
+  // A ordem de deleção foi ajustada para evitar erros de constraint
+  await prisma.saleAdjustment.deleteMany();
   await prisma.chemical_reactions.deleteMany();
   await prisma.pure_metal_lots.deleteMany();
   await prisma.metalAccountEntry.deleteMany();
@@ -395,14 +396,59 @@ async function main() {
   await prisma.pessoa.deleteMany();
   await prisma.organization.deleteMany();
 
-  // Criar uma organização padrão
+  // --- SEÇÃO DE CRIAÇÃO COM IDs FIXOS ---
+  const orgId = '2a5bb448-056b-4b87-b02f-fec691dd658d';
+  const userId = 'c871c1c6-8d57-4275-a489-7432c1d176cc';
+
+  console.log(`Criando organização padrão com ID: ${orgId}`);
   const organization = await prisma.organization.create({
     data: {
+      id: orgId,
       name: 'Organização Padrão',
     },
   });
 
-  // Criar um cliente interno para análises de resíduo
+  console.log('Criando o plano de contas...');
+  await seedContas(organization.id, planoDeContasEstruturado);
+  console.log('Plano de contas criado com sucesso!');
+
+  console.log(`Criando usuário administrador padrão com ID: ${userId}`);
+  const hashedPassword = await bcrypt.hash('Electrosal123@', 10);
+  await prisma.user.create({
+    data: {
+      id: userId,
+      email: 'admin@electrosal.com',
+      name: 'Admin Electrosal',
+      password: hashedPassword,
+      role: 'ADMIN',
+      organizationId: organization.id,
+    },
+  });
+  console.log('Usuário administrador criado com sucesso!');
+
+  // --- SEÇÃO DE CONFIGURAÇÕES DE USUÁRIO ---
+  console.log('Buscando contas padrão para configurar UserSettings...');
+  const receitaConta = await prisma.contaContabil.findFirstOrThrow({ where: { organizationId: orgId, codigo: '4.1.1' } });
+  const caixaConta = await prisma.contaContabil.findFirstOrThrow({ where: { organizationId: orgId, codigo: '1.1.1' } });
+  const despesaConta = await prisma.contaContabil.findFirstOrThrow({ where: { organizationId: orgId, codigo: '5.1.10' } });
+  const estoqueMetalConta = await prisma.contaContabil.findFirstOrThrow({ where: { organizationId: orgId, codigo: '1.1.4' } });
+  const custoProducaoConta = await prisma.contaContabil.findFirstOrThrow({ where: { organizationId: orgId, codigo: '5.2' } });
+
+  console.log('Criando configurações de usuário (UserSettings) com IDs fixos...');
+  await prisma.userSettings.create({
+    data: {
+      id: '47529257-3065-4d1a-ac60-0c014c7d96af',
+      userId: userId,
+      defaultReceitaContaId: receitaConta.id,
+      defaultCaixaContaId: caixaConta.id,
+      defaultDespesaContaId: despesaConta.id,
+      metalStockAccountId: estoqueMetalConta.id,
+      productionCostAccountId: custoProducaoConta.id,
+    },
+  });
+  console.log('UserSettings criados com sucesso!');
+
+  // --- SEÇÃO DE DADOS ADICIONAIS ---
   const internalClient = await prisma.pessoa.create({
     data: {
       organizationId: organization.id,
@@ -413,26 +459,7 @@ async function main() {
       cnpj: '00.000.000/0001-00',
     },
   });
-
   console.log(`Cliente interno criado: ${internalClient.id}`);
-
-
-  console.log('Criando o plano de contas...');
-  await seedContas(organization.id, planoDeContasEstruturado);
-  console.log('Plano de contas criado com sucesso!');
-
-  console.log('Criando usuário administrador padrão...');
-  const hashedPassword = await bcrypt.hash('Electrosal123@', 10);
-  await prisma.user.create({
-    data: {
-      email: 'admin@electrosal.com',
-      name: 'Admin Electrosal',
-      password: hashedPassword,
-      role: 'ADMIN',
-      organizationId: organization.id,
-    },
-  });
-  console.log('Usuário administrador criado com sucesso!');
 
   console.log('Criando o contador de lote de produção...');
   await prisma.productionBatchCounter.upsert({

@@ -403,5 +403,19 @@ Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, se
    - **Tarefa:** Modelar e implementar o fluxo de compra de metal de fornecedores, incluindo o cenário onde um cliente deposita um valor diretamente para o fornecedor da empresa.
    - **Status:** A fazer.
 
+### Histórico de Soluções e Decisões
+
+**1. Correção do Cálculo de Ajuste para Vendas Legadas**
+   - **Problema:** O processo de "Importar Dados Legados (Processo Completo)" estava calculando incorretamente o lucro (`grossDiscrepancyGrams`) para vendas de produtos como "El Sal 68%". Além disso, o processo travava no final, sem concluir.
+   - **Diagnóstico:**
+     - O cálculo de `saleExpectedGrams` aplicava uma conversão de teor de ouro (ex: 68.2%) a todos os produtos, quando para as vendas legadas, deveria usar a quantidade direta do item.
+     - O processo de recálculo (`backfill`) executava uma busca ao banco de dados para cada venda dentro de um loop (problema N+1), causando lentidão e travamento com muitas vendas.
+     - O campo `goldPrice` na entidade `Sale` não estava sendo atualizado com a cotação calculada.
+   - **Solução Implementada:**
+     - **Simplificação da Regra de Negócio:** A lógica no `CalculateSaleAdjustmentUseCase` foi simplificada. Agora, `saleExpectedGrams` é sempre a soma direta da quantidade dos itens da venda, alinhando-se à regra de negócio para as vendas importadas.
+     - **Otimização do Backfill:** O processo de `backfillSaleAdjustments` foi otimizado para buscar os dados de todas as vendas de uma só vez, mas a iteração ainda processa uma venda de cada vez para evitar erros de tipo complexos e garantir a robustez, resolvendo o problema de travamento.
+     - **Correção do `goldPrice`:** A lógica foi ajustada para garantir que, após o cálculo do ajuste, o campo `goldPrice` na entidade `Sale` seja preenchido com o `paymentQuotation` calculado.
+   - **Status:** Concluído. O processo de importação agora é robusto, não trava e calcula os ajustes de venda corretamente.
+
 
 # Vendas uma de produto de revenda, a comissão seria o que pagou menos o que vendeu, seria uma porcentagem desse lucrobruto em venda do sal de au 68$, que vira da reação, ai muda, eu cobro uma mão de obra, que seria por exemplo teria que ter uma tabela, abaixo de 19 gramas cobro 1 gr, isso pode ser altarado , mas seria como padrão, vamos dar um exemplo de uma venda de 10 gr, na cotação de venda 606 e tem frete de R$ 70,00, recebo R$ 6736,00 em metal 11,115 g, mas a cotação de compra do fornecedor é 605,entao seria  11,13, essa diferença seria para uma conta diferença_cotação de 0,014 gr, para calculo de comissão seria a 1 gr de mão de obra menos custos, que ai teria que colocar. é bem complexo deu para entendeer, e queria importar do sistema antigo, os clientes tem um externalId do sistema antigo queria vincular as vendas, elas então em /home/aleduque/Documentos/cursos/sistema-erp-electrosal/json-imports    

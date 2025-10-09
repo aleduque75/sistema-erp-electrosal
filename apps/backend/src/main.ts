@@ -3,8 +3,18 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { config } from 'dotenv';
+import { Decimal } from '@prisma/client/runtime/library';
 
 config();
+
+// BigInt and Decimal serialization
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
+(Decimal.prototype as any).toJSON = function () {
+  return this.toString();
+};
 
 import { LogLevel } from '@nestjs/common'; // ADDED
 

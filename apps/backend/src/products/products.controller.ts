@@ -72,4 +72,14 @@ export class ProductsController {
   ) {
     return this.productsService.remove(organizationId, id);
   }
+
+  @Get('product-groups/debug')
+  getAllProductGroups(@CurrentUser('orgId') organizationId: string) {
+    return this.productsService.getAllProductGroups(organizationId);
+  }
+
+  @Post('fix-reaction-group')
+  fixReactionGroupFlag(@CurrentUser('orgId') organizationId: string) {
+    return this.productsService.fixReactionGroupFlag(organizationId);
+  }
 }

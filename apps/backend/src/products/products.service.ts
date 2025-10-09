@@ -172,16 +172,14 @@ export class ProductsService {
     const prismaProducts = await this.prisma.product.findMany({
       where: { organizationId },
       include: {
+        productGroup: true,
         inventoryLots: {
-          orderBy: {
-            receivedDate: 'asc',
-          },
+          where: { remainingQuantity: { gt: 0 } },
+          orderBy: { createdAt: 'desc' },
         },
-        productGroup: true, // Incluir o grupo do produto
       },
     });
-    const domainProducts = prismaProducts.map(ProductMapper.toDomain);
-    return domainProducts.map(p => p.toJSON());
+    return prismaProducts;
   }
 
   async findOne(organizationId: string, id: string): Promise<Product> {
@@ -232,5 +230,31 @@ export class ProductsService {
     const product = await this.findOne(organizationId, id); // Garante que o produto existe e retorna DDD entity
     const deletedPrismaProduct = await this.prisma.product.delete({ where: { id: product.id.toString() } });
     return ProductMapper.toDomain(deletedPrismaProduct);
+  }
+
+  async getAllProductGroups(organizationId: string): Promise<any[]> {
+    return this.prisma.productGroup.findMany({ where: { organizationId } });
+  }
+
+  async fixReactionGroupFlag(organizationId: string): Promise<{ message: string }> {
+    const groupName = 'Aurocianeto 68%';
+    const productGroup = await this.prisma.productGroup.findFirst({
+      where: { name: groupName, organizationId },
+    });
+
+    if (!productGroup) {
+      throw new NotFoundException(`Grupo de produto "${groupName}" não encontrado.`);
+    }
+
+    if (productGroup.isReactionProductGroup) {
+      return { message: `O grupo "${groupName}" já está configurado corretamente.` };
+    }
+
+    await this.prisma.productGroup.update({
+      where: { id: productGroup.id },
+      data: { isReactionProductGroup: true },
+    });
+
+    return { message: `Grupo "${groupName}" corrigido com sucesso.` };
   }
 }
