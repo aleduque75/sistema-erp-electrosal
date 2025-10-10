@@ -1,5 +1,3 @@
-// Possível caminho: apps/frontend/src/app/(dashboard)/contas-correntes/create/transacao-form.tsx
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -28,10 +26,10 @@ import {
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 
-const createFormSchema = (moeda?: string) => z.object({
+const formSchema = z.object({
   descricao: z.string().min(3, "A descrição é obrigatória."),
-  valor: moeda === 'BRL' ? z.coerce.number().positive("O valor deve ser maior que zero.") : z.coerce.number().optional(),
-  goldAmount: moeda !== 'BRL' ? z.coerce.number().positive("O valor deve ser maior que zero.") : z.coerce.number().optional(),
+  valor: z.coerce.number().optional(),
+  goldAmount: z.coerce.number().optional(),
   tipo: z.enum(["CREDITO", "DEBITO"]),
   contaContabilId: z.string({
     required_error: "Selecione uma conta contábil.",
@@ -45,7 +43,7 @@ interface TransacaoFormProps {
   contaCorrenteId: string;
   onSave: () => void;
   initialData?: TransacaoExtrato | null;
-  moeda?: string;
+  moeda?: string; // This prop is no longer the main driver, but can be kept for context
 }
 
 interface TransacaoExtrato {
@@ -64,51 +62,74 @@ interface ContaContabil {
   codigo: string;
 }
 
-export function TransacaoForm({ contaCorrenteId, onSave, initialData, moeda }: TransacaoFormProps) {
+export function TransacaoForm({ contaCorrenteId, onSave, initialData }: TransacaoFormProps) {
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
-  const formSchema = createFormSchema(moeda);
+  const [quotation, setQuotation] = useState(0);
+
   type FormValues = z.infer<typeof formSchema>;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
   });
 
-  const tipoLancamento = form.watch("tipo");
-  const dataHora = form.watch("dataHora");
+  const { watch, setValue, reset } = form;
+  const tipoLancamento = watch("tipo");
+  const dataHora = watch("dataHora");
 
-  const handleConversion = async (fieldToConvert: 'valor' | 'goldAmount') => {
-    if (!dataHora) return;
-
-    try {
-      const response = await api.get(`/quotations/by-date?date=${dataHora}&metal=AU`);
-      const quotation = response.data;
-
-      if (quotation) {
-        const valor = form.getValues('valor');
-        const goldAmount = form.getValues('goldAmount');
-
-        if (fieldToConvert === 'valor' && valor) {
-          const newGoldAmount = valor / quotation.buyPrice;
-          form.setValue('goldAmount', newGoldAmount, { shouldValidate: true });
-        } else if (fieldToConvert === 'goldAmount' && goldAmount) {
-          const newValor = goldAmount * quotation.buyPrice;
-          form.setValue('valor', newValor, { shouldValidate: true });
+  // Fetch quotation when date changes
+  useEffect(() => {
+    const fetchQuotation = async () => {
+      if (dataHora) {
+        try {
+          const response = await api.get(`/quotations/by-date?date=${dataHora}&metal=AU`);
+          const fetchedQuotation = response.data?.buyPrice || 0;
+          setQuotation(fetchedQuotation);
+        } catch (error) {
+          setQuotation(0);
+          toast.info('Cotação não encontrada para a data selecionada.');
         }
       }
-    } catch (error) {
-      console.error('Failed to fetch quotation', error);
-      toast.error('Cotação não encontrada para a data selecionada.');
+    };
+    fetchQuotation();
+  }, [dataHora]);
+
+  // Handlers for dynamic conversion
+  const handleBrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newBrlValue = parseFloat(e.target.value) || 0;
+    setValue('valor', newBrlValue);
+    if (quotation > 0) {
+      const newGoldAmount = newBrlValue / quotation;
+      setValue('goldAmount', parseFloat(newGoldAmount.toFixed(4)));
+    }
+  };
+
+  const handleGoldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newGoldValue = parseFloat(e.target.value) || 0;
+    setValue('goldAmount', newGoldValue);
+    if (quotation > 0) {
+      const newBrlValue = newGoldValue * quotation;
+      setValue('valor', parseFloat(newBrlValue.toFixed(2)));
+    }
+  };
+
+  const handleQuotationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuotation = parseFloat(e.target.value) || 0;
+    setQuotation(newQuotation);
+    const currentBrlValue = watch('valor') || 0;
+    if (newQuotation > 0 && currentBrlValue > 0) {
+      const newGoldAmount = currentBrlValue / newQuotation;
+      setValue('goldAmount', parseFloat(newGoldAmount.toFixed(4)));
     }
   };
 
   useEffect(() => {
     if (initialData) {
-      form.reset({
+      reset({
         ...initialData,
         dataHora: initialData.dataHora.split('T')[0],
       });
     } else {
-      form.reset({
+      reset({
         dataHora: new Date().toISOString().split("T")[0],
         tipo: "CREDITO",
         descricao: "",
@@ -117,7 +138,7 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData, moeda }: T
         contaContabilId: "",
       });
     }
-  }, [initialData, form]);
+  }, [initialData, reset]);
 
   useEffect(() => {
     if (tipoLancamento) {
@@ -129,19 +150,6 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData, moeda }: T
       setContasContabeis([]);
     }
   }, [tipoLancamento]);
-
-  useEffect(() => {
-    if (!initialData) {
-      form.setValue("contaContabilId", "");
-    }
-  }, [contasContabeis, form.setValue, initialData]);
-
-  useEffect(() => {
-    if (!initialData) {
-        form.setValue('valor', 0);
-        form.setValue('goldAmount', 0);
-    }
-  }, [dataHora, initialData, form.setValue]);
 
   const filteredOptions = useMemo(() => {
     return contasContabeis.map((c) => ({
@@ -206,35 +214,48 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData, moeda }: T
             </FormItem>
           )}
         />
-        {moeda === 'BRL' ? (
-          <FormField
-            name="valor"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Valor (R$)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" {...field} onBlur={() => handleConversion('valor')} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        ) : (
-          <FormField
-            name="goldAmount"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Valor (Au g)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.0001" {...field} onBlur={() => handleConversion('goldAmount')} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+
+        <div className="grid grid-cols-3 gap-4 items-end">
+            <FormField
+                name="valor"
+                control={form.control}
+                render={({ field }) => (
+                <FormItem className="col-span-1">
+                    <FormLabel>Valor (R$)</FormLabel>
+                    <FormControl>
+                    <Input type="number" step="0.01" {...field} onChange={handleBrlChange} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                name="quotation"
+                render={({ field }) => (
+                <FormItem className="col-span-1">
+                    <FormLabel>Cotação do Dia</FormLabel>
+                    <FormControl>
+                    <Input type="number" step="0.01" value={quotation} onChange={handleQuotationChange} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                name="goldAmount"
+                control={form.control}
+                render={({ field }) => (
+                <FormItem className="col-span-1">
+                    <FormLabel>Valor (Au g)</FormLabel>
+                    <FormControl>
+                    <Input type="number" step="0.0001" {...field} onChange={handleGoldChange} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+
         <FormField
           name="descricao"
           control={form.control}

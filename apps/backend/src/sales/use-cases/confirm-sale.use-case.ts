@@ -15,23 +15,22 @@ export class ConfirmSaleUseCase {
 
   async execute(organizationId: string, userId: string, saleId: string, confirmSaleDto: ConfirmSaleDto) {
     return this.prisma.$transaction(async (tx) => {
+      console.log(`[ConfirmSaleUseCase] Searching for Sale - ID: ${saleId}, OrgID: ${organizationId}, Status: ${SaleStatus.A_SEPARAR}`);
       const sale = await tx.sale.findFirst({
         where: { 
           id: saleId, 
           organizationId,
-          OR: [
-            { status: SaleStatus.PENDENTE },
-            { status: SaleStatus.A_SEPARAR },
-          ]
+          status: SaleStatus.A_SEPARAR,
         },
         include: {
           saleItems: { include: { product: { include: { productGroup: true } } } },
           pessoa: true,
         },
       });
+      console.log(`[ConfirmSaleUseCase] Sale found: ${sale ? sale.id : 'None'}`);
 
       if (!sale) {
-        throw new NotFoundException(`Venda com status PENDENTE ou A_SEPARAR com ID ${saleId} não encontrada.`);
+        throw new NotFoundException(`Venda com status A_SEPARAR com ID ${saleId} não encontrada.`);
       }
 
       const { paymentMethod, numberOfInstallments, contaCorrenteId, updatedGoldPrice, clientMetalAccountId } = confirmSaleDto;

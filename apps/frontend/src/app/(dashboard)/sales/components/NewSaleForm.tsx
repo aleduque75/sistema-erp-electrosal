@@ -59,6 +59,7 @@ export function NewSaleForm({ onSave }: any) {
   const [saleGoldQuote, setSaleGoldQuote] = useState(0);
   const [laborCostTable, setLaborCostTable] = useState<any[]>([]);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [freightAmount, setFreightAmount] = useState(0);
 
   const {
     control,
@@ -157,8 +158,8 @@ export function NewSaleForm({ onSave }: any) {
     [totalAmount, feePercentage]
   );
   const finalAmount = useMemo(
-    () => (absorbCreditCardFee ? totalAmount : totalAmount + feeAmount),
-    [totalAmount, feeAmount, absorbCreditCardFee]
+    () => (absorbCreditCardFee ? totalAmount : totalAmount + feeAmount) + freightAmount,
+    [totalAmount, feeAmount, absorbCreditCardFee, freightAmount]
   );
 
   const onFinalizeSale = async (formData: any) => {
@@ -188,6 +189,7 @@ export function NewSaleForm({ onSave }: any) {
       pessoaId: formData.clientId,
       items: items.map(({ productId, quantity, price, inventoryLotId }) => ({ productId, quantity, price, inventoryLotId })),
       feeAmount: totalAmount * (feePercentage / 100),
+      freightAmount: freightAmount,
       paymentMethod,
       paymentTermId,
       goldQuoteValue: saleGoldQuote,
@@ -269,6 +271,15 @@ export function NewSaleForm({ onSave }: any) {
                   type="number"
                   value={saleGoldQuote}
                   onChange={(e) => setSaleGoldQuote(Number(e.target.value))}
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Frete (R$)</Label>
+                <Input
+                  type="number"
+                  value={freightAmount}
+                  onChange={(e) => setFreightAmount(Number(e.target.value))}
                   step="0.01"
                 />
               </div>
@@ -386,6 +397,10 @@ export function NewSaleForm({ onSave }: any) {
                   <span>{formatCurrency(feeAmount)}</span>
                 </div>
               )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Frete</span>
+                <span>{formatCurrency(freightAmount)}</span>
+              </div>
               <div className="flex justify-between text-xl font-bold pt-2 border-t">
                 <span>Total</span>
                 <span>{formatCurrency(finalAmount)}</span>

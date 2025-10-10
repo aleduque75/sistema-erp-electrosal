@@ -5,6 +5,7 @@ import { CompleteProductionStepUseCase } from './use-cases/complete-production-s
 import { AdjustPurityUseCase } from './use-cases/adjust-purity.use-case';
 import { CreateChemicalReactionDto } from './dtos/create-chemical-reaction.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { CompleteReactionDto } from './dtos/complete-reaction.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('chemical-reactions')
@@ -24,9 +25,9 @@ export class ChemicalReactionsController {
   }
 
   @Patch(':id/complete-production')
-  async completeProductionStep(@Param('id') id: string, @Req() req, @Body() dto: any) {
+  async completeProductionStep(@Param('id') id: string, @Req() req, @Body() dto: CompleteReactionDto) {
     const organizationId = req.user?.orgId;
-    const command = { organizationId, reactionId: id, ...dto };
+    const command = { organizationId, reactionId: id, dto };
     return this.completeProductionStepUseCase.execute(command);
   }
 

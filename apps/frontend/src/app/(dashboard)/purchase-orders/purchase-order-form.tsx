@@ -151,9 +151,9 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
 
     api.get("/products").then((res) => {
       const mappedProducts = res.data.map((p: any) => ({
-        id: p._id,
-        name: p.props.name,
-        price: p.props.price,
+        id: p.id,
+        name: p.name,
+        price: p.price,
       }));
       setProducts(mappedProducts);
     }).finally(() => {

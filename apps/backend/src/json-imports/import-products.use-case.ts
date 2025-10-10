@@ -58,14 +58,14 @@ export class ImportProductsUseCase {
           where: { externalId: oldProduct['unique id'] },
           update: {
             name: oldProduct.nome,
-            stock: this.parseNumber(oldProduct.quantidade),
+            stock: 0, // Always set stock to 0
             productGroupId: productGroupId,
           },
           create: {
             organizationId,
             name: oldProduct.nome,
             price: new Decimal(0), // Default price, adjust if needed
-            stock: this.parseNumber(oldProduct.quantidade),
+            stock: 0, // Always set stock to 0
             productGroupId: productGroupId,
             externalId: oldProduct['unique id'],
           },

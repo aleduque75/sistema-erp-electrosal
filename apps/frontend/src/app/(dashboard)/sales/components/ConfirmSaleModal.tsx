@@ -58,6 +58,7 @@ export function ConfirmSaleModal({
   const [currentQuote, setCurrentQuote] = useState(0);
   const [laborCostTable, setLaborCostTable] = useState<any[]>([]);
   const [detailedSale, setDetailedSale] = useState<any | null>(null);
+  const [goldValue, setGoldValue] = useState(0);
 
   const { control, handleSubmit, watch, reset } = useForm<ConfirmSaleFormValues>({
     resolver: zodResolver(formSchema),
@@ -85,12 +86,10 @@ export function ConfirmSaleModal({
     }
   }, [open, initialSale, reset]);
 
-  const recalculatedNetAmount = useMemo(() => {
-    if (!detailedSale || !currentQuote || !laborCostTable.length) {
-      return Number(detailedSale?.netAmount || 0);
-    }
+  const totalGoldValue = useMemo(() => {
+    if (!detailedSale || !laborCostTable.length) return 0;
 
-    let newTotalAmount = new Decimal(0);
+    let goldFromItems = new Decimal(0);
     for (const item of detailedSale.saleItems) {
       if (item.product.productGroup?.isReactionProductGroup) {
         const itemQuantity = new Decimal(item.quantity);
@@ -99,15 +98,35 @@ export function ConfirmSaleModal({
           goldGramsSold.gte(e.minGrams) && (e.maxGrams === null || goldGramsSold.lte(e.maxGrams))
         );
         const laborGrams = laborEntry ? new Decimal(laborEntry.goldGramsCharged) : new Decimal(0);
-        const totalGoldForPrice = goldGramsSold.plus(laborGrams);
-        const newItemTotal = totalGoldForPrice.times(currentQuote);
-        newTotalAmount = newTotalAmount.plus(newItemTotal);
+        goldFromItems = goldFromItems.plus(goldGramsSold).plus(laborGrams);
       } else {
-        newTotalAmount = newTotalAmount.plus(new Decimal(item.price).times(item.quantity));
+        const goldPriceAtSale = new Decimal(detailedSale.goldPrice || 1);
+        if (goldPriceAtSale.gt(0)) {
+          const itemGoldValue = new Decimal(item.price).times(item.quantity).dividedBy(goldPriceAtSale);
+          goldFromItems = goldFromItems.plus(itemGoldValue);
+        }
       }
     }
-    return newTotalAmount.plus(detailedSale.feeAmount || 0).toNumber();
-  }, [detailedSale, currentQuote, laborCostTable]);
+    return goldFromItems.toNumber();
+  }, [detailedSale, laborCostTable]);
+
+  const recalculatedNetAmount = useMemo(() => {
+    if (totalGoldValue <= 0 || currentQuote <= 0) return Number(detailedSale?.netAmount || 0);
+    
+    const totalBRL = new Decimal(totalGoldValue).times(currentQuote);
+    const feeAmount = totalBRL.times(Number(detailedSale.feeAmount || 0)).dividedBy(Number(detailedSale.totalAmount) || 1);
+    return totalBRL.plus(feeAmount).plus(Number(detailedSale.shippingCost) || 0).toNumber();
+
+  }, [totalGoldValue, currentQuote, detailedSale]);
+
+  // Effect to sync gold value when BRL amount or quote changes
+  useEffect(() => {
+    if (currentQuote > 0) {
+      setGoldValue(recalculatedNetAmount / currentQuote);
+    } else {
+      setGoldValue(0);
+    }
+  }, [recalculatedNetAmount, currentQuote]);
 
   const onSubmit = async (data: ConfirmSaleFormValues) => {
     if (!detailedSale) return;
@@ -146,7 +165,7 @@ export function ConfirmSaleModal({
             <p><span className="font-semibold">Cliente:</span> {detailedSale.pessoa.name}</p>
             <p><span className="font-semibold">Valor Original:</span> {formatCurrency(Number(detailedSale.netAmount))}</p>
             {hasPriceChanged && (
-              <Alert variant="warning">
+              <Alert variant="destructive">
                 <AlertTitle>Atenção: O Preço Mudou!</AlertTitle>
                 <AlertDescription>
                   O valor foi recalculado para <span className="font-bold">{formatCurrency(recalculatedNetAmount)}</span> com base na cotação atual do ouro.
@@ -155,9 +174,19 @@ export function ConfirmSaleModal({
             )}
           </div>
 
-          <div className="space-y-1">
-            <Label>Cotação do Ouro (R$)</Label>
-            <Input type="number" value={currentQuote} onChange={e => setCurrentQuote(Number(e.target.value))} step="0.01" />
+          <div className="grid grid-cols-3 gap-4 items-end">
+            <div className="space-y-1 col-span-1">
+              <Label>Cotação do Ouro (R$)</Label>
+              <Input type="number" value={currentQuote} onChange={e => setCurrentQuote(Number(e.target.value))} step="0.01" />
+            </div>
+            <div className="space-y-1 col-span-1">
+              <Label>Valor Final (R$)</Label>
+              <Input type="number" value={recalculatedNetAmount.toFixed(2)} readOnly className="font-bold" />
+            </div>
+            <div className="space-y-1 col-span-1">
+              <Label>Equivalente (Au g)</Label>
+              <Input type="number" value={goldValue.toFixed(4)} readOnly className="font-bold" />
+            </div>
           </div>
           
           <Controller
@@ -166,13 +195,13 @@ export function ConfirmSaleModal({
             render={({ field }) => (
               <div className="space-y-1">
                 <Label>Método de Pagamento</Label>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <Select onValueChange={field.onChange} value={field.value || ''}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o método..." />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="A_VISTA">À Vista</SelectItem>
                     <SelectItem value="A_PRAZO">A Prazo</SelectItem>
-                    <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
-                    <SelectItem value="METAL">Metal</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

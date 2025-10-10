@@ -22,6 +22,7 @@ export class CreateSaleUseCase {
       paymentMethod,
       feeAmount,
       goldQuoteValue,
+      freightAmount,
     } = createSaleDto;
 
     const client = await this.prisma.client.findFirst({ where: { pessoaId, organizationId } });
@@ -125,7 +126,8 @@ export class CreateSaleUseCase {
     }
 
     const finalFeeAmount = new Decimal(feeAmount || 0);
-    const netAmount = totalAmount.plus(finalFeeAmount);
+    const finalFreightAmount = new Decimal(freightAmount || 0);
+    const netAmount = totalAmount.plus(finalFeeAmount).plus(finalFreightAmount);
     const goldPrice = goldQuote.valorVenda;
     const goldValue = netAmount.dividedBy(goldPrice);
 
@@ -143,6 +145,7 @@ export class CreateSaleUseCase {
         totalAmount,
         totalCost,
         feeAmount: finalFeeAmount,
+        shippingCost: finalFreightAmount,
         netAmount,
         goldPrice,
         goldValue,

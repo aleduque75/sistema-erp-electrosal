@@ -1,4 +1,0 @@
-
-> backend@0.0.1 lint /home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend
-> eslint "{src,apps,libs,test}/**/*.ts" --fix
-

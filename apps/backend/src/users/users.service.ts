@@ -36,8 +36,8 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async findByIdAndOrganization(id: string, organizationId: string): Promise<User | null> {
-    return this.prisma.user.findFirst({ where: { id, organizationId } });
+  async findByIdAndOrganization(id: string, organizationId: string, include?: any): Promise<User | null> {
+    return this.prisma.user.findFirst({ where: { id, organizationId }, include });
   }
 
   // --- 👇 MÉTODOS FALTANTES ADICIONADOS AQUI 👇 ---

@@ -36,6 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
 import { ContaContabilForm } from "@/components/forms/conta-contabil-form";
 import { TipoContaContabilPrisma } from "@/lib/types";
 
@@ -63,6 +64,21 @@ interface SelectionState {
   description?: string; // Guarda a descrição editada
 }
 
+// --- NOVAS INTERFACES PARA USER PROFILE E SETTINGS ---
+interface UserSettings {
+  id: string;
+  defaultReceitaContaId: string | null;
+  defaultDespesaContaId: string | null;
+}
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  settings: UserSettings | null;
+}
+// --------------------------------------------------
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value
@@ -86,6 +102,13 @@ export function OfxImport() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryType, setNewCategoryType] =
     useState<TipoContaContabilPrisma>(TipoContaContabilPrisma.DESPESA);
+
+  // --- BUSCA O PERFIL DO USUÁRIO COM AS CONFIGURAÇÕES ---
+  const { data: userProfile, isLoading: isLoadingProfile } = useQuery<UserProfile>({
+    queryKey: ["userProfile"],
+    queryFn: () => api.get("/users/profile").then((res) => res.data),
+  });
+  // -----------------------------------------------------
 
   const fetchContas = async () => {
     try {
@@ -124,16 +147,41 @@ export function OfxImport() {
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-      setPreviewData(response.data);
-      const initialSelections = response.data.reduce((acc: Record<string, SelectionState>, t: PreviewTransaction) => {
+      const newPreviewData: PreviewTransaction[] = response.data;
+      setPreviewData(newPreviewData);
+
+      // --- LÓGICA DE CATEGORIZAÇÃO AUTOMÁTICA ---
+      const defaultReceitaId = userProfile?.settings?.defaultReceitaContaId;
+      const defaultDespesaId = userProfile?.settings?.defaultDespesaContaId;
+
+      const initialSelections = newPreviewData.reduce((acc: Record<string, SelectionState>, t: PreviewTransaction) => {
+        let suggestedContaId: string | undefined = undefined;
+
+        if (t.status === "new") {
+          const searchDescription = t.description.toLowerCase();
+          const accountsToSearch = t.type === 'CREDIT' ? contasDeEntrada : contasDeSaida;
+          const defaultId = t.type === 'CREDIT' ? defaultReceitaId : defaultDespesaId;
+
+          // 1. Tenta encontrar um match exato ou parcial
+          const foundAccount = accountsToSearch.find(acc => searchDescription.includes(acc.nome.toLowerCase()));
+
+          if (foundAccount) {
+            suggestedContaId = foundAccount.id;
+          } else if (defaultId) {
+            suggestedContaId = defaultId;
+          }
+        }
+
         acc[t.fitId] = {
           selected: t.status === "new",
-          contaContabilId: undefined,
+          contaContabilId: suggestedContaId,
           description: t.description,
         };
         return acc;
       }, {});
       setSelections(initialSelections);
+      // --------------------------------------------
+
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || "Erro ao pré-visualizar arquivo."
@@ -290,7 +338,7 @@ export function OfxImport() {
                 required
               />
             </div>
-            <Button type="submit" disabled={isUploading} className="w-full">
+            <Button type="submit" disabled={isUploading || isLoadingProfile} className="w-full">
               {isUploading ? "Analisando..." : "Analisar Arquivo"}
             </Button>
           </form>
@@ -416,7 +464,8 @@ export function OfxImport() {
                       <TableCell
                         className={`text-right font-medium ${t.type === "CREDIT" ? "text-green-600" : "text-red-600"}`}
                       >
-                        {formatCurrency(t.amount)}
+                        {t.type === "CREDIT" ? "+ " : "- "}
+                        {formatCurrency(Math.abs(t.amount))}
                       </TableCell>
                       <TableCell>
                         <Badge

@@ -426,7 +426,7 @@ export class JsonImportsService {
 
                         const receitaConta = await this.prisma.contaContabil.findFirstOrThrow({ where: { organizationId, codigo: '4.1.1' } });
 
-                        const despesaContaDefault = await this.prisma.contaContabil.findFirstOrThrow({ where: { organizationId, codigo: '3.1.1' } }); // Assumindo que 3.1.1 é uma conta de despesa genérica
+                        const despesaContaDefault = await this.prisma.contaContabil.findFirstOrThrow({ where: { organizationId, codigo: '5.1.10' } }); // CORRIGIDO: Usar Despesas Gerais
 
                   
 
@@ -533,7 +533,7 @@ export class JsonImportsService {
                 await this.prisma.transacao.create({
                   data: {
                     organizationId: organizationId,
-                    tipo: 'DEBITO',
+                    tipo: 'CREDITO', // CORRIGIDO: Pagamento recebido é um crédito
                     valor: this.parseDecimal(financa.valorRecebido),
                     goldAmount: this.parseDecimal(financa.valorRecebidoAu),
                     moeda: 'BRL',
@@ -728,11 +728,15 @@ export class JsonImportsService {
               continue;
             }
 
-            let tipoTransacao: TipoTransacaoPrisma = 'CREDITO'; // Padrão
-            let valorFinal = valorRecebido > 0 ? valorRecebido : valorPago;
-            if (valorFinal < 0) {
+            let tipoTransacao: TipoTransacaoPrisma;
+            let valorFinal = 0;
+
+            if (valorRecebido > 0) {
+              tipoTransacao = 'CREDITO';
+              valorFinal = valorRecebido;
+            } else {
               tipoTransacao = 'DEBITO';
-              valorFinal = Math.abs(valorFinal);
+              valorFinal = valorPago;
             }
 
             let cotacao = this.parseDecimal(financa.cotacao);

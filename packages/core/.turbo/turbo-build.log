@@ -1,5 +1,0 @@
-
-
-> @sistema-erp-electrosal/core@1.0.0 build /home/aleduque/Documentos/cursos/sistema-erp-electrosal/packages/core
-> tsc && tsc-alias -p tsconfig.json
-

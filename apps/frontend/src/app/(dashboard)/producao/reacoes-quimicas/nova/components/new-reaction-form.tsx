@@ -36,20 +36,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PlusCircle, Trash2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { MetalLotSelectionModal } from "./metal-lot-selection-modal";
 
-// ----------------------------------------------------
-// ZOD SCHEMA CORRIGIDO: Adiciona os campos de insumo que estavam faltando
-// ----------------------------------------------------
+// ZOD SCHEMA for the creation step
 const formSchema = z.object({
   notes: z.string().optional(),
   sourceLots: z
@@ -62,19 +55,11 @@ const formSchema = z.object({
       })
     )
     .min(1, "Adicione pelo menos um lote de metal."),
-
-  // CAMPOS DE INSUMO ADICIONADOS:
-  inputRawMaterialGrams: z.coerce.number().min(0).optional(),
-  inputBasketLeftoverGrams: z.coerce.number().min(0).optional(),
-  inputDistillateLeftoverGrams: z.coerce.number().min(0).optional(),
-  // Fim dos campos de insumo adicionados
-
   outputProductGroupId: z
     .string()
     .min(1, "Selecione o grupo de produto de saída."),
   batchNumber: z.string().optional(),
 });
-// ----------------------------------------------------
 
 type NewReactionFormValues = z.infer<typeof formSchema>;
 
@@ -102,11 +87,6 @@ export function NewReactionForm() {
     defaultValues: {
       notes: "",
       sourceLots: [],
-      // DEFAULTS PARA OS NOVOS CAMPOS:
-      inputRawMaterialGrams: 0,
-      inputBasketLeftoverGrams: 0,
-      inputDistillateLeftoverGrams: 0,
-      // Fim dos defaults
       outputProductGroupId: "",
       batchNumber: "",
     },
@@ -114,21 +94,10 @@ export function NewReactionForm() {
 
   const {
     fields: sourceLotFields,
-    append: appendSourceLot,
     remove: removeSourceLot,
   } = useFieldArray({
     control: form.control,
     name: "sourceLots",
-  });
-
-  const { data: metalLots, isLoading: isLoadingMetalLots } = useQuery<
-    MetalLot[]
-  >({
-    queryKey: ["metalLots"],
-    queryFn: async () => {
-      const response = await api.get("/pure-metal-lots?remainingGramsGt=0");
-      return response.data;
-    },
   });
 
   const { data: productGroups, isLoading: isLoadingProductGroups } = useQuery<
@@ -137,7 +106,6 @@ export function NewReactionForm() {
     queryKey: ["productGroups"],
     queryFn: async () => {
       const response = await api.get("/product-groups");
-      console.log("Fetched productGroups:", response.data);
       return response.data.filter(
         (pg: ProductGroup) => pg.isReactionProductGroup
       );
@@ -145,13 +113,11 @@ export function NewReactionForm() {
   });
 
   const selectedOutputProductGroupId = form.watch("outputProductGroupId");
-  const selectedOutputProductGroup = useMemo(() => {
-    return productGroups?.find((pg) => pg.id === selectedOutputProductGroupId);
-  }, [productGroups, selectedOutputProductGroupId]);
-
+  
   const selectedOutputProduct = useMemo(() => {
-    return selectedOutputProductGroup?.products?.[0];
-  }, [selectedOutputProductGroup]);
+    const group = productGroups?.find((pg) => pg.id === selectedOutputProductGroupId);
+    return group?.products?.[0];
+  }, [productGroups, selectedOutputProductGroupId]);
 
   useEffect(() => {
     if (
@@ -177,37 +143,18 @@ export function NewReactionForm() {
   const onSubmit = async (values: NewReactionFormValues) => {
     if (!selectedOutputProduct) {
       toast.error(
-        "Produto de saída (Sal 68%) não encontrado para o grupo selecionado."
+        "Produto de saída não encontrado para o grupo selecionado."
       );
       return;
     }
 
     try {
-      // Cria o payload de insumos, removendo o 0 para campos opcionais no backend, se necessário
-      const payload: any = {
+      const payload = {
         notes: values.notes,
         outputProductId: selectedOutputProduct.id,
         sourceLots: values.sourceLots,
         batchNumber: values.batchNumber,
       };
-
-      // Adiciona os insumos opcionais se forem maiores que zero
-      if (values.inputRawMaterialGrams && values.inputRawMaterialGrams > 0) {
-        payload.inputRawMaterialGrams = values.inputRawMaterialGrams;
-      }
-      if (
-        values.inputBasketLeftoverGrams &&
-        values.inputBasketLeftoverGrams > 0
-      ) {
-        payload.inputBasketLeftoverGrams = values.inputBasketLeftoverGrams;
-      }
-      if (
-        values.inputDistillateLeftoverGrams &&
-        values.inputDistillateLeftoverGrams > 0
-      ) {
-        payload.inputDistillateLeftoverGrams =
-          values.inputDistillateLeftoverGrams;
-      }
 
       await api.post("/chemical-reactions", payload);
       toast.success("Reação química iniciada com sucesso!");
@@ -225,7 +172,7 @@ export function NewReactionForm() {
       <CardHeader>
         <CardTitle>Iniciar Nova Reação Química</CardTitle>
         <CardDescription>
-          Preencha os detalhes dos insumos e produtos resultantes da reação.
+          Selecione os insumos e o produto final para iniciar a reação.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -281,7 +228,7 @@ export function NewReactionForm() {
                                 quantityField.onChange(
                                   parseFloat(e.target.value) || 0
                                 )
-                              } // Garante tipo numérico
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -316,86 +263,14 @@ export function NewReactionForm() {
                       .map((f) => f.pureMetalLotId)}
                   />
                 </Dialog>
-
-                <Separator />
-
-                {/* CAMPOS DE INSUMO FALTANTES (AGORA INCLUÍDOS NO ZOD) */}
-                <FormField
-                  control={form.control}
-                  name="inputRawMaterialGrams"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Matéria-Prima (g)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.001"
-                          placeholder="0.000"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value) || 0)
-                          } // Garante tipo numérico
-                          value={field.value ?? ""} // Trata undefined/null
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="inputBasketLeftoverGrams"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sobra de Cesto (g Au)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.001"
-                          placeholder="0.000"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value) || 0)
-                          }
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="inputDistillateLeftoverGrams"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sobra de Destilado (g Au)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.001"
-                          placeholder="0.000"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value) || 0)
-                          }
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </CardContent>
             </Card>
 
-            {/* Seção de Produtos Resultantes */}
+            {/* Seção de Produto Pretendido */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">
-                  Produtos Resultantes (Saída de Ouro)
+                  Produto Final Pretendido
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -418,7 +293,7 @@ export function NewReactionForm() {
                         <SelectContent>
                           {isLoadingProductGroups ? (
                             <SelectItem value="loading" disabled>
-                              Carregando grupos de produtos...
+                              Carregando grupos...
                             </SelectItem>
                           ) : (
                             productGroups?.map((pg) => (
@@ -433,13 +308,13 @@ export function NewReactionForm() {
                     </FormItem>
                   )}
                 />
-
+                
                 <FormField
                   control={form.control}
                   name="batchNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Número do Lote (Opcional)</FormLabel>
+                      <FormLabel>Número do Lote de Produção (Opcional)</FormLabel>
                       <FormControl>
                         <Input placeholder="Ex: 1194" {...field} />
                       </FormControl>

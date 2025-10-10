@@ -40,6 +40,19 @@ export class SalesController {
     private readonly processClientMetalPaymentToSupplierUseCase: ProcessClientMetalPaymentToSupplierUseCase,
   ) {}
 
+  @Post()
+  // @Roles(Role.ADMIN, Role.MANAGER) // Temporarily commented out until RolesGuard is found/implemented
+  @UseGuards(AuthGuard('jwt'))
+  async create(
+    @CurrentUser('organizationId') organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Body() createSaleDto: CreateSaleDto,
+  ) {
+    console.log('POST /api/sales endpoint hit!'); // Debug log
+    const sale = await this.createSaleUseCase.execute(organizationId, userId, createSaleDto);
+    return sale; // Returning raw sale object as SalePresenter is not found
+  }
+
   @Public()
   @Post('backfill-adjustments')
   async backfillSaleAdjustments() {
@@ -110,5 +123,34 @@ export class SalesController {
     @Body() updateSaleDto: UpdateSaleDto,
   ) {
     return this.salesService.update(organizationId, id, updateSaleDto);
+  }
+
+  @Post(':id/confirm')
+  async confirm(
+    @CurrentUser('organizationId') organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') saleId: string,
+    @Body() confirmSaleDto: ConfirmSaleDto,
+  ) {
+    return this.confirmSaleUseCase.execute(organizationId, userId, saleId, confirmSaleDto);
+  }
+
+  @Patch(':id/release-to-pcp')
+  async releaseToPcp(
+    @CurrentUser('organizationId') organizationId: string,
+    // @CurrentUser('id') userId: string, // userId is not needed by the use case
+    @Param('id') saleId: string,
+  ) {
+    await this.releaseToPcpUseCase.execute(organizationId, saleId);
+    return { message: 'Venda liberada para PCP com sucesso.' };
+  }
+
+  @Patch(':id/finalize')
+  async finalize(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') saleId: string,
+  ) {
+    await this.finalizeSaleUseCase.execute(organizationId, saleId);
+    return { message: 'Venda finalizada com sucesso.' };
   }
 }

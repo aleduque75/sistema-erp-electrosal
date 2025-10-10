@@ -555,10 +555,10 @@ export default function ExtratoPage() {
                         <TableCell
                           className={`text-right font-semibold ${t.tipo === "CREDITO" ? "text-green-600" : "text-red-600"}`}
                         >
-                          {t.tipo === "DEBITO" && "- "}
+                          {t.tipo === "CREDITO" ? "+ " : "- "}
                           {currencyView === "BRL"
-                            ? formatCurrency(t.valor)
-                            : formatGold(t.goldAmount)}
+                            ? formatCurrency(Math.abs(t.valor))
+                            : formatGold(Math.abs(t.goldAmount || 0))}
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>

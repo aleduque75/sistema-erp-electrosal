@@ -107,15 +107,15 @@ export default function SeparacaoPedidoPage() {
     doc.save(`romaneio_${sale.orderNumber}.pdf`);
   };
 
-  const handleFinalize = async () => {
+  const handleConfirmSeparation = async () => {
     if (!sale) return;
 
     try {
-      await api.patch(`/sales/${sale.id}/finalize`);
-      toast.success('Pedido marcado como finalizado!');
+      await api.patch(`/sales/${sale.id}/release-to-pcp`);
+      toast.success('Separação confirmada! Pedido pronto para faturamento.');
       router.push('/pcp/a-separar');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Falha ao finalizar o pedido.');
+      toast.error(error.response?.data?.message || 'Falha ao confirmar separação.');
     }
   };
 
@@ -158,7 +158,7 @@ export default function SeparacaoPedidoPage() {
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
           <Button variant="outline" onClick={generatePDF}>Gerar PDF</Button>
-          <Button onClick={handleFinalize}>Marcar como Finalizado</Button>
+          <Button onClick={handleConfirmSeparation}>Confirmar Separação</Button>
         </CardFooter>
       </Card>
     </div>

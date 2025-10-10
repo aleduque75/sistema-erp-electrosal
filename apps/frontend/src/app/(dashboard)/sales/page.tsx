@@ -284,14 +284,13 @@ export default function SalesPage() {
                 <DropdownMenuSeparator />
                 {sale.status === 'PENDENTE' && (
                   <>
-                    <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>Confirmar Pagamento</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleReleaseToPcp(sale.id)}>Liberar para Separação</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-red-600" onClick={() => handleCancelSale(sale.id)}>Cancelar Venda</DropdownMenuItem>
                   </>
                 )}
                 {sale.status === 'A_SEPARAR' && (
-                  <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>Confirmar Pagamento</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedSale(sale)}>Confirmar Pagamento</DropdownMenuItem>
                 )}
                 {isRevertible && (
                   <DropdownMenuItem className="text-red-600" onClick={() => handleRevertSale(sale.id)}>
@@ -410,18 +409,6 @@ export default function SalesPage() {
           open={!!selectedSale}
           onOpenChange={(open) => !open && setSelectedSale(null)}
           onSave={fetchSales}
-        />
-      )}
-
-      {saleToConfirm && (
-        <ConfirmSaleModal
-          sale={saleToConfirm}
-          open={!!saleToConfirm}
-          onOpenChange={(open) => !open && setSaleToConfirm(null)}
-          onSuccess={() => {
-            setSaleToConfirm(null);
-            fetchSales();
-          }}
         />
       )}
     </div>

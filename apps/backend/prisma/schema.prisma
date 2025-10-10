@@ -168,6 +168,7 @@ model Product {
   stockMovements     StockMovement[]
   inventoryLots      InventoryLot[]
   purchaseOrderItems PurchaseOrderItem[]
+  chemicalReactionsAsOutput chemical_reactions[]
 }
 
 model ProductGroup {
@@ -801,8 +802,10 @@ model chemical_reactions {
   outputBasketLeftoverGrams     Float?
   outputDistillateLeftoverGrams Float?
   outputGoldGrams               Decimal                      @db.Decimal(10, 3)
-  outputSilverGrams             Decimal                      @db.Decimal(10, 3)
+  outputSilverGrams             Decimal?                     @db.Decimal(10, 3)
+  outputProductId               String
   organization                  Organization                 @relation(fields: [organizationId], references: [id])
+  outputProduct                 Product                      @relation(fields: [outputProductId], references: [id])
   productionBatch               InventoryLot?                @relation("ReactionToBatch", fields: [productionBatchId], references: [id])
   lots                          pure_metal_lots[]            @relation("chemical_reactionsTopure_metal_lots")
 
