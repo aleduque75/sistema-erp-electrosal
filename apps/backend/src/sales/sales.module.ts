@@ -10,6 +10,8 @@ import { ConfirmSaleUseCase } from './use-cases/confirm-sale.use-case';
 import { CancelSaleUseCase } from './use-cases/cancel-sale.use-case';
 import { FinalizeSaleUseCase } from './use-cases/finalize-sale.use-case';
 import { RevertSaleUseCase } from './use-cases/revert-sale.use-case';
+import { EditSaleUseCase } from './use-cases/edit-sale.use-case';
+import { SeparateSaleUseCase } from './use-cases/separate-sale.use-case';
 import { ReleaseToPcpUseCase } from './use-cases/release-to-pcp.use-case';
 import { CalculateSaleAdjustmentUseCase } from './use-cases/calculate-sale-adjustment.use-case';
 import { BackfillSaleGoldValueUseCase } from './use-cases/backfill-sale-gold-value.use-case';
@@ -37,7 +39,9 @@ import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositorie
     CancelSaleUseCase,
     FinalizeSaleUseCase,
     RevertSaleUseCase,
+    EditSaleUseCase,
     ReleaseToPcpUseCase,
+    SeparateSaleUseCase,
     CalculateSaleAdjustmentUseCase,
     BackfillSaleGoldValueUseCase,
     ProcessClientMetalPaymentToSupplierUseCase, // Add new use case

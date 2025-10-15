@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUpDown } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -31,9 +31,27 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { NewSaleForm } from './components/NewSaleForm';
 import { SaleDetailsModal } from './sale-details-modal';
+import { EditSaleModal } from './components/EditSaleModal';
 import { ConfirmSaleModal } from './components/ConfirmSaleModal';
+import { ReceivePaymentForm } from '../accounts-rec/components/receive-payment-form';
+
 
 // Temporary updated Sale type
+export interface SaleInstallment {
+  id: string;
+  installmentNumber: number;
+  amount: number;
+  dueDate: string;
+  status: 'PENDING' | 'PAID' | 'OVERDUE';
+  paidAt?: string;
+}
+
+export interface PaymentTerm {
+  id: string;
+  name: string;
+  installmentsDays: number[];
+}
+
 export interface Sale {
   id: string;
   orderNumber: string;
@@ -45,12 +63,19 @@ export interface Sale {
   goldValue: number;
   paymentMethod: string;
   createdAt: string;
-  status: 'PENDENTE' | 'CONFIRMADO' | 'A_SEPARAR' | 'FINALIZADO' | 'CANCELADO';
+  status: 'PENDENTE' | 'CONFIRMADO' | 'A_SEPARAR' | 'SEPARADO' | 'FINALIZADO' | 'CANCELADO';
   lucro?: number;
   paymentAccountName?: string;
   adjustment?: {
     netDiscrepancyGrams: number;
+    paymentReceivedBRL: number;
   };
+  accountsRec: {
+    id: string;
+    amount: number;
+    description: string;
+    received: boolean;
+  }[];
   saleItems: {
     id: string;
     productId: string;
@@ -59,6 +84,8 @@ export interface Sale {
     product: { name: string };
     inventoryLotId?: string;
   }[];
+  installments: SaleInstallment[]; // Added installments
+  paymentTerm?: PaymentTerm; // Added paymentTerm
 }
 
 const formatCurrency = (value: number) =>
@@ -72,6 +99,7 @@ const statusConfig: { [key in Sale['status']]: { label: string; className: strin
   PENDENTE: { label: 'Pendente', className: 'text-yellow-600 bg-yellow-100' },
   CONFIRMADO: { label: 'Confirmado', className: 'text-blue-600 bg-blue-100' },
   A_SEPARAR: { label: 'A Separar', className: 'text-orange-600 bg-orange-100' },
+  SEPARADO: { label: 'Separado', className: 'text-purple-600 bg-purple-100' },
   FINALIZADO: { label: 'Finalizado', className: 'text-green-600 bg-green-100' },
   CANCELADO: { label: 'Cancelado', className: 'text-red-600 bg-red-100' },
 };
@@ -81,7 +109,9 @@ export default function SalesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [saleToEdit, setSaleToEdit] = useState<Sale | null>(null);
   const [saleToConfirm, setSaleToConfirm] = useState<Sale | null>(null);
+  const [accountToReceive, setAccountToReceive] = useState<Sale['accountsRec'][0] | null>(null);
 
   // Filter states
   const [clients, setClients] = useState<{ value: string; label: string }[]>([]);
@@ -201,6 +231,17 @@ export default function SalesPage() {
     }
   };
 
+  const handleSeparateSale = async (saleId: string) => {
+    if (!confirm('Deseja marcar este pedido como separado?')) return;
+    try {
+      await api.patch(`/sales/${saleId}/separate`);
+      toast.success('Venda marcada como separada!');
+      fetchSales();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Falha ao separar a venda.');
+    }
+  };
+
   const columns: ColumnDef<Sale>[] = [
     { accessorKey: 'orderNumber', header: 'Nº Pedido' },
     {
@@ -250,7 +291,7 @@ export default function SalesPage() {
       header: () => <div className="text-right">Lucro (g)</div>,
       cell: ({ row }) => (
         <div className="text-right font-mono text-sm">
-          {row.original.adjustment ? `${Number(row.original.adjustment.grossDiscrepancyGrams).toFixed(4)}g` : '-'}
+          {row.original.adjustment ? `${Number(row.original.adjustment.netDiscrepancyGrams).toFixed(4)}g` : '-'}
         </div>
       ),
     },
@@ -267,7 +308,8 @@ export default function SalesPage() {
       id: 'actions',
       cell: ({ row }) => {
         const sale = row.original;
-        const isRevertible = ['CONFIRMADO', 'A_SEPARAR', 'FINALIZADO'].includes(sale.status);
+        // REGRA FINAL: Reverter está disponível em todos os status, exceto no PENDENTE.
+        const isRevertible = sale.status !== 'PENDENTE';
 
         return (
           <div className="text-right">
@@ -280,22 +322,42 @@ export default function SalesPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setSelectedSale(sale)}>Ver Detalhes</DropdownMenuItem>
+                
+                <DropdownMenuItem onClick={() => setSelectedSale(sale)}>
+                  Ver Detalhes
+                </DropdownMenuItem>
+                
                 <DropdownMenuSeparator />
+
+                {/* Ações para PENDENTE */}
                 {sale.status === 'PENDENTE' && (
                   <>
+                    <DropdownMenuItem onClick={() => setSaleToEdit(sale)}>Editar Pedido</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleReleaseToPcp(sale.id)}>Liberar para Separação</DropdownMenuItem>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-red-600" onClick={() => handleCancelSale(sale.id)}>Cancelar Venda</DropdownMenuItem>
                   </>
                 )}
+
+                {/* Ações para A_SEPARAR */}
                 {sale.status === 'A_SEPARAR' && (
-                  <DropdownMenuItem onClick={() => setSelectedSale(sale)}>Confirmar Pagamento</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSeparateSale(sale.id)}>Marcar como Separado</DropdownMenuItem>
                 )}
-                {isRevertible && (
-                  <DropdownMenuItem className="text-red-600" onClick={() => handleRevertSale(sale.id)}>
-                    Reverter para Pendente
+
+                {/* Ações para SEPARADO */}
+                {sale.status === 'SEPARADO' && (
+                  <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>
+                    Confirmar Venda
                   </DropdownMenuItem>
+                )}
+
+                {/* Ação de Reverter (aparece em todos os status, menos PENDENTE) */}
+                {isRevertible && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-red-600" onClick={() => handleRevertSale(sale.id)}>
+                      Reverter para Pendente
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -411,6 +473,25 @@ export default function SalesPage() {
           onSave={fetchSales}
         />
       )}
+
+      {saleToEdit && (
+        <EditSaleModal
+          sale={saleToEdit}
+          open={!!saleToEdit}
+          onOpenChange={(open) => !open && setSaleToEdit(null)}
+          onSave={fetchSales}
+        />
+      )}
+
+      {saleToConfirm && (
+        <ConfirmSaleModal
+          sale={saleToConfirm}
+          open={!!saleToConfirm}
+          onOpenChange={(open) => !open && setSaleToConfirm(null)}
+          onSuccess={() => { fetchSales(); setSaleToConfirm(null); }}
+        />
+      )}
+
     </div>
   );
 }

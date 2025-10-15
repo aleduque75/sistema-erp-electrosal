@@ -90,7 +90,7 @@ export function NewSaleForm({ onSave }: any) {
     async function fetchData() {
       try {
         const [clientsRes, productsRes, contasRes, feesRes, orgSettingsRes, paymentTermsRes, quoteRes, laborTableRes] = await Promise.all([
-          api.get("/pessoas?role=client"),
+          api.get("/pessoas?role=CLIENT"),
           api.get("/products"),
           api.get("/contas-correntes"),
           api.get("/credit-card-fees"),

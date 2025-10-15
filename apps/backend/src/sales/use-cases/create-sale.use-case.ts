@@ -20,6 +20,7 @@ export class CreateSaleUseCase {
       pessoaId,
       items,
       paymentMethod,
+      paymentTermId, // ADICIONADO
       feeAmount,
       goldQuoteValue,
       freightAmount,
@@ -33,17 +34,28 @@ export class CreateSaleUseCase {
     if (goldQuoteValue) {
       goldQuote = { valorVenda: new Decimal(goldQuoteValue) };
     } else {
-      const latestGoldQuote = await this.quotationsService.findLatest(TipoMetal.AU, organizationId);
+      const latestGoldQuote = await this.quotationsService.findLatest(TipoMetal.AU, organizationId, new Date());
       if (!latestGoldQuote) throw new BadRequestException('Nenhuma cotação de ouro encontrada para hoje.');
       goldQuote = { valorVenda: latestGoldQuote.sellPrice };
     }
 
     const productIds = items.map((item) => item.productId);
-    const rawProductsInDb = await this.prisma.product.findMany({
-      where: { id: { in: productIds }, organizationId },
-      include: { productGroup: true },
-    });
+    const inventoryLotIds = items
+      .map((item) => item.inventoryLotId)
+      .filter((id): id is string => !!id); // Filter out null/undefined
+
+    const [rawProductsInDb, inventoryLotsInDb] = await Promise.all([
+      this.prisma.product.findMany({
+        where: { id: { in: productIds }, organizationId },
+        include: { productGroup: true },
+      }),
+      this.prisma.inventoryLot.findMany({
+        where: { id: { in: inventoryLotIds }, organizationId },
+      }),
+    ]);
+
     const productsInDb = rawProductsInDb.map(ProductMapper.toDomain);
+    const inventoryLotsMap = new Map(inventoryLotsInDb.map(lot => [lot.id, lot]));
 
     const laborCostTable = await this.prisma.laborCostTableEntry.findMany({
       where: { organizationId },
@@ -60,6 +72,12 @@ export class CreateSaleUseCase {
       const product = productsInDb.find((p) => p.id.toString() === item.productId);
       if (!product) throw new NotFoundException(`Produto com ID ${item.productId} não encontrado.`);
 
+      if (!item.inventoryLotId) {
+        throw new BadRequestException(`Item ${product.name} não possui um lote de inventário (inventoryLotId) especificado.`);
+      }
+      const inventoryLot = inventoryLotsMap.get(item.inventoryLotId);
+      if (!inventoryLot) throw new NotFoundException(`Lote de inventário com ID ${item.inventoryLotId} não encontrado.`);
+
       const productGroup = product.productGroup;
       if (!productGroup) throw new BadRequestException(`Produto "${product.name}" não possui um grupo associado.`);
 
@@ -67,12 +85,8 @@ export class CreateSaleUseCase {
       const itemQuantity = new Decimal(item.quantity);
       totalAmount = totalAmount.plus(itemPrice.times(itemQuantity));
       
-      let itemCost: Decimal;
-      if (productGroup.isReactionProductGroup) {
-        itemCost = new Decimal(product.costPrice || 0).times(itemQuantity).plus(itemQuantity);
-      } else {
-        itemCost = new Decimal(product.costPrice || 0).times(itemQuantity);
-      }
+      const lotCostPrice = new Decimal(inventoryLot.costPrice);
+      const itemCost = lotCostPrice.times(itemQuantity);
       totalCost = totalCost.plus(itemCost);
 
       // --- Commission Calculation Logic ---
@@ -120,7 +134,7 @@ export class CreateSaleUseCase {
         productId: product.id.toString(),
         quantity: item.quantity,
         price: itemPrice,
-        costPriceAtSale: itemCost.dividedBy(item.quantity), // Cost at time of sale draft
+        costPriceAtSale: lotCostPrice, // Cost at time of sale from the specific lot
         inventoryLotId: item.inventoryLotId,
       });
     }
@@ -150,6 +164,7 @@ export class CreateSaleUseCase {
         goldPrice,
         goldValue,
         paymentMethod,
+        paymentTermId, // ADICIONADO
         commissionAmount: totalCommissionAmount,
         commissionDetails: commissionDetails,
         // Status will default to PENDENTE via schema

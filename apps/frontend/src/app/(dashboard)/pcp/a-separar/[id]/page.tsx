@@ -111,7 +111,7 @@ export default function SeparacaoPedidoPage() {
     if (!sale) return;
 
     try {
-      await api.patch(`/sales/${sale.id}/release-to-pcp`);
+      await api.patch(`/sales/${sale.id}/separate`);
       toast.success('Separação confirmada! Pedido pronto para faturamento.');
       router.push('/pcp/a-separar');
     } catch (error: any) {

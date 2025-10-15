@@ -1,0 +1,13 @@
+-- CreateEnum
+CREATE TYPE "SaleAdjustmentCalcMethod" AS ENUM ('QUANTITY_BASED', 'COST_BASED');
+
+-- AlterTable
+ALTER TABLE "product_groups" ADD COLUMN     "adjustmentCalcMethod" "SaleAdjustmentCalcMethod" NOT NULL DEFAULT 'QUANTITY_BASED';
+
+-- AlterTable
+ALTER TABLE "sale_adjustments" ALTER COLUMN "paymentReceivedBRL" SET DATA TYPE DECIMAL(14,2),
+ALTER COLUMN "costsInBRL" SET DATA TYPE DECIMAL(14,2),
+ALTER COLUMN "grossProfitBRL" SET DATA TYPE DECIMAL(14,2),
+ALTER COLUMN "netProfitBRL" SET DATA TYPE DECIMAL(14,2),
+ALTER COLUMN "otherCostsBRL" SET DATA TYPE DECIMAL(14,2),
+ALTER COLUMN "totalCostBRL" SET DATA TYPE DECIMAL(14,2);

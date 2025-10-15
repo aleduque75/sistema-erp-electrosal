@@ -93,9 +93,10 @@ export class QuotationsService {
     }
     return this.prisma.quotation.findFirst({
       where,
-      orderBy: {
-        date: 'desc',
-      },
+      orderBy: [
+        { date: 'desc' },
+        { createdAt: 'desc' },
+      ],
     });
   }
 
@@ -108,9 +109,10 @@ export class QuotationsService {
         metal,
         organizationId,
       },
-      orderBy: {
-        date: 'desc',
-      },
+      orderBy: [
+        { date: 'desc' },
+        { createdAt: 'desc' },
+      ],
     });
   }
 }

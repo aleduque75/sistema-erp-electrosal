@@ -105,7 +105,7 @@ export class ContasCorrentesService {
       },
       include: {
         contaContabil: true,
-        AccountRec: {
+        accountRec: { // Corrected from AccountRec
           include: {
             sale: {
               select: {
@@ -142,10 +142,10 @@ export class ContasCorrentesService {
       saldoFinalBRL: saldosFinais.brl,
       saldoFinalGold: saldosFinais.gold,
       contaCorrente,
-      transacoes: transacoesNoPeriodo.map(t => ({
+      transacoes: transacoesNoPeriodo.map((t) => ({
         ...t,
         contaContabilNome: t.contaContabil?.nome,
-        sale: t.AccountRec?.sale,
+        sale: t.accountRec?.sale, // Corrected from t.AccountRec
       })),
     };
   }

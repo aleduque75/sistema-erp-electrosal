@@ -1,15 +1,19 @@
 // apps/backend/src/settings/settings.controller.ts
-import { Controller, Get, Body, Patch, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Body, Patch, UseGuards, Request, Post } from '@nestjs/common'; // Adicionar Post
 import { SettingsService } from './settings.service';
 import { UpdateSettingDto } from './dto/update-setting.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UpdateOrganizationSettingDto } from './dto/update-organization-setting.dto';
+import { ExportSeedDataUseCase } from './use-cases/export-seed-data.use-case'; // Importar o use case
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly exportSeedDataUseCase: ExportSeedDataUseCase, // Injetar o use case
+  ) {}
 
   @Get()
   findOne(@Request() req) {
@@ -35,5 +39,10 @@ export class SettingsController {
       organizationId,
       updateDto.absorbCreditCardFee,
     );
+  }
+
+  @Post('export-seed-data')
+  async exportSeedData() {
+    return this.exportSeedDataUseCase.execute();
   }
 }

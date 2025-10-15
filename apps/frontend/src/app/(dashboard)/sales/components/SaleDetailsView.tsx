@@ -46,8 +46,15 @@ interface AccountRec {
 interface Sale {
   pessoa: {
     name: string;
+    logradouro?: string | null;
+    numero?: string | null;
+    bairro?: string | null;
+    cidade?: string | null;
+    uf?: string | null;
+    cep?: string | null;
   };
   createdAt: string;
+  status: string; // Adicionado
   saleItems: SaleItem[];
   accountsRec: AccountRec[];
   totalAmount: number;
@@ -56,21 +63,38 @@ interface Sale {
   netAmount: number;
 }
 
-export function SaleDetailsView({ sale }: { sale: Sale }) {
+interface SaleDetailsViewProps {
+  sale: Sale;
+  onReceivePayment?: (accountRec: AccountRec) => void;
+}
+
+export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps) {
   if (!sale) return null;
 
   const receivedPayments = sale.accountsRec.filter(ar => ar.received);
+  const pendingAccountsRec = sale.accountsRec.find(ar => !ar.received);
+  const paymentLocation = receivedPayments[0]?.contaCorrente?.name || 'N/A';
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      {/* ... (conteúdo existente do componente) ... */}
+      <div className="grid grid-cols-2 gap-4 border-b pb-4">
         <div>
           <h3 className="font-semibold">Cliente</h3>
           <p className="text-muted-foreground">{sale.pessoa.name}</p>
+          <p className="text-muted-foreground">
+            {`${sale.pessoa.logradouro || ''}, ${sale.pessoa.numero || ''}`}
+          </p>
+          <p className="text-muted-foreground">
+            {`${sale.pessoa.bairro || ''} - ${sale.pessoa.cidade || ''}/${sale.pessoa.uf || ''}`}
+          </p>
+          <p className="text-muted-foreground">{`CEP: ${sale.pessoa.cep || ''}`}</p>
         </div>
-        <div>
+        <div className="text-right">
           <h3 className="font-semibold">Data da Venda</h3>
           <p className="text-muted-foreground">{formatDate(sale.createdAt)}</p>
+          <h3 className="font-semibold mt-2">Local de Pagamento</h3>
+          <p className="text-muted-foreground">{paymentLocation}</p>
         </div>
       </div>
 
@@ -136,24 +160,14 @@ export function SaleDetailsView({ sale }: { sale: Sale }) {
         </Card>
       )}
 
-      <div className="flex flex-col items-end space-y-2 pt-4 border-t">
-        <div className="flex justify-between w-full max-w-xs">
-          <span className="text-muted-foreground">Subtotal</span>
-          <span>{formatCurrency(sale.totalAmount)}</span>
+      {/* Botão de Receber Pagamento Condicional */}
+      {sale.status === 'SEPARADO' && onReceivePayment && pendingAccountsRec && (
+        <div className="pt-4 flex justify-end">
+            <Button onClick={() => onReceivePayment(pendingAccountsRec)}>
+                Receber Pagamento
+            </Button>
         </div>
-        <div className="flex justify-between w-full max-w-xs">
-          <span className="text-muted-foreground">Taxas</span>
-          <span>{formatCurrency(sale.feeAmount)}</span>
-        </div>
-        <div className="flex justify-between w-full max-w-xs">
-          <span className="text-muted-foreground">Valor em Ouro</span>
-          <span>{sale.goldValue ? `${sale.goldValue.toFixed(4)} g` : 'N/A'}</span>
-        </div>
-        <div className="flex justify-between w-full max-w-xs font-bold text-lg">
-          <span>Total</span>
-          <span>{formatCurrency(sale.netAmount)}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

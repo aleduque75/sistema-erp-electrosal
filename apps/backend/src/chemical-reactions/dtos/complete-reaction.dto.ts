@@ -9,6 +9,10 @@ export class CompleteReactionDto {
   @IsOptional()
   outputBasketLeftoverGrams?: number;
 
+  @IsNumber()
+  @IsOptional()
+  outputDistillateLeftoverGrams?: number;
+
   @IsString()
   @IsOptional()
   batchNumber?: string;

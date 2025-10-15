@@ -101,7 +101,6 @@ export class ReconcileLegacySalesUseCase {
           data: {
             received: true,
             receivedAt: transacao.dataHora,
-            transacaoId: transacao.id,
             contaCorrenteId: transacao.contaCorrenteId,
           },
         });

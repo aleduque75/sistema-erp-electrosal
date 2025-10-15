@@ -176,9 +176,9 @@ export class PurchaseOrdersService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Create inventory lots
+      // 1. Create inventory lots and stock movements
       for (const item of order.items) {
-        await tx.inventoryLot.create({
+        const createdLot = await tx.inventoryLot.create({
           data: {
             organizationId: organizationId,
             productId: item.productId,
@@ -191,7 +191,18 @@ export class PurchaseOrdersService {
           },
         });
 
-        // 2. Update product stock
+        await tx.stockMovement.create({
+          data: {
+            organizationId,
+            productId: item.productId,
+            inventoryLotId: createdLot.id,
+            quantity: item.quantity, // Positive for incoming stock
+            type: 'COMPRA',
+            sourceDocument: `Pedido de Compra #${order.orderNumber}`,
+          }
+        });
+
+        // 2. Update product stock (this might be deprecated in the future in favor of calculated stock from lots)
         this.logger.log(`Atualizando estoque do produto ${item.productId}. Quantidade: ${item.quantity}`);
         const productBeforeUpdate = await tx.product.findUnique({ where: { id: item.productId } });
         this.logger.log(`Estoque antes: ${productBeforeUpdate?.stock}`);

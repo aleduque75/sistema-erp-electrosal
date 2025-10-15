@@ -22,7 +22,7 @@ export class UpdateTransactionUseCase {
     const originalTransacao = await this.prisma.transacao.findUnique({
       where: { id: command.transactionId, organizationId: command.organizationId },
       include: {
-        AccountRec: { include: { sale: true } },
+        accountRec: { include: { sale: true } }, // Corrected from AccountRec
       },
     });
 
@@ -30,12 +30,12 @@ export class UpdateTransactionUseCase {
       throw new NotFoundException(`Transação com ID ${command.transactionId} não encontrada.`);
     }
 
-    if (!originalTransacao.AccountRec) {
+    if (!originalTransacao.accountRec) { // Corrected from AccountRec
       throw new BadRequestException('A transação não está associada a um recebimento (AccountRec) e não pode ser ajustada por este método.');
     }
 
     // Criar uma constante local para garantir a tipagem
-    const accountRec = originalTransacao.AccountRec;
+    const accountRec = originalTransacao.accountRec; // Corrected from AccountRec
 
     if (!accountRec.sale) {
       throw new BadRequestException('A transação não está associada a uma venda. Ajuste manual não implementado para este tipo.');
@@ -73,7 +73,7 @@ export class UpdateTransactionUseCase {
 
       // 2. Criar a nova transação na conta correta com os novos valores
       this.logger.log(`Criando novo lançamento na conta: ${command.newContaCorrenteId}`);
-      const newTransacao = await tx.transacao.create({
+      await tx.transacao.create({
         data: {
           organizationId: command.organizationId,
           tipo: originalTransacao.tipo,
@@ -84,19 +84,12 @@ export class UpdateTransactionUseCase {
           dataHora: originalTransacao.dataHora, // Manter a data original
           contaCorrenteId: command.newContaCorrenteId,
           contaContabilId: originalTransacao.contaContabilId,
-          AccountRec: { connect: { id: accountRec.id } },
+          accountRecId: accountRec.id, // Corrected from connect syntax
           status: TransacaoStatus.ATIVA, // A nova transação é ativa
         },
       });
 
-      // 3. Atualizar a referência no AccountRec para a nova transação
-      this.logger.log(`Atualizando AccountRec ${accountRec.id} para a nova transação ${newTransacao.id}`);
-      await tx.accountRec.update({
-        where: { id: accountRec.id },
-        data: { transacaoId: newTransacao.id },
-      });
-
-      // 4. Marcar a transação original como "ajustada"
+      // 3. Marcar a transação original como "ajustada"
       await tx.transacao.update({
         where: { id: originalTransacao.id },
         data: { status: TransacaoStatus.AJUSTADA },

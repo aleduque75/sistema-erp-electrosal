@@ -69,7 +69,19 @@ interface ProductGroup {
 }
 
 export function ProductForm({ product, onSave }: ProductFormProps) {
+  const [productGroups, setProductGroups] = useState<ProductGroup[]>([]);
 
+  useEffect(() => {
+    const fetchProductGroups = async () => {
+      try {
+        const response = await api.get("/product-groups");
+        setProductGroups(response.data);
+      } catch (error) {
+        toast.error("Falha ao buscar grupos de produtos.");
+      }
+    };
+    fetchProductGroups();
+  }, []);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -79,7 +91,7 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
       costPrice: product?.costPrice || 0,
       stock: product?.stock || 0,
       description: product?.description || "",
-      productGroupId: product?.productGroupId || "", // CORRIGIDO: Use "" em vez de undefined
+      productGroupId: product?.productGroupId || "",
       goldValue: product?.goldValue || 0,
     },
   });
@@ -116,6 +128,32 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="productGroupId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Grupo do Produto</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um grupo" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {productGroups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="grid grid-cols-2 gap-2">
           <FormField
             control={form.control}
@@ -157,8 +195,6 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
               </FormItem>
             )}
           />
-
-
 
           <FormField
             control={form.control}

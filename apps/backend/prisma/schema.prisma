@@ -178,6 +178,7 @@ model ProductGroup {
   description            String?
   commissionPercentage   Decimal?     @db.Decimal(5, 2)
   isReactionProductGroup Boolean      @default(false)
+  adjustmentCalcMethod   SaleAdjustmentCalcMethod @default(QUANTITY_BASED)
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
   products               Product[]
@@ -202,6 +203,7 @@ model InventoryLot {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   saleItems         SaleItem[]
+  stockMovements    StockMovement[]     // Adicionado para rastrear movimentações
   reaction          chemical_reactions? @relation("ReactionToBatch")
   organization      Organization        @relation(fields: [organizationId], references: [id])
   product           Product             @relation(fields: [productId], references: [id])
@@ -212,20 +214,23 @@ model InventoryLot {
 model StockMovement {
   id             String       @id @default(uuid())
   productId      String
+  inventoryLotId String?      // Adicionado para rastrear o lote
   type           String
   quantity       Float
+  sourceDocument String?      // Adicionado para rastrear a origem
   createdAt      DateTime     @default(now())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   product        Product      @relation(fields: [productId], references: [id])
+  inventoryLot   InventoryLot? @relation(fields: [inventoryLotId], references: [id])
 }
 
 model Sale {
   id                String            @id @default(uuid())
   orderNumber       Int               @unique
-  totalAmount       Decimal           @db.Decimal(10, 2)
+  totalAmount       Decimal           @db.Decimal(14, 2)
   feeAmount         Decimal?          @db.Decimal(10, 2)
-  netAmount         Decimal?          @db.Decimal(10, 2)
+  netAmount         Decimal?          @db.Decimal(14, 2)
   paymentMethod     String?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -234,7 +239,7 @@ model Sale {
   pessoaId          String
   goldPrice         Decimal?          @db.Decimal(10, 2)
   goldValue         Decimal?          @db.Decimal(10, 4)
-  totalCost         Decimal?          @db.Decimal(12, 2)
+  totalCost         Decimal?          @db.Decimal(14, 2)
   commissionAmount  Decimal?          @db.Decimal(10, 2)
   commissionDetails Json?
   externalId        String?           @unique
@@ -335,13 +340,13 @@ model AccountRec {
   updatedAt        DateTime          @updatedAt
   contaCorrenteId  String?
   organizationId   String
-  transacaoId      String?           @unique
+    transacaoId_old  String?           @unique @map("transacaoId")
   externalId       String?           @unique
   contaCorrente    ContaCorrente?    @relation(fields: [contaCorrenteId], references: [id])
   organization     Organization      @relation(fields: [organizationId], references: [id])
   sale             Sale?             @relation(fields: [saleId], references: [id])
-  transacao        Transacao?        @relation(fields: [transacaoId], references: [id])
   saleInstallments SaleInstallment[]
+  transacoes       Transacao[]
 }
 
 model MetalReceivable {
@@ -439,12 +444,13 @@ model Transacao {
   fitId           String?
   organizationId  String
   goldAmount      Decimal?            @db.Decimal(10, 4)
-  AccountRec      AccountRec?
+  accountRecId    String?
   AccountPay      AccountPay?
   contaContabil   ContaContabil       @relation(fields: [contaContabilId], references: [id])
   contaCorrente   ContaCorrente?      @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction)
   organization    Organization        @relation(fields: [organizationId], references: [id])
   status          TransacaoStatus     @default(ATIVA)
+  accountRec      AccountRec?         @relation(fields: [accountRecId], references: [id])
 
   @@unique([contaCorrenteId, fitId])
   @@map("transacoes")
@@ -846,14 +852,23 @@ model SaleAdjustment {
   id                     String       @id @default(uuid())
   saleId                 String       @unique
   organizationId         String
-  paymentReceivedBRL     Decimal      @db.Decimal(12, 2)
-  paymentQuotation       Decimal      @db.Decimal(12, 2)
-  paymentEquivalentGrams Decimal      @db.Decimal(12, 4)
-  saleExpectedGrams      Decimal      @db.Decimal(12, 4)
-  grossDiscrepancyGrams  Decimal      @db.Decimal(12, 4)
-  costsInBRL             Decimal      @db.Decimal(12, 2)
-  costsInGrams           Decimal      @db.Decimal(12, 4)
-  netDiscrepancyGrams    Decimal      @db.Decimal(12, 4)
+
+  // Campos antigos (focados em Ouro) - tornando opcionais
+  paymentReceivedBRL     Decimal      @db.Decimal(14, 2)
+  paymentQuotation       Decimal?     @db.Decimal(12, 2) // Pode não haver uma cotação de ouro
+  paymentEquivalentGrams Decimal?     @db.Decimal(12, 4)
+  saleExpectedGrams      Decimal?     @db.Decimal(12, 4)
+  grossDiscrepancyGrams  Decimal?     @db.Decimal(12, 4)
+  costsInBRL             Decimal      @db.Decimal(14, 2) // Mantido por enquanto
+  costsInGrams           Decimal?     @db.Decimal(12, 4)
+  netDiscrepancyGrams    Decimal?     @db.Decimal(12, 4)
+
+  // Novos campos (focados em BRL)
+  totalCostBRL           Decimal?     @db.Decimal(14, 2)
+  grossProfitBRL         Decimal?     @db.Decimal(14, 2)
+  otherCostsBRL          Decimal?     @db.Decimal(14, 2)
+  netProfitBRL           Decimal?     @db.Decimal(14, 2)
+
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
   organization           Organization @relation(fields: [organizationId], references: [id])
@@ -976,6 +991,12 @@ enum SaleStatus {
   PENDENTE
   CONFIRMADO
   A_SEPARAR
+  SEPARADO
   FINALIZADO
   CANCELADO
+}
+
+enum SaleAdjustmentCalcMethod {
+  QUANTITY_BASED
+  COST_BASED
 }

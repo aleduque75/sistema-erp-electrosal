@@ -30,8 +30,7 @@ export default function NewMetalDepositPage() {
 
   useEffect(() => {
     // Fetch all clients/pessoas to populate the selector
-    api.get('/pessoas').then(res => setPessoas(res.data));
-  }, []);
+          api.get('/pessoas?role=CLIENT').then(res => setPessoas(res.data));  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

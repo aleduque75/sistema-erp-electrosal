@@ -20,9 +20,13 @@ export class BackfillTransactionsUseCase {
       // Find the corresponding AccountRec that links to this transaction
       const accountRec = await this.prisma.accountRec.findFirst({
         where: {
-          transacaoId: transacao.id,
           organizationId,
           contaCorrenteId: { not: null }, // Ensure the AccountRec has the ID we need
+          transacoes: {
+            some: {
+              id: transacao.id,
+            },
+          },
         },
       });
 

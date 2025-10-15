@@ -6,34 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import api from '@/lib/api';
 
-interface SaleItem {
-  id: string;
-  product: { name: string; price: number };
-  quantity: number;
-  price: number;
-}
-
-interface Sale {
-  id: string;
-  client: { name: string };
-  totalAmount: number;
-  saleDate: string;
-  paymentMethod?: string; // Add paymentMethod to the interface
-  saleItems: SaleItem[];
-  accountsRec: {
-    id: string;
-    amount: number;
-    receivedAt: string;
-    transacao?: {
-      id: string;
-      valor: number;
-      goldAmount?: number;
-      contaCorrente: {
-        nome: string;
-      };
-    };
-  }[];
-}
+import { InstallmentList } from '@/components/sales/InstallmentList';
 
 export default function SaleDetailPage() {
   const { user, loading } = useAuth();
@@ -65,6 +38,10 @@ export default function SaleDetailPage() {
           ...item,
           price: parseFloat(item.price),
         })),
+        installments: response.data.installments.map((installment: any) => ({
+          ...installment,
+          amount: parseFloat(installment.amount),
+        })),
       });
     } catch (err: any) {
       setError(err.message);
@@ -90,9 +67,9 @@ export default function SaleDetailPage() {
   return (
     <div className="card p-6">
       <h1 className="text-2xl font-bold mb-4">Detalhes da Venda</h1>
-      <p><strong>Cliente:</strong> {sale.client.name}</p>
+      <p><strong>Cliente:</strong> {sale.pessoa.name}</p>
       <p><strong>Valor Total:</strong> {sale.totalAmount.toFixed(2)}</p>
-      <p><strong>Data da Venda:</strong> {new Date(sale.saleDate).toLocaleDateString()}</p>
+      <p><strong>Data da Venda:</strong> {new Date(sale.createdAt).toLocaleDateString()}</p>
       <p><strong>Método de Pagamento:</strong> {sale.paymentMethod}</p>
 
       <h2 className="text-xl font-bold mt-6 mb-2">Itens Vendidos</h2>
@@ -116,6 +93,10 @@ export default function SaleDetailPage() {
           ))}
         </tbody>
       </table>
+
+      {sale.installments && sale.installments.length > 0 && (
+        <InstallmentList installments={sale.installments} />
+      )}
 
       <h2 class="text-xl font-bold mt-6 mb-2">Recebimentos</h2>
       <table className="table-auto mb-4">

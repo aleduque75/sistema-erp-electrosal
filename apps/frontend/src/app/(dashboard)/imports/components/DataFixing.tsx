@@ -21,6 +21,18 @@ export function DataFixing() {
   const [isBackfillingGoldValue, setIsBackfillingGoldValue] = useState(false);
   const [isFixingReactionGroup, setIsFixingReactionGroup] = useState(false);
   const [isBackfillingCosts, setIsBackfillingCosts] = useState(false);
+  const [isExportingSeedData, setIsExportingSeedData] = useState(false); // Novo estado
+
+  const handleExportSeedData = async () => { // Nova função
+    setIsExportingSeedData(true);
+    const promise = api.post("/settings/export-seed-data"); // Chamando o novo endpoint
+    toast.promise(promise, {
+      loading: "Exportando dados de seed...",
+      success: (response) => response.message || "Dados de seed exportados com sucesso!",
+      error: (err) => err.response?.data?.message || "Falha ao exportar dados de seed.",
+      finally: () => setIsExportingSeedData(false),
+    });
+  };
 
   const handleLinkSalesReceivables = async () => {
     setIsLinkingSales(true);
@@ -278,6 +290,27 @@ export function DataFixing() {
             {isBackfillingCosts
               ? "Corrigindo Custos..."
               : "Corrigir Custos de Vendas"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="w-full max-w-lg border-green-500">
+        <CardHeader>
+          <CardTitle className="text-green-700">Exportar Dados de Seed</CardTitle>
+          <CardDescription>
+            Exporta as contas contábeis, contas correntes e transações para o arquivo `json-imports/seed_data.json`.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            onClick={handleExportSeedData}
+            disabled={isExportingSeedData}
+            className="w-full"
+          >
+            {isExportingSeedData
+              ? "Exportando..."
+              : "Exportar Dados de Seed"}
           </Button>
         </CardContent>
       </Card>

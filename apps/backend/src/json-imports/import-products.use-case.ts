@@ -71,6 +71,19 @@ export class ImportProductsUseCase {
           },
         });
 
+        // Special goldValue logic
+        let specialGoldValue: number | undefined = undefined;
+        if (oldProduct.nome.trim().toLowerCase() === 'el sal 68%') {
+          specialGoldValue = 0.6802721088435374;
+        }
+
+        if (specialGoldValue !== undefined) {
+          await this.prisma.product.update({
+            where: { id: newProduct.id },
+            data: { goldValue: specialGoldValue },
+          });
+        }
+
         results.push({ name: oldProduct.nome, status: 'success', newProductId: newProduct.id });
       } catch (error) {
         console.error(`Erro ao importar produto ${oldProduct.nome}:`, error.message);

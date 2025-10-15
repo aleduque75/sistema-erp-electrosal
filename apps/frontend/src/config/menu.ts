@@ -65,9 +65,9 @@ export const menuConfig: NavItem[] = [
       },
       {
         title: "Grupos de Produtos",
-        href: "/product-groups",
+        href: "/cadastros/grupos-de-produto",
         icon: Package,
-        description: "Gerencie os grupos de produtos para comissionamento.",
+        description: "Gerencie grupos e configure o método de cálculo de ajuste.",
       },
     ],
   },
@@ -158,7 +158,7 @@ export const menuConfig: NavItem[] = [
       },
       {
         title: "Configurar Contas",
-        href: "/dashboard/financeiro/contas",
+        href: "/financeiro/contas",
         icon: Settings,
         description: "Ajuste os saldos iniciais e outras configurações das contas.",
       },

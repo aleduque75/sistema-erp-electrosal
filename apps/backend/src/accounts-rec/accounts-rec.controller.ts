@@ -61,7 +61,7 @@ export class AccountsRecController {
   @Patch(':id/receive')
   receive(
     @CurrentUser('orgId') organizationId: string,
-    @CurrentUser('sub') userId: string, // Added userId
+    @CurrentUser('id') userId: string, // Corrected from 'sub' to 'id'
     @Param('id') id: string,
     @Body() dto: ReceivePaymentDto,
   ) {

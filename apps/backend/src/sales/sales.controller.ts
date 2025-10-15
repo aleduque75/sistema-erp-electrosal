@@ -12,14 +12,17 @@ import {
 import { SalesService } from './sales.service';
 import { SaleStatus, Role } from '@prisma/client'; // Keep Sale for now, will refactor later
 import { CreateSaleDto, UpdateSaleDto, ConfirmSaleDto } from './dtos/sales.dto';
+import { EditSaleDto } from './dtos/edit-sale.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case';
+import { EditSaleUseCase } from './use-cases/edit-sale.use-case';
 import { ConfirmSaleUseCase } from './use-cases/confirm-sale.use-case';
 import { CancelSaleUseCase } from './use-cases/cancel-sale.use-case';
 import { FinalizeSaleUseCase } from './use-cases/finalize-sale.use-case';
 import { RevertSaleUseCase } from './use-cases/revert-sale.use-case';
 import { ReleaseToPcpUseCase } from './use-cases/release-to-pcp.use-case';
+import { SeparateSaleUseCase } from './use-cases/separate-sale.use-case';
 import { BackfillSaleGoldValueUseCase } from './use-cases/backfill-sale-gold-value.use-case';
 import { ProcessClientMetalPaymentToSupplierUseCase, ProcessClientMetalPaymentToSupplierCommand } from './use-cases/process-client-metal-payment-to-supplier.use-case';
 
@@ -31,11 +34,13 @@ export class SalesController {
   constructor(
     private readonly salesService: SalesService,
     private readonly createSaleUseCase: CreateSaleUseCase,
+    private readonly editSaleUseCase: EditSaleUseCase,
     private readonly confirmSaleUseCase: ConfirmSaleUseCase,
     private readonly cancelSaleUseCase: CancelSaleUseCase,
     private readonly finalizeSaleUseCase: FinalizeSaleUseCase,
     private readonly revertSaleUseCase: RevertSaleUseCase,
     private readonly releaseToPcpUseCase: ReleaseToPcpUseCase,
+    private readonly separateSaleUseCase: SeparateSaleUseCase,
     private readonly backfillSaleGoldValueUseCase: BackfillSaleGoldValueUseCase,
     private readonly processClientMetalPaymentToSupplierUseCase: ProcessClientMetalPaymentToSupplierUseCase,
   ) {}
@@ -145,6 +150,15 @@ export class SalesController {
     return { message: 'Venda liberada para PCP com sucesso.' };
   }
 
+  @Patch(':id/separate')
+  async separate(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') saleId: string,
+  ) {
+    await this.separateSaleUseCase.execute(organizationId, saleId);
+    return { message: 'Venda separada com sucesso.' };
+  }
+
   @Patch(':id/finalize')
   async finalize(
     @CurrentUser('organizationId') organizationId: string,
@@ -152,5 +166,15 @@ export class SalesController {
   ) {
     await this.finalizeSaleUseCase.execute(organizationId, saleId);
     return { message: 'Venda finalizada com sucesso.' };
+  }
+
+  @Patch(':id/edit')
+  async edit(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') saleId: string,
+    @Body() editSaleDto: EditSaleDto,
+  ) {
+    const sale = await this.editSaleUseCase.execute(organizationId, saleId, editSaleDto);
+    return sale;
   }
 }

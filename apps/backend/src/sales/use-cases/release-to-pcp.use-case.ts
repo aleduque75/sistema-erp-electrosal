@@ -36,17 +36,31 @@ export class ReleaseToPcpUseCase {
       }
 
       for (const item of saleWithItems.saleItems) {
-        if (item.inventoryLotId) {
-          await tx.inventoryLot.update({
-            where: { id: item.inventoryLotId },
-            data: { remainingQuantity: { decrement: item.quantity } },
-          });
-        } else {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: item.quantity } },
-          });
+        if (!item.inventoryLotId) {
+          throw new BadRequestException(`O item ${item.productId} não possui um lote de estoque associado.`);
         }
+
+        // Decrement lot and product stock
+        await tx.inventoryLot.update({
+          where: { id: item.inventoryLotId },
+          data: { remainingQuantity: { decrement: item.quantity } },
+        });
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+
+        // Create Stock Movement Record
+        await tx.stockMovement.create({
+          data: {
+            organizationId,
+            productId: item.productId,
+            inventoryLotId: item.inventoryLotId,
+            quantity: -item.quantity, // Negative for stock out
+            type: 'VENDA',
+            sourceDocument: `Venda #${saleWithItems.orderNumber}`,
+          }
+        });
       }
 
       return tx.sale.update({

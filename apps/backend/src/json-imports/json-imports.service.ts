@@ -541,7 +541,7 @@ export class JsonImportsService {
                     dataHora: this.parseDate(financa.dataPagamento),
                     contaContabilId: receitaConta.id,
                     contaCorrenteId: contaCorrenteId,
-                    AccountRec: { connect: { id: newAccountRec.id } },
+                    accountRecId: newAccountRec.id,
                   },
                 });
               } else {
@@ -677,7 +677,7 @@ export class JsonImportsService {
                     dataHora: this.parseDate(financa.dataPagamento),
                     contaContabilId: receitaConta.id,
                     contaCorrenteId: contaCorrenteId,
-                    AccountRec: { connect: { id: newAccountRec.id } },
+                    accountRecId: newAccountRec.id,
                   },
                 });
               } else {
@@ -802,7 +802,7 @@ export class JsonImportsService {
                 this.logger.warn(`Cotação não encontrada para a despesa na data ${dataTransacao}. GoldAmount será 0.`);
               }
 
-              await this.prisma.transacao.create({
+              const newTransacao = await this.prisma.transacao.create({
                 data: {
                   organizationId: organizationId,
                   tipo: 'DEBITO',
@@ -813,8 +813,12 @@ export class JsonImportsService {
                   dataHora: dataTransacao,
                   contaContabilId: despesaContaDefault.id,
                   contaCorrenteId: contaCorrenteId,
-                  AccountPay: { connect: { id: newAccountPay.id } },
                 },
+              });
+
+              await this.prisma.accountPay.update({
+                where: { id: newAccountPay.id },
+                data: { transacaoId: newTransacao.id },
               });
             }
             despesasCriadasCount++;

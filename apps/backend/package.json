@@ -24,7 +24,12 @@
     "db:backfill-quotations-from-items": "dotenv -e ../../.env -- ts-node prisma/backfill-quotations-from-items.ts",
     "db:import-clients-from-csv": "dotenv -e ../../.env -- ts-node prisma/import-clients-from-csv.ts",
     "db:recalculate-gold-amount": "dotenv -e ../../.env -- ts-node prisma/recalculate-gold-amount.ts",
-    "copy:prisma-engine": "cp ../../node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node ./dist/"
+    "db:link-legacy-sales": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/link-legacy-sales.ts",
+    "db:recalculate-adjustments": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/recalculate-sale-adjustments.ts",
+    "db:set-adjustment-methods": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/set-adjustment-methods.ts",
+    "db:diagnose-pg": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/diagnose-product-groups.ts",
+    "copy:prisma-engine": "cp ../../node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node ./dist/",
+    "db:export-seed-data": "dotenv -e ../../.env -- ts-node prisma/export-seed-data.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.5",

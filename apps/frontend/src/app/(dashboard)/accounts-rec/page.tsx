@@ -227,7 +227,7 @@ export default function AccountsRecPage() {
                 <DialogHeader>
                     <DialogTitle>Detalhes da Venda - Pedido #{saleToView?.orderNumber}</DialogTitle>
                 </DialogHeader>
-                {saleToView ? <SaleDetailsView sale={saleToView} /> : <p>Carregando...</p>}
+                {saleToView ? <SaleDetailsView sale={saleToView} onReceivePayment={setAccountToReceive} /> : <p>Carregando...</p>}
             </DialogContent>
         </Dialog>
     </div>

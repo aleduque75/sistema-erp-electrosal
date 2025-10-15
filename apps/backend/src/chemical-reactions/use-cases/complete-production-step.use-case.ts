@@ -96,6 +96,26 @@ export class CompleteProductionStepUseCase {
         },
       });
 
+      // Create a stock movement for the produced product
+      await tx.stockMovement.create({
+        data: {
+          organizationId,
+          productId: reaction.outputProductId,
+          quantity: outputProductGrams, // Positive quantity for stock increase
+          type: 'REACTION_OUTPUT', // Indicates it came from a reaction
+        },
+      });
+
+      // Update the product's stock level
+      await tx.product.update({
+        where: { id: reaction.outputProductId },
+        data: {
+          stock: {
+            increment: outputProductGrams,
+          },
+        },
+      });
+
       // Create lots for leftovers
       if (outputBasketLeftoverGrams && outputBasketLeftoverGrams > 0) {
         await tx.pure_metal_lots.create({
@@ -107,7 +127,7 @@ export class CompleteProductionStepUseCase {
             initialGrams: goldInBasketLeftover.toNumber(),
             remainingGrams: goldInBasketLeftover.toNumber(),
             purity: 1, // Assuming 100% purity for leftovers
-            notes: `Sobra de Cesto da Reação #${reaction.id}`,
+            notes: `CESTO LOTE ${batchNumber}`,
           },
         });
       }
@@ -121,7 +141,7 @@ export class CompleteProductionStepUseCase {
             initialGrams: outputDistillateLeftoverGrams,
             remainingGrams: outputDistillateLeftoverGrams,
             purity: 1, // Assuming 100% purity for leftovers
-            notes: `Sobra de Destilado da Reação #${reaction.id}`,
+            notes: `DESTILADO LOTE ${batchNumber}`,
           },
         });
       }

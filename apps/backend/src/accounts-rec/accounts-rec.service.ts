@@ -9,14 +9,20 @@ import {
   UpdateAccountRecDto,
   ReceivePaymentDto,
 } from './dtos/account-rec.dto';
-import { AccountRec, Prisma, TipoTransacaoPrisma } from '@prisma/client';
-import { SettingsService } from '../settings/settings.service'; // Added
+import { AccountRec, Prisma, TipoTransacaoPrisma, TipoMetal } from '@prisma/client';
+import { SettingsService } from '../settings/settings.service';
+import { QuotationsService } from '../quotations/quotations.service';
+import { startOfDay } from 'date-fns';
+import { CalculateSaleAdjustmentUseCase } from '../sales/use-cases/calculate-sale-adjustment.use-case';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class AccountsRecService {
   constructor(
     private prisma: PrismaService,
-    private settingsService: SettingsService, // Injected
+    private settingsService: SettingsService,
+    private quotationsService: QuotationsService,
+    private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
   ) {}
 
   async create(
@@ -47,9 +53,13 @@ export class AccountsRecService {
     });
   }
 
-  async findOne(organizationId: string, id: string): Promise<AccountRec> {
+  async findOne(
+    organizationId: string,
+    id: string,
+  ): Promise<AccountRec> {
     const account = await this.prisma.accountRec.findFirst({
       where: { id, organizationId },
+      include: { sale: true },
     });
     if (!account) {
       throw new NotFoundException(
@@ -73,27 +83,67 @@ export class AccountsRecService {
 
   async receive(
     organizationId: string,
-    userId: string, // Added userId
+    userId: string,
     id: string,
     data: ReceivePaymentDto,
   ): Promise<any> {
-    const [accountToReceive, settings] = await Promise.all([
-      this.findOne(organizationId, id),
-      this.settingsService.findOne(userId), // Used SettingsService
-    ]);
+    const accountToReceive = await this.prisma.accountRec.findFirst({
+      where: { id, organizationId },
+      include: { sale: true },
+    });
 
-    if (!settings?.defaultCaixaContaId) {
-      throw new BadRequestException(
-        "Nenhuma conta 'Caixa' padrão foi configurada para registrar recebimentos.",
-      );
+    if (!accountToReceive) {
+      throw new NotFoundException(`Conta a receber com ID ${id} não encontrada.`);
     }
 
-    const receivedAt = data.receivedAt || new Date();
-    const amountReceived =
-      data.amountReceived || accountToReceive.amount.toNumber();
+    const updatedAccountRec = await this.prisma.$transaction(async (tx) => {
+      const settings = await this.settingsService.findOne(userId);
+      if (!settings?.defaultCaixaContaId) {
+        throw new BadRequestException(
+          "Nenhuma conta 'Caixa' padrão foi configurada para registrar recebimentos.",
+        );
+      }
 
-    return this.prisma.$transaction(async (tx) => {
-      const updatedAccountRec = await tx.accountRec.update({
+      const receivedAt = data.receivedAt || new Date();
+      const amountReceived = new Decimal(
+        data.amountReceived || accountToReceive.amount,
+      );
+
+      let paymentQuotation = accountToReceive.sale?.goldPrice;
+
+      // If the sale does not have a gold price, fetch the quotation for the payment day and update the sale
+      if (!paymentQuotation && accountToReceive.saleId) {
+        const paymentDate = startOfDay(receivedAt);
+
+        const quotationForPaymentDay = await this.quotationsService.findByDate(
+          paymentDate, // Use the normalized date
+          TipoMetal.AU,
+          organizationId,
+        );
+
+        if (!quotationForPaymentDay) {
+          throw new BadRequestException(
+            `Nenhuma cotação de ouro encontrada para a data ${receivedAt.toLocaleDateString()}. Não é possível registrar o recebimento.`,
+          );
+        }
+
+        // Use a cotação de compra, pois estamos 'comprando' o metal do cliente com o valor recebido
+        paymentQuotation = quotationForPaymentDay.buyPrice;
+
+        // Update the sale with this quotation for future consistency
+        await tx.sale.update({
+          where: { id: accountToReceive.saleId },
+          data: { goldPrice: paymentQuotation },
+        });
+      } else if (!paymentQuotation) {
+        throw new BadRequestException(
+          'A cotação para a transação não pôde ser determinada.',
+        );
+      }
+
+      const goldAmount = amountReceived.dividedBy(paymentQuotation);
+
+      const updated = await tx.accountRec.update({
         where: { id },
         data: {
           received: true,
@@ -110,14 +160,25 @@ export class AccountsRecService {
           tipo: TipoTransacaoPrisma.CREDITO,
           descricao: `Recebimento de: ${accountToReceive.description}`,
           valor: amountReceived,
+          goldAmount: goldAmount,
           moeda: 'BRL',
           dataHora: receivedAt,
+          accountRecId: updated.id, // Link to the AccountRec
         },
       });
 
-      return updatedAccountRec;
+      return updated;
     });
-  } // <-- ESTA CHAVE ESTAVA FALTANDO
+    // After payment is registered, if it's linked to a sale, trigger adjustment calculation
+    if (updatedAccountRec.saleId) {
+      await this.calculateSaleAdjustmentUseCase.execute(
+        updatedAccountRec.saleId,
+        organizationId,
+      );
+    }
+
+    return updatedAccountRec;
+  }
 
   async remove(organizationId: string, id: string): Promise<AccountRec> {
     await this.findOne(organizationId, id);

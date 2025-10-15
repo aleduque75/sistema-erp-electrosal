@@ -63,6 +63,7 @@ export class SalesService {
       where: whereClause,
       include: {
         pessoa: true, // Inclui o nome do cliente na listagem
+        paymentTerm: true, // Inclui os dados do prazo de pagamento
         saleItems: {
           include: {
             product: true, // Inclui detalhes do produto em cada item
@@ -71,7 +72,7 @@ export class SalesService {
         adjustment: true, // Include the sale adjustment data
         accountsRec: {
           include: {
-            transacao: {
+            transacoes: {
               include: {
                 contaCorrente: true,
               },
@@ -86,7 +87,7 @@ export class SalesService {
     });
 
     const result = prismaSales.map(sale => {
-      const paymentAccountName = sale.accountsRec[0]?.transacao?.contaCorrente?.nome || null;
+      const paymentAccountName = sale.accountsRec[0]?.transacoes[0]?.contaCorrente?.nome || null;
 
       return {
         ...sale,
@@ -112,6 +113,8 @@ export class SalesService {
       where: { id, organizationId },
       include: {
         pessoa: true, // Inclui os dados do cliente
+        paymentTerm: true, // Inclui o prazo de pagamento
+        installments: true, // Inclui as parcelas da venda
         saleItems: {
           // Inclui os itens da venda
           include: {
@@ -121,7 +124,7 @@ export class SalesService {
         },
         accountsRec: { // Inclui os recebíveis associados
           include: {
-            transacao: { // Para cada recebível, inclui a transação
+            transacoes: { // Para cada recebível, inclui a transação
               include: {
                 contaCorrente: true, // Para cada transação, inclui a conta corrente
               },
@@ -141,7 +144,7 @@ export class SalesService {
         ...item,
         price: item.price.toNumber(),
         product: item.product
-          ? { id: item.product.id, name: item.product.name }
+          ? { id: item.product.id, name: item.product.name, goldValue: item.product.goldValue }
           : null,
       })),
     };
@@ -317,7 +320,7 @@ export class SalesService {
       include: { // Otimização: buscar todos os dados necessários de uma vez
         accountsRec: {
           include: {
-            transacao: true,
+            transacoes: true,
           },
         },
         saleItems: {
@@ -380,13 +383,13 @@ export class SalesService {
         organizationId,
         goldPrice: null,
         accountsRec: {
-          some: { transacaoId: { not: null } },
+          some: { transacoes: { some: {} } },
         },
       },
       include: {
         accountsRec: {
           include: {
-            transacao: true,
+            transacoes: true,
           },
         },
       },
@@ -396,7 +399,7 @@ export class SalesService {
     let notFoundCount = 0;
 
     for (const sale of salesToProcess) {
-      const mainTransaction = sale.accountsRec.map(ar => ar.transacao).find(t => t && t.valor.isPositive() && t.goldAmount?.isPositive());
+      const mainTransaction = sale.accountsRec.flatMap(ar => ar.transacoes).find(t => t && t.valor.isPositive() && t.goldAmount?.isPositive());
 
       if (mainTransaction) {
         const effectiveQuotation = mainTransaction.valor.dividedBy(mainTransaction.goldAmount!);
@@ -430,10 +433,14 @@ export class SalesService {
         organizationId: organizationId
       },
       include: {
-        saleItems: { select: { quantity: true, product: { select: { name: true }} } },
+        saleItems: { 
+          include: {
+            product: true,
+          }
+        },
         accountsRec: {
           include: {
-            transacao: true,
+            transacoes: true,
           },
         },
         adjustment: true,
@@ -444,7 +451,7 @@ export class SalesService {
       throw new NotFoundException(`Venda com Nº ${orderNumber} não encontrada.`);
     }
 
-    const paymentTransactions = sale.accountsRec.map(ar => ar.transacao).filter((t): t is Transacao => !!t);
+    const paymentTransactions = sale.accountsRec.flatMap(ar => ar.transacoes).filter((t): t is Transacao => !!t);
 
     const totalPaymentBRL = paymentTransactions.reduce((sum, t) => sum.plus(t.valor), new Decimal(0));
     const totalPaymentGold = paymentTransactions.reduce((sum, t) => sum.plus(t.goldAmount || 0), new Decimal(0));
@@ -475,7 +482,7 @@ export class SalesService {
       include: {
         accountsRec: {
           include: {
-            transacao: {
+            transacoes: {
               include: {
                 contaCorrente: true,
               },

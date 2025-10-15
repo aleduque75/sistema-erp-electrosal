@@ -5,52 +5,49 @@ import { TipoTransacaoPrisma, Prisma, SaleStatus, TipoMetal } from '@prisma/clie
 import { SettingsService } from '../../settings/settings.service';
 import { ConfirmSaleDto } from '../dtos/sales.dto';
 import Decimal from 'decimal.js';
+import { CalculateSaleAdjustmentUseCase } from './calculate-sale-adjustment.use-case';
 
 @Injectable()
 export class ConfirmSaleUseCase {
   constructor(
     private prisma: PrismaService,
     private settingsService: SettingsService,
+    private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
   ) {}
 
   async execute(organizationId: string, userId: string, saleId: string, confirmSaleDto: ConfirmSaleDto) {
-    return this.prisma.$transaction(async (tx) => {
-      console.log(`[ConfirmSaleUseCase] Searching for Sale - ID: ${saleId}, OrgID: ${organizationId}, Status: ${SaleStatus.A_SEPARAR}`);
+    const confirmedSale = await this.prisma.$transaction(async (tx) => {
+      console.log(`[ConfirmSaleUseCase] Searching for Sale - ID: ${saleId}, OrgID: ${organizationId}`);
       const sale = await tx.sale.findFirst({
         where: { 
           id: saleId, 
           organizationId,
-          status: SaleStatus.A_SEPARAR,
+          status: { in: [SaleStatus.PENDENTE, SaleStatus.A_SEPARAR, SaleStatus.SEPARADO] },
         },
         include: {
           saleItems: { include: { product: { include: { productGroup: true } } } },
           pessoa: true,
+          paymentTerm: true, // Incluir o prazo de pagamento
         },
       });
       console.log(`[ConfirmSaleUseCase] Sale found: ${sale ? sale.id : 'None'}`);
 
       if (!sale) {
-        throw new NotFoundException(`Venda com status A_SEPARAR com ID ${saleId} não encontrada.`);
+        throw new NotFoundException(`Venda com status PENDENTE, A_SEPARAR ou SEPARADO com ID ${saleId} não encontrada.`);
       }
 
-      const { paymentMethod, numberOfInstallments, contaCorrenteId, updatedGoldPrice, clientMetalAccountId } = confirmSaleDto;
+      const { paymentMethod, contaCorrenteId, updatedGoldPrice } = confirmSaleDto;
 
-      let finalNetAmount = sale.netAmount!;
-      let finalGoldPrice = sale.goldPrice!;
-      let finalTotalAmount = sale.totalAmount;
-      let finalGoldValue = sale.goldValue!;
+      let finalNetAmount = new Decimal(sale.netAmount || 0);
+      let finalGoldPrice = new Decimal(sale.goldPrice || 0);
+      let finalTotalAmount = new Decimal(sale.totalAmount || 0);
+      let finalGoldValue = new Decimal(sale.goldValue || 0);
 
-      if (updatedGoldPrice && !new Decimal(updatedGoldPrice).equals(sale.goldPrice!)) {
-        // Recalculation logic as before...
-        // For simplicity, we trust the frontend recalculated amount if sent
-        // A robust solution would recalculate here fully.
+      if (updatedGoldPrice && !new Decimal(updatedGoldPrice).equals(finalGoldPrice)) {
         finalGoldPrice = new Decimal(updatedGoldPrice);
         finalNetAmount = new Decimal(confirmSaleDto.updatedNetAmount || sale.netAmount!);
         finalGoldValue = finalNetAmount.dividedBy(finalGoldPrice);
       }
-
-      // Stock validation and deduction logic (as before)
-      // ... (omitted for brevity, assuming it's correct)
 
       // CREATE FINANCIAL ENTRIES
       const settings = await this.settingsService.findOne(userId);
@@ -94,31 +91,58 @@ export class ConfirmSaleUseCase {
           },
         });
 
-        await tx.transacao.create({ data: { organizationId, tipo: TipoTransacaoPrisma.CREDITO, valor: finalNetAmount, moeda: 'BRL', descricao: `Recebimento da Venda #${sale.orderNumber} (Pagamento em Metal)`, contaContabilId: settings.defaultReceitaContaId!, dataHora: new Date() } });
+        await tx.transacao.create({ data: { organizationId, tipo: TipoTransacaoPrisma.CREDITO, valor: finalNetAmount, goldAmount: finalGoldValue, moeda: 'BRL', descricao: `Recebimento da Venda #${sale.orderNumber} (Pagamento em Metal)`, contaContabilId: settings.defaultReceitaContaId!, dataHora: new Date() } });
 
       } else if (paymentMethod === 'A_VISTA') {
         if (!contaCorrenteId) throw new BadRequestException('Conta de destino é obrigatória para vendas à vista.');
         await tx.transacao.create({ data: { organizationId, tipo: TipoTransacaoPrisma.CREDITO, valor: finalNetAmount, moeda: 'BRL', descricao: `Recebimento da Venda #${sale.orderNumber}`, contaContabilId: settings.defaultReceitaContaId!, contaCorrenteId: contaCorrenteId, dataHora: new Date() } });
-      } else { // A_PRAZO or CREDIT_CARD
-        const installmentsCount = paymentMethod === 'A_PRAZO' ? (numberOfInstallments || 1) : 1;
-        const installmentValue = finalNetAmount.dividedBy(installmentsCount);
-        for (let i = 1; i <= installmentsCount; i++) {
-          await tx.accountRec.create({ data: { organizationId, saleId: sale.id, description: `Parcela ${i}/${installmentsCount} da Venda #${sale.orderNumber}`, amount: installmentValue, dueDate: paymentMethod === 'CREDIT_CARD' ? addDays(new Date(), 30) : addMonths(new Date(), i) } });
+      } else if (paymentMethod === 'A_PRAZO') {
+        if (!sale.paymentTerm) {
+          throw new BadRequestException('Prazo de pagamento não encontrado para venda A Prazo.');
         }
+        const installmentsCount = sale.paymentTerm.installmentsDays.length;
+        if (installmentsCount === 0) {
+          throw new BadRequestException('Prazo de pagamento não possui parcelas configuradas.');
+        }
+
+        const installmentValue = finalNetAmount.dividedBy(installmentsCount);
+
+        for (let i = 0; i < installmentsCount; i++) {
+          const days = sale.paymentTerm.installmentsDays[i];
+          await tx.accountRec.create({
+            data: {
+              organizationId,
+              saleId: sale.id,
+              description: `Parcela ${i + 1}/${installmentsCount} da Venda #${sale.orderNumber}`,
+              amount: installmentValue,
+              dueDate: addDays(new Date(), days),
+            },
+          });
+        }
+      } else { // CREDIT_CARD or other methods
+        // Fallback for CREDIT_CARD or other types - creates a single receivable
+        await tx.accountRec.create({ data: { organizationId, saleId: sale.id, description: `Conta a Receber para Venda #${sale.orderNumber}`, amount: finalNetAmount, dueDate: addDays(new Date(), 30) } });
       }
 
       // UPDATE SALE STATUS AND FINAL VALUES
       return tx.sale.update({
         where: { id: saleId },
         data: {
-          status: sale.status === SaleStatus.A_SEPARAR ? SaleStatus.FINALIZADO : SaleStatus.CONFIRMADO,
+          status: SaleStatus.FINALIZADO,
           paymentMethod: confirmSaleDto.paymentMethod,
           netAmount: finalNetAmount,
-          totalAmount: finalTotalAmount, // This should also be recalculated
+          totalAmount: finalTotalAmount,
           goldPrice: finalGoldPrice,
           goldValue: finalGoldValue,
         },
       });
     });
+
+    // After transaction, calculate adjustment
+    if (confirmedSale) {
+      await this.calculateSaleAdjustmentUseCase.execute(saleId, organizationId);
+    }
+
+    return confirmedSale;
   }
 }

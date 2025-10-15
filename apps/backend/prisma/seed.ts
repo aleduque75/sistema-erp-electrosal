@@ -1,8 +1,27 @@
 import { PrismaClient, TipoContaContabilPrisma, ContaCorrenteType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { config } from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
 
 config();
+
+interface SeedData {
+  contasCorrentes: any[];
+  contasContabeis: any[];
+  transacoes: any[];
+}
+
+let customSeedData: SeedData | null = null;
+const seedDataPath = path.join(__dirname, '..' , '..' , 'json-imports', 'seed_data.json');
+
+try {
+  const data = fs.readFileSync(seedDataPath, 'utf-8');
+  customSeedData = JSON.parse(data);
+  console.log('seed_data.json carregado com sucesso.');
+} catch (error) {
+  console.log('seed_data.json não encontrado ou inválido. Usando dados padrão.');
+}
 
 const prisma = new PrismaClient();
 
@@ -408,9 +427,21 @@ async function main() {
     },
   });
 
-  console.log('Criando o plano de contas...');
-  await seedContas(organization.id, planoDeContasEstruturado);
-  console.log('Plano de contas criado com sucesso!');
+  if (customSeedData && customSeedData.contasContabeis.length > 0) {
+    console.log('Criando contas contábeis a partir de seed_data.json...');
+    for (const conta of customSeedData.contasContabeis) {
+      await prisma.contaContabil.upsert({
+        where: { id: conta.id },
+        update: { ...conta, organizationId: organization.id },
+        create: { ...conta, organizationId: organization.id },
+      });
+    }
+    console.log('Contas contábeis de seed_data.json criadas/atualizadas com sucesso!');
+  } else {
+    console.log('Criando o plano de contas padrão...');
+    await seedContas(organization.id, planoDeContasEstruturado);
+    console.log('Plano de contas padrão criado com sucesso!');
+  }
 
   console.log(`Criando usuário administrador padrão com ID: ${userId}`);
   const hashedPassword = await bcrypt.hash('Electrosal123@', 10);
@@ -425,6 +456,33 @@ async function main() {
     },
   });
   console.log('Usuário administrador criado com sucesso!');
+
+  // --- SEÇÃO DE DADOS DE SEED CUSTOMIZADOS (Contas Correntes e Transações) ---
+  if (customSeedData) {
+    if (customSeedData.contasCorrentes.length > 0) {
+      console.log('Criando contas correntes a partir de seed_data.json...');
+      for (const conta of customSeedData.contasCorrentes) {
+        await prisma.contaCorrente.upsert({
+          where: { id: conta.id },
+          update: { ...conta, organizationId: organization.id },
+          create: { ...conta, organizationId: organization.id },
+        });
+      }
+      console.log('Contas correntes de seed_data.json criadas/atualizadas com sucesso!');
+    }
+
+    if (customSeedData.transacoes.length > 0) {
+      console.log('Criando transações a partir de seed_data.json...');
+      for (const transacao of customSeedData.transacoes) {
+        await prisma.transacao.upsert({
+          where: { id: transacao.id },
+          update: { ...transacao, organizationId: organization.id },
+          create: { ...transacao, organizationId: organization.id },
+        });
+      }
+      console.log('Transações de seed_data.json criadas/atualizadas com sucesso!');
+    }
+  }
 
   // --- SEÇÃO DE CONFIGURAÇÕES DE USUÁRIO ---
   console.log('Buscando contas padrão para configurar UserSettings...');

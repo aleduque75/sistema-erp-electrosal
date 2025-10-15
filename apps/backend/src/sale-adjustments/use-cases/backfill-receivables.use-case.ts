@@ -11,21 +11,22 @@ export class BackfillReceivablesUseCase {
         organizationId,
         received: true,
         contaCorrenteId: null,
-        transacaoId: { not: null },
+        transacoes: { some: {} }, // Corrected from transacaoId
       },
       include: {
-        transacao: true,
+        transacoes: true, // Corrected from transacao
       },
     });
 
     let updatedCount = 0;
 
     for (const rec of affectedRecs) {
-      if (rec.transacao && rec.transacao.contaCorrenteId) {
+      // Use the first transaction if it exists
+      if (rec.transacoes[0] && rec.transacoes[0].contaCorrenteId) {
         await this.prisma.accountRec.update({
           where: { id: rec.id },
           data: {
-            contaCorrenteId: rec.transacao.contaCorrenteId,
+            contaCorrenteId: rec.transacoes[0].contaCorrenteId, // Corrected from rec.transacao
           },
         });
         updatedCount++;

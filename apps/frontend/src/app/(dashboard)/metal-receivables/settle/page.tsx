@@ -40,8 +40,7 @@ export default function SettleMetalReceivablesPage() {
 
   useEffect(() => {
     // Fetch all clients/pessoas to populate the selector
-    api.get('/pessoas').then(res => setPessoas(res.data));
-  }, []);
+          api.get('/pessoas?role=CLIENT').then(res => setPessoas(res.data));  }, []);
 
   useEffect(() => {
     if (selectedPessoaId) {
