@@ -70,6 +70,7 @@ export class SalesService {
           },
         },
         adjustment: true, // Include the sale adjustment data
+        installments: true, // Include the sale installments for details view
         accountsRec: {
           include: {
             transacoes: {
@@ -435,7 +436,7 @@ export class SalesService {
       include: {
         saleItems: { 
           include: {
-            product: true,
+            product: { include: { productGroup: true } },
           }
         },
         accountsRec: {

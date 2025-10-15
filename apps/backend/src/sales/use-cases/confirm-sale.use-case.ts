@@ -93,9 +93,53 @@ export class ConfirmSaleUseCase {
 
         await tx.transacao.create({ data: { organizationId, tipo: TipoTransacaoPrisma.CREDITO, valor: finalNetAmount, goldAmount: finalGoldValue, moeda: 'BRL', descricao: `Recebimento da Venda #${sale.orderNumber} (Pagamento em Metal)`, contaContabilId: settings.defaultReceitaContaId!, dataHora: new Date() } });
 
+        // Create a corresponding AccountRec for history
+        await tx.accountRec.create({
+          data: {
+            organizationId,
+            saleId: sale.id,
+            description: `Recebimento (em metal) da Venda #${sale.orderNumber}`,
+            amount: finalNetAmount,
+            dueDate: new Date(),
+            received: true,
+            receivedAt: new Date(),
+          },
+        });
+
       } else if (paymentMethod === 'A_VISTA') {
         if (!contaCorrenteId) throw new BadRequestException('Conta de destino é obrigatória para vendas à vista.');
-        await tx.transacao.create({ data: { organizationId, tipo: TipoTransacaoPrisma.CREDITO, valor: finalNetAmount, moeda: 'BRL', descricao: `Recebimento da Venda #${sale.orderNumber}`, contaContabilId: settings.defaultReceitaContaId!, contaCorrenteId: contaCorrenteId, dataHora: new Date() } });
+
+        // For A_VISTA, we still need to calculate the gold equivalent for profit analysis
+        if (finalGoldPrice.isZero()) {
+          throw new BadRequestException('Cotação do ouro não pode ser zero para calcular o valor em ouro.');
+        }
+        const goldAmountForTx = finalNetAmount.dividedBy(finalGoldPrice);
+
+        await tx.accountRec.create({
+          data: {
+            organizationId,
+            saleId: sale.id,
+            description: `Recebimento (à vista) da Venda #${sale.orderNumber}`,
+            amount: finalNetAmount,
+            dueDate: new Date(),
+            received: true,
+            receivedAt: new Date(),
+            contaCorrenteId: contaCorrenteId,
+            transacoes: { // Nested create to link the transaction
+              create: {
+                organizationId,
+                tipo: TipoTransacaoPrisma.CREDITO,
+                valor: finalNetAmount,
+                moeda: 'BRL',
+                descricao: `Recebimento da Venda #${sale.orderNumber}`,
+                contaContabilId: settings.defaultReceitaContaId!,
+                contaCorrenteId: contaCorrenteId,
+                dataHora: new Date(),
+                goldAmount: goldAmountForTx, // Set the gold amount
+              }
+            }
+          },
+        });
       } else if (paymentMethod === 'A_PRAZO') {
         if (!sale.paymentTerm) {
           throw new BadRequestException('Prazo de pagamento não encontrado para venda A Prazo.');

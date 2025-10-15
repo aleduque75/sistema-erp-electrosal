@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateSaleDto } from '../dtos/sales.dto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma, TipoMetal } from '@prisma/client';
+import { Prisma, TipoMetal, SaleInstallmentStatus } from '@prisma/client';
 import { SettingsService } from '../../settings/settings.service';
 import { ProductMapper } from '../../products/mappers/product.mapper';
 import { QuotationsService } from '../../quotations/quotations.service';
@@ -171,6 +171,38 @@ export class CreateSaleUseCase {
         saleItems: { create: saleItemsToCreate },
       },
     });
+
+    if (paymentTermId) {
+      const paymentTerm = await this.prisma.paymentTerm.findUnique({
+        where: { id: paymentTermId },
+      });
+
+      if (paymentTerm && paymentTerm.installmentsDays.length > 0) {
+        const numberOfInstallments = paymentTerm.installmentsDays.length;
+        const installmentAmount = netAmount.dividedBy(numberOfInstallments).toDecimalPlaces(2, Decimal.ROUND_DOWN);
+        const remainder = netAmount.minus(installmentAmount.times(numberOfInstallments));
+
+        const installmentsToCreate = paymentTerm.installmentsDays.map((days, index) => {
+          const dueDate = new Date(sale.createdAt);
+          dueDate.setDate(dueDate.getDate() + days);
+
+          // Add the remainder to the first installment
+          const finalInstallmentAmount = index === 0 ? installmentAmount.plus(remainder) : installmentAmount;
+
+          return {
+            saleId: sale.id,
+            installmentNumber: index + 1,
+            amount: finalInstallmentAmount,
+            dueDate,
+            status: SaleInstallmentStatus.PENDING,
+          };
+        });
+
+        await this.prisma.saleInstallment.createMany({
+          data: installmentsToCreate,
+        });
+      }
+    }
 
     return sale;
   }

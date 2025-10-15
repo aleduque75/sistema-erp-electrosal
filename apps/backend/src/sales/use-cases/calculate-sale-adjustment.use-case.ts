@@ -100,6 +100,8 @@ export class CalculateSaleAdjustmentUseCase {
         let itemExpectedGrams = new Decimal(0);
         const calcMethod = item.product.productGroup?.adjustmentCalcMethod;
 
+        this.logger.debug(`[ADJ_CALC] Item: ${item.product.name}, Method: ${calcMethod}, Qty: ${item.quantity}, GoldValue: ${item.product.goldValue}`);
+
         switch (calcMethod) {
           case 'COST_BASED':
             if (paymentQuotation && !paymentQuotation.isZero()) {
@@ -116,7 +118,20 @@ export class CalculateSaleAdjustmentUseCase {
 
           case 'QUANTITY_BASED':
           default:
-            itemExpectedGrams = new Decimal(item.quantity);
+            // For quantity-based products, expected gold is the item's quantity multiplied by its gold purity (`goldValue`).
+            const goldValue = new Decimal(item.product.goldValue || 0);
+            if (goldValue.isZero()) {
+              // If product has no gold value (e.g., resale items), expected grams is just the quantity if it's a 1:1 gold item, otherwise it should be 0.
+              // Assuming for non-gold products, the expected gold is 0.
+              // If a product IS gold but has goldValue=0, this is a data error, but we calculate as 0.
+              this.logger.warn(
+                `Produto ${item.productId} tem teor de ouro (goldValue) zero ou nulo. Gramas esperadas para este item será 0.`,
+              );
+              itemExpectedGrams = new Decimal(0);
+            } else {
+              itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
+              this.logger.debug(`[ADJ_CALC] QUANTITY_BASED Result: ${itemExpectedGrams}`);
+            }
             break;
         }
         saleExpectedGrams = saleExpectedGrams.plus(itemExpectedGrams);
