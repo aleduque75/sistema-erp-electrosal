@@ -19,6 +19,7 @@ import {
   MetalAccountEntry,
   IPessoaRepository,
   EmailVO,
+  StatusAnaliseQuimica,
 } from '@sistema-erp-electrosal/core';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { ContasContabeisService } from '../../contas-contabeis/contas-contabeis.service';
@@ -116,7 +117,7 @@ export class ProcessRecoveryFinalizationUseCase {
         organizationId,
         sourceType: 'RECOVERY_ORDER',
         sourceId: recoveryOrder.id.toString(),
-        metalType: TipoMetal.AU,
+        metalType: recoveryOrder.metalType, // Use dynamic metalType
         initialGrams: auPuroRecuperadoGramas,
         remainingGrams: auPuroRecuperadoGramas,
         purity: teorFinal,
@@ -124,8 +125,6 @@ export class ProcessRecoveryFinalizationUseCase {
       });
       await this.pureMetalLotRepository.create(pureMetalLot);
       this.logger.log(`Lote de metal puro criado: ${pureMetalLot.id.toString()}`);
-
-
     }
 
     let residueAnalysisId: string | undefined = undefined;
@@ -139,6 +138,7 @@ export class ProcessRecoveryFinalizationUseCase {
         volumeOuPesoEntrada: residuoGramas,
         unidadeEntrada: 'g',
         auEstimadoBrutoGramas: residuoGramas,
+        metalType: recoveryOrder.metalType, // Pass metalType to residue analysis
       });
 
       const createdResidue = await this.analiseRepository.create(residueAnalysis, organizationId);
@@ -149,7 +149,7 @@ export class ProcessRecoveryFinalizationUseCase {
 
     // --- Create Financial Transaction ---
     if (auPuroRecuperadoGramas > 0) {
-      const cotacao = await this.cotacoesService.findLatest(TipoMetal.AU, organizationId);
+      const cotacao = await this.cotacoesService.findLatest(recoveryOrder.metalType, organizationId);
       if (cotacao && parseFloat(cotacao.buyPrice.toString()) > 0) {
         const valorBRL = auPuroRecuperadoGramas * parseFloat(cotacao.buyPrice.toString());
         this.logger.log(`Valor BRL do metal recuperado: ${valorBRL}`);
@@ -197,6 +197,16 @@ export class ProcessRecoveryFinalizationUseCase {
     });
 
     await this.recoveryOrderRepository.save(recoveryOrder);
+
+    // --- Update status of associated Chemical Analyses to FINALIZADO_RECUPERADO ---
+    for (const analiseId of recoveryOrder.chemicalAnalysisIds) {
+      const analise = await this.analiseRepository.findById(analiseId, organizationId);
+      if (analise) {
+        analise.update({ status: StatusAnaliseQuimica.FINALIZADO_RECUPERADO });
+        await this.analiseRepository.save(analise);
+      }
+    }
+
     this.logger.log(`Ordem de recuperação ${recoveryOrderId} finalizada com sucesso.`);
   }
 }

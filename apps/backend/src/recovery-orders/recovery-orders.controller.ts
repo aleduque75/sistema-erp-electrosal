@@ -9,11 +9,13 @@ import {
   ParseUUIDPipe,
   Get,
   Inject,
+  Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateRecoveryOrderUseCase } from './use-cases/create-recovery-order.use-case';
 import { CreateRecoveryOrderDto } from './dtos/create-recovery-order.dto';
 import { RecoveryOrderResponseDto } from './dtos/recovery-order.response.dto';
+import { ListRecoveryOrdersDto } from './dtos/list-recovery-orders.dto';
 import { StartRecoveryOrderUseCase } from './use-cases/start-recovery-order.use-case';
 import { UpdateRecoveryOrderPurityUseCase } from './use-cases/update-recovery-order-purity.use-case';
 import { ProcessRecoveryFinalizationUseCase } from './use-cases/process-recovery-finalization.use-case';
@@ -42,9 +44,9 @@ export class RecoveryOrdersController {
   }
 
   @Get()
-  async getAllRecoveryOrders(@Req() req): Promise<RecoveryOrderResponseDto[]> {
+  async getAllRecoveryOrders(@Req() req, @Query() filters: ListRecoveryOrdersDto): Promise<RecoveryOrderResponseDto[]> {
     const organizationId = req.user?.orgId;
-    const recoveryOrders = await this.recoveryOrderRepository.findAll(organizationId);
+    const recoveryOrders = await this.recoveryOrderRepository.findAll(organizationId, filters);
     return recoveryOrders.map(RecoveryOrderResponseDto.fromDomain);
   }
 

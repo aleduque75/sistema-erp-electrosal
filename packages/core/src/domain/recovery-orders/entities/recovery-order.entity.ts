@@ -1,6 +1,7 @@
 import { UniqueEntityID } from '../../../_shared/domain/unique-entity-id';
 import { AggregateRoot } from "../../../_shared/domain/aggregate-root";
 import { RecoveryOrderStatus } from "../../enums/recovery-order-status.enum";
+import { TipoMetal } from '../../enums/tipo-metal.enum';
 
 // Define a interface para os dados resumidos da análise química
 export interface AnaliseQuimicaResumida {
@@ -12,6 +13,7 @@ export interface AnaliseQuimicaResumida {
 
 export interface RecoveryOrderProps {
   organizationId: string;
+  metalType: TipoMetal;
   chemicalAnalysisIds: string[];
   status: RecoveryOrderStatus;
   dataInicio: Date;
@@ -69,6 +71,7 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
   }
 
   get organizationId(): string { return this.props.organizationId; }
+  get metalType(): TipoMetal { return this.props.metalType; }
   get chemicalAnalysisIds(): string[] { return this.props.chemicalAnalysisIds; }
   get status(): RecoveryOrderStatus { return this.props.status; }
   get dataInicio(): Date { return this.props.dataInicio; }

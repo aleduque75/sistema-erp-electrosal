@@ -11,11 +11,13 @@ import {
   IRecoveryOrderRepository,
   RecoveryOrder,
   RecoveryOrderStatus,
+  TipoMetal,
 } from '@sistema-erp-electrosal/core';
 
 export interface CreateRecoveryOrderCommand {
   organizationId: string;
   chemicalAnalysisIds: string[];
+  metalType: TipoMetal;
 }
 
 @Injectable()
@@ -28,7 +30,7 @@ export class CreateRecoveryOrderUseCase {
   ) {}
 
   async execute(command: CreateRecoveryOrderCommand): Promise<RecoveryOrder> {
-    const { organizationId, chemicalAnalysisIds } = command;
+    const { organizationId, chemicalAnalysisIds, metalType } = command;
 
     if (!chemicalAnalysisIds || chemicalAnalysisIds.length === 0) {
       throw new BadRequestException(
@@ -59,6 +61,16 @@ export class CreateRecoveryOrderUseCase {
       );
     }
 
+    // Validate that all analyses have the same metalType as the one provided
+    const mismatchedMetalTypeAnalyses = analyses.filter(
+      (analise) => analise.metalType !== metalType,
+    );
+    if (mismatchedMetalTypeAnalyses.length > 0) {
+      throw new BadRequestException(
+        `Todas as análises devem ser do mesmo tipo de metal (${metalType}). Análises com IDs [${mismatchedMetalTypeAnalyses.map(a => a.id).join(', ')}] são de um tipo diferente.`,
+      );
+    }
+
     const totalBrutoEstimadoGramas = analyses.reduce((sum, analise) => {
       let gramsToAdd = 0;
       if (analise.auEstimadoBrutoGramas && analise.auEstimadoBrutoGramas > 0) {
@@ -78,6 +90,7 @@ export class CreateRecoveryOrderUseCase {
 
     const recoveryOrder = RecoveryOrder.create({
       organizationId,
+      metalType,
       chemicalAnalysisIds,
       dataInicio: new Date(),
       totalBrutoEstimadoGramas,

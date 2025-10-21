@@ -23,14 +23,16 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
 import { AnaliseQuimica } from "../../types/analise-quimica";
 import { getAnalisesQuimicas } from "@/services/analisesApi";
 import { createRecoveryOrder } from "@/services/recoveryOrdersApi";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TipoMetal } from "@/types/tipo-metal";
 
 const createRecoveryOrderSchema = z.object({
+  metalType: z.nativeEnum(TipoMetal, { required_error: "Selecione um tipo de metal." }),
   chemicalAnalysisIds: z.array(z.string().uuid()).min(1, "Selecione ao menos uma análise química."),
 });
 
@@ -48,26 +50,30 @@ export function CreateRecoveryOrderModal({
   onSuccess,
 }: CreateRecoveryOrderModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableAnalyses, setAvailableAnalyses] = useState<AnaliseQuimica[]>([]);
+  const [allAnalyses, setAllAnalyses] = useState<AnaliseQuimica[]>([]);
+  const [filteredAnalyses, setFilteredAnalyses] = useState<AnaliseQuimica[]>([]);
   const [isLoadingAnalyses, setIsLoadingAnalyses] = useState(true);
 
   const form = useForm<CreateRecoveryOrderFormData>({
     resolver: zodResolver(createRecoveryOrderSchema),
     defaultValues: {
       chemicalAnalysisIds: [],
+      metalType: TipoMetal.AU,
     },
   });
 
+  const selectedMetalType = form.watch('metalType');
+
   useEffect(() => {
-      const fetchAvailableAnalyses = async () => {
-    try {
-      const fetchedAnalyses = await getAnalisesQuimicas();
-      const filtered = fetchedAnalyses.filter(
-        // CORREÇÃO: Usando a string literal
-        (analise) => analise.status === 'APROVADO_PARA_RECUPERACAO' 
-      );
-      setAvailableAnalyses(filtered);
-    } catch (error) {
+    const fetchAvailableAnalyses = async () => {
+      setIsLoadingAnalyses(true);
+      try {
+        const fetchedAnalyses = await getAnalisesQuimicas();
+        const filtered = fetchedAnalyses.filter(
+          (analise) => analise.status === 'APROVADO_PARA_RECUPERACAO'
+        );
+        setAllAnalyses(filtered);
+      } catch (error) {
         console.error("Erro ao buscar análises disponíveis:", error);
         toast.error("Erro ao carregar análises disponíveis.");
       } finally {
@@ -79,6 +85,12 @@ export function CreateRecoveryOrderModal({
       fetchAvailableAnalyses();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const filtered = allAnalyses.filter(analise => analise.metalType === selectedMetalType);
+    setFilteredAnalyses(filtered);
+    form.setValue('chemicalAnalysisIds', []); // Reset selection when metal type changes
+  }, [selectedMetalType, allAnalyses, form]);
 
   const onSubmit = async (data: CreateRecoveryOrderFormData) => {
     setIsSubmitting(true);
@@ -108,6 +120,29 @@ export function CreateRecoveryOrderModal({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
             <FormField
               control={form.control}
+              name="metalType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Metal</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o metal..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={TipoMetal.AU}>Ouro (AU)</SelectItem>
+                      <SelectItem value={TipoMetal.AG}>Prata (AG)</SelectItem>
+                      <SelectItem value={TipoMetal.RH}>Ródio (RH)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="chemicalAnalysisIds"
               render={() => (
                 <FormItem>
@@ -119,11 +154,11 @@ export function CreateRecoveryOrderModal({
                   </div>
                   {isLoadingAnalyses ? (
                     <p>Carregando análises...</p>
-                  ) : availableAnalyses.length === 0 ? (
-                    <p>Nenhuma análise aprovada disponível.</p>
+                  ) : filteredAnalyses.length === 0 ? (
+                    <p>Nenhuma análise aprovada disponível para o metal selecionado.</p>
                   ) : (
                     <ScrollArea className="h-[200px] rounded-md border p-4">
-                      {availableAnalyses.map((analise) => (
+                      {filteredAnalyses.map((analise) => (
                         <FormField
                           key={analise.id}
                           control={form.control}

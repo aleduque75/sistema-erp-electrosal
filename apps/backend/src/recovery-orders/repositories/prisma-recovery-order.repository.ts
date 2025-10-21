@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IRecoveryOrderRepository, RecoveryOrder, UniqueEntityID, RecoveryOrderStatus, AnaliseQuimicaResumida } from '@sistema-erp-electrosal/core';
-import { RecoveryOrder as PrismaRecoveryOrder, RecoveryOrderStatusPrisma } from '@prisma/client';
+import { RecoveryOrder as PrismaRecoveryOrder, RecoveryOrderStatusPrisma, Prisma } from '@prisma/client';
+import { ListRecoveryOrdersDto } from '../dtos/list-recovery-orders.dto';
 
 @Injectable()
 export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
@@ -12,6 +13,7 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     const domainRecoveryOrder = RecoveryOrder.reconstitute(
       {
         organizationId: props.organizationId,
+        metalType: props.metalType,
         chemicalAnalysisIds: props.chemicalAnalysisIds,
         status: props.status as RecoveryOrderStatus,
         dataInicio: props.dataInicio,
@@ -41,6 +43,7 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     const data = {
       id: recoveryOrder.id.toString(),
       organizationId: recoveryOrder.organizationId,
+      metalType: recoveryOrder.metalType,
       chemicalAnalysisIds: recoveryOrder.chemicalAnalysisIds,
       status: recoveryOrder.status as RecoveryOrderStatusPrisma,
       dataInicio: recoveryOrder.dataInicio,
@@ -95,11 +98,24 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     return this.mapToDomain(dbRecoveryOrder, mappedAnalises);
   }
 
-  async findAll(organizationId: string): Promise<RecoveryOrder[]> {
+  async findAll(organizationId: string, filters?: ListRecoveryOrdersDto): Promise<RecoveryOrder[]> {
+    const whereClause: Prisma.RecoveryOrderWhereInput = { organizationId };
+
+    if (filters?.metalType) {
+      whereClause.metalType = filters.metalType;
+    }
+    if (filters?.startDate) {
+      whereClause.dataInicio = { gte: new Date(filters.startDate) };
+    }
+    if (filters?.endDate) {
+      if (!whereClause.dataInicio) {
+        whereClause.dataInicio = {};
+      }
+      (whereClause.dataInicio as Prisma.DateTimeFilter).lte = new Date(filters.endDate);
+    }
+
     const dbRecoveryOrders = await this.prisma.recoveryOrder.findMany({
-      where: {
-        organizationId,
-      },
+      where: whereClause,
       orderBy: { dataCriacao: 'desc' },
     });
 

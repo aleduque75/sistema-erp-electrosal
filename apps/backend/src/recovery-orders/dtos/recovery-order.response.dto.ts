@@ -1,8 +1,9 @@
-import { RecoveryOrder, RecoveryOrderStatus } from '@sistema-erp-electrosal/core';
+import { RecoveryOrder, RecoveryOrderStatus, TipoMetal } from '@sistema-erp-electrosal/core';
 
 export class RecoveryOrderResponseDto {
   id: string;
   organizationId: string;
+  metalType: TipoMetal;
   chemicalAnalysisIds: string[];
   status: RecoveryOrderStatus;
   dataInicio: Date;
@@ -30,6 +31,7 @@ export class RecoveryOrderResponseDto {
     const dto = new RecoveryOrderResponseDto();
     dto.id = recoveryOrder.id.toString();
     dto.organizationId = recoveryOrder.organizationId;
+    dto.metalType = recoveryOrder.metalType;
     dto.chemicalAnalysisIds = recoveryOrder.chemicalAnalysisIds;
     dto.status = recoveryOrder.status;
     dto.dataInicio = recoveryOrder.dataInicio;
