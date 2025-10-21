@@ -150,78 +150,79 @@ model Funcionario {
 }
 
 model Product {
-  id                 String              @id @default(uuid())
-  name               String
-  description        String?
-  price              Decimal             @db.Decimal(10, 2)
-  stock              Float?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  organizationId     String
-  costPrice          Decimal?            @db.Decimal(10, 2)
-  productGroupId     String?
-  goldValue          Float?
-  externalId         String?             @unique
-  organization       Organization        @relation(fields: [organizationId], references: [id])
-  productGroup       ProductGroup?       @relation(fields: [productGroupId], references: [id])
-  saleItems          SaleItem[]
-  stockMovements     StockMovement[]
-  inventoryLots      InventoryLot[]
-  purchaseOrderItems PurchaseOrderItem[]
+  id                        String               @id @default(uuid())
+  name                      String
+  description               String?
+  price                     Decimal              @db.Decimal(10, 2)
+  stock                     Float?
+  stockUnit                 StockUnit            @default(GRAMS)
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+  organizationId            String
+  costPrice                 Decimal?             @db.Decimal(10, 2)
+  productGroupId            String?
+  goldValue                 Float?
+  externalId                String?              @unique
+  organization              Organization         @relation(fields: [organizationId], references: [id])
+  productGroup              ProductGroup?        @relation(fields: [productGroupId], references: [id])
+  saleItems                 SaleItem[]
+  stockMovements            StockMovement[]
+  inventoryLots             InventoryLot[]
+  purchaseOrderItems        PurchaseOrderItem[]
   chemicalReactionsAsOutput chemical_reactions[]
 }
 
 model ProductGroup {
-  id                     String       @id @default(uuid())
+  id                     String                   @id @default(uuid())
   organizationId         String
   name                   String
   description            String?
-  commissionPercentage   Decimal?     @db.Decimal(5, 2)
-  isReactionProductGroup Boolean      @default(false)
+  commissionPercentage   Decimal?                 @db.Decimal(5, 2)
+  isReactionProductGroup Boolean                  @default(false)
   adjustmentCalcMethod   SaleAdjustmentCalcMethod @default(QUANTITY_BASED)
-  createdAt              DateTime     @default(now())
-  updatedAt              DateTime     @updatedAt
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
   products               Product[]
-  organization           Organization @relation(fields: [organizationId], references: [id])
+  organization           Organization             @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, name])
   @@map("product_groups")
 }
 
 model InventoryLot {
-  id                String              @id @default(uuid())
-  organizationId    String
-  productId         String
-  batchNumber       String?             @unique
-  costPrice         Decimal             @db.Decimal(10, 2)
-  quantity          Float
-  remainingQuantity Float
-  sourceType        String
-  sourceId          String
-  notes             String?
-  receivedDate      DateTime            @default(now())
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  saleItems         SaleItem[]
-  stockMovements    StockMovement[]     // Adicionado para rastrear movimentações
-  reaction          chemical_reactions? @relation("ReactionToBatch")
-  organization      Organization        @relation(fields: [organizationId], references: [id])
-  product           Product             @relation(fields: [productId], references: [id])
+  id                  String               @id @default(uuid())
+  organizationId      String
+  productId           String
+  batchNumber         String?              @unique
+  costPrice           Decimal              @db.Decimal(10, 2)
+  quantity            Float
+  remainingQuantity   Float
+  sourceType          String
+  sourceId            String
+  notes               String?
+  receivedDate        DateTime             @default(now())
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  saleItems           SaleItem[]
+  stockMovements      StockMovement[] // Adicionado para rastrear movimentações
+  reaction            chemical_reactions?  @relation("ReactionToBatch")
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  product             Product              @relation(fields: [productId], references: [id])
 
   @@map("inventory_lots")
 }
 
 model StockMovement {
-  id             String       @id @default(uuid())
+  id             String        @id @default(uuid())
   productId      String
-  inventoryLotId String?      // Adicionado para rastrear o lote
+  inventoryLotId String? // Adicionado para rastrear o lote
   type           String
   quantity       Float
-  sourceDocument String?      // Adicionado para rastrear a origem
-  createdAt      DateTime     @default(now())
+  sourceDocument String? // Adicionado para rastrear a origem
+  createdAt      DateTime      @default(now())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  product        Product      @relation(fields: [productId], references: [id])
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  product        Product       @relation(fields: [productId], references: [id])
   inventoryLot   InventoryLot? @relation(fields: [inventoryLotId], references: [id])
 }
 
@@ -329,24 +330,24 @@ model AccountPay {
 }
 
 model AccountRec {
-  id               String            @id @default(uuid())
-  saleId           String?
-  description      String
-  amount           Decimal           @db.Decimal(10, 2)
-  dueDate          DateTime
-  received         Boolean           @default(false)
-  receivedAt       DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  contaCorrenteId  String?
-  organizationId   String
-    transacaoId_old  String?           @unique @map("transacaoId")
-  externalId       String?           @unique
-  contaCorrente    ContaCorrente?    @relation(fields: [contaCorrenteId], references: [id])
-  organization     Organization      @relation(fields: [organizationId], references: [id])
-  sale             Sale?             @relation(fields: [saleId], references: [id])
+  id              String            @id @default(uuid())
+  saleId          String?
+  description     String
+  amount          Decimal           @db.Decimal(10, 2)
+  dueDate         DateTime
+  received        Boolean           @default(false)
+  receivedAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  contaCorrenteId String?
+  organizationId  String
+  transacaoId_old String?           @unique @map("transacaoId")
+  externalId      String?           @unique
+  contaCorrente   ContaCorrente?    @relation(fields: [contaCorrenteId], references: [id])
+  organization    Organization      @relation(fields: [organizationId], references: [id])
+  sale            Sale?             @relation(fields: [saleId], references: [id])
   saleInstallments SaleInstallment[]
-  transacoes       Transacao[]
+  transacoes      Transacao[]
 }
 
 model MetalReceivable {
@@ -461,6 +462,7 @@ enum TransacaoStatus {
   AJUSTADA
   CANCELADA
 }
+
 model CreditCard {
   id                     String                  @id @default(uuid())
   name                   String
@@ -607,8 +609,9 @@ model Recuperacao {
 model AnaliseQuimica {
   id                          String                     @id @default(uuid())
   organizationId              String
+  metalType                   TipoMetal                  @default(AU)
   clienteId                   String?
-  numeroAnalise               String                     @unique
+  numeroAnalise               String
   dataEntrada                 DateTime
   descricaoMaterial           String
   volumeOuPesoEntrada         Float
@@ -636,6 +639,7 @@ model AnaliseQuimica {
   recoveryOrderAsResidue      RecoveryOrder?             @relation("ResidueOfRecovery")
   recuperacoes                Recuperacao[]
 
+  @@unique([organizationId, numeroAnalise])
   @@map("analises_quimicas")
 }
 
@@ -644,7 +648,7 @@ model MetalCredit {
   organizationId     String
   clientId           String
   chemicalAnalysisId String         @unique
-  metal              String
+  metalType          TipoMetal      @default(AU)
   grams              Float
   date               DateTime       @default(now())
   createdAt          DateTime       @default(now())
@@ -693,6 +697,7 @@ model PurchaseOrderItem {
 model RecoveryOrder {
   id                           String                    @id @default(uuid())
   organizationId               String
+  metalType                    TipoMetal                 @default(AU)
   chemicalAnalysisIds          String[]
   dataInicio                   DateTime                  @default(now())
   dataFim                      DateTime?
@@ -793,6 +798,7 @@ model OperationalCost {
 model chemical_reactions {
   id                            String                       @id @default(uuid())
   organizationId                String
+  metalType                     TipoMetal                    @default(AU)
   auUsedGrams                   Float
   notes                         String?
   outputProductGrams            Float
@@ -846,6 +852,16 @@ model ProductionBatchCounter {
   updatedAt       DateTime @updatedAt
 
   @@map("production_batch_counters")
+}
+
+model CrrCounter {
+  id              String   @id @default(uuid())
+  organizationId  String   @unique
+  lastCrrNumber   Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("crr_counters")
 }
 
 model SaleAdjustment {
@@ -999,4 +1015,9 @@ enum SaleStatus {
 enum SaleAdjustmentCalcMethod {
   QUANTITY_BASED
   COST_BASED
+}
+
+enum StockUnit {
+  GRAMS
+  KILOGRAMS
 }
