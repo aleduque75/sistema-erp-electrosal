@@ -1,6 +1,6 @@
 import { Inject, Injectable, ConflictException } from '@nestjs/common';
-import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core/domain/enums/status-analise-quimica.enum';
 import { AnaliseQuimica, AnaliseQuimicaProps, IAnaliseQuimicaRepository, RegistrarNovaAnaliseDto } from '@sistema-erp-electrosal/core';
+import { PrismaService } from '../../prisma/prisma.service';
 
 export interface RegistrarNovaAnaliseCommand {
   dto: RegistrarNovaAnaliseDto;
@@ -12,25 +12,35 @@ export class RegistrarNovaAnaliseUseCase {
   constructor(
     @Inject('IAnaliseQuimicaRepository')
     private readonly analiseRepo: IAnaliseQuimicaRepository,
+    private readonly prisma: PrismaService,
   ) {}
+
+  private async getNextCrrNumber(organizationId: string): Promise<number> {
+    const counter = await this.prisma.crrCounter.upsert({
+      where: { organizationId },
+      update: { lastCrrNumber: { increment: 1 } },
+      create: { organizationId, lastCrrNumber: 3066 }, // Starts here, so first is 3066
+    });
+    return counter.lastCrrNumber;
+  }
 
   async execute(command: RegistrarNovaAnaliseCommand): Promise<AnaliseQuimica> {
     const { dto, organizationId } = command;
 
-    const lastNumeroAnalise = await this.analiseRepo.findLastNumeroAnalise(organizationId);
-    let nextNumber = 1;
-    if (lastNumeroAnalise) {
-      const lastNumber = parseInt(lastNumeroAnalise.split('-')[1], 10);
-      nextNumber = lastNumber + 1;
+    const nextNumber = await this.getNextCrrNumber(organizationId);
+    const newNumeroAnalise = `CRR-${nextNumber}`;
+
+    const existing = await this.analiseRepo.findByNumeroAnalise(newNumeroAnalise, organizationId);
+    if (existing) {
+      throw new ConflictException(`Análise química com número ${newNumeroAnalise} já existe.`);
     }
-    const newNumeroAnalise = `AQ-${nextNumber.toString().padStart(3, '0')}`;
 
     const props: Omit<
       AnaliseQuimicaProps,
-      'id' | 'dataCriacao' | 'dataAtualizacao' | 'status'
+      'id' | 'dataCriacao' | 'dataAtualizacao' | 'status' | 'numeroAnalise'
     > = {
       clienteId: dto.clienteId,
-      numeroAnalise: newNumeroAnalise,
+      metalType: dto.metalType,
       dataEntrada: dto.dataEntrada,
       descricaoMaterial: dto.descricaoMaterial,
       volumeOuPesoEntrada: dto.volumeOuPesoEntrada,
@@ -51,7 +61,11 @@ export class RegistrarNovaAnaliseUseCase {
       ordemDeRecuperacaoId: null,
     };
 
-    const novaAnalise = AnaliseQuimica.criar(props);
+    const novaAnalise = AnaliseQuimica.criar({
+      ...props,
+      numeroAnalise: newNumeroAnalise,
+    });
+
     return this.analiseRepo.create(novaAnalise, organizationId);
   }
 }

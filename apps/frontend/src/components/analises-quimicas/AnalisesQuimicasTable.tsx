@@ -141,13 +141,15 @@ export function AnalisesQuimicasTable({
               <TableHead>Cliente</TableHead>
               <TableHead className="w-[150px]">Data Entrada</TableHead>
               <TableHead>Material</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
+              <TableHead className="w-[100px]">Metal</TableHead>
+              <TableHead className="w-[180px]">Status</TableHead>
               <TableHead className="w-[50px] text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {[...Array(5)].map((_, i) => (
               <TableRow key={i}>
+                <TableCell>...</TableCell>
                 <TableCell>...</TableCell>
                 <TableCell>...</TableCell>
                 <TableCell>...</TableCell>
@@ -188,12 +190,15 @@ export function AnalisesQuimicasTable({
               <TableHead>Cliente</TableHead>
               <TableHead className="w-[150px]">Data Entrada</TableHead>
               <TableHead>Material</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
+              <TableHead className="w-[100px]">Metal</TableHead>
+              <TableHead className="w-[180px]">Status</TableHead>
               <TableHead className="w-[50px] text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {analises.map((analise) => (
+            {analises.map((analise) => {
+              console.log("Analise data in table row:", analise);
+              return (
               <TableRow key={analise.id}>
                 <TableCell className="font-medium">
                   {analise.numeroAnalise}
@@ -203,6 +208,7 @@ export function AnalisesQuimicasTable({
                   {format(new Date(analise.dataEntrada), "dd/MM/yyyy")}
                 </TableCell>
                 <TableCell>{analise.descricaoMaterial}</TableCell>
+                <TableCell>{analise.metalType || 'AU'}</TableCell>
                 <TableCell>
                   {/* Removemos 'as any' e confiamos no tipo corrigido do Badge */}
                   <ChemicalAnalysisStatusBadge status={analise.status} />
@@ -217,6 +223,11 @@ export function AnalisesQuimicasTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                      <DropdownMenuItem
+                        onClick={() => setAnaliseParaVisualizar(analise)}
+                      >
+                        Ver Detalhes
+                      </DropdownMenuItem>
                       {analise.status === "EM_ANALISE" && (
                         <>
                           <DropdownMenuItem
@@ -266,7 +277,7 @@ export function AnalisesQuimicasTable({
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
+            );})}
           </TableBody>
         </Table>
       </div>

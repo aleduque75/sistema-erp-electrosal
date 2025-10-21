@@ -132,6 +132,7 @@ export function VisualizarAnaliseModal({
               <DetailItem label="Nº Análise" value={analise.numeroAnalise} />
               <DetailItem label="Data de Entrada" value={format(new Date(analise.dataEntrada), "dd/MM/yyyy HH:mm")} />
               <DetailItem label="Material" value={analise.descricaoMaterial} />
+              <DetailItem label="Metal" value={analise.metalType || 'AU'} />
             </div>
             <div className="grid grid-cols-1">
                 <DetailItem label="Cliente" value={analise.cliente?.name || "N/A"} />

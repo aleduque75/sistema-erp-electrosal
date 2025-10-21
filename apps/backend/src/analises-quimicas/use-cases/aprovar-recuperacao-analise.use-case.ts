@@ -58,21 +58,20 @@ export class AprovarRecuperacaoAnaliseUseCase {
 
     await this.prisma.$transaction(async (tx) => {
       // Lógica correta: Credita o metal na conta de metal do cliente
-      let contaCliente = await this.contaMetalRepo.findByPessoaIdAndMetal(
+      let contaCliente = await this.contaMetalRepo.findByPersonId(
         analise.clienteId,
-        TipoMetal.AU,
+        analise.metalType,
         command.organizationId,
-        tx,
       );
 
       if (!contaCliente) {
         contaCliente = MetalAccount.create({
           pessoaId: analise.clienteId,
           name: analise.clienteId, // Using clienteId as name for now, assuming it's a client-specific account
-          metalType: TipoMetal.AU,
+          metalType: analise.metalType,
           organizationId: command.organizationId,
         });
-        await this.contaMetalRepo.create(contaCliente, tx);
+        await this.contaMetalRepo.create(contaCliente);
       }
 
       contaCliente.credit({ // MODIFIED to use the updated credit method
@@ -82,7 +81,7 @@ export class AprovarRecuperacaoAnaliseUseCase {
         origemTipo: 'AnaliseQuimica',
         observacao: `Crédito da Análise Nº ${analise.numeroAnalise}`,
       });
-      await this.contaMetalRepo.save(contaCliente, tx);
+      await this.contaMetalRepo.save(contaCliente);
     });
 
     return this.analiseRepo.save(analise, command.organizationId);

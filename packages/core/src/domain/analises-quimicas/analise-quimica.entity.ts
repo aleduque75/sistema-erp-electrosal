@@ -2,11 +2,13 @@ import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
 import { AggregateRoot } from "../../_shared/domain/aggregate-root";
 import { StatusAnaliseQuimica } from "../enums/status-analise-quimica.enum";
 import { nanoid } from 'nanoid';
+import { TipoMetal } from '../enums/tipo-metal.enum';
 
 export interface AnaliseQuimicaProps {
   id?: string;
   clienteId?: string | null;
   cliente?: { name: string };
+  metalType: TipoMetal;
   numeroAnalise: string;
   dataEntrada: Date;
   descricaoMaterial: string;
@@ -57,6 +59,7 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
   }
 
   get clienteId(): string | null | undefined { return this.props.clienteId; }
+  get metalType(): TipoMetal { return this.props.metalType; }
   get cliente(): { name: string } | undefined { return this.props.cliente; }
   get numeroAnalise(): string { return this.props.numeroAnalise; }
   get dataEntrada(): Date { return this.props.dataEntrada; }

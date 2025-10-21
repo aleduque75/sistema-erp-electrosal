@@ -43,6 +43,7 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     return {
       id: analise.id.toString(),
       organizationId,
+      metalType: analise.metalType,
       clienteId: analise.clienteId || null,
       numeroAnalise: analise.numeroAnalise,
       dataEntrada: analise.dataEntrada,
@@ -89,9 +90,17 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
 
   async findByNumeroAnalise(
     numeroAnalise: string,
+    organizationId: string,
   ): Promise<AnaliseQuimica | null> {
     return this.mapToDomain(
-      await this.prisma.analiseQuimica.findUnique({ where: { numeroAnalise } }),
+      await this.prisma.analiseQuimica.findUnique({
+        where: {
+          organizationId_numeroAnalise: {
+            organizationId,
+            numeroAnalise,
+          },
+        },
+      }),
     );
   }
 
@@ -142,6 +151,7 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
   async findAll(filtros?: FiltrosAnaliseQuimica & { organizationId?: string }): Promise<AnaliseQuimica[]> {
     const whereClause: Prisma.AnaliseQuimicaWhereInput = {};
     if (filtros?.organizationId) whereClause.organizationId = filtros.organizationId;
+    if (filtros?.metalType) whereClause.metalType = filtros.metalType;
     if (filtros?.clienteId) whereClause.clienteId = filtros.clienteId;
     if (filtros?.numeroAnalise)
       whereClause.numeroAnalise = {

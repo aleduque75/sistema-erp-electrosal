@@ -1,9 +1,11 @@
 import { AnaliseQuimica } from '../analise-quimica.entity';
 import { StatusAnaliseQuimica } from '../../enums/status-analise-quimica.enum';
+import { TipoMetal } from '../../enums/tipo-metal.enum';
 
 export class AnaliseQuimicaResponseDto {
   id!: string;
   clienteId!: string | null | undefined;
+  metalType!: TipoMetal;
   numeroAnalise!: string;
   dataEntrada!: Date;
   descricaoMaterial!: string;
@@ -32,6 +34,7 @@ export class AnaliseQuimicaResponseDto {
     const dto: AnaliseQuimicaResponseDto = {
       id: analise.id.toString(),
       clienteId: analise.clienteId,
+      metalType: analise.metalType,
       numeroAnalise: analise.numeroAnalise,
       dataEntrada: analise.dataEntrada,
       descricaoMaterial: analise.descricaoMaterial,

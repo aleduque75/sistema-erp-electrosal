@@ -14,6 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
@@ -27,6 +28,7 @@ import { getPessoas } from "@/services/pessoasApi";
 
 const formSchema = z.object({
   clienteId: z.string().uuid({ message: "Por favor, selecione um cliente." }),
+  metalType: z.enum(['AU', 'AG', 'RH'], { required_error: "O tipo de metal é obrigatório." }),
   dataEntrada: z.date({ required_error: "A data de entrada é obrigatória." }),
   descricaoMaterial: z.string().min(1, { message: "A descrição do material é obrigatória." }),
   volumeOuPesoEntrada: z.coerce.number().min(0.001, { message: "O valor deve ser maior que zero." }),
@@ -67,32 +69,57 @@ export function AnaliseQuimicaForm({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
       dataEntrada: new Date(),
+      metalType: 'AU',
     },
   });
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="clienteId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Cliente</FormLabel>
-              <FormControl>
-                <Combobox
-                  options={clientes.map(cliente => ({ value: cliente.id, label: cliente.name }))}
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="Selecione o cliente"
-                  searchPlaceholder="Buscar cliente..."
-                  emptyText="Nenhum cliente encontrado."
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="clienteId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cliente</FormLabel>
+                <FormControl>
+                  <Combobox
+                    options={clientes.map(cliente => ({ value: cliente.id, label: cliente.name }))}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Selecione o cliente"
+                    searchPlaceholder="Buscar cliente..."
+                    emptyText="Nenhum cliente encontrado."
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="metalType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Metal</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o metal" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="AU">Ouro (AU)</SelectItem>
+                    <SelectItem value="AG">Prata (AG)</SelectItem>
+                    <SelectItem value="RH">Ródio (RH)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}

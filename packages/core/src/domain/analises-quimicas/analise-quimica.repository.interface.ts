@@ -14,7 +14,7 @@ export interface IAnaliseQuimicaRepository {
     id: string,
     organizationId: string,
   ): Promise<AnaliseQuimica | null>;
-  findByNumeroAnalise(numeroAnalise: string): Promise<AnaliseQuimica | null>;
+  findByNumeroAnalise(numeroAnalise: string, organizationId: string): Promise<AnaliseQuimica | null>;
   findAllByClienteId(clienteId: string): Promise<AnaliseQuimica[]>;
   findAnalisesAprovadasSemOrdem(organizationId: string, clienteId?: string): Promise<AnaliseQuimica[]>;
   findAll(filtros?: FiltrosAnaliseQuimica & { organizationId?: string }): Promise<AnaliseQuimica[]>;

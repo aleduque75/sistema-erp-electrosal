@@ -2,6 +2,7 @@
 
 // Mantemos o import type, mas precisaremos do tipo de valor do Enum para a interface
 import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
+import { TipoMetal } from './tipo-metal';
 
 // Definindo a interface simplificada do cliente localmente
 export interface ClienteAnalise {
@@ -16,6 +17,7 @@ export interface AnaliseQuimica {
   numeroAnalise: string;
   dataEntrada: string;
   descricaoMaterial: string;
+  metalType?: TipoMetal;
   
   // Usando o novo tipo literal
   status: StatusAnaliseQuimicaLiteral;
