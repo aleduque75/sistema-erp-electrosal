@@ -50,7 +50,7 @@ interface AddItemModalProps {
   onOpenChange: (open: boolean) => void;
   products: Product[];
   items: SaleItem[];
-  onAddItem: (item: { productId: string; name: string; quantity: number; price: number; inventoryLotId?: string }) => void;
+  onAddItem: (item: { productId: string; name: string; quantity: number; price: number; inventoryLotId?: string; batchNumber?: string; }) => void;
   saleGoldQuote: number;
   laborCostTable: any[];
 }
@@ -181,6 +181,7 @@ export function AddItemModal({
       quantity: finalQuantity,
       price: itemPrice,
       inventoryLotId: selectedLot || undefined,
+      batchNumber: lot?.batchNumber,
     });
 
     onOpenChange(false); // Close modal on success

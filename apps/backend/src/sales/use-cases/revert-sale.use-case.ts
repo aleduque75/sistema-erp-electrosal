@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SaleStatus, TipoTransacaoPrisma } from '@prisma/client';
+import { SaleStatus, TipoTransacaoPrisma, SaleInstallmentStatus } from '@prisma/client';
 
 @Injectable()
 export class RevertSaleUseCase {
@@ -39,32 +39,42 @@ export class RevertSaleUseCase {
       }
 
       // 2. Reverse Financial Entries
-      if (sale.paymentMethod === 'A_VISTA') {
-        const originalTx = await tx.transacao.findFirst({
-            where: { descricao: `Recebimento da Venda #${sale.orderNumber}` }
-        });
-        if(originalTx && originalTx.contaCorrenteId) {
+      const accountsRec = await tx.accountRec.findMany({
+        where: { saleId: sale.id },
+        include: { transacoes: true },
+      });
+
+      for (const ar of accountsRec) {
+        if (ar.received) {
+          for (const transacao of ar.transacoes) {
             await tx.transacao.create({
-                data: {
-                    organizationId,
-                    tipo: TipoTransacaoPrisma.DEBITO,
-                    valor: sale.netAmount!,
-                    moeda: 'BRL',
-                    descricao: `Estorno da Venda #${sale.orderNumber}`,
-                    contaContabilId: originalTx.contaContabilId,
-                    contaCorrenteId: originalTx.contaCorrenteId,
-                    dataHora: new Date(),
-                }
+              data: {
+                organizationId,
+                tipo: TipoTransacaoPrisma.DEBITO,
+                valor: transacao.valor,
+                moeda: transacao.moeda,
+                descricao: `Estorno: ${transacao.descricao}`,
+                contaContabilId: transacao.contaContabilId,
+                contaCorrenteId: transacao.contaCorrenteId,
+                dataHora: new Date(),
+              },
             });
+          }
         }
-      } else if (sale.paymentMethod === 'A_PRAZO' || sale.paymentMethod === 'CREDIT_CARD') {
-        await tx.accountRec.deleteMany({ where: { saleId: sale.id } });
-      } else if (sale.paymentMethod === 'METAL') {
-        const metalLot = await tx.pure_metal_lots.findFirst({ where: { saleId: sale.id } });
-        if (metalLot) {
-            // This assumes the lot was not yet used. A more robust solution would check this.
-            await tx.pure_metal_lots.delete({ where: { id: metalLot.id } });
-        }
+
+        await tx.accountRec.update({
+          where: { id: ar.id },
+          data: { received: false, receivedAt: null },
+        });
+      }
+
+      await tx.saleInstallment.updateMany({
+        where: { saleId: sale.id },
+        data: { status: SaleInstallmentStatus.PENDING, paidAt: null },
+      });
+
+      if (sale.paymentMethod === 'METAL') {
+        await tx.pure_metal_lots.deleteMany({ where: { saleId: sale.id } });
         const metalEntry = await tx.metalAccountEntry.findFirst({ where: { sourceId: sale.id, type: 'SALE_PAYMENT' } });
         if(metalEntry) {
             const clientAccount = await tx.metalAccount.findUnique({where: {id: metalEntry.metalAccountId}});

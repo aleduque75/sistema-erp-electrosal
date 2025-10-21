@@ -16,6 +16,15 @@ interface SaleInstallment {
   dueDate: string;
   status: 'PENDING' | 'PAID' | 'OVERDUE';
   paidAt?: string;
+  accountRec?: {
+    transacoes?:
+      | {
+          contaCorrente?: {
+            nome: string;
+          } | null;
+        }[]
+      | null;
+  } | null;
 }
 
 interface InstallmentListProps {
@@ -51,20 +60,34 @@ export function InstallmentList({ installments }: InstallmentListProps) {
             <TableHead>Vencimento</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Data Pagamento</TableHead>
+            <TableHead>Conta Pagamento</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {installments.map((installment) => (
-            <TableRow key={installment.id}>
-              <TableCell>{installment.installmentNumber}</TableCell>
-              <TableCell>{installment.amount.toFixed(2)}</TableCell>
-              <TableCell>{new Date(installment.dueDate).toLocaleDateString()}</TableCell>
-              <TableCell>{getStatusBadge(installment.status)}</TableCell>
-              <TableCell>
-                {installment.paidAt ? new Date(installment.paidAt).toLocaleDateString() : '-'}
-              </TableCell>
-            </TableRow>
-          ))}
+          {installments.map((installment) => {
+            const correctedStatus = installment.paidAt ? 'PAID' : installment.status;
+            const paymentAccountName =
+              installment.accountRec?.transacoes?.[0]?.contaCorrente?.nome || '-';
+
+            return (
+              <TableRow key={installment.id}>
+                <TableCell>{installment.installmentNumber}</TableCell>
+                <TableCell>
+                  {parseFloat(installment.amount as any).toFixed(2)}
+                </TableCell>
+                <TableCell>
+                  {new Date(installment.dueDate).toLocaleDateString()}
+                </TableCell>
+                <TableCell>{getStatusBadge(correctedStatus)}</TableCell>
+                <TableCell>
+                  {installment.paidAt
+                    ? new Date(installment.paidAt).toLocaleDateString()
+                    : '-'}
+                </TableCell>
+                <TableCell>{paymentAccountName}</TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

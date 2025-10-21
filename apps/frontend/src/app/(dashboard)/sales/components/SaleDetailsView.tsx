@@ -25,6 +25,11 @@ const formatDate = (dateString?: string | null) => {
   return new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
+const formatGold = (value?: number | null) => {
+  if (value == null) return "-";
+  return `${value.toFixed(4).replace(".", ",")} g`;
+};
+
 interface SaleItem {
   id: string;
   product: {
@@ -41,6 +46,7 @@ interface AccountRec {
   receivedAt: string | null;
   amount: number;
   contaCorrente?: { name: string } | null;
+  transacao?: { goldAmount?: number; sale?: { goldPrice?: number } };
 }
 
 interface Sale {
@@ -71,9 +77,11 @@ interface SaleDetailsViewProps {
 export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps) {
   if (!sale) return null;
 
+  console.log('Sale object in SaleDetailsView:', sale);
+
   const receivedPayments = sale.accountsRec.filter(ar => ar.received);
   const pendingAccountsRec = sale.accountsRec.find(ar => !ar.received);
-  const paymentLocation = receivedPayments[0]?.contaCorrente?.name || 'N/A';
+  const paymentLocation = receivedPayments[0]?.transacao?.contaCorrente?.name || 'N/A';
 
   return (
     <div className="space-y-4">
@@ -144,14 +152,18 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
                   <TableHead>Data Recebimento</TableHead>
                   <TableHead>Conta</TableHead>
                   <TableHead className="text-right">Valor Recebido</TableHead>
+                  <TableHead className="text-right">Cotação</TableHead>
+                  <TableHead className="text-right">Valor em Ouro</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {receivedPayments.map((ar) => (
                   <TableRow key={ar.id}>
                     <TableCell>{formatDate(ar.receivedAt)}</TableCell>
-                    <TableCell>{ar.contaCorrente?.name || 'N/A'}</TableCell>
+                    <TableCell>{ar.transacao?.contaCorrente?.name || 'N/A'}</TableCell>
                     <TableCell className="text-right">{formatCurrency(ar.amount)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(ar.transacao?.sale?.goldPrice || 0)}</TableCell>
+                    <TableCell className="text-right">{formatGold(ar.transacao?.goldAmount)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -24,7 +24,10 @@ import { RevertSaleUseCase } from './use-cases/revert-sale.use-case';
 import { ReleaseToPcpUseCase } from './use-cases/release-to-pcp.use-case';
 import { SeparateSaleUseCase } from './use-cases/separate-sale.use-case';
 import { BackfillSaleGoldValueUseCase } from './use-cases/backfill-sale-gold-value.use-case';
+import { BackfillInstallmentsUseCase } from './use-cases/backfill-installments.use-case';
 import { ProcessClientMetalPaymentToSupplierUseCase, ProcessClientMetalPaymentToSupplierCommand } from './use-cases/process-client-metal-payment-to-supplier.use-case';
+import { LinkSaleItemToBatchUseCase } from './use-cases/link-sale-item-to-batch.use-case';
+import { LinkSaleItemToBatchDto } from './dtos/link-sale-item-to-batch.dto';
 
 import { Public } from '../auth/decorators/public.decorator';
 
@@ -43,7 +46,19 @@ export class SalesController {
     private readonly separateSaleUseCase: SeparateSaleUseCase,
     private readonly backfillSaleGoldValueUseCase: BackfillSaleGoldValueUseCase,
     private readonly processClientMetalPaymentToSupplierUseCase: ProcessClientMetalPaymentToSupplierUseCase,
+    private readonly backfillInstallmentsUseCase: BackfillInstallmentsUseCase,
+    private readonly linkSaleItemToBatchUseCase: LinkSaleItemToBatchUseCase,
   ) {}
+
+  @Post('link-item-to-batch')
+  async linkSaleItemToBatch(@Body() linkSaleItemToBatchDto: LinkSaleItemToBatchDto) {
+    return this.linkSaleItemToBatchUseCase.execute(linkSaleItemToBatchDto);
+  }
+
+  @Post('backfill-installments')
+  async backfillInstallments(@CurrentUser('organizationId') organizationId: string) {
+    return this.backfillInstallmentsUseCase.execute(organizationId);
+  }
 
   @Post()
   // @Roles(Role.ADMIN, Role.MANAGER) // Temporarily commented out until RolesGuard is found/implemented
@@ -154,8 +169,9 @@ export class SalesController {
   async separate(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') saleId: string,
+    @Body() body: { separationDate?: Date },
   ) {
-    await this.separateSaleUseCase.execute(organizationId, saleId);
+    await this.separateSaleUseCase.execute(organizationId, saleId, body?.separationDate);
     return { message: 'Venda separada com sucesso.' };
   }
 
@@ -176,5 +192,14 @@ export class SalesController {
   ) {
     const sale = await this.editSaleUseCase.execute(organizationId, saleId, editSaleDto);
     return sale;
+  }
+
+  @Patch(':id/revert')
+  async revert(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') saleId: string,
+  ) {
+    await this.revertSaleUseCase.execute(organizationId, saleId);
+    return { message: 'Venda revertida para PENDENTE com sucesso.' };
   }
 }

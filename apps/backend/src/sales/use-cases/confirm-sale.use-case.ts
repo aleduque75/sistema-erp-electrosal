@@ -36,9 +36,16 @@ export class ConfirmSaleUseCase {
         throw new NotFoundException(`Venda com status PENDENTE, A_SEPARAR ou SEPARADO com ID ${saleId} não encontrada.`);
       }
 
-      const { paymentMethod, contaCorrenteId, updatedGoldPrice } = confirmSaleDto;
+      const { paymentMethod, contaCorrenteId, updatedGoldPrice, paymentMetalType } = confirmSaleDto;
 
       let finalNetAmount = new Decimal(sale.netAmount || 0);
+
+      if (finalNetAmount.isZero()) {
+        finalNetAmount = sale.saleItems.reduce((acc, item) => {
+          return acc.plus(new Decimal(item.price).times(item.quantity));
+        }, new Decimal(0));
+      }
+
       let finalGoldPrice = new Decimal(sale.goldPrice || 0);
       let finalTotalAmount = new Decimal(sale.totalAmount || 0);
       let finalGoldValue = new Decimal(sale.goldValue || 0);
@@ -54,16 +61,19 @@ export class ConfirmSaleUseCase {
       if (!settings?.defaultReceitaContaId) throw new BadRequestException('Conta de receita padrão não configurada.');
 
       if (paymentMethod === 'METAL') {
+        if (!paymentMetalType) {
+          throw new BadRequestException('O tipo de metal de pagamento é obrigatório para vendas em metal.');
+        }
         if (finalGoldValue.lessThanOrEqualTo(0)) {
-          throw new BadRequestException('Valor em ouro inválido para pagamento em metal.');
+          throw new BadRequestException('Valor em gramas inválido para pagamento em metal.');
         }
 
         let clientAccount = await tx.metalAccount.findFirst({
-          where: { personId: sale.pessoaId, organizationId, type: TipoMetal.AU },
+          where: { personId: sale.pessoaId, organizationId, type: paymentMetalType },
         });
 
         if (!clientAccount) {
-          clientAccount = await tx.metalAccount.create({ data: { personId: sale.pessoaId, organizationId, type: TipoMetal.AU } });
+          clientAccount = await tx.metalAccount.create({ data: { personId: sale.pessoaId, organizationId, type: paymentMetalType } });
         }
 
         await tx.metalAccountEntry.create({
@@ -82,7 +92,7 @@ export class ConfirmSaleUseCase {
             organizationId,
             sourceType: 'SALE_PAYMENT',
             sourceId: sale.id,
-            metalType: TipoMetal.AU,
+            metalType: paymentMetalType,
             initialGrams: finalGoldValue.toNumber(),
             remainingGrams: finalGoldValue.toNumber(),
             purity: 1,
@@ -94,15 +104,28 @@ export class ConfirmSaleUseCase {
         await tx.transacao.create({ data: { organizationId, tipo: TipoTransacaoPrisma.CREDITO, valor: finalNetAmount, goldAmount: finalGoldValue, moeda: 'BRL', descricao: `Recebimento da Venda #${sale.orderNumber} (Pagamento em Metal)`, contaContabilId: settings.defaultReceitaContaId!, dataHora: new Date() } });
 
         // Create a corresponding AccountRec for history
-        await tx.accountRec.create({
+        const paymentDate = new Date();
+        const accountRec = await tx.accountRec.create({
           data: {
             organizationId,
             saleId: sale.id,
             description: `Recebimento (em metal) da Venda #${sale.orderNumber}`,
             amount: finalNetAmount,
-            dueDate: new Date(),
+            dueDate: paymentDate,
             received: true,
-            receivedAt: new Date(),
+            receivedAt: paymentDate,
+          },
+        });
+
+        await tx.saleInstallment.create({
+          data: {
+            saleId: sale.id,
+            installmentNumber: 1,
+            amount: finalNetAmount,
+            dueDate: paymentDate,
+            status: 'PAID',
+            paidAt: paymentDate,
+            accountRecId: accountRec.id,
           },
         });
 
@@ -113,17 +136,18 @@ export class ConfirmSaleUseCase {
         if (finalGoldPrice.isZero()) {
           throw new BadRequestException('Cotação do ouro não pode ser zero para calcular o valor em ouro.');
         }
+        const paymentDate = new Date();
         const goldAmountForTx = finalNetAmount.dividedBy(finalGoldPrice);
 
-        await tx.accountRec.create({
+        const accountRec = await tx.accountRec.create({
           data: {
             organizationId,
             saleId: sale.id,
             description: `Recebimento (à vista) da Venda #${sale.orderNumber}`,
             amount: finalNetAmount,
-            dueDate: new Date(),
+            dueDate: paymentDate,
             received: true,
-            receivedAt: new Date(),
+            receivedAt: paymentDate,
             contaCorrenteId: contaCorrenteId,
             transacoes: { // Nested create to link the transaction
               create: {
@@ -134,10 +158,22 @@ export class ConfirmSaleUseCase {
                 descricao: `Recebimento da Venda #${sale.orderNumber}`,
                 contaContabilId: settings.defaultReceitaContaId!,
                 contaCorrenteId: contaCorrenteId,
-                dataHora: new Date(),
+                dataHora: paymentDate,
                 goldAmount: goldAmountForTx, // Set the gold amount
               }
             }
+          },
+        });
+
+        await tx.saleInstallment.create({
+          data: {
+            saleId: sale.id,
+            installmentNumber: 1,
+            amount: finalNetAmount,
+            dueDate: paymentDate,
+            status: 'PAID',
+            paidAt: paymentDate,
+            accountRecId: accountRec.id,
           },
         });
       } else if (paymentMethod === 'A_PRAZO') {
@@ -153,13 +189,28 @@ export class ConfirmSaleUseCase {
 
         for (let i = 0; i < installmentsCount; i++) {
           const days = sale.paymentTerm.installmentsDays[i];
-          await tx.accountRec.create({
+          const dueDate = addDays(new Date(), days);
+
+          // 1. Create the AccountRec first
+          const accountRec = await tx.accountRec.create({
             data: {
               organizationId,
               saleId: sale.id,
               description: `Parcela ${i + 1}/${installmentsCount} da Venda #${sale.orderNumber}`,
               amount: installmentValue,
-              dueDate: addDays(new Date(), days),
+              dueDate: dueDate,
+            },
+          });
+
+          // 2. Then create the SaleInstallment, linking it to the new AccountRec
+          await tx.saleInstallment.create({
+            data: {
+              saleId: sale.id,
+              installmentNumber: i + 1,
+              amount: installmentValue,
+              dueDate: dueDate,
+              status: 'PENDING', // Explicitly set status
+              accountRecId: accountRec.id, // THE CRUCIAL LINK
             },
           });
         }

@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -17,6 +15,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Sale } from '../page';
+import { TipoMetal } from '@/types/tipo-metal';
 
 interface ConfirmSaleModalProps {
   sale: Sale | null;
@@ -41,6 +40,7 @@ export function ConfirmSaleModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [accounts, setAccounts] = useState<ContaCorrente[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | undefined>(undefined);
+  const [selectedMetalType, setSelectedMetalType] = useState<TipoMetal | undefined>(undefined);
 
   useEffect(() => {
     if (open && sale?.paymentMethod === 'A_VISTA') {
@@ -50,9 +50,10 @@ export function ConfirmSaleModal({
         toast.error('Falha ao buscar contas correntes.');
       });
     }
-    // Reset selection when modal closes or sale changes
+    // Reset selections when modal closes or sale changes
     if (!open) {
       setSelectedAccountId(undefined);
+      setSelectedMetalType(undefined);
     }
   }, [open, sale]);
 
@@ -61,7 +62,7 @@ export function ConfirmSaleModal({
 
     setIsSubmitting(true);
     try {
-      const payload: { paymentMethod: string; contaCorrenteId?: string } = {
+      const payload: { paymentMethod: string; contaCorrenteId?: string; paymentMetalType?: TipoMetal } = {
         paymentMethod: sale.paymentMethod,
       };
 
@@ -72,6 +73,13 @@ export function ConfirmSaleModal({
           return;
         }
         payload.contaCorrenteId = selectedAccountId;
+      } else if (sale.paymentMethod === 'METAL') {
+        if (!selectedMetalType) {
+          toast.error('Por favor, selecione o tipo de metal para pagamento.');
+          setIsSubmitting(false);
+          return;
+        }
+        payload.paymentMetalType = selectedMetalType;
       }
 
       await api.post(`/sales/${sale.id}/confirm`, payload);
@@ -87,7 +95,11 @@ export function ConfirmSaleModal({
   if (!sale) return null;
 
   const isVista = sale.paymentMethod === 'A_VISTA';
-  const isConfirmButtonDisabled = isSubmitting || (isVista && !selectedAccountId);
+  const isMetal = sale.paymentMethod === 'METAL';
+  const isConfirmButtonDisabled = 
+    isSubmitting || 
+    (isVista && !selectedAccountId) ||
+    (isMetal && !selectedMetalType);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -119,6 +131,22 @@ export function ConfirmSaleModal({
                       {account.nome}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {isMetal && (
+            <div className="space-y-2 pt-2">
+              <Label htmlFor="metal-type">Tipo de Metal do Pagamento</Label>
+              <Select value={selectedMetalType} onValueChange={(value) => setSelectedMetalType(value as TipoMetal)}>
+                <SelectTrigger id="metal-type">
+                  <SelectValue placeholder="Selecione o metal..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TipoMetal.AU}>Ouro (AU)</SelectItem>
+                  <SelectItem value={TipoMetal.AG}>Prata (AG)</SelectItem>
+                  <SelectItem value={TipoMetal.RH}>Ródio (RH)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

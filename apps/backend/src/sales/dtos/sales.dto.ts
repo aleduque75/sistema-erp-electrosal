@@ -1,16 +1,7 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsInt,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-  ValidateNested,
-} from 'class-validator';
+import { IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested, IsEnum } from 'class-validator';
+import { TipoMetal } from '@prisma/client';
 
 class SaleItemDto {
   @IsUUID() @IsNotEmpty() productId: string;
@@ -44,6 +35,10 @@ export class CreateSaleDto {
 export class UpdateSaleDto extends PartialType(CreateSaleDto) {}
 
 export class ConfirmSaleDto {
+  @IsEnum(TipoMetal)
+  @IsOptional()
+  paymentMetalType?: TipoMetal;
+
   @IsString()
   @IsNotEmpty()
   paymentMethod: 'A_VISTA' | 'A_PRAZO' | 'CREDIT_CARD' | 'METAL';

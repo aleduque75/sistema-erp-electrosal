@@ -67,6 +67,7 @@ export class SalesService {
         saleItems: {
           include: {
             product: true, // Inclui detalhes do produto em cada item
+            inventoryLot: true, // Inclui o lote para exibir o batchNumber
           },
         },
         adjustment: true, // Include the sale adjustment data
@@ -99,6 +100,7 @@ export class SalesService {
           product: item.product
             ? { id: item.product.id, name: item.product.name }
             : null,
+          inventoryLot: item.inventoryLot, // Garante que o lote seja passado
         })),
       };
     });
@@ -115,7 +117,19 @@ export class SalesService {
       include: {
         pessoa: true, // Inclui os dados do cliente
         paymentTerm: true, // Inclui o prazo de pagamento
-        installments: true, // Inclui as parcelas da venda
+        installments: {
+          include: {
+            accountRec: {
+              include: {
+                transacoes: {
+                  include: {
+                    contaCorrente: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         saleItems: {
           // Inclui os itens da venda
           include: {
@@ -132,6 +146,7 @@ export class SalesService {
             },
           },
         },
+        adjustment: true, // Inclui os dados de ajuste da venda
       },
     });
 
@@ -147,6 +162,7 @@ export class SalesService {
         product: item.product
           ? { id: item.product.id, name: item.product.name, goldValue: item.product.goldValue }
           : null,
+        inventoryLot: item.inventoryLot, // Garante que o lote seja passado
       })),
     };
 

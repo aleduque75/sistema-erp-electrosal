@@ -17,6 +17,8 @@ import { Sale } from '@/types/sale';
 import { InstallmentList } from '@/components/sales/InstallmentList';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+const formatGrams = (value: number | null | undefined) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(value || 0);
+const formatDecimal = (value: number | null | undefined) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
 
 interface SaleDetailsModalProps {
   sale: Sale | null;
@@ -41,18 +43,31 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
 
   const getPaymentInfo = () => {
     if (!sale) return 'N/A';
-    // Check if there are any paid installments
-    const paidInstallments = sale.installments?.filter(inst => inst.status === 'PAID');
-    if (paidInstallments && paidInstallments.length > 0) {
-      return 'Pago';
+
+    const receivedAccounts = sale.accountsRec?.filter(ar => ar.received) || [];
+
+    if (receivedAccounts.length > 0) {
+      const accountNames = receivedAccounts.map(ar => ar.transacao?.contaCorrente?.nome).filter(Boolean).join(', ');
+      return `Recebido em: ${accountNames}`;
     }
-    // Check if there are any pending installments
-    const pendingInstallments = sale.installments?.filter(inst => inst.status === 'PENDING' || inst.status === 'OVERDUE');
-    if (pendingInstallments && pendingInstallments.length > 0) {
-      return 'A Receber';
+
+    if (!sale.installments || sale.installments.length === 0) {
+      if (sale.status === 'FINALIZADO') return 'Finalizado';
+      return sale.paymentMethod?.replace('_', ' ') || 'Pendente';
     }
-    // Fallback for other payment methods or if no installments (e.g., METAL, A_VISTA)
-    return sale.paymentMethod?.replace('_', ' ') || 'Pendente';
+
+    const totalInstallments = sale.installments.length;
+    const paidInstallments = sale.installments.filter(
+      (inst) => inst.status === 'PAID' || inst.paidAt,
+    ).length;
+
+    if (paidInstallments === totalInstallments) {
+      return 'Finalizado';
+    }
+    if (paidInstallments > 0) {
+      return 'Parcialmente Pago';
+    }
+    return 'A Receber';
   };
 
   return (
@@ -84,6 +99,23 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                   <p className="text-muted-foreground">{new Date(sale.createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</p>
                   <h3 className="font-semibold mt-2">Status do Pagamento</h3>
                   <p className="text-muted-foreground font-bold">{getPaymentInfo()}</p>
+
+                  {sale.adjustment && (
+                    <>
+                      <h3 className="font-semibold mt-2">Cotação do Pagamento</h3>
+                      <p className="text-muted-foreground">{formatCurrency(sale.adjustment.paymentQuotation)}</p>
+                      <h3 className="font-semibold mt-2">Gramas Equivalentes Pagas</h3>
+                      <p className="text-muted-foreground">{formatGrams(sale.adjustment.paymentEquivalentGrams)} g</p>
+                      <h3 className="font-semibold mt-2">Ganho/Perda Cotação (%)</h3>
+                      <p className={`font-bold ${sale.adjustment.grossDiscrepancyGrams > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatDecimal(
+                          (sale.adjustment.grossDiscrepancyGrams /
+                            (sale.adjustment.saleExpectedGrams || 1)) *
+                            100,
+                        )}%
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -104,7 +136,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                       {sale.saleItems?.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell>{item.product.name}</TableCell>
-                          <TableCell>{item.inventoryLotId?.substring(0, 8) || 'N/A'}</TableCell>
+                          <TableCell>{item.inventoryLot?.batchNumber || 'N/A'}</TableCell>
                           <TableCell className="text-center">{item.quantity}</TableCell>
                           <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
                         </TableRow>

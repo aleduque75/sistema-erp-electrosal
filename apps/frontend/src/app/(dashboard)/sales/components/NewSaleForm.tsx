@@ -31,7 +31,7 @@ import { AddItemModal } from "./AddItemModal";
 // --- Interfaces ---
 interface Client { id: string; name: string; }
 interface Product { id: string; name: string; price: number; stock: number; inventoryLots: any[] }
-interface SaleItem { productId: string; name: string; quantity: number; price: number; stock: number; inventoryLotId?: string; }
+interface SaleItem { productId: string; name: string; quantity: number; price: number; stock: number; inventoryLotId?: string; batchNumber?: string; }
 interface ContaCorrente { id: string; nome: string; }
 interface Fee { id: string; installments: number; feePercentage: number; }
 interface PaymentTerm { id: string; name: string; installmentsDays: number[]; interestRate?: number; }
@@ -358,7 +358,7 @@ export function NewSaleForm({ onSave }: any) {
                     {items.length > 0 ? (
                       items.map((item) => (
                         <TableRow key={`${item.productId}-${item.inventoryLotId || 'stock'}`}>
-                          <TableCell>{item.name}{item.inventoryLotId && ` (Lote: ${item.inventoryLotId.substring(0,8)})`}</TableCell>
+                          <TableCell>{item.name}{item.batchNumber && ` (Lote: ${item.batchNumber})`}</TableCell>
                           <TableCell>{Number(item.quantity).toFixed(4)}</TableCell>
                           <TableCell>{formatCurrency(item.price)}</TableCell>
                           <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>

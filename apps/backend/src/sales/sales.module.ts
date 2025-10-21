@@ -16,6 +16,8 @@ import { ReleaseToPcpUseCase } from './use-cases/release-to-pcp.use-case';
 import { CalculateSaleAdjustmentUseCase } from './use-cases/calculate-sale-adjustment.use-case';
 import { BackfillSaleGoldValueUseCase } from './use-cases/backfill-sale-gold-value.use-case';
 import { QuotationsModule } from '../quotations/quotations.module';
+import { BackfillInstallmentsUseCase } from './use-cases/backfill-installments.use-case';
+import { LinkSaleItemToBatchUseCase } from './use-cases/link-sale-item-to-batch.use-case';
 import { ProcessClientMetalPaymentToSupplierUseCase } from './use-cases/process-client-metal-payment-to-supplier.use-case'; // New Use Case
 import { PrismaMetalAccountRepository } from '../metal-accounts/repositories/prisma-metal-account.repository'; // Assuming path
 import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositories/prisma-metal-account-entry.repository'; // Assuming path
@@ -31,7 +33,7 @@ import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositorie
 
   ],
   controllers: [SalesController],
-  exports: [SalesService, CalculateSaleAdjustmentUseCase, BackfillSaleGoldValueUseCase], // Adicionado exports
+  exports: [SalesService, CalculateSaleAdjustmentUseCase, BackfillSaleGoldValueUseCase, BackfillInstallmentsUseCase], // Adicionado exports
   providers: [
     SalesService,
     CreateSaleUseCase,
@@ -44,6 +46,8 @@ import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositorie
     SeparateSaleUseCase,
     CalculateSaleAdjustmentUseCase,
     BackfillSaleGoldValueUseCase,
+    BackfillInstallmentsUseCase, // Add new use case
+    LinkSaleItemToBatchUseCase,
     ProcessClientMetalPaymentToSupplierUseCase, // Add new use case
     {
       provide: 'IMetalAccountRepository',
