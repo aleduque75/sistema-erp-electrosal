@@ -24,8 +24,9 @@ export class QuotationsController {
     @CurrentUser('orgId') organizationId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('metalType') metalType?: string,
   ) {
-    return this.quotationsService.findAll(organizationId, startDate, endDate);
+    return this.quotationsService.findAll(organizationId, startDate, endDate, metalType);
   }
 
   @Get('by-date')

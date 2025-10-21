@@ -14,13 +14,16 @@ export class SettingsService {
     let prismaSettings = await this.prisma.userSettings.findUnique({
       where: { userId },
     });
+    console.log('[DEBUG] SettingsService - prismaSettings (raw):', prismaSettings);
     if (!prismaSettings) {
       const newSettings = UserSettings.create({ userId });
       prismaSettings = await this.prisma.userSettings.create({
         data: UserSettingsMapper.toPersistence(newSettings),
       });
     }
-    return UserSettingsMapper.toDomain(prismaSettings);
+    const domainSettings = UserSettingsMapper.toDomain(prismaSettings);
+    console.log('[DEBUG] SettingsService - domainSettings:', domainSettings);
+    return domainSettings;
   }
 
   // Atualiza as configurações

@@ -36,8 +36,15 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async findByIdAndOrganization(id: string, organizationId: string, include?: any): Promise<User | null> {
-    return this.prisma.user.findFirst({ where: { id, organizationId }, include });
+  async findByIdAndOrganization(
+    id: string,
+    organizationId: string,
+    include?: any,
+  ): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: { id, organizationId },
+      include,
+    });
   }
 
   // --- 👇 MÉTODOS FALTANTES ADICIONADOS AQUI 👇 ---
@@ -45,7 +52,11 @@ export class UsersService {
     return this.prisma.user.findMany({ where: { organizationId } });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto, organizationId: string): Promise<User> {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+    organizationId: string,
+  ): Promise<User> {
     if (updateUserDto.password) {
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
     }
@@ -61,7 +72,9 @@ export class UsersService {
     });
   }
 
-  async getUserSettingsByOrganizationId(organizationId: string): Promise<UserSettings | null> {
+  async getUserSettingsByOrganizationId(
+    organizationId: string,
+  ): Promise<UserSettings | null> {
     const user = await this.prisma.user.findFirst({
       where: { organizationId },
       include: { settings: true },

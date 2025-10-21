@@ -29,7 +29,8 @@ interface AccountRec {
   received: boolean;
   receivedAt?: string | null;
   sale?: { id: string; orderNumber: number };
-  pessoa?: { name: string }; // Assuming sale includes pessoa
+  pessoa?: { name: string };
+  clientId: string;
 }
 
 interface SaleDetails extends AccountRec { /* Combine for simplicity */ }

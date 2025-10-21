@@ -43,7 +43,7 @@ export class QuotationsService {
     }
   }
 
-  async findAll(organizationId: string, startDate?: string, endDate?: string) {
+  async findAll(organizationId: string, startDate?: string, endDate?: string, metalType?: string) {
     const where: Prisma.QuotationWhereInput = { organizationId };
 
     if (startDate) {
@@ -52,6 +52,11 @@ export class QuotationsService {
 
     if (endDate) {
       where.date = { ...(where.date as object), lte: new Date(endDate) };
+    }
+
+    if (metalType) {
+      const metalTypes = metalType.split(',').map(type => type.trim().toUpperCase() as TipoMetal);
+      where.metal = { in: metalTypes };
     }
 
     return this.prisma.quotation.findMany({

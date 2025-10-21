@@ -1,7 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { IPessoaRepository, Pessoa, EmailVO, DocumentoFiscalVO, UniqueEntityID } from '@sistema-erp-electrosal/core';
+import {
+  IPessoaRepository,
+  Pessoa,
+  EmailVO,
+  DocumentoFiscalVO,
+  UniqueEntityID,
+} from '@sistema-erp-electrosal/core';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Pessoa as PrismaPessoa, Client, Fornecedor, Funcionario } from '@prisma/client';
+import {
+  Pessoa as PrismaPessoa,
+  Client,
+  Fornecedor,
+  Funcionario,
+} from '@prisma/client';
 
 // Define a type that includes relations for conversion
 type PessoaWithRelations = PrismaPessoa & {
@@ -62,7 +73,10 @@ export class PrismaPessoaRepository implements IPessoaRepository {
     return this.toDomain(pessoa);
   }
 
-  async findByEmail(email: EmailVO, organizationId: string): Promise<Pessoa | null> {
+  async findByEmail(
+    email: EmailVO,
+    organizationId: string,
+  ): Promise<Pessoa | null> {
     const pessoa = await this.prisma.pessoa.findFirst({
       where: {
         email: email.valor,
@@ -81,10 +95,16 @@ export class PrismaPessoaRepository implements IPessoaRepository {
 
     return this.toDomain(pessoa);
   }
-  async findByDocumento(documento: DocumentoFiscalVO, organizationId: string): Promise<Pessoa | null> {
+  async findByDocumento(
+    documento: DocumentoFiscalVO,
+    organizationId: string,
+  ): Promise<Pessoa | null> {
     throw new Error('Method not implemented.');
   }
-  async findByGoogleId(googleId: string, organizationId: string): Promise<Pessoa | null> {
+  async findByGoogleId(
+    googleId: string,
+    organizationId: string,
+  ): Promise<Pessoa | null> {
     throw new Error('Method not implemented.');
   }
 
@@ -102,7 +122,10 @@ export class PrismaPessoaRepository implements IPessoaRepository {
     return pessoas.map(this.toDomain);
   }
 
-  async findManyByIds(ids: string[], organizationId: string): Promise<Pessoa[]> {
+  async findManyByIds(
+    ids: string[],
+    organizationId: string,
+  ): Promise<Pessoa[]> {
     throw new Error('Method not implemented.');
   }
   async create(pessoa: Pessoa, organizationId: string): Promise<Pessoa> {
