@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EditQuotationModal } from "@/components/quotations/EditQuotationModal";
 import { NovaQuotationModal } from "@/components/quotations/NovaQuotationModal";
 import {
   Card,
@@ -29,6 +30,9 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Quotation {
   id: string;
@@ -69,6 +73,15 @@ export default function QuotationsPage() {
   const handleFilter = () => {
     fetchQuotations();
   }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await api.delete(`/quotations/${id}`);
+      fetchQuotations();
+    } catch (error) {
+      console.error("Erro ao excluir cotação:", error);
+    }
+  };
 
   const handleSaveSuccess = () => {
     fetchQuotations();
@@ -115,7 +128,7 @@ export default function QuotationsPage() {
                   <TableRow key={quotation.id}>
                     <TableCell>{quotation.metal}</TableCell>
                     <TableCell>
-                      {new Date(quotation.date).toLocaleDateString()}
+                      {format(new Date(quotation.date), "PPP", { locale: ptBR })}
                     </TableCell>
                     <TableCell>{quotation.buyPrice.toFixed(2)}</TableCell>
                     <TableCell>{quotation.sellPrice.toFixed(2)}</TableCell>
@@ -129,17 +142,9 @@ export default function QuotationsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <EditQuotationModal quotation={quotation} onSaveSuccess={handleSaveSuccess} />
                           <DropdownMenuItem
-                            onClick={() =>
-                              console.log("Editar cotação:", quotation.id)
-                            }
-                          >
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              console.log("Excluir cotação:", quotation.id)
-                            }
+                            onClick={() => handleDelete(quotation.id)}
                           >
                             Excluir
                           </DropdownMenuItem>

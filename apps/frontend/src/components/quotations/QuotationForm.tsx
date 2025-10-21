@@ -38,6 +38,7 @@ const METAL_TYPES = ['AU', 'AG', 'RH'] as const;
 // 2. CORREÇÃO DE TIPAGEM: Usamos a sintaxe `typeof` para referenciar o tipo do Enum na interface
 interface QuotationFormProps { 
   onSave: () => void;
+  id?: string;
   initialData?: {
     metal: (typeof TipoMetal)[keyof typeof TipoMetal]; 
     date: Date;
@@ -50,7 +51,17 @@ interface QuotationFormProps {
 const formSchema = z.object({
   // 3. CORREÇÃO ZOD: Usando z.enum com o array literal
   metal: z.enum(METAL_TYPES, { required_error: "O metal é obrigatório." }),
-  date: z.date({ required_error: "A data é obrigatória." }),
+  date: z.string().transform((val, ctx) => {
+    const date = parse(val, "yyyy-MM-dd", new Date());
+    if (isNaN(date.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Data inválida",
+      });
+      return z.NEVER;
+    }
+    return date;
+  }),
   buyPrice: z.coerce.number().min(0.01, "O valor de compra deve ser maior que zero."),
   sellPrice: z.coerce.number().min(0.01, "O valor de venda deve ser maior que zero."),
   tipoPagamento: z.string().optional(),
@@ -58,13 +69,16 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function QuotationForm({ onSave, initialData }: QuotationFormProps) { 
+export function QuotationForm({ onSave, id, initialData }: QuotationFormProps) { 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      ...initialData,
+      date: format(initialData.date, "yyyy-MM-dd"),
+    } : {
       // 4. CORREÇÃO DEFAULT VALUE: Usando a string literal 'AU'
       metal: 'AU', 
-      date: new Date(), 
+      date: format(new Date(), "yyyy-MM-dd"), 
       buyPrice: 0, 
       sellPrice: 0, 
       tipoPagamento: "",
@@ -79,8 +93,13 @@ export function QuotationForm({ onSave, initialData }: QuotationFormProps) {
           date: data.date.toISOString(), 
       };
 
-      await api.post("/quotations", dataToSend);
-      toast.success("Cotação salva com sucesso!");
+      if (id) {
+        await api.patch(`/quotations/${id}`, dataToSend);
+        toast.success("Cotação atualizada com sucesso!");
+      } else {
+        await api.post("/quotations", dataToSend);
+        toast.success("Cotação salva com sucesso!");
+      }
       onSave();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Ocorreu um erro ao salvar a cotação.");
@@ -122,39 +141,11 @@ export function QuotationForm({ onSave, initialData }: QuotationFormProps) {
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Data</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP", { locale: ptBR })
-                      ) : (
-                        <span>Escolha uma data</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
               <Input
-                type="text"
-                placeholder="Ou digite a data (dd/mm/aaaa)"
+                type="date"
+                value={format(field.value, "yyyy-MM-dd")}
                 onChange={(e) => {
-                  const date = parse(e.target.value, "dd/MM/yyyy", new Date());
+                  const date = parse(e.target.value, "yyyy-MM-dd", new Date());
                   if (!isNaN(date.getTime())) {
                     field.onChange(date);
                   }

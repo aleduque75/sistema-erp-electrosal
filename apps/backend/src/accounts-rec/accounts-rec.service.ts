@@ -48,11 +48,18 @@ export class AccountsRecService {
       where.received = false;
     }
 
-    return this.prisma.accountRec.findMany({
+    const accounts = await this.prisma.accountRec.findMany({
       where,
-      include: { sale: true },
-      orderBy: { dueDate: 'asc' },
+      include: {
+        sale: { include: { pessoa: { include: { client: true } } } },
+        transacoes: true, // Include transactions
+      },
     });
+
+    return accounts.map((account) => ({
+      ...account,
+      clientId: account.sale?.pessoa?.client?.pessoaId || null, // Adiciona o clientId
+    }));
   }
 
   async findOne(
@@ -61,7 +68,7 @@ export class AccountsRecService {
   ): Promise<AccountRec> {
     const account = await this.prisma.accountRec.findFirst({
       where: { id, organizationId },
-      include: { sale: true },
+      include: { sale: { include: { pessoa: { include: { client: true } } } } },
     });
     if (!account) {
       throw new NotFoundException(
@@ -180,6 +187,7 @@ export class AccountsRecService {
           descricao: `Recebimento de: ${accountToReceive.description}`,
           valor: amountReceived,
           goldAmount: goldAmount,
+          goldPrice: paymentQuotation,
           moeda: 'BRL',
           dataHora: receivedAt,
           accountRecId: updated.id, // Link to the AccountRec

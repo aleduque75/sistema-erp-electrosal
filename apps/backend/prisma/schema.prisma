@@ -337,6 +337,7 @@ model AccountRec {
   dueDate         DateTime
   received        Boolean           @default(false)
   receivedAt      DateTime?
+  amountPaid      Decimal           @db.Decimal(10, 2) @default(0)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   contaCorrenteId String?
@@ -445,6 +446,7 @@ model Transacao {
   fitId           String?
   organizationId  String
   goldAmount      Decimal?            @db.Decimal(10, 4)
+  goldPrice       Decimal?            @db.Decimal(10, 2)
   accountRecId    String?
   AccountPay      AccountPay?
   contaContabil   ContaContabil       @relation(fields: [contaContabilId], references: [id])
@@ -907,6 +909,7 @@ enum SaleInstallmentStatus {
   PENDING
   PAID
   OVERDUE
+  PARTIALLY_PAID
 }
 
 enum ReceivableStatus {

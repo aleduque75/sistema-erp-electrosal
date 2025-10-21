@@ -46,7 +46,7 @@ interface AccountRec {
   receivedAt: string | null;
   amount: number;
   contaCorrente?: { name: string } | null;
-  transacao?: { goldAmount?: number; sale?: { goldPrice?: number } };
+  transacoes: { goldAmount?: number; goldPrice?: number; contaCorrente?: { name: string } }[];
 }
 
 interface Sale {
@@ -160,10 +160,10 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
                 {receivedPayments.map((ar) => (
                   <TableRow key={ar.id}>
                     <TableCell>{formatDate(ar.receivedAt)}</TableCell>
-                    <TableCell>{ar.transacao?.contaCorrente?.name || 'N/A'}</TableCell>
+                    <TableCell>{ar.transacoes[0]?.contaCorrente?.name || (ar.transacoes[0]?.goldAmount ? 'Crédito de Metal' : 'N/A')}</TableCell>
                     <TableCell className="text-right">{formatCurrency(ar.amount)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(ar.transacao?.sale?.goldPrice || 0)}</TableCell>
-                    <TableCell className="text-right">{formatGold(ar.transacao?.goldAmount)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(ar.transacoes[0]?.goldPrice || 0)}</TableCell>
+                    <TableCell className="text-right">{formatGold(Number(ar.transacoes[0]?.goldAmount))}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

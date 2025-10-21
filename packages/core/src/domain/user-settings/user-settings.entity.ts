@@ -45,6 +45,14 @@ export class UserSettings extends Entity<UserSettingsProps> {
     return this.props.defaultDespesaContaId;
   }
 
+  get metalStockAccountId(): string | undefined {
+    return this.props.metalStockAccountId;
+  }
+
+  get productionCostAccountId(): string | undefined {
+    return this.props.productionCostAccountId;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt!;
   }
