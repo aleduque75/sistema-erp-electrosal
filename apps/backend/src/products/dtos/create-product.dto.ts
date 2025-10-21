@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -8,12 +9,14 @@ import {
   Min,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
+import { StockUnit } from '@prisma/client';
 
 export class CreateProductDto {
   @IsString() @IsNotEmpty() name: string;
   @IsString() @IsOptional() description?: string;
   @IsNumber() @Min(0) price: number;
   @IsNumber() @IsOptional() stock?: number;
+  @IsEnum(StockUnit) @IsOptional() stockUnit?: StockUnit;
   @IsNumber() @IsOptional() costPrice?: number; // Adicionado
   @IsNumber() @IsOptional() goldValue?: number; // Adicionado
   @IsUUID() @IsOptional() productGroupId?: string; // NOVO CAMPO

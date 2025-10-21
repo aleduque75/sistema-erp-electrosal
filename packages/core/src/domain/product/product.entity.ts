@@ -15,6 +15,8 @@ export interface ProductProps {
   price: number;
   costPrice?: number | null;
   stock: number;
+  stockUnit?: 'GRAMS' | 'KILOGRAMS';
+  goldValue?: number;
   inventoryLots?: InventoryLotProps[];
   productGroup?: ProductGroup;
   createdAt?: Date;
@@ -71,6 +73,14 @@ export class Product extends Entity<ProductProps> {
     return this.props.stock;
   }
 
+  get stockUnit(): 'GRAMS' | 'KILOGRAMS' | undefined {
+    return this.props.stockUnit;
+  }
+
+  get goldValue(): number | undefined {
+    return this.props.goldValue;
+  }
+
   get productGroup(): ProductGroup | undefined {
     return this.props.productGroup;
   }
@@ -96,6 +106,8 @@ export class Product extends Entity<ProductProps> {
       price: this.price,
       costPrice: this.costPrice,
       stock: this.stock,
+      stockUnit: this.stockUnit,
+      goldValue: this.goldValue,
       inventoryLots: this.inventoryLots.map(lot => ({
         id: lot.id.toString(),
         remainingQuantity: lot.remainingQuantity,

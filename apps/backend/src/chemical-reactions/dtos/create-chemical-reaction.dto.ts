@@ -1,5 +1,6 @@
-import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TipoMetal } from '@sistema-erp-electrosal/core';
 
 class SourceLotDto {
   @IsString()
@@ -11,6 +12,9 @@ class SourceLotDto {
 }
 
 export class CreateChemicalReactionDto {
+  @IsEnum(TipoMetal)
+  metalType: TipoMetal;
+
   @IsString()
   @IsNotEmpty()
   outputProductId: string;

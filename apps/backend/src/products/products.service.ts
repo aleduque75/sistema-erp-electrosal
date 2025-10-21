@@ -215,6 +215,7 @@ export class ProductsService {
       price: data.price,
       costPrice: data.costPrice,
       stock: data.stock,
+      stockUnit: data.stockUnit,
       goldValue: data.goldValue,
       productGroup: productGroup,
     }); // Update DDD entity

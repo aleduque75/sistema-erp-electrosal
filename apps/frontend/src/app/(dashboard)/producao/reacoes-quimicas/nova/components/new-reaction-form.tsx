@@ -41,9 +41,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { MetalLotSelectionModal } from "./metal-lot-selection-modal";
+import { TipoMetal } from "@/types/tipo-metal";
 
 // ZOD SCHEMA for the creation step
 const formSchema = z.object({
+  metalType: z.nativeEnum(TipoMetal, { required_error: "Selecione um tipo de metal." }),
   notes: z.string().optional(),
   sourceLots: z
     .array(
@@ -85,6 +87,7 @@ export function NewReactionForm() {
   const form = useForm<NewReactionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      metalType: TipoMetal.AU,
       notes: "",
       sourceLots: [],
       outputProductGroupId: "",
@@ -102,7 +105,7 @@ export function NewReactionForm() {
 
   const { data: productGroups, isLoading: isLoadingProductGroups } = useQuery<
     ProductGroup[]
-  >({
+  >({ 
     queryKey: ["productGroups"],
     queryFn: async () => {
       const response = await api.get("/product-groups");
@@ -113,6 +116,7 @@ export function NewReactionForm() {
   });
 
   const selectedOutputProductGroupId = form.watch("outputProductGroupId");
+  const selectedMetalType = form.watch("metalType");
   
   const selectedOutputProduct = useMemo(() => {
     const group = productGroups?.find((pg) => pg.id === selectedOutputProductGroupId);
@@ -150,6 +154,7 @@ export function NewReactionForm() {
 
     try {
       const payload = {
+        metalType: values.metalType,
         notes: values.notes,
         outputProductId: selectedOutputProduct.id,
         sourceLots: values.sourceLots,
@@ -178,11 +183,34 @@ export function NewReactionForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="metalType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Metal</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o metal..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={TipoMetal.AU}>Ouro (AU)</SelectItem>
+                      <SelectItem value={TipoMetal.AG}>Prata (AG)</SelectItem>
+                      <SelectItem value={TipoMetal.RH}>Ródio (RH)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Seção de Insumos */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">
-                  Insumos (Entrada de Ouro)
+                  Insumos (Entrada de Metal)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -217,7 +245,7 @@ export function NewReactionForm() {
                       name={`sourceLots.${index}.gramsToUse`}
                       render={({ field: quantityField }) => (
                         <FormItem className="w-32">
-                          <FormLabel>Quantidade (g Au)</FormLabel>
+                          <FormLabel>Quantidade (g)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -256,6 +284,7 @@ export function NewReactionForm() {
                     </Button>
                   </DialogTrigger>
                   <MetalLotSelectionModal
+                    metalType={selectedMetalType}
                     onSelectLots={handleSelectMetalLots}
                     onClose={() => setIsMetalLotModalOpen(false)}
                     existingSelectedLotIds={form

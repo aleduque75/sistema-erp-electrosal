@@ -29,6 +29,8 @@ export class ProductMapper {
         price: raw.price.toNumber(),
         costPrice: raw.costPrice?.toNumber() ?? undefined,
         stock: raw.stock ?? 0,
+        stockUnit: raw.stockUnit,
+        goldValue: raw.goldValue ?? undefined,
         inventoryLots: inventoryLots, // Mapeando os lotes
         productGroup: productGroup,
         createdAt: raw.createdAt,
@@ -48,6 +50,8 @@ export class ProductMapper {
       price: new Prisma.Decimal(product.price),
       costPrice: product.costPrice ? new Prisma.Decimal(product.costPrice) : null,
       stock: product.stock,
+      stockUnit: product.stockUnit,
+      goldValue: product.goldValue,
       productGroup: product.productGroup ? { connect: { id: product.productGroup.id.toString() } } : undefined,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,

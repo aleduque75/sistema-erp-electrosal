@@ -12,6 +12,7 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
     return ChemicalReaction.create(
       {
         organizationId: dbData.organizationId,
+        metalType: dbData.metalType,
         reactionDate: dbData.reactionDate,
         notes: dbData.notes || undefined,
         inputGoldGrams: dbData.inputGoldGrams,

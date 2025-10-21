@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ChemicalReactionStatusPrisma, TipoMetal, PureMetalLotStatus } from '@prisma/client';
+import { ChemicalReactionStatusPrisma, TipoMetal, PureMetalLotStatus, StockUnit } from '@prisma/client';
 import { CompleteReactionDto } from '../dtos/complete-reaction.dto';
 import { QuotationsService } from '../../quotations/quotations.service';
 import Decimal from 'decimal.js';
@@ -81,14 +81,22 @@ export class CompleteProductionStepUseCase {
       const totalCost = totalGoldGrams.times(goldQuote.buyPrice);
       const costPricePerGramOfProduct = goldInOutputProduct.gt(0) ? totalCost.dividedBy(outputProductGrams) : new Decimal(0);
 
+      // Determine the quantity to save based on the product's stock unit
+      let stockQuantity: number;
+      if (reaction.outputProduct.stockUnit === 'KILOGRAMS') {
+        stockQuantity = new Decimal(outputProductGrams).dividedBy(1000).toNumber();
+      } else {
+        stockQuantity = outputProductGrams;
+      }
+
       // Create Inventory Lot for the finished product
       const newInventoryLot = await tx.inventoryLot.create({
         data: {
           organizationId,
           productId: reaction.outputProductId, // Now safe to use
           batchNumber,
-          quantity: outputProductGrams,
-          remainingQuantity: outputProductGrams,
+          quantity: stockQuantity,
+          remainingQuantity: stockQuantity,
           costPrice: costPricePerGramOfProduct.toDecimalPlaces(2),
           sourceType: 'REACTION',
           sourceId: reaction.id,
@@ -101,7 +109,7 @@ export class CompleteProductionStepUseCase {
         data: {
           organizationId,
           productId: reaction.outputProductId,
-          quantity: outputProductGrams, // Positive quantity for stock increase
+          quantity: stockQuantity, // Positive quantity for stock increase
           type: 'REACTION_OUTPUT', // Indicates it came from a reaction
         },
       });
@@ -111,7 +119,7 @@ export class CompleteProductionStepUseCase {
         where: { id: reaction.outputProductId },
         data: {
           stock: {
-            increment: outputProductGrams,
+            increment: stockQuantity,
           },
         },
       });

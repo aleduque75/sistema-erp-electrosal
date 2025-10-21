@@ -35,6 +35,7 @@ interface Product {
   price: number;
   costPrice?: number;
   stock: number;
+  stockUnit: "GRAMS" | "KILOGRAMS";
   productGroupId?: string;
   goldValue?: number;
 }
@@ -47,10 +48,8 @@ const formSchema = z.object({
     .number()
     .positive("O preço de custo deve ser um número positivo.")
     .optional(),
-  stock: z.coerce
-    .number()
-    .int()
-    .nonnegative("O estoque não pode ser negativo."),
+  stock: z.coerce.number().nonnegative("O estoque não pode ser negativo."),
+  stockUnit: z.enum(["GRAMS", "KILOGRAMS"]),
   description: z.string().optional(),
   productGroupId: z.string().optional(),
   goldValue: z.coerce.number().optional(),
@@ -90,6 +89,7 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
       price: product?.price || 0,
       costPrice: product?.costPrice || 0,
       stock: product?.stock || 0,
+      stockUnit: product?.stockUnit || "GRAMS",
       description: product?.description || "",
       productGroupId: product?.productGroupId || "",
       goldValue: product?.goldValue || 0,
@@ -191,6 +191,31 @@ export function ProductForm({ product, onSave }: ProductFormProps) {
                 <FormControl>
                   <Input type="number" {...field} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="stockUnit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Unidade de Estoque</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a unidade" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="GRAMS">Gramas (g)</SelectItem>
+                    <SelectItem value="KILOGRAMS">Quilogramas (kg)</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

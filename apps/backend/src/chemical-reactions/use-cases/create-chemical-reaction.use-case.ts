@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateChemicalReactionDto } from '../dtos/create-chemical-reaction.dto';
-import { PureMetalLotStatus, ChemicalReactionStatusPrisma } from '@prisma/client';
+import { PureMetalLotStatus, ChemicalReactionStatusPrisma, TipoMetal } from '@prisma/client';
 import Decimal from 'decimal.js';
 
 export interface CreateChemicalReactionCommand {
@@ -15,7 +15,7 @@ export class CreateChemicalReactionUseCase {
 
   async execute(command: CreateChemicalReactionCommand): Promise<any> {
     const { organizationId, dto } = command;
-    const { sourceLots, notes, outputProductId } = dto;
+    const { sourceLots, notes, outputProductId, metalType } = dto;
 
     if (!sourceLots || sourceLots.length === 0) {
       throw new BadRequestException('Pelo menos um lote de origem deve ser fornecido.');
@@ -34,7 +34,7 @@ export class CreateChemicalReactionUseCase {
         throw new NotFoundException(`Produto de saída com ID ${outputProductId} não encontrado.`);
       }
 
-      // 2. Process source lots
+      // 2. Process source lots and validate metalType
       let totalGoldGrams = new Decimal(0);
       const sourceLotIds: string[] = [];
 
@@ -45,6 +45,13 @@ export class CreateChemicalReactionUseCase {
 
         if (!lot || lot.organizationId !== organizationId) {
           throw new NotFoundException(`Lote de metal puro com ID ${lotInfo.pureMetalLotId} não encontrado.`);
+        }
+
+        // Metal type validation
+        if (lot.metalType !== metalType) {
+          throw new BadRequestException(
+            `Todos os lotes de origem devem ser do tipo ${metalType}. O lote ${lot.id} é do tipo ${lot.metalType}.`,
+          );
         }
 
         if (new Decimal(lot.remainingGrams).lt(lotInfo.gramsToUse)) {
@@ -71,6 +78,7 @@ export class CreateChemicalReactionUseCase {
       const reaction = await tx.chemical_reactions.create({
         data: {
           organizationId,
+          metalType, // Save the metal type
           notes,
           status: ChemicalReactionStatusPrisma.STARTED,
           auUsedGrams: totalGoldGrams.toNumber(),

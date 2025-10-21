@@ -1,8 +1,10 @@
 import { AggregateRoot } from '../../_shared/domain/aggregate-root';
 import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
+import { TipoMetal } from '../enums/tipo-metal.enum';
 
 export interface ChemicalReactionProps {
   organizationId: string;
+  metalType: TipoMetal;
   reactionDate: Date;
   notes?: string;
   // Inputs
@@ -32,6 +34,8 @@ export class ChemicalReaction extends AggregateRoot<ChemicalReactionProps> {
     );
     return chemicalReaction;
   }
+
+  get metalType(): TipoMetal { return this.props.metalType; }
 
   // Adicionar getters conforme necessário
 }

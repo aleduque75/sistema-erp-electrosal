@@ -24,6 +24,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+import { TipoMetal } from "@/types/tipo-metal";
+
 interface MetalLot {
   id: string;
   remainingGrams: number;
@@ -38,12 +40,14 @@ interface MetalLot {
 }
 
 interface MetalLotSelectionModalProps {
+  metalType: TipoMetal;
   onSelectLots: (selectedLots: { lotId: string; quantity: number }[]) => void;
   onClose: () => void;
   existingSelectedLotIds: string[];
 }
 
 export function MetalLotSelectionModal({
+  metalType,
   onSelectLots,
   onClose,
   existingSelectedLotIds,
@@ -55,12 +59,13 @@ export function MetalLotSelectionModal({
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: metalLots, isLoading: isLoadingMetalLots } = useQuery<MetalLot[]>({
-    queryKey: ["metalLots"],
+    queryKey: ["metalLots", metalType],
     queryFn: async () => {
-      const response = await api.get("/pure-metal-lots?remainingGramsGt=0");
+      const response = await api.get(`/pure-metal-lots?remainingGramsGt=0&metalType=${metalType}`);
       console.log("Fetched pure_metal_lots:", response.data);
       return response.data;
     },
+    enabled: !!metalType, // Only fetch if metalType is selected
   });
 
   const filteredLots = useMemo(() => {
