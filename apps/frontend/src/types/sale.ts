@@ -39,7 +39,8 @@ export interface Sale {
     amount: number;
     description: string;
     received: boolean;
-    transacao?: Transacao;
+    receivedAt: string | null;
+    transacao?: Transacao & { contaCorrente?: { nome: string }; sale?: { goldPrice?: number } };
   }[];
   saleItems?: {
     id: string;

@@ -134,6 +134,25 @@ export const menuConfig: NavItem[] = [
     ],
   },
   {
+    title: "Estoque",
+    href: "#",
+    icon: Package,
+    subItems: [
+      {
+        title: "Extrato de Estoque",
+        href: "/estoque/extrato",
+        icon: FileText,
+        description: "Visualize o extrato de movimentação de um produto.",
+      },
+      {
+        title: "Ajuste Manual",
+        href: "/estoque/adjust",
+        icon: PlusCircle,
+        description: "Faça uma entrada ou saída manual no estoque.",
+      },
+    ],
+  },
+  {
     title: "Financeiro",
     href: "#",
     icon: DollarSign,

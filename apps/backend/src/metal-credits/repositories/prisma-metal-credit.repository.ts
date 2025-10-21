@@ -23,7 +23,7 @@ export class PrismaMetalCreditRepository implements IMetalCreditRepository {
       organizationId: metalCredit.organizationId,
       clientId: metalCredit.clientId,
       chemicalAnalysisId: metalCredit.chemicalAnalysisId,
-      metal: metalCredit.metal,
+      metalType: metalCredit.metalType,
       grams: metalCredit.grams,
       date: metalCredit.date,
     };

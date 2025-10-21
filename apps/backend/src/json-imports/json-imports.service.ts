@@ -8,6 +8,7 @@ import { SalesService } from '../sales/sales.service';
 import { Decimal } from '@prisma/client/runtime/library';
 
 import { ImportProductsUseCase } from './import-products.use-case';
+import { SalesMovementImportUseCase } from '../sales-movement-import/sales-movement-import.use-case';
 
 @Injectable()
 export class JsonImportsService {
@@ -17,6 +18,7 @@ export class JsonImportsService {
     private readonly prisma: PrismaService,
     private readonly salesService: SalesService,
     private readonly importProductsUseCase: ImportProductsUseCase,
+    private readonly salesMovementImportUseCase: SalesMovementImportUseCase,
   ) {}
 
   async resetAndSeed(): Promise<{ message: string }> {
@@ -510,42 +512,44 @@ export class JsonImportsService {
           const duplicatasDoPedido = duplicatas.filter(d => String(d.pedidoDuplicata).trim().startsWith(orderNumber));
 
           for (const duplicata of duplicatasDoPedido) {
-            const accountRecExternalId = duplicata['unique id'];
-            const newAccountRec = await this.prisma.accountRec.create({
-              data: {
-                organizationId: organizationId,
-                saleId: newSale.id,
-                description: duplicata.historico || `Duplicata para pedido ${orderNumber}`,
-                amount: this.parseDecimal(duplicata.valorBruto),
-                dueDate: this.parseDate(duplicata.dataVencimento),
-                received: duplicata.aberto === 'não',
-                receivedAt: duplicata.aberto === 'não' ? this.parseDate(duplicata.dataPagamento) : null,
-                externalId: accountRecExternalId,
-              }
-            });
+            if (this.parseDecimal(duplicata.valorBruto) > 0) {
+              const accountRecExternalId = duplicata['unique id'];
+              const newAccountRec = await this.prisma.accountRec.create({
+                data: {
+                  organizationId: organizationId,
+                  saleId: newSale.id,
+                  description: duplicata.historico || `Duplicata para pedido ${orderNumber}`,
+                  amount: this.parseDecimal(duplicata.valorBruto),
+                  dueDate: this.parseDate(duplicata.dataVencimento),
+                  received: duplicata.aberto === 'não',
+                  receivedAt: duplicata.aberto === 'não' ? this.parseDate(duplicata.dataPagamento) : null,
+                  externalId: accountRecExternalId,
+                }
+              });
 
-            if (newAccountRec.received) {
-              const financa = financasByDuplicataMap.get(String(duplicata.pedidoDuplicata).trim());
-              if (financa) {
-                const contaCorrenteName = String(financa.contaCorrente || '').trim().toLowerCase();
-                const contaCorrenteId = contasCorrentesMap.get(contaCorrenteName);
+              if (newAccountRec.received) {
+                const financa = financasByDuplicataMap.get(String(duplicata.pedidoDuplicata).trim());
+                if (financa) {
+                  const contaCorrenteName = String(financa.contaCorrente || '').trim().toLowerCase();
+                  const contaCorrenteId = contasCorrentesMap.get(contaCorrenteName);
 
-                await this.prisma.transacao.create({
-                  data: {
-                    organizationId: organizationId,
-                    tipo: 'CREDITO', // CORRIGIDO: Pagamento recebido é um crédito
-                    valor: this.parseDecimal(financa.valorRecebido),
-                    goldAmount: this.parseDecimal(financa.valorRecebidoAu),
-                    moeda: 'BRL',
-                    descricao: financa.descricao || `Pagamento para pedido ${orderNumber}`,
-                    dataHora: this.parseDate(financa.dataPagamento),
-                    contaContabilId: receitaConta.id,
-                    contaCorrenteId: contaCorrenteId,
-                    accountRecId: newAccountRec.id,
-                  },
-                });
-              } else {
-                this.logger.warn(`Nenhuma financa encontrada para a duplicata ${duplicata.pedidoDuplicata}.`);
+                  await this.prisma.transacao.create({
+                    data: {
+                      organizationId: organizationId,
+                      tipo: 'CREDITO', // CORRIGIDO: Pagamento recebido é um crédito
+                      valor: this.parseDecimal(financa.valorRecebido),
+                      goldAmount: this.parseDecimal(financa.valorRecebidoAu),
+                      moeda: 'BRL',
+                      descricao: financa.descricao || `Pagamento para pedido ${orderNumber}`,
+                      dataHora: this.parseDate(financa.dataPagamento),
+                      contaContabilId: receitaConta.id,
+                      contaCorrenteId: contaCorrenteId,
+                      accountRecId: newAccountRec.id,
+                    },
+                  });
+                } else {
+                  this.logger.warn(`Nenhuma financa encontrada para a duplicata ${duplicata.pedidoDuplicata}.`);
+                }
               }
             }
           }
@@ -865,9 +869,17 @@ export class JsonImportsService {
       await this.importContas(organizationId);
       await this.importProducts(organizationId);
       await this.importSalesAndFinance(organizationId);
-      await this.linkSalesAndReceivables(organizationId);
+      await this.backfillLotCreationMovements(organizationId); // Adicionado
       await this.salesService.backfillSaleAdjustments(organizationId);
-      return { message: 'Importação completa do legado concluída com sucesso!' };
+
+      // Etapa final: Executar a importação de movimentação de vendas
+      this.logger.log('Iniciando a etapa final: Importação e processamento da planilha de movimentação...');
+      const movementFilePath = path.join(process.cwd(), '..', '..', 'json-imports', 'MOVIMENTACAO_VIRGULA.csv');
+      const fileBuffer = await fs.readFile(movementFilePath);
+      await this.salesMovementImportUseCase.execute(fileBuffer);
+      this.logger.log('Planilha de movimentação processada com sucesso.');
+
+      return { message: 'Importação completa do legado, incluindo a planilha de movimentação, concluída com sucesso!' };
     } catch (error) {
       this.logger.error('Falha na importação completa do legado.', error.stack);
       throw new Error('Falha na importação completa do legado.');
@@ -877,5 +889,45 @@ export class JsonImportsService {
   async auditImportFiles(): Promise<{ message: string }> {
     this.logger.warn(`Método auditImportFiles chamado. Implementação pendente.`);
     return { message: `Auditoria de arquivos de importação (pendente de implementação).` };
+  }
+
+  async backfillLotCreationMovements(organizationId: string): Promise<{ message: string }> {
+    this.logger.log('Iniciando backfill de movimentos de criação de lotes...');
+
+    const inventoryLots = await this.prisma.inventoryLot.findMany({
+      where: { organizationId },
+      include: { reaction: true }, // Incluir a reação para pegar a data
+    });
+
+    let createdCount = 0;
+    for (const lot of inventoryLots) {
+      const existingMovement = await this.prisma.stockMovement.findFirst({
+        where: {
+          inventoryLotId: lot.id,
+          type: 'LOT_CREATION',
+        },
+      });
+
+      if (!existingMovement) {
+        // Usar a data da reação se disponível, senão a data de recebimento do lote
+        const createdAt = lot.reaction?.reactionDate || lot.receivedDate;
+
+        await this.prisma.stockMovement.create({
+          data: {
+            organizationId: lot.organizationId,
+            productId: lot.productId,
+            inventoryLotId: lot.id,
+            quantity: lot.quantity,
+            type: 'LOT_CREATION',
+            sourceDocument: `Criação Lote #${lot.batchNumber || lot.id.substring(0, 8)}`,
+            createdAt: createdAt,
+          },
+        });
+        createdCount++;
+      }
+    }
+
+    this.logger.log(`Backfill concluído. ${createdCount} movimentos de criação de lotes criados.`);
+    return { message: `Backfill de movimentos de criação de lotes concluído. ${createdCount} movimentos criados.` };
   }
 }

@@ -27,6 +27,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 interface Quotation {
   id: string;
   metal: string;
@@ -38,10 +41,16 @@ interface Quotation {
 
 export default function QuotationsPage() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const fetchQuotations = async () => {
     try {
-      const response = await api.get(`/quotations?_=${new Date().getTime()}`);
+      const params = new URLSearchParams();
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+
+      const response = await api.get(`/quotations?${params.toString()}`);
       const quotationsWithNumbers = response.data.map((q: Quotation) => ({
         ...q,
         buyPrice: Number(q.buyPrice),
@@ -56,6 +65,10 @@ export default function QuotationsPage() {
   useEffect(() => {
     fetchQuotations();
   }, []);
+
+  const handleFilter = () => {
+    fetchQuotations();
+  }
 
   const handleSaveSuccess = () => {
     fetchQuotations();
@@ -74,6 +87,17 @@ export default function QuotationsPage() {
           <NovaQuotationModal onSaveSuccess={handleSaveSuccess} />
         </CardHeader>
         <CardContent>
+          <div className="flex items-center space-x-4 mb-4">
+            <div>
+              <Label htmlFor="start-date">Data Inicial</Label>
+              <Input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="end-date">Data Final</Label>
+              <Input id="end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            </div>
+            <Button onClick={handleFilter}>Filtrar</Button>
+          </div>
           {quotations.length > 0 ? (
             <Table>
               <TableHeader>

@@ -47,9 +47,18 @@ export class ImportProductsUseCase {
                 organizationId,
                 name: oldProduct.produtoGrupo,
                 description: `Grupo importado de ${oldProduct.produtoGrupo}`,
-                isReactionProductGroup: oldProduct.produtoGrupo === 'Aurocianeto de Potassio',
+                isReactionProductGroup: oldProduct.produtoGrupo === 'Aurocianeto 68%',
               },
             });
+          } else {
+            // Se o grupo já existe, verifica se a flag está correta e atualiza se necessário
+            const shouldBeReactionGroup = oldProduct.produtoGrupo === 'Aurocianeto 68%';
+            if (productGroup.isReactionProductGroup !== shouldBeReactionGroup) {
+              productGroup = await this.prisma.productGroup.update({
+                where: { id: productGroup.id },
+                data: { isReactionProductGroup: shouldBeReactionGroup },
+              });
+            }
           }
           productGroupId = productGroup.id;
         }

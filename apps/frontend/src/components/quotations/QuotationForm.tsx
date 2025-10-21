@@ -28,7 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TipoMetal } from "@sistema-erp-electrosal/core"; 
 
@@ -150,6 +150,16 @@ export function QuotationForm({ onSave, initialData }: QuotationFormProps) {
                   />
                 </PopoverContent>
               </Popover>
+              <Input
+                type="text"
+                placeholder="Ou digite a data (dd/mm/aaaa)"
+                onChange={(e) => {
+                  const date = parse(e.target.value, "dd/MM/yyyy", new Date());
+                  if (!isNaN(date.getTime())) {
+                    field.onChange(date);
+                  }
+                }}
+              />
               <FormMessage />
             </FormItem>
           )}

@@ -93,6 +93,12 @@ export function UserNav() {
               <span>Configurar Prazos</span>
             </DropdownMenuItem>
           </Link>
+          <Link href="/ajuste-historico" passHref>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Ajuste Histórico</span>
+            </DropdownMenuItem>
+          </Link>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>

@@ -1,5 +1,6 @@
-import { IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TipoMetal } from '@prisma/client';
 
 export class GetPureMetalLotsDto {
   @IsOptional()
@@ -16,8 +17,8 @@ export class GetPureMetalLotsDto {
   sourceId?: string;
 
   @IsOptional()
-  @IsString()
-  metalType?: string;
+  @IsEnum(TipoMetal)
+  metalType?: TipoMetal;
 
   @IsOptional()
   @IsString()

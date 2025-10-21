@@ -42,7 +42,7 @@ export default function PcpPickingPage() {
             {row.original.saleItems.map(item => (
               <li key={item.id}>
                 {item.quantity}x {item.product.name}
-                {item.inventoryLotId && ` (Lote: ${item.inventoryLotId.substring(0, 8)})`}
+                {item.inventoryLot?.batchNumber && ` (Lote: ${item.inventoryLot.batchNumber})`}
               </li>
             ))}
           </ul>

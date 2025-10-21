@@ -107,11 +107,11 @@ export default function SaleAdjustmentPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Total da Venda (R$)</p>
-                  <p className="font-mono">{sale.totalAmount.toFixed(2)}</p>
+                  <p className="font-mono">{parseFloat(sale.totalAmount as any).toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Valor Recebido (R$)</p>
-                  <p className="font-mono">{sale.accountsRec.reduce((sum, ar) => sum + ar.amount, 0).toFixed(2)}</p>
+                  <p className="font-mono">{sale.accountsRec.reduce((sum, ar) => sum + parseFloat(ar.amount as any), 0).toFixed(2)}</p>
                 </div>
               </div>
             </div>

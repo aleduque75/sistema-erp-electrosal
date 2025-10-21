@@ -4,8 +4,8 @@ import type { AnaliseQuimica } from "@/types/analise-quimica";
 import type { CreateAnaliseQuimicaDto, UpdateAnaliseQuimicaDto, LancarResultadoDto } from "@/types/analise-quimica.dtos";
 
 
-export const getAnalisesQuimicas = async (): Promise<AnaliseQuimica[]> => {
-  const response = await apiClient.get("/analises-quimicas");
+export const getAnalisesQuimicas = async (params: string = ''): Promise<AnaliseQuimica[]> => {
+  const response = await apiClient.get(`/analises-quimicas?${params}`);
   return response.data;
 };
 

@@ -6,11 +6,15 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // Redefining Sale type to include full details needed for this page
 interface Sale {
@@ -40,8 +44,11 @@ export default function SeparacaoPedidoPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSaleItemId, setSelectedSaleItemId] = useState<string | null>(null);
+  const [batchNumber, setBatchNumber] = useState('');
 
-  useEffect(() => {
+  const fetchSale = () => {
     if (id) {
       setIsLoading(true);
       api.get(`/sales/${id}`)
@@ -49,7 +56,45 @@ export default function SeparacaoPedidoPage() {
         .catch(() => toast.error('Falha ao buscar dados do pedido.'))
         .finally(() => setIsLoading(false));
     }
+  };
+
+  useEffect(() => {
+    fetchSale();
   }, [id]);
+
+  const handleOpenModal = (saleItemId: string) => {
+    setSelectedSaleItemId(saleItemId);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedSaleItemId(null);
+    setBatchNumber('');
+  };
+
+  const handleLinkBatch = async () => {
+    console.log('handleLinkBatch called');
+    if (!selectedSaleItemId || !batchNumber) {
+      toast.error('Por favor, insira o número do lote.');
+      return;
+    }
+
+    console.log('Sending request to /sales/link-item-to-batch with', { saleItemId: selectedSaleItemId, batchNumber });
+
+    try {
+      await api.post('/sales/link-item-to-batch', {
+        saleItemId: selectedSaleItemId,
+        batchNumber,
+      });
+      toast.success('Lote vinculado com sucesso!');
+      handleCloseModal();
+      fetchSale(); // Refresh sale data
+    } catch (error) {
+      console.error('Error linking batch:', error);
+      toast.error('Falha ao vincular o lote. Verifique o número e tente novamente.');
+    }
+  };
 
   const generatePDF = () => {
     if (!sale) return;
@@ -107,11 +152,13 @@ export default function SeparacaoPedidoPage() {
     doc.save(`romaneio_${sale.orderNumber}.pdf`);
   };
 
+  const [separationDate, setSeparationDate] = useState(new Date());
+
   const handleConfirmSeparation = async () => {
     if (!sale) return;
 
     try {
-      await api.patch(`/sales/${sale.id}/separate`);
+      await api.patch(`/sales/${sale.id}/separate`, { separationDate });
       toast.success('Separação confirmada! Pedido pronto para faturamento.');
       router.push('/pcp/a-separar');
     } catch (error: any) {
@@ -133,7 +180,13 @@ export default function SeparacaoPedidoPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div><span className="font-semibold">Cliente:</span> {sale.pessoa.name}</div>
-            <div><span className="font-semibold">Data:</span> {new Date(sale.createdAt).toLocaleDateString('pt-BR')}</div>
+            <div><span className="font-semibold">Data da Venda:</span> {new Date(sale.createdAt).toLocaleDateString('pt-BR')}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="separation-date">Data da Separação</Label>
+              <Input id="separation-date" type="date" value={format(separationDate, 'yyyy-MM-dd')} onChange={(e) => setSeparationDate(new Date(e.target.value))} />
+            </div>
           </div>
           <Separator />
           <h3 className="font-semibold text-lg">Itens</h3>
@@ -143,6 +196,7 @@ export default function SeparacaoPedidoPage() {
                 <TableHead>Produto</TableHead>
                 <TableHead>Lote</TableHead>
                 <TableHead className="text-right">Quantidade</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -151,6 +205,11 @@ export default function SeparacaoPedidoPage() {
                   <TableCell>{item.product.name}</TableCell>
                   <TableCell>{item.inventoryLot?.batchNumber || 'N/A'}</TableCell>
                   <TableCell className="text-right">{item.quantity.toFixed(4)}</TableCell>
+                  <TableCell>
+                    {!item.inventoryLot && (
+                      <Button onClick={() => handleOpenModal(item.id)}>Vincular Lote</Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -161,6 +220,23 @@ export default function SeparacaoPedidoPage() {
           <Button onClick={handleConfirmSeparation}>Confirmar Separação</Button>
         </CardFooter>
       </Card>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vincular Lote</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Número do Lote"
+            value={batchNumber}
+            onChange={(e) => setBatchNumber(e.target.value)}
+          />
+          <DialogFooter>
+            <Button variant="secondary" onClick={handleCloseModal}>Cancelar</Button>
+            <Button onClick={handleLinkBatch}>Vincular</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

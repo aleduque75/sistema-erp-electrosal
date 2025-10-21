@@ -20,8 +20,12 @@ export class QuotationsController {
   }
 
   @Get()
-  findAll(@CurrentUser('orgId') organizationId: string) {
-    return this.quotationsService.findAll(organizationId);
+  findAll(
+    @CurrentUser('orgId') organizationId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.quotationsService.findAll(organizationId, startDate, endDate);
   }
 
   @Get('by-date')

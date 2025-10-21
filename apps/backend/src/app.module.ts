@@ -51,6 +51,9 @@ import { PureMetalLotsModule } from './pure-metal-lots/pure-metal-lots.module';
 import { StockModule } from './stock/stock.module';
 import { SaleAdjustmentsModule } from './sale-adjustments/sale-adjustments.module';
 import { MetalDepositsModule } from './metal-deposits/metal-deposits.module';
+import { DataCorrectionModule } from './data-correction/data-correction.module';
+import { SalesMovementImportModule } from './sales-movement-import/sales-movement-import.module';
+import { StockStatementModule } from './stock-statement/stock-statement.module';
 
 @Module({
   imports: [
@@ -102,6 +105,9 @@ import { MetalDepositsModule } from './metal-deposits/metal-deposits.module';
     StockModule,
     SaleAdjustmentsModule,
     MetalDepositsModule,
+    DataCorrectionModule,
+    SalesMovementImportModule,
+    StockStatementModule,
   ],
   controllers: [AppController],
   providers: [

@@ -68,10 +68,7 @@ export function ReceivePaymentForm({
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      await api.patch(`/accounts-rec/${accountRec.id}/receive`, {
-        ...data,
-        receivedAt: new Date(data.receivedAt),
-      });
+      await api.patch(`/accounts-rec/${accountRec.id}/receive`, data);
       toast.success("Recebimento registrado com sucesso!");
       onSave();
     } catch (err: any) {

@@ -10,21 +10,53 @@ export class QuotationsService {
 
   async create(organizationId: string, createQuotationDto: CreateQuotationDto) {
     const { metal, date, buyPrice, sellPrice, tipoPagamento } = createQuotationDto;
-    return this.prisma.quotation.create({
-      data: {
+    const quotationDate = new Date(date);
+
+    const existingQuotation = await this.prisma.quotation.findFirst({
+      where: {
         organizationId,
         metal,
-        date: new Date(date),
-        buyPrice: parseFloat(buyPrice),
-        sellPrice: parseFloat(sellPrice),
-        tipoPagamento,
+        date: quotationDate,
+        tipoPagamento: tipoPagamento || null,
       },
     });
+
+    if (existingQuotation) {
+      return this.prisma.quotation.update({
+        where: { id: existingQuotation.id },
+        data: {
+          buyPrice: parseFloat(buyPrice),
+          sellPrice: parseFloat(sellPrice),
+        },
+      });
+    } else {
+      return this.prisma.quotation.create({
+        data: {
+          organizationId,
+          metal,
+          date: quotationDate,
+          buyPrice: parseFloat(buyPrice),
+          sellPrice: parseFloat(sellPrice),
+          tipoPagamento,
+        },
+      });
+    }
   }
 
-  async findAll(organizationId: string) {
+  async findAll(organizationId: string, startDate?: string, endDate?: string) {
+    const where: Prisma.QuotationWhereInput = { organizationId };
+
+    if (startDate) {
+      where.date = { ...(where.date as object), gte: new Date(startDate) };
+    }
+
+    if (endDate) {
+      where.date = { ...(where.date as object), lte: new Date(endDate) };
+    }
+
     return this.prisma.quotation.findMany({
-      where: { organizationId },
+      where,
+      orderBy: { date: 'desc' },
     });
   }
 
