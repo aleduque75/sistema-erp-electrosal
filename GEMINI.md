@@ -417,5 +417,19 @@ Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, se
      - **Correção do `goldPrice`:** A lógica foi ajustada para garantir que, após o cálculo do ajuste, o campo `goldPrice` na entidade `Sale` seja preenchido com o `paymentQuotation` calculado.
    - **Status:** Concluído. O processo de importação agora é robusto, não trava e calcula os ajustes de venda corretamente.
 
+**2. Correções no Processo de Importação Completa e Extrato de Estoque**
+   - **Problema:** O processo de "Iniciar Importação Completa" apresentava falhas na criação de lotes, no tratamento de pedidos em aberto e na geração de contas a receber. Além disso, a tela de extrato de estoque necessitava de melhorias na ordenação.
+   - **Diagnóstico:**
+     - A importação de lotes estava incompleta porque o sistema sobrescrevia dados de lotes com o mesmo número no arquivo de movimentação.
+     - Pedidos com status "ABERTO" estavam sendo processados incorretamente, com baixa de estoque e quitação de parcelas indevidas.
+     - Contas a receber com valor zerado estavam sendo criadas, gerando dados desnecessários.
+     - O extrato de estoque não tinha uma ordenação consistente.
+   - **Solução Implementada:**
+     - **Correção na Criação de Lotes:** Ajustada a lógica em `sales-movement-import.use-case.ts` para garantir que todos os lotes únicos do arquivo `MOVIMENTACAO_VIRGULA.csv` sejam criados, evitando a sobrescrita de dados.
+     - **Tratamento de Pedidos em Aberto:** Adicionada uma verificação em `sales-movement-import.use-case.ts` para que vendas com status "ABERTO" não tenham seu estoque ou parcelas alterados durante a importação.
+     - **Validação de Contas a Receber:** Implementada uma condição em `json-imports.service.ts` para impedir a criação de contas a receber (`AccountRec`) com valor bruto igual a zero.
+     - **Ordenação do Extrato de Estoque:** A consulta no `stock-statement.service.ts` foi modificada para ordenar as movimentações por número do pedido (`orderNumber`) e, secundariamente, pela data, garantindo uma visualização clara e cronológica.
+   - **Status:** Concluído. O processo de importação está mais robusto e as visualizações de dados mais precisas.
+
 
 # Vendas uma de produto de revenda, a comissão seria o que pagou menos o que vendeu, seria uma porcentagem desse lucrobruto em venda do sal de au 68$, que vira da reação, ai muda, eu cobro uma mão de obra, que seria por exemplo teria que ter uma tabela, abaixo de 19 gramas cobro 1 gr, isso pode ser altarado , mas seria como padrão, vamos dar um exemplo de uma venda de 10 gr, na cotação de venda 606 e tem frete de R$ 70,00, recebo R$ 6736,00 em metal 11,115 g, mas a cotação de compra do fornecedor é 605,entao seria  11,13, essa diferença seria para uma conta diferença_cotação de 0,014 gr, para calculo de comissão seria a 1 gr de mão de obra menos custos, que ai teria que colocar. é bem complexo deu para entendeer, e queria importar do sistema antigo, os clientes tem um externalId do sistema antigo queria vincular as vendas, elas então em /home/aleduque/Documentos/cursos/sistema-erp-electrosal/json-imports    

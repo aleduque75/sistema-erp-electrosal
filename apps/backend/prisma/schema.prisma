@@ -651,7 +651,7 @@ model MetalCredit {
   clientId           String
   chemicalAnalysisId String         @unique
   metalType          TipoMetal      @default(AU)
-  grams              Float
+  grams              Decimal        @db.Decimal(10, 4)
   date               DateTime       @default(now())
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
@@ -1013,6 +1013,7 @@ enum SaleStatus {
   SEPARADO
   FINALIZADO
   CANCELADO
+  PAGO_PARCIALMENTE
 }
 
 enum SaleAdjustmentCalcMethod {

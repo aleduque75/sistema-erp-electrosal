@@ -10,7 +10,9 @@ export class QuotationsService {
 
   async create(organizationId: string, createQuotationDto: CreateQuotationDto) {
     const { metal, date, buyPrice, sellPrice, tipoPagamento } = createQuotationDto;
-    const quotationDate = new Date(date);
+    const utcDate = new Date(date);
+    // Construct a new Date object representing the local date
+    const quotationDate = new Date(utcDate.getFullYear(), utcDate.getMonth(), utcDate.getDate());
 
     const existingQuotation = await this.prisma.quotation.findFirst({
       where: {
@@ -87,7 +89,8 @@ export class QuotationsService {
       data.metal = updateQuotationDto.metal;
     }
     if (updateQuotationDto.date !== undefined) {
-      data.date = new Date(updateQuotationDto.date);
+      const utcDate = new Date(updateQuotationDto.date);
+      data.date = new Date(utcDate.getFullYear(), utcDate.getMonth(), utcDate.getDate());
     }
     if (updateQuotationDto.buyPrice !== undefined) {
       data.buyPrice = parseFloat(updateQuotationDto.buyPrice);

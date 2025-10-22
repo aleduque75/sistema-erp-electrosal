@@ -22,7 +22,9 @@ export class JsonImportsService {
   ) {}
 
   async resetAndSeed(): Promise<{ message: string }> {
-    this.logger.warn('Iniciando o processo de RESET e SEED do banco de dados...');
+    this.logger.warn(
+      'Iniciando o processo de RESET e SEED do banco de dados...',
+    );
 
     // 1. Limpar todas as tabelas na ordem correta para evitar erros de constraint
     await this.prisma.chemical_reactions.deleteMany({});
@@ -68,16 +70,21 @@ export class JsonImportsService {
 
     // 2. Executar o comando de seed do Prisma
     return new Promise((resolve, reject) => {
-      const seedProcess = exec('pnpm prisma db seed', (error, stdout, stderr) => {
-        if (error) {
-          this.logger.error(`Falha ao executar o seed: ${error.message}`);
-          this.logger.error(`Stderr: ${stderr}`);
-          reject({ message: 'Falha ao executar o seed do banco de dados.' });
-          return;
-        }
-        this.logger.log(`Saída do Seed: ${stdout}`);
-        resolve({ message: 'Banco de dados resetado e populado com sucesso!' });
-      });
+      const seedProcess = exec(
+        'pnpm prisma db seed',
+        (error, stdout, stderr) => {
+          if (error) {
+            this.logger.error(`Falha ao executar o seed: ${error.message}`);
+            this.logger.error(`Stderr: ${stderr}`);
+            reject({ message: 'Falha ao executar o seed do banco de dados.' });
+            return;
+          }
+          this.logger.log(`Saída do Seed: ${stdout}`);
+          resolve({
+            message: 'Banco de dados resetado e populado com sucesso!',
+          });
+        },
+      );
 
       if (seedProcess.stdout) {
         seedProcess.stdout.on('data', (data) => {
@@ -93,7 +100,6 @@ export class JsonImportsService {
     });
   }
 
-
   private parseDecimal(value: string): number {
     if (!value) return 0;
     return parseFloat(value.replace(',', '.'));
@@ -108,7 +114,9 @@ export class JsonImportsService {
   }
 
   async deleteAllSales() {
-    this.logger.warn('Iniciando a exclusão de TODAS as transações financeiras, vendas, e contas...');
+    this.logger.warn(
+      'Iniciando a exclusão de TODAS as transações financeiras, vendas, e contas...',
+    );
     try {
       // A ordem é importante para evitar erros de chave estrangeira
       await this.prisma.transacao.deleteMany({});
@@ -127,16 +135,28 @@ export class JsonImportsService {
       this.logger.log('Vendas excluídas.');
 
       this.logger.log('Exclusão completa concluída com sucesso.');
-      return { message: 'Todas as transações, vendas, e contas associadas foram excluídas com sucesso.' };
+      return {
+        message:
+          'Todas as transações, vendas, e contas associadas foram excluídas com sucesso.',
+      };
     } catch (error) {
-      this.logger.error('Ocorreu um erro ao excluir os dados financeiros.', error.stack);
+      this.logger.error(
+        'Ocorreu um erro ao excluir os dados financeiros.',
+        error.stack,
+      );
       throw new Error('Falha ao excluir dados financeiros.');
     }
   }
 
   async importOrUpdateCompanies(organizationId: string) {
     this.logger.log('Iniciando importação e atualização de empresas...');
-    const filePath = path.join(process.cwd(), '..', '..', 'json-imports', 'Empresa.json');
+    const filePath = path.join(
+      process.cwd(),
+      '..',
+      '..',
+      'json-imports',
+      'Empresa.json',
+    );
 
     try {
       const fileContent = await fs.readFile(filePath, 'utf-8');
@@ -155,7 +175,7 @@ export class JsonImportsService {
           });
           if (existingByCnpj) {
             this.logger.warn(
-              `CNPJ duplicado encontrado: \"${cnpj}\" para externalId ${externalId}. Pulando este registro.`, 
+              `CNPJ duplicado encontrado: \"${cnpj}\" para externalId ${externalId}. Pulando este registro.`,
             );
             skippedCount++;
             continue;
@@ -210,7 +230,7 @@ export class JsonImportsService {
 
         const userType = company.tagUsuario || company.tipoUsuario;
         if (userType) {
-          const roles = userType.split(',').map(role => role.trim());
+          const roles = userType.split(',').map((role) => role.trim());
 
           if (roles.includes('Cliente')) {
             await this.prisma.client.upsert({
@@ -254,21 +274,29 @@ export class JsonImportsService {
       }
 
       this.logger.log(
-        `Processamento de empresas concluído. ${processedCount} registros processados, ${skippedCount} registros pulados por duplicidade.`, 
+        `Processamento de empresas concluído. ${processedCount} registros processados, ${skippedCount} registros pulados por duplicidade.`,
       );
       return {
-        message: `${processedCount} registros de empresas foram processados, ${skippedCount} pulados.`, 
+        message: `${processedCount} registros de empresas foram processados, ${skippedCount} pulados.`,
       };
-
     } catch (error) {
-      this.logger.error('Falha ao processar o arquivo de empresas.', error.stack);
+      this.logger.error(
+        'Falha ao processar o arquivo de empresas.',
+        error.stack,
+      );
       throw new Error('Falha na importação de empresas.');
     }
   }
 
   async importContas(organizationId: string) {
     this.logger.log('Iniciando importação de contas correntes e de metal...');
-    const filePath = path.join(process.cwd(), '..', '..', 'json-imports', 'conta_corrente.json');
+    const filePath = path.join(
+      process.cwd(),
+      '..',
+      '..',
+      'json-imports',
+      'conta_corrente.json',
+    );
 
     try {
       const fileContent = await fs.readFile(filePath, 'utf-8');
@@ -289,11 +317,11 @@ export class JsonImportsService {
         }
 
         await this.prisma.contaCorrente.upsert({
-          where: { 
+          where: {
             organizationId_numeroConta: {
               organizationId: organizationId,
               numeroConta: nome, // Usando nome como número da conta
-            }
+            },
           },
           update: {
             initialBalanceBRL: this.parseDecimal(conta.saldoInicial),
@@ -309,13 +337,14 @@ export class JsonImportsService {
             type: type,
           },
         });
-        
+
         processedCount++;
       }
 
       this.logger.log(`${processedCount} contas processadas do JSON.`);
-      return { message: `${processedCount} contas foram processadas com sucesso.` };
-
+      return {
+        message: `${processedCount} contas foram processadas com sucesso.`,
+      };
     } catch (error) {
       this.logger.error('Falha ao processar o arquivo de contas.', error.stack);
       throw new Error('Falha na importação de contas.');
@@ -327,7 +356,13 @@ export class JsonImportsService {
 
     try {
       const basePath = path.join(process.cwd(), '..', '..', 'json-imports');
-      const [pedidosContent, itemsContent, financasContent, empresasContent, duplicatasContent] = await Promise.all([
+      const [
+        pedidosContent,
+        itemsContent,
+        financasContent,
+        empresasContent,
+        duplicatasContent,
+      ] = await Promise.all([
         fs.readFile(path.join(basePath, 'pedidos.json'), 'utf-8'),
         fs.readFile(path.join(basePath, 'pedidoItens.json'), 'utf-8'),
         fs.readFile(path.join(basePath, 'financeiro.json'), 'utf-8'),
@@ -345,7 +380,9 @@ export class JsonImportsService {
       this.logger.log('Mapeando e salvando cotações diárias...');
       const dailyQuotesMap = new Map<string, number>();
       for (const financa of financas) {
-        const data = this.parseDate(financa.dataPagamento || financa.dataVencimento);
+        const data = this.parseDate(
+          financa.dataPagamento || financa.dataVencimento,
+        );
         const dateString = data.toISOString().split('T')[0]; // Formato YYYY-MM-DD
         const cotacao = this.parseDecimal(financa.cotacao);
 
@@ -359,8 +396,8 @@ export class JsonImportsService {
                 organizationId: organizationId,
                 metal: 'AU',
                 date: new Date(dateString),
-                tipoPagamento: 'LEGADO'
-              }
+                tipoPagamento: 'LEGADO',
+              },
             },
             update: { buyPrice: cotacao, sellPrice: cotacao },
             create: {
@@ -369,19 +406,24 @@ export class JsonImportsService {
               date: new Date(dateString),
               buyPrice: cotacao,
               sellPrice: cotacao,
-              tipoPagamento: 'LEGADO'
-            }
+              tipoPagamento: 'LEGADO',
+            },
           });
         }
       }
-      this.logger.log(`${dailyQuotesMap.size} cotações diárias únicas foram mapeadas e salvas.`);
+      this.logger.log(
+        `${dailyQuotesMap.size} cotações diárias únicas foram mapeadas e salvas.`,
+      );
 
       // --- MAPEAMENTO DE DADOS ---
 
       const customerNameToExternalIdMap = new Map<string, string>();
       for (const empresa of empresas) {
         if (empresa.nome && empresa['unique id']) {
-          customerNameToExternalIdMap.set(empresa.nome.trim(), empresa['unique id']);
+          customerNameToExternalIdMap.set(
+            empresa.nome.trim(),
+            empresa['unique id'],
+          );
         }
       }
 
@@ -402,79 +444,49 @@ export class JsonImportsService {
         }
       }
 
-                        this.logger.log(`Mapeamento concluído: ${financasByDuplicataMap.size} registros financeiros mapeados.`);
+      this.logger.log(
+        `Mapeamento concluído: ${financasByDuplicataMap.size} registros financeiros mapeados.`,
+      );
 
-                  
+      // --- PROCESSAMENTO E CRIAÇÃO NO BANCO ---
 
-                        // --- PROCESSAMENTO E CRIAÇÃO NO BANCO ---
+      let createdCount = 0; // Vendas criadas
 
-                  
+      let skippedCount = 0; // Vendas puladas
 
-                        let createdCount = 0; // Vendas criadas
+      let errorCount = 0; // Vendas com erro
 
-                        let skippedCount = 0; // Vendas puladas
+      let despesasCriadasCount = 0; // Despesas criadas
 
-                        let errorCount = 0;   // Vendas com erro
+      let outrasTransacoesCriadasCount = 0; // Outras transações criadas
 
-                        let despesasCriadasCount = 0; // Despesas criadas
+      const productsMap = new Map(
+        (await this.prisma.product.findMany({ where: { organizationId } })).map(
+          (p) => [p.name.trim().toLowerCase(), p],
+        ),
+      );
 
-                        let outrasTransacoesCriadasCount = 0; // Outras transações criadas
+      const contasCorrentesMap = new Map(
+        (
+          await this.prisma.contaCorrente.findMany({
+            where: { organizationId },
+          })
+        ).map((c) => [c.nome.trim().toLowerCase(), c.id]),
+      );
 
-                  
+      const receitaConta = await this.prisma.contaContabil.findFirstOrThrow({
+        where: { organizationId, codigo: '4.1.1' },
+      });
 
-                        const productsMap = new Map((await this.prisma.product.findMany({ where: { organizationId } })).map(p => [p.name.trim().toLowerCase(), p]));
+      const despesaContaDefault =
+        await this.prisma.contaContabil.findFirstOrThrow({
+          where: { organizationId, codigo: '5.1.10' },
+        }); // CORRIGIDO: Usar Despesas Gerais
 
-                        const contasCorrentesMap = new Map((await this.prisma.contaCorrente.findMany({ where: { organizationId } })).map(c => [c.nome.trim().toLowerCase(), c.id]));
-
-                        const receitaConta = await this.prisma.contaContabil.findFirstOrThrow({ where: { organizationId, codigo: '4.1.1' } });
-
-                        const despesaContaDefault = await this.prisma.contaContabil.findFirstOrThrow({ where: { organizationId, codigo: '5.1.10' } }); // CORRIGIDO: Usar Despesas Gerais
-
-                  
-
-                        // --- 1. PROCESSAR VENDAS E RECEBIMENTOS ---      this.logger.log('Iniciando processamento de Vendas e Recebimentos...');
-      for (const pedido of pedidos) {
-        const orderNumber = String(pedido.numero).trim();
-
-        try {
-          const externalId = customerNameToExternalIdMap.get(pedido.cliente.trim());
-          if (!externalId) {
-            this.logger.warn(`Cliente "${pedido.cliente}" do pedido ${orderNumber} não encontrado. Pulando.`);
-            skippedCount++;
-            continue;
-          }
-
-          const pessoa = await this.prisma.pessoa.findUnique({ where: { externalId } });
-          if (!pessoa) {
-            this.logger.warn(`Pessoa com externalId ${externalId} não encontrada. Pulando pedido ${orderNumber}.`);
-            skippedCount++;
-            continue;
-          }
-
-          const saleItemsData = itemsByOrderNumberMap.get(orderNumber);
-          if (!saleItemsData || saleItemsData.length === 0) {
-            this.logger.warn(`Itens para o pedido ${orderNumber} não encontrados. Pulando.`);
-            skippedCount++;
-            continue;
-          }
-
-          const existingSale = await this.prisma.sale.findUnique({ where: { externalId: pedido['unique id'] } });
-          if (existingSale) {
-            skippedCount++;
-            continue;
-          }
-
-          const orderNumberInt = parseInt(orderNumber, 10);
-          if (isNaN(orderNumberInt)) {
-            this.logger.warn(`Número do pedido "${orderNumber}" não é um número válido. Pulando.`);
-            skippedCount++;
-            continue;
-          }
-
-          const totalAmountParsed = this.parseDecimal(pedido.valorTotal);
-          if (!totalAmountParsed || totalAmountParsed === 0) {
-            this.logger.warn(`Pedido ${orderNumber} com valorTotal ausente ou zerado no JSON.`);
-          }
+      // --- 1. PROCESSAR VENDAS E RECEBIMENTOS ---          const saleDate = this.parseDate(pedido.data);
+          const dateString = saleDate.toISOString().split('T')[0];
+          const goldPrice = dailyQuotesMap.get(dateString) || 0;
+          const goldValue = this.parseDecimal(pedido.valorTotalAu);
 
           const newSale = await this.prisma.sale.create({
             data: {
@@ -484,18 +496,24 @@ export class JsonImportsService {
               externalId: pedido['unique id'],
               totalAmount: totalAmountParsed,
               shippingCost: this.parseDecimal(pedido.valorFrete),
-              createdAt: this.parseDate(pedido.data),
+              createdAt: saleDate,
               paymentMethod: 'IMPORTADO',
+              goldPrice: goldPrice,
+              goldValue: goldValue,
               saleItems: {
-                create: saleItemsData.map(item => {
+                create: saleItemsData.map((item) => {
                   const productName = String(item.produto).trim().toLowerCase();
                   const product = productsMap.get(productName);
-                  if (!product) throw new Error(`Produto "${item.produto}" não encontrado no banco de dados.`);
-                  
-                  const quantity = this.parseDecimal(item.quantidade) || this.parseDecimal(item.quantidadeAu) || 0;
+                  if (!product)
+                    throw new Error(
+                      `Produto "${item.produto}" não encontrado no banco de dados.`,
+                    );
+
+                                    const quantity = this.parseDecimal(item.quantidadeSal) || this.parseDecimal(item.quantidade) || this.parseDecimal(item.quantidadeAu) || 0;
                   const totalValue = this.parseDecimal(item.valorTotalReal);
                   const price = quantity > 0 ? totalValue / quantity : 0;
-                  const costPriceAtSale = this.parseDecimal(item.cotacao) * quantity;
+                  const costPriceAtSale =
+                    this.parseDecimal(item.cotacao) * quantity;
 
                   return {
                     productId: product.id,
@@ -509,7 +527,9 @@ export class JsonImportsService {
             },
           });
 
-          const duplicatasDoPedido = duplicatas.filter(d => String(d.pedidoDuplicata).trim().startsWith(orderNumber));
+          const duplicatasDoPedido = duplicatas.filter((d) =>
+            String(d.pedidoDuplicata).trim().startsWith(orderNumber),
+          );
 
           for (const duplicata of duplicatasDoPedido) {
             if (this.parseDecimal(duplicata.valorBruto) > 0) {
@@ -518,20 +538,30 @@ export class JsonImportsService {
                 data: {
                   organizationId: organizationId,
                   saleId: newSale.id,
-                  description: duplicata.historico || `Duplicata para pedido ${orderNumber}`,
+                  description:
+                    duplicata.historico ||
+                    `Duplicata para pedido ${orderNumber}`,
                   amount: this.parseDecimal(duplicata.valorBruto),
                   dueDate: this.parseDate(duplicata.dataVencimento),
                   received: duplicata.aberto === 'não',
-                  receivedAt: duplicata.aberto === 'não' ? this.parseDate(duplicata.dataPagamento) : null,
+                  receivedAt:
+                    duplicata.aberto === 'não'
+                      ? this.parseDate(duplicata.dataPagamento)
+                      : null,
                   externalId: accountRecExternalId,
-                }
+                },
               });
 
               if (newAccountRec.received) {
-                const financa = financasByDuplicataMap.get(String(duplicata.pedidoDuplicata).trim());
+                const financa = financasByDuplicataMap.get(
+                  String(duplicata.pedidoDuplicata).trim(),
+                );
                 if (financa) {
-                  const contaCorrenteName = String(financa.contaCorrente || '').trim().toLowerCase();
-                  const contaCorrenteId = contasCorrentesMap.get(contaCorrenteName);
+                  const contaCorrenteName = String(financa.contaCorrente || '')
+                    .trim()
+                    .toLowerCase();
+                  const contaCorrenteId =
+                    contasCorrentesMap.get(contaCorrenteName);
 
                   await this.prisma.transacao.create({
                     data: {
@@ -540,7 +570,9 @@ export class JsonImportsService {
                       valor: this.parseDecimal(financa.valorRecebido),
                       goldAmount: this.parseDecimal(financa.valorRecebidoAu),
                       moeda: 'BRL',
-                      descricao: financa.descricao || `Pagamento para pedido ${orderNumber}`,
+                      descricao:
+                        financa.descricao ||
+                        `Pagamento para pedido ${orderNumber}`,
                       dataHora: this.parseDate(financa.dataPagamento),
                       contaContabilId: receitaConta.id,
                       contaCorrenteId: contaCorrenteId,
@@ -548,24 +580,32 @@ export class JsonImportsService {
                     },
                   });
                 } else {
-                  this.logger.warn(`Nenhuma financa encontrada para a duplicata ${duplicata.pedidoDuplicata}.`);
+                  this.logger.warn(
+                    `Nenhuma financa encontrada para a duplicata ${duplicata.pedidoDuplicata}.`,
+                  );
                 }
               }
             }
           }
 
-          const allDuplicatesPaid = duplicatasDoPedido.every(d => d.aberto === 'não');
+          const allDuplicatesPaid = duplicatasDoPedido.every(
+            (d) => d.aberto === 'não',
+          );
           if (allDuplicatesPaid) {
             const updatedSale = await this.prisma.sale.update({
               where: { id: newSale.id },
               data: { status: 'FINALIZADO' },
             });
-            this.logger.log(`Venda ${newSale.id} atualizada para status: ${updatedSale.status}`);
+            this.logger.log(
+              `Venda ${newSale.id} atualizada para status: ${updatedSale.status}`,
+            );
           }
 
           createdCount++;
         } catch (error) {
-          this.logger.error(`Erro ao importar venda ${orderNumber}: ${error.message}`);
+          this.logger.error(
+            `Erro ao importar venda ${orderNumber}: ${error.message}`,
+          );
           errorCount++;
         }
       }
@@ -575,28 +615,40 @@ export class JsonImportsService {
         const orderNumber = String(pedido.numero).trim();
 
         try {
-          const externalId = customerNameToExternalIdMap.get(pedido.cliente.trim());
+          const externalId = customerNameToExternalIdMap.get(
+            pedido.cliente.trim(),
+          );
           if (!externalId) {
-            this.logger.warn(`Cliente "${pedido.cliente}" do pedido ${orderNumber} não encontrado. Pulando.`);
+            this.logger.warn(
+              `Cliente "${pedido.cliente}" do pedido ${orderNumber} não encontrado. Pulando.`,
+            );
             skippedCount++;
             continue;
           }
 
-          const pessoa = await this.prisma.pessoa.findUnique({ where: { externalId } });
+          const pessoa = await this.prisma.pessoa.findUnique({
+            where: { externalId },
+          });
           if (!pessoa) {
-            this.logger.warn(`Pessoa com externalId ${externalId} não encontrada. Pulando pedido ${orderNumber}.`);
+            this.logger.warn(
+              `Pessoa com externalId ${externalId} não encontrada. Pulando pedido ${orderNumber}.`,
+            );
             skippedCount++;
             continue;
           }
 
           const saleItemsData = itemsByOrderNumberMap.get(orderNumber);
           if (!saleItemsData || saleItemsData.length === 0) {
-            this.logger.warn(`Itens para o pedido ${orderNumber} não encontrados. Pulando.`);
+            this.logger.warn(
+              `Itens para o pedido ${orderNumber} não encontrados. Pulando.`,
+            );
             skippedCount++;
             continue;
           }
 
-          const existingSale = await this.prisma.sale.findUnique({ where: { externalId: pedido['unique id'] } });
+          const existingSale = await this.prisma.sale.findUnique({
+            where: { externalId: pedido['unique id'] },
+          });
           if (existingSale) {
             skippedCount++;
             continue;
@@ -604,15 +656,24 @@ export class JsonImportsService {
 
           const orderNumberInt = parseInt(orderNumber, 10);
           if (isNaN(orderNumberInt)) {
-            this.logger.warn(`Número do pedido "${orderNumber}" não é um número válido. Pulando.`);
+            this.logger.warn(
+              `Número do pedido "${orderNumber}" não é um número válido. Pulando.`,
+            );
             skippedCount++;
             continue;
           }
 
           const totalAmountParsed = this.parseDecimal(pedido.valorTotal);
           if (!totalAmountParsed || totalAmountParsed === 0) {
-            this.logger.warn(`Pedido ${orderNumber} com valorTotal ausente ou zerado no JSON.`);
+            this.logger.warn(
+              `Pedido ${orderNumber} com valorTotal ausente ou zerado no JSON.`,
+            );
           }
+
+          const saleDate = this.parseDate(pedido.data);
+          const dateString = saleDate.toISOString().split('T')[0];
+          const goldPrice = dailyQuotesMap.get(dateString) || 0;
+          const goldValue = this.parseDecimal(pedido.valorTotalAu);
 
           const newSale = await this.prisma.sale.create({
             data: {
@@ -622,18 +683,24 @@ export class JsonImportsService {
               externalId: pedido['unique id'],
               totalAmount: totalAmountParsed,
               shippingCost: this.parseDecimal(pedido.valorFrete),
-              createdAt: this.parseDate(pedido.data),
+              createdAt: saleDate,
               paymentMethod: 'IMPORTADO',
+              goldPrice: goldPrice,
+              goldValue: goldValue,
               saleItems: {
-                create: saleItemsData.map(item => {
+                create: saleItemsData.map((item) => {
                   const productName = String(item.produto).trim().toLowerCase();
                   const product = productsMap.get(productName);
-                  if (!product) throw new Error(`Produto "${item.produto}" não encontrado no banco de dados.`);
-                  
-                  const quantity = this.parseDecimal(item.quantidade) || this.parseDecimal(item.quantidadeAu) || 0;
+                  if (!product)
+                    throw new Error(
+                      `Produto "${item.produto}" não encontrado no banco de dados.`,
+                    );
+
+                                    const quantity = this.parseDecimal(item.quantidadeSal) || this.parseDecimal(item.quantidade) || this.parseDecimal(item.quantidadeAu) || 0;
                   const totalValue = this.parseDecimal(item.valorTotalReal);
                   const price = quantity > 0 ? totalValue / quantity : 0;
-                  const costPriceAtSale = this.parseDecimal(item.cotacao) * quantity;
+                  const costPriceAtSale =
+                    this.parseDecimal(item.cotacao) * quantity;
 
                   return {
                     productId: product.id,
@@ -647,7 +714,9 @@ export class JsonImportsService {
             },
           });
 
-          const duplicatasDoPedido = duplicatas.filter(d => String(d.pedidoDuplicata).trim().startsWith(orderNumber));
+          const duplicatasDoPedido = duplicatas.filter((d) =>
+            String(d.pedidoDuplicata).trim().startsWith(orderNumber),
+          );
 
           for (const duplicata of duplicatasDoPedido) {
             const accountRecExternalId = duplicata['unique id'];
@@ -655,20 +724,29 @@ export class JsonImportsService {
               data: {
                 organizationId: organizationId,
                 saleId: newSale.id,
-                description: duplicata.historico || `Duplicata para pedido ${orderNumber}`,
+                description:
+                  duplicata.historico || `Duplicata para pedido ${orderNumber}`,
                 amount: this.parseDecimal(duplicata.valorBruto),
                 dueDate: this.parseDate(duplicata.dataVencimento),
                 received: duplicata.aberto === 'não',
-                receivedAt: duplicata.aberto === 'não' ? this.parseDate(duplicata.dataPagamento) : null,
+                receivedAt:
+                  duplicata.aberto === 'não'
+                    ? this.parseDate(duplicata.dataPagamento)
+                    : null,
                 externalId: accountRecExternalId,
-              }
+              },
             });
 
             if (newAccountRec.received) {
-              const financa = financasByDuplicataMap.get(String(duplicata.pedidoDuplicata).trim());
+              const financa = financasByDuplicataMap.get(
+                String(duplicata.pedidoDuplicata).trim(),
+              );
               if (financa) {
-                const contaCorrenteName = String(financa.contaCorrente || '').trim().toLowerCase();
-                const contaCorrenteId = contasCorrentesMap.get(contaCorrenteName);
+                const contaCorrenteName = String(financa.contaCorrente || '')
+                  .trim()
+                  .toLowerCase();
+                const contaCorrenteId =
+                  contasCorrentesMap.get(contaCorrenteName);
 
                 await this.prisma.transacao.create({
                   data: {
@@ -677,7 +755,9 @@ export class JsonImportsService {
                     valor: this.parseDecimal(financa.valorRecebido),
                     goldAmount: this.parseDecimal(financa.valorRecebidoAu),
                     moeda: 'BRL',
-                    descricao: financa.descricao || `Pagamento para pedido ${orderNumber}`,
+                    descricao:
+                      financa.descricao ||
+                      `Pagamento para pedido ${orderNumber}`,
                     dataHora: this.parseDate(financa.dataPagamento),
                     contaContabilId: receitaConta.id,
                     contaCorrenteId: contaCorrenteId,
@@ -685,38 +765,57 @@ export class JsonImportsService {
                   },
                 });
               } else {
-                this.logger.warn(`Nenhuma financa encontrada para a duplicata ${duplicata.pedidoDuplicata}.`);
+                this.logger.warn(
+                  `Nenhuma financa encontrada para a duplicata ${duplicata.pedidoDuplicata}.`,
+                );
               }
             }
           }
 
-          const allDuplicatesPaid = duplicatasDoPedido.every(d => d.aberto === 'não');
+          const allDuplicatesPaid = duplicatasDoPedido.every(
+            (d) => d.aberto === 'não',
+          );
           if (allDuplicatesPaid) {
             const updatedSale = await this.prisma.sale.update({
               where: { id: newSale.id },
               data: { status: 'FINALIZADO' },
             });
-            this.logger.log(`Venda ${newSale.id} atualizada para status: ${updatedSale.status}`);
+            this.logger.log(
+              `Venda ${newSale.id} atualizada para status: ${updatedSale.status}`,
+            );
           }
 
           createdCount++;
         } catch (error) {
-          this.logger.error(`Erro ao importar venda ${orderNumber}: ${error.message}`);
+          this.logger.error(
+            `Erro ao importar venda ${orderNumber}: ${error.message}`,
+          );
           errorCount++;
         }
       }
 
       // --- 2. PROCESSAR OUTRAS TRANSAÇÕES (Despesas, Recebimentos em Metal, Transferências) ---
-      this.logger.log('Iniciando processamento de outras transações (despesas, recebimentos em metal, transferências)...');
+      this.logger.log(
+        'Iniciando processamento de outras transações (despesas, recebimentos em metal, transferências)...',
+      );
       for (const financa of financas) {
         const financaId = financa['unique id'];
         const duplicataNumber = String(financa.duplicata || '').trim();
         const valorRecebido = this.parseDecimal(financa.valorRecebido);
         const isTransferencia = financa.transferencia === 'sim';
-        const isRecebimentoEmMetal = String(financa.contaCorrente || '').trim().toLowerCase() === 'metal';
-        const valorPago = this.parseDecimal(financa.valorPago) || this.parseDecimal(financa.valor);
-        const dataTransacao = this.parseDate(financa.dataPagamento || financa.dataEmissao);
-        const contaCorrenteName = String(financa.contaCorrente || '').trim().toLowerCase();
+        const isRecebimentoEmMetal =
+          String(financa.contaCorrente || '')
+            .trim()
+            .toLowerCase() === 'metal';
+        const valorPago =
+          this.parseDecimal(financa.valorPago) ||
+          this.parseDecimal(financa.valor);
+        const dataTransacao = this.parseDate(
+          financa.dataPagamento || financa.dataEmissao,
+        );
+        const contaCorrenteName = String(financa.contaCorrente || '')
+          .trim()
+          .toLowerCase();
         const contaCorrenteId = contasCorrentesMap.get(contaCorrenteName);
 
         // Pula se já foi tratado como pagamento de venda
@@ -728,7 +827,9 @@ export class JsonImportsService {
           // --- Lógica para Transferências / Recebimentos em Metal ---
           if (isTransferencia || isRecebimentoEmMetal) {
             if (!contaCorrenteId) {
-              this.logger.warn(`Conta corrente "${financa.contaCorrente}" não encontrada para a transação ${financaId}. Pulando.`);
+              this.logger.warn(
+                `Conta corrente "${financa.contaCorrente}" não encontrada para a transação ${financaId}. Pulando.`,
+              );
               continue;
             }
 
@@ -744,7 +845,9 @@ export class JsonImportsService {
             }
 
             let cotacao = this.parseDecimal(financa.cotacao);
-            let goldAmount = this.parseDecimal(financa.valorRecebidoAu) || this.parseDecimal(financa.valorAuGasto);
+            let goldAmount =
+              this.parseDecimal(financa.valorRecebidoAu) ||
+              this.parseDecimal(financa.valorAuGasto);
 
             if (goldAmount === 0 && valorFinal > 0 && cotacao > 0) {
               goldAmount = valorFinal / cotacao; // Calcula goldAmount se só tiver BRL
@@ -764,7 +867,9 @@ export class JsonImportsService {
                 valor: new Decimal(valorFinal),
                 goldAmount: new Decimal(goldAmount).toDecimalPlaces(4),
                 moeda: 'BRL',
-                descricao: financa.descricao || `Transação importada: ${financa.carteira}`,
+                descricao:
+                  financa.descricao ||
+                  `Transação importada: ${financa.carteira}`,
                 dataHora: dataTransacao,
                 contaContabilId: receitaConta.id, // TODO: Mapear para conta contábil mais apropriada para transferências/recebimentos de metal
                 contaCorrenteId: contaCorrenteId,
@@ -776,7 +881,9 @@ export class JsonImportsService {
           // --- Lógica para Despesas ---
           else if (valorPago > 0 && valorRecebido === 0) {
             if (!contaCorrenteId) {
-              this.logger.warn(`Conta corrente "${financa.contaCorrente}" não encontrada para a despesa ${financaId}. Pulando.`);
+              this.logger.warn(
+                `Conta corrente "${financa.contaCorrente}" não encontrada para a despesa ${financaId}. Pulando.`,
+              );
               continue;
             }
 
@@ -787,9 +894,12 @@ export class JsonImportsService {
                 amount: new Decimal(valorPago),
                 dueDate: this.parseDate(financa.dataVencimento),
                 paid: financa.baixaPagamento === 'sim',
-                paidAt: financa.baixaPagamento === 'sim' ? this.parseDate(financa.dataPagamento) : null,
+                paidAt:
+                  financa.baixaPagamento === 'sim'
+                    ? this.parseDate(financa.dataPagamento)
+                    : null,
                 contaContabilId: despesaContaDefault.id,
-              }
+              },
             });
 
             if (newAccountPay.paid) {
@@ -803,7 +913,9 @@ export class JsonImportsService {
               if (cotacao > 0) {
                 goldAmount = new Decimal(valorPago).dividedBy(cotacao);
               } else {
-                this.logger.warn(`Cotação não encontrada para a despesa na data ${dataTransacao}. GoldAmount será 0.`);
+                this.logger.warn(
+                  `Cotação não encontrada para a despesa na data ${dataTransacao}. GoldAmount será 0.`,
+                );
               }
 
               const newTransacao = await this.prisma.transacao.create({
@@ -813,7 +925,8 @@ export class JsonImportsService {
                   valor: new Decimal(valorPago),
                   goldAmount: goldAmount.toDecimalPlaces(4),
                   moeda: 'BRL',
-                  descricao: financa.descricao || `Pagamento de despesa importada`,
+                  descricao:
+                    financa.descricao || `Pagamento de despesa importada`,
                   dataHora: dataTransacao,
                   contaContabilId: despesaContaDefault.id,
                   contaCorrenteId: contaCorrenteId,
@@ -826,27 +939,40 @@ export class JsonImportsService {
               });
             }
             despesasCriadasCount++;
-          }
-          else {
-            this.logger.warn(`Registro financeiro ${financaId} não classificado. Pulando.`);
+          } else {
+            this.logger.warn(
+              `Registro financeiro ${financaId} não classificado. Pulando.`,
+            );
           }
         } catch (error) {
-          this.logger.error(`Erro ao importar registro financeiro ${financaId}: ${error.message}`);
+          this.logger.error(
+            `Erro ao importar registro financeiro ${financaId}: ${error.message}`,
+          );
           errorCount++;
         }
       }
 
       this.logger.log(`Importação de vendas e débitos concluída.`);
       this.logger.log(`- ${createdCount} vendas criadas com sucesso.`);
-      this.logger.log(`- ${skippedCount} vendas puladas por dados ausentes ou duplicidade.`);
+      this.logger.log(
+        `- ${skippedCount} vendas puladas por dados ausentes ou duplicidade.`,
+      );
       this.logger.log(`- ${errorCount} vendas com erro durante a criação.`);
-      this.logger.log(`- ${despesasCriadasCount} despesas criadas com sucesso.`);
-      this.logger.log(`- ${outrasTransacoesCriadasCount} outras transações (recebimentos/transferências) criadas com sucesso.`);
+      this.logger.log(
+        `- ${despesasCriadasCount} despesas criadas com sucesso.`,
+      );
+      this.logger.log(
+        `- ${outrasTransacoesCriadasCount} outras transações (recebimentos/transferências) criadas com sucesso.`,
+      );
 
-      return { message: `Importação concluída: ${createdCount} vendas, ${despesasCriadasCount} despesas e ${outrasTransacoesCriadasCount} outras transações processadas.` };
-
+      return {
+        message: `Importação concluída: ${createdCount} vendas, ${despesasCriadasCount} despesas e ${outrasTransacoesCriadasCount} outras transações processadas.`,
+      };
     } catch (error) {
-      this.logger.error('Falha ao ler ou mapear arquivos JSON para importação de vendas.', error.stack);
+      this.logger.error(
+        'Falha ao ler ou mapear arquivos JSON para importação de vendas.',
+        error.stack,
+      );
       throw new Error('Falha na preparação da importação de vendas.');
     }
   }
@@ -857,13 +983,21 @@ export class JsonImportsService {
     return this.importProductsUseCase.execute(organizationId, jsonDirectory);
   }
 
-  async linkSalesAndReceivables(organizationId: string): Promise<{ message: string }> {
-    this.logger.log(`Vinculação de vendas e recebimentos para a organização ${organizationId}. Esta etapa já é realizada durante a importação de vendas e finanças.`);
+  async linkSalesAndReceivables(
+    organizationId: string,
+  ): Promise<{ message: string }> {
+    this.logger.log(
+      `Vinculação de vendas e recebimentos para a organização ${organizationId}. Esta etapa já é realizada durante a importação de vendas e finanças.`,
+    );
     return { message: `Vinculação de vendas e recebimentos já realizada.` };
   }
 
-  async runFullLegacyImport(organizationId: string): Promise<{ message: string }> {
-    this.logger.log(`Iniciando importação completa do legado para a organização ${organizationId}...`);
+  async runFullLegacyImport(
+    organizationId: string,
+  ): Promise<{ message: string }> {
+    this.logger.log(
+      `Iniciando importação completa do legado para a organização ${organizationId}...`,
+    );
     try {
       await this.importOrUpdateCompanies(organizationId);
       await this.importContas(organizationId);
@@ -873,13 +1007,24 @@ export class JsonImportsService {
       await this.salesService.backfillSaleAdjustments(organizationId);
 
       // Etapa final: Executar a importação de movimentação de vendas
-      this.logger.log('Iniciando a etapa final: Importação e processamento da planilha de movimentação...');
-      const movementFilePath = path.join(process.cwd(), '..', '..', 'json-imports', 'MOVIMENTACAO_VIRGULA.csv');
+      this.logger.log(
+        'Iniciando a etapa final: Importação e processamento da planilha de movimentação...',
+      );
+      const movementFilePath = path.join(
+        process.cwd(),
+        '..',
+        '..',
+        'json-imports',
+        'MOVIMENTACAO_VIRGULA.csv',
+      );
       const fileBuffer = await fs.readFile(movementFilePath);
       await this.salesMovementImportUseCase.execute(fileBuffer);
       this.logger.log('Planilha de movimentação processada com sucesso.');
 
-      return { message: 'Importação completa do legado, incluindo a planilha de movimentação, concluída com sucesso!' };
+      return {
+        message:
+          'Importação completa do legado, incluindo a planilha de movimentação, concluída com sucesso!',
+      };
     } catch (error) {
       this.logger.error('Falha na importação completa do legado.', error.stack);
       throw new Error('Falha na importação completa do legado.');
@@ -887,11 +1032,17 @@ export class JsonImportsService {
   }
 
   async auditImportFiles(): Promise<{ message: string }> {
-    this.logger.warn(`Método auditImportFiles chamado. Implementação pendente.`);
-    return { message: `Auditoria de arquivos de importação (pendente de implementação).` };
+    this.logger.warn(
+      `Método auditImportFiles chamado. Implementação pendente.`,
+    );
+    return {
+      message: `Auditoria de arquivos de importação (pendente de implementação).`,
+    };
   }
 
-  async backfillLotCreationMovements(organizationId: string): Promise<{ message: string }> {
+  async backfillLotCreationMovements(
+    organizationId: string,
+  ): Promise<{ message: string }> {
     this.logger.log('Iniciando backfill de movimentos de criação de lotes...');
 
     const inventoryLots = await this.prisma.inventoryLot.findMany({
@@ -927,7 +1078,11 @@ export class JsonImportsService {
       }
     }
 
-    this.logger.log(`Backfill concluído. ${createdCount} movimentos de criação de lotes criados.`);
-    return { message: `Backfill de movimentos de criação de lotes concluído. ${createdCount} movimentos criados.` };
+    this.logger.log(
+      `Backfill concluído. ${createdCount} movimentos de criação de lotes criados.`,
+    );
+    return {
+      message: `Backfill de movimentos de criação de lotes concluído. ${createdCount} movimentos criados.`,
+    };
   }
 }

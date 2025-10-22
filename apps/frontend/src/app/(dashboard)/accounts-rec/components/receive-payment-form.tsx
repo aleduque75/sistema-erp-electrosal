@@ -57,7 +57,7 @@ interface ReceivePaymentFormProps {
 }
 
 const formSchema = z.object({
-  paymentMethod: z.enum(["financial", "metalCredit"], { required_error: "Selecione um método de pagamento." }),
+  paymentMethod: z.enum(["financial", "metalCredit", "metal"], { required_error: "Selecione um método de pagamento." }),
   contaCorrenteId: z.string().optional(),
   amountReceived: z.coerce
     .number()
@@ -69,6 +69,8 @@ const formSchema = z.object({
   quotationBuyPrice: z.coerce
     .number()
     .min(0.01, "O preço da cotação deve ser maior que zero."), // Campo único para o preço da cotação
+  metalType: z.enum(["AU", "AG", "RH"]).optional(),
+  purity: z.coerce.number().optional(),
 }).superRefine((data, ctx) => {
   if (data.paymentMethod === "financial") {
     if (!data.contaCorrenteId) {
@@ -112,6 +114,35 @@ const formSchema = z.object({
         code: z.ZodIssueCode.custom,
         message: "O preço da cotação é obrigatório.",
         path: ["quotationBuyPrice"],
+      });
+    }
+  } else if (data.paymentMethod === "metal") {
+    if (!data.metalType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "O tipo de metal é obrigatório.",
+        path: ["metalType"],
+      });
+    }
+    if (!data.amountInGrams || data.amountInGrams <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "A quantidade em gramas é obrigatória.",
+        path: ["amountInGrams"],
+      });
+    }
+    if (!data.quotationBuyPrice || data.quotationBuyPrice <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "A cotação é obrigatória.",
+        path: ["quotationBuyPrice"],
+      });
+    }
+    if (!data.purity || data.purity <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "A pureza é obrigatória.",
+        path: ["purity"],
       });
     }
   }
@@ -233,6 +264,13 @@ export function ReceivePaymentForm({
           amountInGrams: data.amountInGrams,
           customBuyPrice: data.quotationBuyPrice,
         });
+      } else if (data.paymentMethod === "metal") {
+        await api.patch(`/accounts-rec/${accountRec.id}/pay-with-metal`, {
+          metalType: data.metalType,
+          amountInGrams: data.amountInGrams,
+          quotation: data.quotationBuyPrice,
+          purity: data.purity,
+        });
       }
       toast.success("Recebimento registrado com sucesso!");
       onSave();
@@ -267,6 +305,7 @@ export function ReceivePaymentForm({
                 <SelectContent>
                   <SelectItem value="financial">Dinheiro / Transferência</SelectItem>
                   <SelectItem value="metalCredit">Crédito de Metal</SelectItem>
+                  <SelectItem value="metal">Receber em Metal</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -407,6 +446,75 @@ export function ReceivePaymentForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Cotação (R$/g)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
+
+        {selectedPaymentMethod === "metal" && (
+          <>
+            <FormField
+              name="metalType"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Metal</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de metal..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="AU">Ouro (AU)</SelectItem>
+                      <SelectItem value="AG">Prata (AG)</SelectItem>
+                      <SelectItem value="RH">Ródio (RH)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="amountInGrams"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantidade em Gramas</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.000001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="quotationBuyPrice"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cotação (R$/g)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="purity"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pureza (%)</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} />
                   </FormControl>

@@ -70,6 +70,21 @@ export class CreateMetalReceivablePaymentUseCase {
         },
       });
 
+      // Update the associated sale status based on the receivable status
+      let saleStatusToUpdate: 'FINALIZADO' | 'PAGO_PARCIALMENTE' | undefined;
+      if (newStatus === 'PAGO') {
+        saleStatusToUpdate = 'FINALIZADO';
+      } else if (newStatus === 'PAGO_PARCIALMENTE') {
+        saleStatusToUpdate = 'PAGO_PARCIALMENTE';
+      }
+
+      if (saleStatusToUpdate) {
+        await tx.sale.update({
+          where: { id: receivable.saleId },
+          data: { status: saleStatusToUpdate },
+        });
+      }
+
       return { payment, updatedReceivable };
     });
   }

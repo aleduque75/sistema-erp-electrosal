@@ -159,17 +159,27 @@ export class ImportSalesUseCase {
                   organizationId,
                   name: oldItem.produto,
                 },
+                include: { productGroup: true },
               });
 
               if (!product) {
                 throw new NotFoundException(`Produto "${oldItem.produto}" não encontrado para importação.`);
               }
 
-              const price = new Decimal(this.parseNumber(oldItem.valorTotalReal)).dividedBy(this.parseNumber(oldItem.quantidadeAu || oldItem.quantidade || '1'));
+              let itemQuantity: number;
+              if (oldItem.produto.trim().toLowerCase().includes('sal 68%')) {
+                itemQuantity = this.parseNumber(oldItem.quantidadeSal || oldItem.quantidade || '1');
+                console.log(`[DEBUG IMPORT] Produto: ${oldItem.produto}, (Explicit Sal 68% - includes) quantidadeSal: ${oldItem.quantidadeSal}, itemQuantity: ${itemQuantity}`);
+              } else {
+                itemQuantity = this.parseNumber(oldItem.quantidadeAu || oldItem.quantidade || '1');
+                console.log(`[DEBUG IMPORT] Produto: ${oldItem.produto}, (Other Product) quantidadeAu: ${oldItem.quantidadeAu}, itemQuantity: ${itemQuantity}`);
+              }
+
+              const price = new Decimal(this.parseNumber(oldItem.valorTotalReal)).dividedBy(itemQuantity);
 
               return {
                 productId: product.id,
-                quantity: this.parseNumber(oldItem.quantidadeAu || oldItem.quantidade || '1'),
+                quantity: itemQuantity,
                 price: price,
                 externalId: oldItem['unique id'], // Mapear externalId para SaleItem
               };
@@ -197,8 +207,16 @@ export class ImportSalesUseCase {
           // contaCorrenteId: undefined, // Deixar undefined por enquanto
         };
 
-        const saleGoldQuote = cotacoesMap.get(oldSale.numero); // Buscar a cotação
-        console.log(`[DEBUG COTAÇÃO] Venda ${oldSale.numero}: Cotação encontrada no map: ${saleGoldQuote}`);
+        let saleGoldQuote: number | undefined;
+
+        if (oldSale.cotacao && this.parseNumber(oldSale.cotacao) > 0) {
+          saleGoldQuote = this.parseNumber(oldSale.cotacao);
+          console.log(`[DEBUG Cotação] Venda ${oldSale.numero}: Cotação encontrada diretamente em oldSale.cotacao: ${saleGoldQuote}`);
+        } else {
+          saleGoldQuote = cotacoesMap.get(oldSale.numero);
+          console.log(`[DEBUG COTAÇÃO] Venda ${oldSale.numero}: Cotação encontrada no map: ${saleGoldQuote}`);
+        }
+
         if (saleGoldQuote) {
           createSaleDto.goldQuoteValue = saleGoldQuote; // Adicionar ao DTO se encontrada
           console.log(`[DEBUG Cotação] Venda ${oldSale.numero}: goldQuoteValue adicionado ao DTO: ${createSaleDto.goldQuoteValue}`);

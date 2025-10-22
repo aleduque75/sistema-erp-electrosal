@@ -12,11 +12,13 @@ app-electrosal/
 
 # Ignorar arquivos de log e sistema
 npm-debug.log
+GEMINI.md
 yarn-debug.log
 yarn-error.log
 .DS_Store
 .vscode/
 .idea/
+
 
 # Ignorar arquivos de ambiente local e secrets (somente via Docker Compose/Kubernetes)
 .env

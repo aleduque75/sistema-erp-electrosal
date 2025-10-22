@@ -21,6 +21,8 @@ import { PayAccountsRecWithMetalCreditDto } from './dtos/pay-accounts-rec-with-m
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PayAccountsRecWithMetalCreditUseCase } from './use-cases/pay-accounts-rec-with-metal-credit.use-case';
+import { PayAccountsRecWithMetalDto } from './dtos/pay-accounts-rec-with-metal.dto';
+import { PayAccountsRecWithMetalUseCase } from './use-cases/pay-accounts-rec-with-metal.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('accounts-rec')
@@ -28,6 +30,7 @@ export class AccountsRecController {
   constructor(
     private readonly accountsRecService: AccountsRecService,
     private readonly payAccountsRecWithMetalCreditUseCase: PayAccountsRecWithMetalCreditUseCase,
+    private readonly payAccountsRecWithMetalUseCase: PayAccountsRecWithMetalUseCase,
   ) {}
 
   @Post()
@@ -81,6 +84,21 @@ export class AccountsRecController {
     @Body() dto: PayAccountsRecWithMetalCreditDto,
   ) {
     return this.payAccountsRecWithMetalCreditUseCase.execute(
+      organizationId,
+      userId,
+      accountsRecId,
+      dto,
+    );
+  }
+
+  @Patch(':id/pay-with-metal')
+  payWithMetal(
+    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') accountsRecId: string,
+    @Body() dto: PayAccountsRecWithMetalDto,
+  ) {
+    return this.payAccountsRecWithMetalUseCase.execute(
       organizationId,
       userId,
       accountsRecId,

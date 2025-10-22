@@ -47,10 +47,7 @@ export class SeparateSaleUseCase {
             throw new BadRequestException(`O item ${item.product.name} não possui um lote de estoque associado.`);
           }
 
-          let quantityToDecrement = item.quantity;
-          if (item.product.goldValue && item.product.goldValue !== 1) {
-            quantityToDecrement = new Decimal(item.quantity).dividedBy(new Decimal(item.product.goldValue)).toNumber();
-          }
+          const quantityToDecrement = new Decimal(item.quantity).toNumber();
 
           this.logger.log(`Decrementing stock for item ${item.id} from lot ${item.inventoryLotId} by ${quantityToDecrement}`);
           await tx.inventoryLot.update({

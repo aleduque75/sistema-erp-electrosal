@@ -51,17 +51,7 @@ interface QuotationFormProps {
 const formSchema = z.object({
   // 3. CORREÇÃO ZOD: Usando z.enum com o array literal
   metal: z.enum(METAL_TYPES, { required_error: "O metal é obrigatório." }),
-  date: z.string().transform((val, ctx) => {
-    const date = parse(val, "yyyy-MM-dd", new Date());
-    if (isNaN(date.getTime())) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Data inválida",
-      });
-      return z.NEVER;
-    }
-    return date;
-  }),
+  date: z.date({ required_error: "A data é obrigatória." }),
   buyPrice: z.coerce.number().min(0.01, "O valor de compra deve ser maior que zero."),
   sellPrice: z.coerce.number().min(0.01, "O valor de venda deve ser maior que zero."),
   tipoPagamento: z.string().optional(),
@@ -74,11 +64,11 @@ export function QuotationForm({ onSave, id, initialData }: QuotationFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
       ...initialData,
-      date: format(initialData.date, "yyyy-MM-dd"),
+      date: initialData.date,
     } : {
       // 4. CORREÇÃO DEFAULT VALUE: Usando a string literal 'AU'
       metal: 'AU', 
-      date: format(new Date(), "yyyy-MM-dd"), 
+      date: new Date(), 
       buyPrice: 0, 
       sellPrice: 0, 
       tipoPagamento: "",
@@ -141,16 +131,38 @@ export function QuotationForm({ onSave, id, initialData }: QuotationFormProps) {
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Data</FormLabel>
-              <Input
-                type="date"
-                value={format(field.value, "yyyy-MM-dd")}
-                onChange={(e) => {
-                  const date = parse(e.target.value, "yyyy-MM-dd", new Date());
-                  if (!isNaN(date.getTime())) {
-                    field.onChange(date);
-                  }
-                }}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? (
+                        format(field.value, "PPP", { locale: ptBR })
+                      ) : (
+                        <span>Selecione uma data</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    disabled={(date) =>
+                      date > new Date() || date < new Date("1900-01-01")
+                    }
+                    initialFocus
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
               <FormMessage />
             </FormItem>
           )}

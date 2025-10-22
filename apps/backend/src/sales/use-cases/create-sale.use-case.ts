@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { CreateSaleDto } from '../dtos/sales.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, TipoMetal, SaleInstallmentStatus } from '@prisma/client';
@@ -9,6 +9,7 @@ import Decimal from 'decimal.js';
 
 @Injectable()
 export class CreateSaleUseCase {
+  private readonly logger = new Logger(CreateSaleUseCase.name);
   constructor(
     private prisma: PrismaService,
     private settingsService: SettingsService,
@@ -98,32 +99,11 @@ export class CreateSaleUseCase {
         productGroupName: productGroup.name,
       };
 
-      if (productGroup.isReactionProductGroup) {
-        const goldGramsSold = itemQuantity.times(new Decimal(product.goldValue || 0));
-        let commissionPercentage = new Decimal(2); // Fallback
-
-        const laborEntry = laborCostTable.find(entry =>
-          goldGramsSold.greaterThanOrEqualTo(entry.minGrams) &&
-          (entry.maxGrams === null || goldGramsSold.lessThanOrEqualTo(entry.maxGrams))
-        );
-
-        if (laborEntry && laborEntry.commissionPercentage) {
-          commissionPercentage = new Decimal(laborEntry.commissionPercentage);
-        }
-
-        const commissionInGold = goldGramsSold.times(commissionPercentage).dividedBy(100);
-        itemCommission = commissionInGold.times(goldQuote.valorVenda);
-
-        currentItemCommissionDetails.commissionPercentage = commissionPercentage;
-        currentItemCommissionDetails.commissionInGold = commissionInGold;
-
-      } else {
-        const itemProfit = itemPrice.times(itemQuantity).minus(itemCost);
-        if (productGroup.commissionPercentage) {
-          itemCommission = itemProfit.times(productGroup.commissionPercentage).dividedBy(100);
-          currentItemCommissionDetails.itemProfit = itemProfit;
-          currentItemCommissionDetails.commissionPercentage = productGroup.commissionPercentage;
-        }
+      const itemProfit = itemPrice.times(itemQuantity).minus(itemCost);
+      if (productGroup.commissionPercentage) {
+        itemCommission = itemProfit.times(productGroup.commissionPercentage).dividedBy(100);
+        currentItemCommissionDetails.itemProfit = itemProfit;
+        currentItemCommissionDetails.commissionPercentage = productGroup.commissionPercentage;
       }
 
       totalCommissionAmount = totalCommissionAmount.plus(itemCommission);
@@ -198,6 +178,7 @@ export class CreateSaleUseCase {
           };
         });
 
+        this.logger.debug(`[DEBUG] Installments to create: ${JSON.stringify(installmentsToCreate)}`);
         await this.prisma.saleInstallment.createMany({
           data: installmentsToCreate,
         });

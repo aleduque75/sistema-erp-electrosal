@@ -70,7 +70,7 @@ export function AddItemModal({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedLot, setSelectedLot] = useState<string | null>(null);
   const [itemPrice, setItemPrice] = useState<number>(0);
-  const [laborGramsInput, setLaborGramsInput] = useState<number | string>(0);
+  const [laborPercentInput, setLaborPercentInput] = useState<number | string>(0);
   const [entryUnit, setEntryUnit] = useState('sal');
   const [entryQuantity, setEntryQuantity] = useState<number | string>(1);
 
@@ -82,7 +82,7 @@ export function AddItemModal({
       setEntryQuantity(1);
       setEntryUnit('sal');
       setItemPrice(0);
-      setLaborGramsInput(0);
+      setLaborPercentInput(0);
     }
   }, [open]);
 
@@ -106,14 +106,13 @@ export function AddItemModal({
     return entry ? entry.goldGramsCharged : 0;
   }, [goldAmount, isGoldSaltProduct, laborCostTable]);
 
-  useEffect(() => {
-    setLaborGramsInput(laborGramsCharged);
-  }, [laborGramsCharged]);
+
 
   const totalGoldAmount = useMemo(() => {
-    const laborGrams = typeof laborGramsInput === 'string' ? parseFloat(laborGramsInput) : (laborGramsInput || 0);
+    const laborPercent = typeof laborPercentInput === 'string' ? parseFloat(laborPercentInput) : (laborPercentInput || 0);
+    const laborGrams = goldAmount * (laborPercent / 100);
     return goldAmount + laborGrams;
-  }, [goldAmount, laborGramsInput]);
+  }, [goldAmount, laborPercentInput]);
 
   const finalQuantity = useMemo(() => {
     const quant = typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity;
@@ -129,16 +128,13 @@ export function AddItemModal({
     if (isGoldSaltProduct) {
       if (!saleGoldQuote || saleGoldQuote <= 0) return 0;
       if (goldAmount <= 0) return 0;
-      const laborGrams = typeof laborGramsInput === 'string' ? parseFloat(laborGramsInput) : laborGramsInput;
-      if (isNaN(laborGrams)) return 0;
-      const goldWithLabor = goldAmount + laborGrams;
-      const totalBRL = goldWithLabor * saleGoldQuote;
+      const totalBRL = totalGoldAmount * saleGoldQuote;
       if (finalQuantity === 0) return 0;
       return totalBRL / finalQuantity;
     } else {
       return Number(selectedProduct.price);
     }
-  }, [selectedProduct, isGoldSaltProduct, saleGoldQuote, goldAmount, laborGramsInput, finalQuantity]);
+  }, [selectedProduct, isGoldSaltProduct, saleGoldQuote, goldAmount, laborPercentInput, finalQuantity, totalGoldAmount]);
 
   useEffect(() => {
     if (selectedProduct && !isGoldSaltProduct) {
@@ -236,11 +232,11 @@ export function AddItemModal({
                 </Select>
               </div>
               <div className="sm:col-span-2">
-                <Label>Mão de Obra (g)</Label>
+                <Label>Mão de Obra (%)</Label>
                 <Input
                   type="number"
-                  value={laborGramsInput}
-                  onChange={(e) => setLaborGramsInput(e.target.value)}
+                  value={laborPercentInput}
+                  onChange={(e) => setLaborPercentInput(e.target.value)}
                   step="0.01"
                 />
               </div>

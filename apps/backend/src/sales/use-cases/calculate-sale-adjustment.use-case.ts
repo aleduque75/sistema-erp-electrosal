@@ -122,9 +122,20 @@ export class CalculateSaleAdjustmentUseCase {
             // If this product comes from a reaction group, its quantity is already the gold value.
             if (item.product.productGroup?.isReactionProductGroup) {
               this.logger.debug(
-                `[ADJ_CALC] Produto de Reação. Usando quantidade diretamente: ${item.quantity}`,
+                `[ADJ_CALC] Produto de Reação. Calculando com base no goldValue.`,
               );
-              itemExpectedGrams = new Decimal(item.quantity);
+              const goldValue = new Decimal(item.product.goldValue || 0);
+              if (goldValue.isZero()) {
+                this.logger.warn(
+                  `Produto ${item.productId} (reação) tem teor de ouro (goldValue) zero ou nulo. Gramas esperadas para este item será 0.`,
+                );
+                itemExpectedGrams = new Decimal(0);
+              } else {
+                itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
+                this.logger.debug(
+                  `[ADJ_CALC] Produto de Reação Result: ${itemExpectedGrams}`,
+                );
+              }
             } else {
               // This is the original logic for other products (resale items, etc.)
               const goldValue = new Decimal(item.product.goldValue || 0);
