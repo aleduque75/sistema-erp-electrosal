@@ -573,8 +573,7 @@ export class JsonImportsService {
                     0;
                   const totalValue = this.parseDecimal(item.valorTotalReal);
                   const price = quantity > 0 ? totalValue / quantity : 0;
-                  const costPriceAtSale =
-                    this.parseDecimal(item.cotacao) * quantity;
+                  const costPriceAtSale = this.parseDecimal(item.cotacao);
 
                   return {
                     productId: product.id,
@@ -592,8 +591,25 @@ export class JsonImportsService {
             String(d.pedidoDuplicata).trim().startsWith(orderNumber),
           );
 
+          const totalSaleGoldValue = new Decimal(newSale.goldValue || 0);
+          const totalSaleBRLValue = new Decimal(newSale.totalAmount);
+
           for (const duplicata of duplicatasDoPedido) {
             if (this.parseDecimal(duplicata.valorBruto) > 0) {
+              const duplicataBRLValue = new Decimal(
+                this.parseDecimal(duplicata.valorBruto),
+              );
+              let duplicataGoldAmount = new Decimal(0);
+
+              if (
+                totalSaleBRLValue.isPositive() &&
+                totalSaleGoldValue.isPositive()
+              ) {
+                duplicataGoldAmount = duplicataBRLValue
+                  .dividedBy(totalSaleBRLValue)
+                  .times(totalSaleGoldValue);
+              }
+
               const accountRecExternalId = duplicata['unique id'];
               const newAccountRec = await this.prisma.accountRec.create({
                 data: {
@@ -601,8 +617,9 @@ export class JsonImportsService {
                   saleId: newSale.id,
                   description:
                     duplicata.historico ||
-                    `Duplicata para pedido ${orderNumber}`,
-                  amount: this.parseDecimal(duplicata.valorBruto),
+                    `Receber de ${pessoa.name} (Duplicata) venda #${orderNumber}`,
+                  amount: duplicataBRLValue.toDecimalPlaces(2),
+                  goldAmount: duplicataGoldAmount.toDecimalPlaces(4),
                   dueDate: this.parseDate(duplicata.dataVencimento),
                   received: duplicata.aberto === 'não',
                   receivedAt:

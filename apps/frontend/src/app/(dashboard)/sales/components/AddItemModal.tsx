@@ -201,9 +201,13 @@ export function AddItemModal({
               onChange={(value) => {
                 const product = products.find((p) => p.id === value) || null;
                 setSelectedProduct(product);
-                setEntryUnit('sal');
                 setEntryQuantity(1);
                 setSelectedLot(null);
+                if (product?.name.includes(GOLD_SALT_PRODUCT_NAME)) {
+                  setEntryUnit('au');
+                } else {
+                  setEntryUnit('sal');
+                }
               }}
               placeholder="Pesquise..."
             />

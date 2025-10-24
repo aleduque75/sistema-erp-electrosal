@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "SaleStatus" ADD VALUE 'PAGO_PARCIALMENTE';

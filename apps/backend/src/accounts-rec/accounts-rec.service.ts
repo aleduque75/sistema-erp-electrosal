@@ -68,7 +68,14 @@ export class AccountsRecService {
   ): Promise<AccountRec> {
     const account = await this.prisma.accountRec.findFirst({
       where: { id, organizationId },
-      include: { sale: { include: { pessoa: { include: { client: true } } } } },
+      include: {
+        sale: {
+          include: {
+            pessoa: { include: { client: true } },
+            installments: true, // Include sale installments
+          },
+        },
+      },
     });
     if (!account) {
       throw new NotFoundException(

@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { SaleStatus, Role } from '@prisma/client'; // Keep Sale for now, will refactor later
-import { CreateSaleDto, UpdateSaleDto, ConfirmSaleDto } from './dtos/sales.dto';
+import { CreateSaleDto, UpdateSaleDto, ConfirmSaleDto, ReceiveInstallmentPaymentDto } from './dtos/sales.dto';
 import { EditSaleDto } from './dtos/edit-sale.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -27,6 +27,7 @@ import { BackfillSaleGoldValueUseCase } from './use-cases/backfill-sale-gold-val
 import { BackfillInstallmentsUseCase } from './use-cases/backfill-installments.use-case';
 import { ProcessClientMetalPaymentToSupplierUseCase, ProcessClientMetalPaymentToSupplierCommand } from './use-cases/process-client-metal-payment-to-supplier.use-case';
 import { LinkSaleItemToBatchUseCase } from './use-cases/link-sale-item-to-batch.use-case';
+import { ReceiveInstallmentPaymentUseCase } from './use-cases/receive-installment-payment.use-case';
 import { LinkSaleItemToBatchDto } from './dtos/link-sale-item-to-batch.dto';
 
 import { Public } from '../auth/decorators/public.decorator';
@@ -48,6 +49,7 @@ export class SalesController {
     private readonly processClientMetalPaymentToSupplierUseCase: ProcessClientMetalPaymentToSupplierUseCase,
     private readonly backfillInstallmentsUseCase: BackfillInstallmentsUseCase,
     private readonly linkSaleItemToBatchUseCase: LinkSaleItemToBatchUseCase,
+    private readonly receiveInstallmentPaymentUseCase: ReceiveInstallmentPaymentUseCase,
   ) {}
 
   @Post('link-item-to-batch')
@@ -201,5 +203,21 @@ export class SalesController {
   ) {
     await this.revertSaleUseCase.execute(organizationId, saleId);
     return { message: 'Venda revertida para PENDENTE com sucesso.' };
+  }
+
+  @Patch(':saleId/installments/:installmentId/receive')
+  async receiveInstallmentPayment(
+    @CurrentUser('organizationId') organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Param('saleId') saleId: string, // Not directly used in use case, but for context/path
+    @Param('installmentId') installmentId: string,
+    @Body() receiveInstallmentPaymentDto: ReceiveInstallmentPaymentDto,
+  ) {
+    return this.receiveInstallmentPaymentUseCase.execute(
+      organizationId,
+      userId,
+      installmentId,
+      receiveInstallmentPaymentDto,
+    );
   }
 }

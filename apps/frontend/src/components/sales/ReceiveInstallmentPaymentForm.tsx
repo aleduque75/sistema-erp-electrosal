@@ -1,12 +1,9 @@
-"use client";
-
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { useEffect, useState, useMemo } from "react";
-
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -25,28 +22,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { SaleInstallment } from "@/types/sale";
+import { TipoMetal } from "@prisma/client";
 
-// Interfaces
-import { SaleInstallment } from '@/types/sale'; // Import SaleInstallment
+interface ReceiveInstallmentPaymentFormProps {
+  installment: SaleInstallment;
+  saleId: string;
+  onSave: () => void;
+}
 
 interface ContaCorrente {
   id: string;
   nome: string;
 }
-interface AccountRec {
-  id: string;
-  amount: number;
-  description: string;
-  clientId?: string;
-  goldAmount?: number;
-  goldAmountPaid?: number;
-  sale?: { // Adicionado para acesso ao cliente e data da venda
-    pessoa?: { name: string };
-    createdAt?: string;
-  };
-  installments?: SaleInstallment[]; // Add installments
-  saleId?: string; // Add saleId
-}
+
 interface MetalCredit {
   id: string;
   metalType: string;
@@ -54,39 +43,22 @@ interface MetalCredit {
   date: string;
 }
 
-interface Quotation {
-  id: string;
-  metal: string;
-  buyPrice: number;
-  date: string;
-}
-
-interface ReceivePaymentFormProps {
-  accountRec: AccountRec;
-  onSave: () => void;
-}
-
 const formSchema = z.object({
-  paymentMethod: z.enum(["financial", "metalCredit", "metal"], { required_error: "Selecione um método de pagamento." }),
+  paymentMethod: z.enum(["FINANCIAL", "METAL_CREDIT", "METAL"], { required_error: "Selecione um método de pagamento." }),
   contaCorrenteId: z.string().optional(),
+  metalCreditId: z.string().optional(),
   amountReceived: z.coerce
     .number()
     .positive("O valor recebido deve ser maior que zero.")
     .optional(),
-  receivedAt: z.string().min(1, "A data é obrigatória.").optional(),
-  metalCreditId: z.string().optional(),
   amountInGrams: z.coerce.number().optional(),
+  receivedAt: z.string().min(1, "A data é obrigatória.").optional(),
   quotationBuyPrice: z.coerce
     .number()
-    .min(0.01, "O preço da cotação deve ser maior que zero."), // Campo único para o preço da cotação
-  metalType: z.enum(["AU", "AG", "RH"]).optional(),
+    .min(0.01, "O preço da cotação deve ser maior que zero.").optional(),
+  metalType: z.nativeEnum(TipoMetal).optional(),
   purity: z.coerce.number().optional(),
-  selectedInstallmentId: z.string().optional(), // Add this field
 }).superRefine((data, ctx) => {
-  if (data.paymentMethod === "FINANCIAL" && data.selectedInstallmentId) {
-    // If paying an installment financially, ensure amountReceived is for a specific installment
-    // This will be handled by default value, but can add validation if needed
-  }
   if (data.paymentMethod === "FINANCIAL") {
     if (!data.contaCorrenteId) {
       ctx.addIssue({
@@ -109,7 +81,7 @@ const formSchema = z.object({
         path: ["receivedAt"],
       });
     }
-  } else if (data.paymentMethod === "metalCredit") {
+  } else if (data.paymentMethod === "METAL_CREDIT") {
     if (!data.metalCreditId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -131,7 +103,7 @@ const formSchema = z.object({
         path: ["quotationBuyPrice"],
       });
     }
-  } else if (data.paymentMethod === "metal") {
+  } else if (data.paymentMethod === "METAL") {
     if (!data.metalType) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -163,113 +135,58 @@ const formSchema = z.object({
   }
 });
 
-export function ReceivePaymentForm({
-  accountRec: rawAccountRec, // Rename to avoid confusion
+export function ReceiveInstallmentPaymentForm({
+  installment,
+  saleId,
   onSave,
-}: ReceivePaymentFormProps) {
-  // Sanitize data on entry to ensure all relevant fields are numbers
-  const accountRec = useMemo(() => ({
-    ...rawAccountRec,
-    amount: Number(rawAccountRec.amount || 0),
-    amountPaid: Number(rawAccountRec.amountPaid || 0),
-    goldAmount: Number(rawAccountRec.goldAmount || 0),
-    goldAmountPaid: Number(rawAccountRec.goldAmountPaid || 0),
-  }), [rawAccountRec]);
-
+}: ReceiveInstallmentPaymentFormProps) {
   const [contasCorrentes, setContasCorrentes] = useState<ContaCorrente[]>([]);
   const [metalCredits, setMetalCredits] = useState<MetalCredit[]>([]);
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
   const formatCurrency = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
-
-  // Calculate remaining amounts
-  const remainingBRL = accountRec.amount - accountRec.amountPaid;
-  const remainingGold = accountRec.goldAmount - accountRec.goldAmountPaid;
-  const isGoldBased = accountRec.goldAmount > 0;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      paymentMethod: "financial",
-      amountReceived: parseFloat(remainingBRL.toFixed(2)), // Default to remaining BRL amount
-      receivedAt: accountRec.sale?.createdAt ? new Date(accountRec.sale.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      paymentMethod: "FINANCIAL",
+      amountReceived: parseFloat(Number(installment.amount).toFixed(2)), // Default to installment amount
+      receivedAt: new Date().toISOString().split("T")[0],
       contaCorrenteId: "",
       amountInGrams: 0,
       metalCreditId: "",
-      selectedInstallmentId: "", // Add this field
     },
   });
 
-  const selectedInstallmentId = form.watch("selectedInstallmentId"); // Watch selected installment
-
-  // Update amountReceived based on selected installment
-  useEffect(() => {
-    if (selectedInstallmentId && accountRec.installments) {
-      const selectedInstallment = accountRec.installments.find(inst => inst.id === selectedInstallmentId);
-      if (selectedInstallment) {
-        form.setValue("amountReceived", parseFloat(Number(selectedInstallment.amount).toFixed(2)));
-        form.clearErrors("amountReceived"); // Clear any previous errors on amountReceived
-      }
-    } else {
-      // If no installment is selected or it's not an installment sale, default to remainingBRL
-      form.setValue("amountReceived", parseFloat(remainingBRL.toFixed(2)));
-    }
-  }, [selectedInstallmentId, accountRec.installments, remainingBRL, form]);
-
   const selectedPaymentMethod = form.watch("paymentMethod");
   const selectedMetalCreditId = form.watch("metalCreditId");
-
   const selectedMetalCredit = metalCredits.find(mc => mc.id === selectedMetalCreditId);
-
-  const selectedQuotationBuyPrice = form.watch("quotationBuyPrice");
-
-  const maxGramsToApply = useMemo(() => {
-    if (isGoldBased) {
-      return remainingGold;
-    } else {
-      if (!selectedQuotationBuyPrice || selectedQuotationBuyPrice <= 0) return 0;
-      return parseFloat((remainingBRL / selectedQuotationBuyPrice).toFixed(6));
-    }
-  }, [accountRec, selectedQuotationBuyPrice, isGoldBased, remainingBRL, remainingGold]);
-
-  useEffect(() => {
-    if (selectedPaymentMethod === "financial") {
-      api.get("/contas-correntes").then((res) => setContasCorrentes(res.data));
-    } else if (selectedPaymentMethod === "metalCredit" && accountRec.clientId) {
-      api.get(`/metal-credits/client/${accountRec.clientId}`).then((res) => {
-        setMetalCredits(res.data.map((mc: any) => ({
-          id: mc._id.value,
-          metalType: mc.props.metalType,
-          grams: Number(mc.props.grams),
-          date: mc.props.date,
-        })));
-      });
-      api.get("/quotations?metalType=AU,AG").then((res) => {
-        const fetchedQuotations = res.data.map(q => ({ ...q, buyPrice: Number(q.buyPrice) }));
-        setQuotations(fetchedQuotations);
-        if (fetchedQuotations.length > 0) {
-          const sortedQuotations = fetchedQuotations
-            .filter(q => q.metal === "AU" && new Date(q.date) <= new Date())
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          const mostRecentAuQuotation = sortedQuotations[0];
-          if (mostRecentAuQuotation) {
-            form.setValue("quotationBuyPrice", mostRecentAuQuotation.buyPrice);
-          }
-        }
-      });
-    }
-  }, [selectedPaymentMethod, accountRec.clientId, form]);
-
-  useEffect(() => {
-    if ((selectedPaymentMethod === "metalCredit" || selectedPaymentMethod === "metal") && maxGramsToApply > 0) {
-      form.setValue("amountInGrams", parseFloat(maxGramsToApply.toFixed(6)));
-    }
-  }, [maxGramsToApply, selectedPaymentMethod, form]);
+  const quotationBuyPrice = form.watch("quotationBuyPrice");
+  const amountReceived = form.watch("amountReceived");
+  const receivedAt = form.watch("receivedAt");
 
   const [goldValue, setGoldValue] = useState<number>(0);
 
-  const receivedAt = form.watch("receivedAt");
-  const amountReceived = form.watch("amountReceived");
-  const quotationBuyPrice = form.watch("quotationBuyPrice");
+  useEffect(() => {
+    if (amountReceived && quotationBuyPrice) {
+      setGoldValue(amountReceived / quotationBuyPrice);
+    }
+  }, [amountReceived, quotationBuyPrice]);
+
+  useEffect(() => {
+    if (selectedPaymentMethod === "FINANCIAL") {
+      api.get("/contas-correntes").then((res) => setContasCorrentes(res.data));
+    } else if (selectedPaymentMethod === "METAL_CREDIT") {
+      // Assuming client ID can be derived from saleId or passed as prop
+      // For now, we'll fetch all metal credits and filter by client later if needed
+      api.get("/metal-credits").then((res) => {
+        setMetalCredits(res.data.map((mc: any) => ({
+          id: mc.id,
+          metalType: mc.metalType,
+          grams: Number(mc.grams),
+          date: mc.date,
+        })));
+      });
+    }
+  }, [selectedPaymentMethod]);
 
   useEffect(() => {
     if (receivedAt) {
@@ -281,15 +198,8 @@ export function ReceivePaymentForm({
     }
   }, [receivedAt, form]);
 
-  useEffect(() => {
-    if (amountReceived && quotationBuyPrice) {
-      setGoldValue(amountReceived / quotationBuyPrice);
-    }
-  }, [amountReceived, quotationBuyPrice]);
-
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      let response: any;
       const payload: any = {
         paymentMethod: data.paymentMethod,
         receivedAt: data.receivedAt,
@@ -298,53 +208,18 @@ export function ReceivePaymentForm({
         purity: data.purity,
       };
 
-      if (data.paymentMethod === "financial") {
+      if (data.paymentMethod === "FINANCIAL") {
         payload.contaCorrenteId = data.contaCorrenteId;
         payload.amountReceived = data.amountReceived;
-      } else if (data.paymentMethod === "metalCredit") {
+      } else if (data.paymentMethod === "METAL_CREDIT") {
         payload.metalCreditId = data.metalCreditId;
         payload.amountInGrams = data.amountInGrams;
-      } else if (data.paymentMethod === "metal") {
+      } else if (data.paymentMethod === "METAL") {
         payload.amountInGrams = data.amountInGrams;
       }
 
-      if (accountRec.saleId && data.selectedInstallmentId) {
-        // If an installment is selected, pay the installment
-        response = await api.patch(
-          `/sales/${accountRec.saleId}/installments/${data.selectedInstallmentId}/receive`,
-          payload
-        );
-      } else {
-        // Otherwise, proceed with the existing AccountRec payment
-        if (data.paymentMethod === "financial") {
-          response = await api.patch(`/accounts-rec/${accountRec.id}/receive`, {
-            contaCorrenteId: data.contaCorrenteId,
-            amountReceived: data.amountReceived,
-            receivedAt: data.receivedAt,
-          });
-        } else if (data.paymentMethod === "metalCredit") {
-          response = await api.patch(`/accounts-rec/${accountRec.id}/pay-with-metal-credit`, {
-            metalCreditId: data.metalCreditId,
-            amountInGrams: data.amountInGrams,
-            customBuyPrice: data.quotationBuyPrice,
-          });
-        } else if (data.paymentMethod === "metal") {
-          response = await api.patch(`/accounts-rec/${accountRec.id}/pay-with-metal`, {
-            metalType: data.metalType,
-            amountInGrams: data.amountInGrams,
-            quotation: data.quotationBuyPrice,
-            purity: data.purity,
-          });
-        }
-      }
-      
-      toast.success("Recebimento registrado com sucesso!");
-
-      // Handle overpayment toast REMOVED for installment payments
-      //   if (response?.data?.overpayment && response.data.overpayment > 0) {
-      //     toast.info(`Crédito gerado: ${response.data.overpayment.toFixed(4)}g de ${data.metalType || 'metal'} foram creditados na conta do cliente.`);
-      //   }
-
+      await api.patch(`/sales/${saleId}/installments/${installment.id}/receive`, payload);
+      toast.success("Recebimento de parcela registrado com sucesso!");
       onSave();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Ocorreu um erro.");
@@ -355,60 +230,14 @@ export function ReceivePaymentForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Registrar recebimento para:{" "}
-          <span className="font-medium">{accountRec.description}</span>
-          {accountRec.sale?.pessoa?.name && (
-            <span className="font-medium"> (Cliente: {accountRec.sale.pessoa.name})</span>
-          )}
+          Registrar recebimento para a parcela #<span className="font-medium">{installment.installmentNumber}</span> da venda #<span className="font-medium">{saleId}</span>
         </p>
-
-        <div className="space-y-2 rounded-md border bg-muted/20 p-4">
-          <h4 className="font-medium text-sm">Resumo da Dívida</h4>
-          <div className="text-sm text-muted-foreground grid grid-cols-2 gap-x-4">
-            {isGoldBased ? (
-              <>
-                <span className="font-bold">Total:</span> <span>{accountRec.goldAmount?.toFixed(4)}g ({formatCurrency(accountRec.amount)})</span>
-                <span className="font-bold">Pago:</span> <span>{accountRec.goldAmountPaid?.toFixed(4)}g ({formatCurrency(accountRec.amountPaid || 0)})</span>
-                <span className="font-bold text-primary">Restante:</span> <span className="font-bold text-primary">{remainingGold.toFixed(4)}g ({formatCurrency(remainingBRL)})</span>
-              </>
-            ) : (
-              <>
-                <span className="font-bold">Total:</span> <span>{formatCurrency(accountRec.amount)}</span>
-                <span className="font-bold">Pago:</span> <span>{formatCurrency(accountRec.amountPaid || 0)}</span>
-                <span className="font-bold text-primary">Restante:</span> <span className="font-bold text-primary">{formatCurrency(remainingBRL)}</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {accountRec.installments && accountRec.installments.length > 0 && (
-          <FormField
-            name="selectedInstallmentId"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pagar Parcela Específica</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a parcela a pagar..." />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {accountRec.installments
-                      .filter(inst => inst.status === 'PENDING') // Only show pending installments
-                      .map((inst) => (
-                        <SelectItem key={inst.id} value={inst.id}>
-                          Parcela #{inst.installmentNumber} - {formatCurrency(Number(inst.amount))} (Vencimento: {new Date(inst.dueDate).toLocaleDateString()})
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        <p className="text-sm text-muted-foreground">
+          Valor da Parcela: <span className="font-medium">{formatCurrency(installment.amount)}</span>
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Vencimento: <span className="font-medium">{new Date(installment.dueDate).toLocaleDateString()}</span>
+        </p>
 
         <FormField
           name="paymentMethod"
@@ -423,9 +252,9 @@ export function ReceivePaymentForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="financial">Dinheiro / Transferência</SelectItem>
-                  <SelectItem value="metalCredit">Crédito de Metal</SelectItem>
-                  <SelectItem value="metal">Receber em Metal</SelectItem>
+                  <SelectItem value="FINANCIAL">Dinheiro / Transferência</SelectItem>
+                  <SelectItem value="METAL_CREDIT">Crédito de Metal</SelectItem>
+                  <SelectItem value="METAL">Receber em Metal</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -433,7 +262,7 @@ export function ReceivePaymentForm({
           )}
         />
 
-        {selectedPaymentMethod === "financial" && (
+        {selectedPaymentMethod === "FINANCIAL" && (
           <>
             <FormField
               name="amountReceived"
@@ -504,7 +333,7 @@ export function ReceivePaymentForm({
           </>
         )}
 
-        {selectedPaymentMethod === "metalCredit" && (
+        {selectedPaymentMethod === "METAL_CREDIT" && (
           <>
             <FormField
               name="metalCreditId"
@@ -547,15 +376,9 @@ export function ReceivePaymentForm({
                       type="number"
                       step="0.000001"
                       {...field}
-                      max={maxGramsToApply.toFixed(6)} // Set max attribute
                     />
                   </FormControl>
                   <FormMessage />
-                  {selectedQuotationBuyPrice && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Máximo aplicável: {maxGramsToApply.toFixed(4)}g (equivalente a {formatCurrency(remainingBRL)})
-                    </p>
-                  )}
                 </FormItem>
               )}
             />
@@ -576,7 +399,7 @@ export function ReceivePaymentForm({
           </>
         )}
 
-        {selectedPaymentMethod === "metal" && (
+        {selectedPaymentMethod === "METAL" && (
           <>
             <FormField
               name="metalType"
@@ -652,7 +475,7 @@ export function ReceivePaymentForm({
         >
           {form.formState.isSubmitting
             ? "Salvando..."
-            : "Confirmar Recebimento"}
+            : "Confirmar Recebimento da Parcela"}
         </Button>
       </form>
     </Form>

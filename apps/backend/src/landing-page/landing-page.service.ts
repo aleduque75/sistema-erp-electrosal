@@ -24,68 +24,89 @@ export class LandingPageService {
 
     // Se não existir, cria uma landing page padrão
     if (!landingPage) {
-      landingPage = await this.prisma.landingPage.create({
-        data: {
-          name: 'default',
-          logoText: 'Sistema Beleza',
-          logoImageId: null,
-          customThemeName: null, // Changed from customTheme to customThemeName
-          sections: {
-            create: [
-              {
-                order: 1,
-                type: 'hero',
-                content: {
-                  title: 'Gestão Completa para seu Salão de Beleza',
-                  description:
-                    'Agendamentos, clientes, estoque e financeiro em um só lugar. Foque na beleza, nós cuidamos da organização.',
-                  mainImage: '',
-                  sideImages: [],
-                  ctaButtonText: 'Entrar no Sistema',
-                  ctaButtonLink: '/login',
-                  secondaryButtonText: 'Ver Funcionalidades',
-                  secondaryButtonLink: '#features',
+      try {
+        landingPage = await this.prisma.landingPage.create({
+          data: {
+            name: 'default',
+            logoText: 'Sistema Beleza',
+            logoImageId: null,
+            customThemeName: null, // Changed from customTheme to customThemeName
+            sections: {
+              create: [
+                {
+                  order: 1,
+                  type: 'hero',
+                  content: {
+                    title: 'Gestão Completa para seu Salão de Beleza',
+                    description:
+                      'Agendamentos, clientes, estoque e financeiro em um só lugar. Foque na beleza, nós cuidamos da organização.',
+                    mainImage: '',
+                    sideImages: [],
+                    ctaButtonText: 'Entrar no Sistema',
+                    ctaButtonLink: '/login',
+                    secondaryButtonText: 'Ver Funcionalidades',
+                    secondaryButtonLink: '#features',
+                  },
                 },
-              },
-              {
-                order: 2,
-                type: 'features',
-                content: {
-                  title: 'Funcionalidades Principais',
-                  description:
-                    'Tudo o que você precisa para gerenciar seu salão com eficiência e encantar seus clientes.',
-                  items: [
-                    {
-                      icon: 'CalendarCheck',
-                      title: 'Agenda Inteligente',
-                      description:
-                        'Organize seus horários, evite conflitos e envie lembretes automáticos para seus clientes.',
-                    },
-                    {
-                      icon: 'Users',
-                      title: 'Cadastro de Clientes',
-                      description:
-                        'Mantenha um histórico completo de serviços, preferências e informações de contato para um atendimento VIP.',
-                    },
-                    {
-                      icon: 'BarChart3',
-                      title: 'Financeiro Descomplicado',
-                      description:
-                        'Controle suas contas a pagar, receber, faturas de cartão e veja gráficos que mostram a saúde do seu negócio.',
-                    },
-                  ],
+                {
+                  order: 2,
+                  type: 'features',
+                  content: {
+                    title: 'Funcionalidades Principais',
+                    description:
+                      'Tudo o que você precisa para gerenciar seu salão com eficiência e encantar seus clientes.',
+                    items: [
+                      {
+                        icon: 'CalendarCheck',
+                        title: 'Agenda Inteligente',
+                        description:
+                          'Organize seus horários, evite conflitos e envie lembretes automáticos para seus clientes.',
+                      },
+                      {
+                        icon: 'Users',
+                        title: 'Cadastro de Clientes',
+                        description:
+                          'Mantenha um histórico completo de serviços, preferências e informações de contato para um atendimento VIP.',
+                      },
+                      {
+                        icon: 'BarChart3',
+                        title: 'Financeiro Descomplicado',
+                        description:
+                          'Controle suas contas a pagar, receber, faturas de cartão e veja gráficos que mostram a saúde do seu negócio.',
+                      },
+                    ],
+                  },
                 },
+              ],
+            },
+          },
+          include: {
+            sections: {
+              orderBy: { order: 'asc' },
+            },
+            logoImage: true,
+          },
+        });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          // A landing page foi criada por outra requisição, podemos buscá-la
+          landingPage = await this.prisma.landingPage.findUnique({
+            where: { name: 'default' },
+            include: {
+              sections: {
+                orderBy: { order: 'asc' },
               },
-            ],
-          },
-        },
-        include: { // Added include for create method
-          sections: {
-            orderBy: { order: 'asc' },
-          },
-          logoImage: true,
-        },
-      });
+              logoImage: true,
+            },
+          });
+        } else {
+          // Se for outro erro, relança
+          throw error;
+        }
+      }
     }
 
     // Hidratar caminhos de imagem para seções Hero, se solicitado

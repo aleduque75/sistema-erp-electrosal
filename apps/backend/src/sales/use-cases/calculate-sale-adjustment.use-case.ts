@@ -2,16 +2,25 @@ import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 
+import { Prisma } from '@prisma/client';
+
+type PrismaTransactionClient = Prisma.TransactionClient;
+
 @Injectable()
 export class CalculateSaleAdjustmentUseCase {
   private readonly logger = new Logger(CalculateSaleAdjustmentUseCase.name);
 
   constructor(private prisma: PrismaService) {}
 
-  async execute(saleId: string, organizationId: string): Promise<void> {
+  async execute(
+    saleId: string,
+    organizationId: string,
+    tx?: PrismaTransactionClient,
+  ): Promise<void> {
+    const prismaClient = tx || this.prisma;
     this.logger.log(`Iniciando cálculo de ajuste para a venda ID: ${saleId}`);
 
-    const sale = await this.prisma.sale.findFirst({
+    const sale = await prismaClient.sale.findFirst({
       where: { id: saleId, organizationId },
       include: {
         accountsRec: {
@@ -48,12 +57,13 @@ export class CalculateSaleAdjustmentUseCase {
       paymentEquivalentGrams = new Decimal(sale.goldValue || 0);
     } else {
       this.logger.log(`Venda financeira. Buscando transações de pagamento.`);
-      const hasTransactions = sale.accountsRec.some((ar) => ar.transacoes.length > 0);
+      const hasTransactions = sale.accountsRec.some(
+        (ar) => ar.transacoes.length > 0,
+      );
       if (!hasTransactions) {
         this.logger.warn(
           `Nenhuma transação de pagamento encontrada para a venda ${saleId}.`,
         );
-        return;
       }
 
       // Sum up all transaction values from all account receivables
@@ -77,7 +87,9 @@ export class CalculateSaleAdjustmentUseCase {
 
     // Lógica de cálculo de lucro em BRL (Reais)
     const totalCostBRL = sale.saleItems.reduce((sum, item) => {
-      const itemCost = new Decimal(item.costPriceAtSale || 0).times(item.quantity);
+      const itemCost = new Decimal(item.costPriceAtSale || 0).times(
+        item.quantity,
+      );
       return sum.plus(itemCost);
     }, new Decimal(0));
 
@@ -100,7 +112,9 @@ export class CalculateSaleAdjustmentUseCase {
         let itemExpectedGrams = new Decimal(0);
         const calcMethod = item.product.productGroup?.adjustmentCalcMethod;
 
-        this.logger.debug(`[ADJ_CALC] Item: ${item.product.name}, Method: ${calcMethod}, Qty: ${item.quantity}, GoldValue: ${item.product.goldValue}`);
+        this.logger.debug(
+          `[ADJ_CALC] Item: ${item.product.name}, Method: ${calcMethod}, Qty: ${item.quantity}, GoldValue: ${item.product.goldValue}`,
+        );
 
         switch (calcMethod) {
           case 'COST_BASED':
@@ -118,7 +132,9 @@ export class CalculateSaleAdjustmentUseCase {
 
           case 'QUANTITY_BASED':
           default:
-            this.logger.debug(`[ADJ_CALC] Item: ${item.product.name}, isReactionProductGroup: ${item.product.productGroup?.isReactionProductGroup}`);
+            this.logger.debug(
+              `[ADJ_CALC] Item: ${item.product.name}, isReactionProductGroup: ${item.product.productGroup?.isReactionProductGroup}`,
+            );
             // If this product comes from a reaction group, its quantity is already the gold value.
             if (item.product.productGroup?.isReactionProductGroup) {
               this.logger.debug(
@@ -158,7 +174,7 @@ export class CalculateSaleAdjustmentUseCase {
 
       grossDiscrepancyGrams = paymentEquivalentGrams.minus(saleExpectedGrams);
 
-      const laborCostEntry = await this.prisma.laborCostTableEntry.findFirst({
+      const laborCostEntry = await prismaClient.laborCostTableEntry.findFirst({
         where: {
           organizationId: organizationId,
           minGrams: { lte: saleExpectedGrams.toNumber() },
@@ -168,13 +184,21 @@ export class CalculateSaleAdjustmentUseCase {
           ],
         },
       });
-      const laborCostInGrams = laborCostEntry ? new Decimal(laborCostEntry.goldGramsCharged) : new Decimal(0);
+      const laborCostInGrams =
+        laborCostEntry ?
+          new Decimal(laborCostEntry.goldGramsCharged)
+        : new Decimal(0);
 
-      costsInGrams = otherCostsBRL.isZero() || !paymentQuotation.isFinite() || paymentQuotation.isZero()
-        ? new Decimal(0)
-        : otherCostsBRL.dividedBy(paymentQuotation);
-      
-      netDiscrepancyGrams = grossDiscrepancyGrams.minus(costsInGrams).minus(laborCostInGrams);
+      costsInGrams =
+        otherCostsBRL.isZero() ||
+        !paymentQuotation.isFinite() ||
+        paymentQuotation.isZero()
+          ? new Decimal(0)
+          : otherCostsBRL.dividedBy(paymentQuotation);
+
+      netDiscrepancyGrams = grossDiscrepancyGrams
+        .minus(costsInGrams)
+        .minus(laborCostInGrams);
     }
 
     const adjustmentData = {
@@ -197,14 +221,14 @@ export class CalculateSaleAdjustmentUseCase {
 
     this.logger.log(`Dados do ajuste: ${JSON.stringify(adjustmentData, null, 2)}`);
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.saleAdjustment.upsert({
+    const saveAdjustment = async (client: PrismaTransactionClient) => {
+      await client.saleAdjustment.upsert({
         where: { saleId },
         create: adjustmentData,
         update: adjustmentData,
       });
 
-      await tx.sale.update({
+      await client.sale.update({
         where: { id: saleId },
         data: {
           netAmount: paymentReceivedBRL,
@@ -212,7 +236,15 @@ export class CalculateSaleAdjustmentUseCase {
           totalCost: totalCostBRL, // Atualiza o custo total da venda
         },
       });
-    });
+    };
+
+    if (tx) {
+      await saveAdjustment(tx);
+    } else {
+      await this.prisma.$transaction(async (newTx) => {
+        await saveAdjustment(newTx);
+      });
+    }
 
     this.logger.log(`Ajuste da venda ${saleId} calculado e salvo com sucesso.`);
   }

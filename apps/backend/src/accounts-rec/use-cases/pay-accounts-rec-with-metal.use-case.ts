@@ -1,21 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException, Logger, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { IMetalCreditRepository } from '@sistema-erp-electrosal/core';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { SettingsService } from '../../settings/settings.service';
 import { CalculateSaleAdjustmentUseCase } from '../../sales/use-cases/calculate-sale-adjustment.use-case';
-import { PayAccountsRecWithMetalCreditDto } from '../dtos/pay-accounts-rec-with-metal-credit.dto';
+import { PayAccountsRecWithMetalDto } from '../dtos/pay-accounts-rec-with-metal.dto';
 import { Decimal } from 'decimal.js';
-import { TipoTransacaoPrisma, TipoMetal, SaleStatus } from '@prisma/client';
-import { UniqueEntityID } from '@sistema-erp-electrosal/core';
+import { TipoTransacaoPrisma, PureMetalLotStatus, SaleStatus } from '@prisma/client';
 
 @Injectable()
-export class PayAccountsRecWithMetalCreditUseCase {
-  private readonly logger = new Logger(PayAccountsRecWithMetalCreditUseCase.name);
+export class PayAccountsRecWithMetalUseCase {
+  private readonly logger = new Logger(PayAccountsRecWithMetalUseCase.name);
 
   constructor(
     private prisma: PrismaService,
-    @Inject('IMetalCreditRepository') private metalCreditRepository: IMetalCreditRepository,
     private quotationsService: QuotationsService,
     private settingsService: SettingsService,
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
@@ -25,12 +22,12 @@ export class PayAccountsRecWithMetalCreditUseCase {
     organizationId: string,
     userId: string,
     accountsRecId: string,
-    dto: PayAccountsRecWithMetalCreditDto,
-  ): Promise<any> {
-    const { metalCreditId, amountInGrams, quotationId, customBuyPrice } = dto;
+    dto: PayAccountsRecWithMetalDto,
+  ): Promise<{ accountRec: any, overpayment: number }> { // MODIFIED RETURN TYPE
+    const { metalType, amountInGrams, quotation, purity } = dto;
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Find AccountsReceivable and related data
+      // 1. Find AccountsReceivable
       const accountsRec = await tx.accountRec.findFirst({
         where: { id: accountsRecId, organizationId },
         include: { sale: true },
@@ -43,55 +40,40 @@ export class PayAccountsRecWithMetalCreditUseCase {
         throw new BadRequestException(`Conta a receber com ID ${accountsRecId} já está paga.`);
       }
 
-      const metalCredit = await this.metalCreditRepository.findById(new UniqueEntityID(metalCreditId));
-      if (!metalCredit || metalCredit.organizationId !== organizationId) {
-        throw new NotFoundException(`Crédito de metal com ID ${metalCreditId} não encontrado.`);
-      }
-
-      // 2. Determine payment quotation
-      let finalBuyPrice: Decimal;
-      if (customBuyPrice) {
-        finalBuyPrice = new Decimal(customBuyPrice);
-      } else if (quotationId) {
-        const quotation = await this.quotationsService.findOne(quotationId, organizationId);
-        if (!quotation) throw new NotFoundException(`Cotação com ID ${quotationId} não encontrada.`);
-        if (quotation.metal !== metalCredit.metalType) throw new BadRequestException(`Tipo de metal da cotação não corresponde ao do crédito.`);
-        finalBuyPrice = new Decimal(quotation.buyPrice);
-      } else {
-        throw new BadRequestException('Nenhuma cotação ou preço personalizado foi fornecido.');
-      }
+      const finalBuyPrice = new Decimal(quotation);
       if (finalBuyPrice.isZero() || finalBuyPrice.isNegative()) {
         throw new BadRequestException('O preço de compra da cotação deve ser positivo.');
       }
 
-      // 3. Determine if it's a gold-based or BRL-based receivable
+      const requestedGrams = new Decimal(amountInGrams);
+      if (requestedGrams.isZero() || requestedGrams.isNegative()) {
+        throw new BadRequestException('A quantidade de gramas recebida deve ser positiva.');
+      }
+
+      // 2. Determine if it's a gold-based or BRL-based receivable
       const isGoldBased = accountsRec.goldAmount && new Decimal(accountsRec.goldAmount).isPositive();
 
       let gramsToApply: Decimal;
       let amountToApplyInBRL: Decimal;
       let isFullyPaid: boolean;
+      let overpaymentGrams = new Decimal(0);
 
       if (isGoldBased) {
         // --- GOLD-BASED LOGIC ---
         this.logger.log(`Executando lógica de pagamento baseada em OURO para AccountRec: ${accountsRec.id}`);
         const accountsRecRemainingGold = new Decimal(accountsRec.goldAmount!).minus(new Decimal(accountsRec.goldAmountPaid || 0));
-        const requestedGrams = new Decimal(amountInGrams);
-        const gramsFromCredit = new Decimal(metalCredit.grams);
-
-        gramsToApply = Decimal.min(requestedGrams, gramsFromCredit, accountsRecRemainingGold);
-        if (gramsToApply.isZero() || gramsToApply.isNegative()) {
-          throw new BadRequestException('A quantidade de gramas a ser aplicada é zero ou negativa.');
-        }
+        
+        gramsToApply = Decimal.min(requestedGrams, accountsRecRemainingGold);
+        overpaymentGrams = requestedGrams.minus(gramsToApply);
 
         const newGoldAmountPaid = new Decimal(accountsRec.goldAmountPaid || 0).plus(gramsToApply);
-        
+
         // Check if fully paid with a small tolerance for floating point inaccuracies
         const difference = newGoldAmountPaid.minus(accountsRec.goldAmount!).abs();
         isFullyPaid = newGoldAmountPaid.greaterThanOrEqualTo(accountsRec.goldAmount!) || difference.lessThan(0.00001);
 
         amountToApplyInBRL = gramsToApply.times(finalBuyPrice);
 
-        // Update AccountRec gold fields
         await tx.accountRec.update({
           where: { id: accountsRecId },
           data: {
@@ -106,18 +88,11 @@ export class PayAccountsRecWithMetalCreditUseCase {
         // --- BRL-BASED LOGIC ---
         this.logger.log(`Executando lógica de pagamento baseada em BRL para AccountRec: ${accountsRec.id}`);
         const accountsRecRemainingBRL = new Decimal(accountsRec.amount).minus(new Decimal(accountsRec.amountPaid || 0));
-        const requestedGrams = new Decimal(amountInGrams);
-        const gramsFromCredit = new Decimal(metalCredit.grams);
-
-        const potentialGramsToUse = Decimal.min(requestedGrams, gramsFromCredit);
-        const potentialBRLValue = potentialGramsToUse.times(finalBuyPrice);
+        const potentialBRLValue = requestedGrams.times(finalBuyPrice);
 
         amountToApplyInBRL = Decimal.min(potentialBRLValue, accountsRecRemainingBRL);
         gramsToApply = amountToApplyInBRL.dividedBy(finalBuyPrice);
-
-        if (gramsToApply.isZero() || gramsToApply.isNegative()) {
-          throw new BadRequestException('A quantidade de gramas a ser aplicada é zero ou negativa.');
-        }
+        overpaymentGrams = requestedGrams.minus(gramsToApply);
 
         const newAmountPaid = new Decimal(accountsRec.amountPaid || 0).plus(amountToApplyInBRL);
 
@@ -125,7 +100,6 @@ export class PayAccountsRecWithMetalCreditUseCase {
         const difference = newAmountPaid.minus(accountsRec.amount).abs();
         isFullyPaid = newAmountPaid.greaterThanOrEqualTo(accountsRec.amount) || difference.lessThan(0.01); // BRL has 2 decimal places
 
-        // Update AccountRec BRL fields
         await tx.accountRec.update({
           where: { id: accountsRecId },
           data: {
@@ -136,11 +110,46 @@ export class PayAccountsRecWithMetalCreditUseCase {
         });
       }
 
-      // 4. Update MetalCredit balance
-      const newMetalCreditGrams = new Decimal(metalCredit.grams).minus(gramsToApply);
-      await this.metalCreditRepository.updateGrams(metalCredit.id, newMetalCreditGrams.toNumber());
+      // 4. Create a new pure_metal_lot for the FULL received amount
+      await tx.pure_metal_lots.create({
+        data: {
+          organizationId,
+          sourceType: 'ACCOUNT_REC_PAYMENT',
+          sourceId: accountsRec.id,
+          metalType,
+          initialGrams: requestedGrams.toNumber(), // Use the full amount received
+          remainingGrams: requestedGrams.toNumber(),
+          purity: purity,
+          status: PureMetalLotStatus.AVAILABLE,
+        },
+      });
 
-      // 5. Create Financial Transaction (always happens)
+      // NEW: Handle Overpayment by creating a credit in the customer's metal account
+      if (overpaymentGrams.isPositive()) {
+        const pessoaId = accountsRec.sale?.pessoaId;
+        if (pessoaId) {
+          let metalAccount = await tx.metalAccount.findFirst({
+            where: { personId: pessoaId, type: metalType, organizationId },
+          });
+          if (!metalAccount) {
+            metalAccount = await tx.metalAccount.create({
+              data: { personId: pessoaId, type: metalType, organizationId },
+            });
+          }
+          await tx.metalAccountEntry.create({
+            data: {
+              metalAccountId: metalAccount.id,
+              date: new Date(),
+              description: `Crédito por pagamento excedente na Venda #${accountsRec.sale?.orderNumber}`,
+              grams: overpaymentGrams.toDecimalPlaces(4),
+              type: 'SALE_OVERPAYMENT',
+              sourceId: accountsRec.id,
+            },
+          });
+        }
+      }
+
+      // 5. Create Financial Transaction
       const settings = await this.settingsService.findOne(userId);
       if (!settings?.props.metalStockAccountId) {
         throw new BadRequestException("Nenhuma conta de estoque de metal padrão foi configurada.");
@@ -150,7 +159,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
           organizationId,
           contaContabilId: settings.props.metalStockAccountId,
           tipo: TipoTransacaoPrisma.CREDITO,
-          descricao: `Pagamento da Venda #${accountsRec.sale?.orderNumber} com crédito de metal`,
+          descricao: `Recebimento da Venda #${accountsRec.sale?.orderNumber} com metal físico`,
           valor: amountToApplyInBRL.toNumber(),
           goldAmount: gramsToApply.toNumber(),
           goldPrice: finalBuyPrice.toNumber(),
@@ -160,7 +169,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
         },
       });
 
-      // 6. Update related entities (SaleInstallment, Sale status)
+      // 6. Update related entities
       const saleInstallment = await tx.saleInstallment.findFirst({ where: { accountRecId: accountsRec.id } });
       if (saleInstallment) {
         await tx.saleInstallment.update({
@@ -175,12 +184,13 @@ export class PayAccountsRecWithMetalCreditUseCase {
         });
       }
 
-      // 7. Trigger Sale Adjustment (always, inside the transaction)
+      // 7. Trigger Sale Adjustment
       if (accountsRec.saleId) {
         await this.calculateSaleAdjustmentUseCase.execute(accountsRec.saleId, organizationId, tx);
       }
 
-      return tx.accountRec.findUnique({ where: { id: accountsRecId } });
+      const updatedAccountRec = await tx.accountRec.findUnique({ where: { id: accountsRecId } });
+      return { accountRec: updatedAccountRec, overpayment: overpaymentGrams.toNumber() };
     });
   }
 }

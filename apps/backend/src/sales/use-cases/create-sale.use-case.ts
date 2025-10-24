@@ -27,8 +27,9 @@ export class CreateSaleUseCase {
       freightAmount,
     } = createSaleDto;
 
-    const client = await this.prisma.client.findFirst({ where: { pessoaId, organizationId } });
-    if (!client) throw new NotFoundException('Cliente não encontrado.');
+    if ((paymentMethod === 'A_VISTA' || paymentMethod === 'METAL') && paymentTermId) {
+      throw new BadRequestException('Prazo de pagamento não deve ser informado para vendas à vista ou em metal.');
+    }
 
     let goldQuote: { valorVenda: Decimal };
 

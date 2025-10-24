@@ -80,7 +80,7 @@ export class ConfirmSaleUseCase {
           data: {
             metalAccountId: clientAccount.id,
             date: new Date(),
-            description: `Pagamento da Venda #${sale.orderNumber}`,
+            description: `Saída de metal para pagamento da Venda #${sale.orderNumber} (Conta do Cliente)`,
             grams: finalGoldValue.negated().toNumber(),
             type: 'SALE_PAYMENT',
             sourceId: sale.id,
@@ -96,8 +96,8 @@ export class ConfirmSaleUseCase {
             initialGrams: finalGoldValue.toNumber(),
             remainingGrams: finalGoldValue.toNumber(),
             purity: 1,
-            notes: `Metal recebido como pagamento da Venda #${sale.orderNumber}`,
-            saleId: sale.id,
+            notes: `Metal recebido como pagamento da Venda #${sale.orderNumber} (Sale ID: ${sale.id})`,
+            saleId: sale!.id,
           },
         });
 
@@ -109,8 +109,9 @@ export class ConfirmSaleUseCase {
           data: {
             organizationId,
             saleId: sale.id,
-            description: `Recebimento (em metal) da Venda #${sale.orderNumber}`,
+            description: `Receber de ${sale.pessoa.name} (metal) venda #${sale.orderNumber}`,
             amount: finalNetAmount,
+            goldAmount: finalGoldValue, // ADDED
             dueDate: paymentDate,
             received: true,
             receivedAt: paymentDate,
@@ -128,7 +129,6 @@ export class ConfirmSaleUseCase {
             accountRecId: accountRec.id,
           },
         });
-
       } else if (paymentMethod === 'A_VISTA') {
         if (!contaCorrenteId) throw new BadRequestException('Conta de destino é obrigatória para vendas à vista.');
 
@@ -143,8 +143,9 @@ export class ConfirmSaleUseCase {
           data: {
             organizationId,
             saleId: sale.id,
-            description: `Recebimento (à vista) da Venda #${sale.orderNumber}`,
+            description: `Receber de ${sale.pessoa.name} (à vista) venda #${sale.orderNumber}`,
             amount: finalNetAmount,
+            goldAmount: goldAmountForTx, // ADDED
             dueDate: paymentDate,
             received: true,
             receivedAt: paymentDate,
@@ -180,47 +181,47 @@ export class ConfirmSaleUseCase {
         if (!sale.paymentTerm) {
           throw new BadRequestException('Prazo de pagamento não encontrado para venda A Prazo.');
         }
-        const installmentsCount = sale.paymentTerm.installmentsDays.length;
+        const installmentsCount = sale.paymentTerm!.installmentsDays.length;
         if (installmentsCount === 0) {
           throw new BadRequestException('Prazo de pagamento não possui parcelas configuradas.');
         }
 
         const installmentValue = finalNetAmount.dividedBy(installmentsCount);
+        const installmentGoldValue = finalGoldValue.dividedBy(installmentsCount);
 
-        for (let i = 0; i < installmentsCount; i++) {
-          const days = sale.paymentTerm.installmentsDays[i];
-          const dueDate = addDays(new Date(), days);
+        // Create a single AccountRec for the entire sale
+        const lastDueDate = new Date(sale.createdAt);
+        const maxDays = Math.max(...sale.paymentTerm.installmentsDays);
+        lastDueDate.setDate(lastDueDate.getDate() + maxDays);
 
-          // 1. Create the AccountRec first
-          const accountRec = await tx.accountRec.create({
-            data: {
-              organizationId,
-              saleId: sale.id,
-              description: `Parcela ${i + 1}/${installmentsCount} da Venda #${sale.orderNumber}`,
-              amount: installmentValue,
-              dueDate: dueDate,
-            },
-          });
+        const accountRec = await tx.accountRec.create({
+          data: {
+            organizationId,
+            saleId: sale.id,
+            description: `Receber de ${sale.pessoa.name} (a prazo) venda #${sale.orderNumber}`,
+            amount: finalNetAmount,
+            goldAmount: finalGoldValue,
+            dueDate: lastDueDate,
+            received: false,
+          },
+        });
 
-          // 2. Then create the SaleInstallment, linking it to the new AccountRec
-          await tx.saleInstallment.create({
-            data: {
-              saleId: sale.id,
-              installmentNumber: i + 1,
-              amount: installmentValue,
-              dueDate: dueDate,
-              status: 'PENDING', // Explicitly set status
-              accountRecId: accountRec.id, // THE CRUCIAL LINK
-            },
-          });
-        }
+        // Link the existing installments to the newly created AccountRec
+        await tx.saleInstallment.updateMany({
+          where: {
+            saleId: sale.id,
+          },
+          data: {
+            accountRecId: accountRec.id,
+          },
+        });
       } else { // CREDIT_CARD or other methods
         // Fallback for CREDIT_CARD or other types - creates a single receivable
-        await tx.accountRec.create({ data: { organizationId, saleId: sale.id, description: `Conta a Receber para Venda #${sale.orderNumber}`, amount: finalNetAmount, dueDate: addDays(new Date(), 30) } });
+        await tx.accountRec.create({ data: { organizationId, saleId: sale.id, description: `Receber de ${sale.pessoa.name} venda #${sale.orderNumber}`, amount: finalNetAmount, goldAmount: finalGoldValue, dueDate: addDays(new Date(), 30) } });
       }
 
       // UPDATE SALE STATUS AND FINAL VALUES
-      return tx.sale.update({
+      const updatedSale = await tx.sale.update({
         where: { id: saleId },
         data: {
           status: SaleStatus.FINALIZADO,
@@ -231,13 +232,11 @@ export class ConfirmSaleUseCase {
           goldValue: finalGoldValue,
         },
       });
+
+      // After all updates, calculate adjustment inside the same transaction
+      await this.calculateSaleAdjustmentUseCase.execute(saleId, organizationId, tx);
+
+      return updatedSale;
     });
-
-    // After transaction, calculate adjustment
-    if (confirmedSale) {
-      await this.calculateSaleAdjustmentUseCase.execute(saleId, organizationId);
-    }
-
-    return confirmedSale;
   }
 }

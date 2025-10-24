@@ -19,6 +19,7 @@ import { QuotationsModule } from '../quotations/quotations.module';
 import { BackfillInstallmentsUseCase } from './use-cases/backfill-installments.use-case';
 import { LinkSaleItemToBatchUseCase } from './use-cases/link-sale-item-to-batch.use-case';
 import { ProcessClientMetalPaymentToSupplierUseCase } from './use-cases/process-client-metal-payment-to-supplier.use-case'; // New Use Case
+import { ReceiveInstallmentPaymentUseCase } from './use-cases/receive-installment-payment.use-case';
 import { PrismaMetalAccountRepository } from '../metal-accounts/repositories/prisma-metal-account.repository'; // Assuming path
 import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositories/prisma-metal-account-entry.repository'; // Assuming path
 
@@ -48,7 +49,8 @@ import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositorie
     BackfillSaleGoldValueUseCase,
     BackfillInstallmentsUseCase, // Add new use case
     LinkSaleItemToBatchUseCase,
-    ProcessClientMetalPaymentToSupplierUseCase, // Add new use case
+    ProcessClientMetalPaymentToSupplierUseCase, // New Use Case
+    ReceiveInstallmentPaymentUseCase,
     {
       provide: 'IMetalAccountRepository',
       useClass: PrismaMetalAccountRepository,

@@ -65,3 +65,40 @@ export class ConfirmSaleDto {
   updatedGoldPrice?: number;
 }
 
+export class ReceiveInstallmentPaymentDto {
+  @IsEnum(TipoMetal)
+  @IsOptional()
+  paymentMetalType?: TipoMetal;
+
+  @IsString()
+  @IsNotEmpty()
+  paymentMethod: 'FINANCIAL' | 'METAL_CREDIT' | 'METAL'; // Changed to be more explicit
+
+  @IsUUID()
+  @IsOptional()
+  contaCorrenteId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  metalCreditId?: string;
+
+  @IsNumber()
+  @IsOptional()
+  amountReceived?: number; // For FINANCIAL payment method
+
+  @IsNumber()
+  @IsOptional()
+  amountInGrams?: number; // For METAL_CREDIT or METAL payment method
+
+  @IsString()
+  @IsOptional()
+  receivedAt?: string; // Date of payment
+
+  @IsNumber()
+  @IsOptional()
+  quotationBuyPrice?: number; // Custom quotation for metal payments
+
+  @IsNumber()
+  @IsOptional()
+  purity?: number; // For METAL payment method
+}

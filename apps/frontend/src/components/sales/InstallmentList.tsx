@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ReceiveInstallmentPaymentForm } from './ReceiveInstallmentPaymentForm';
 import {
   Table,
   TableBody,
@@ -29,9 +32,11 @@ interface SaleInstallment {
 
 interface InstallmentListProps {
   installments: SaleInstallment[];
+  saleId: string; // Add saleId prop
+  onInstallmentPaid: () => void; // Add onInstallmentPaid prop
 }
 
-export function InstallmentList({ installments }: InstallmentListProps) {
+export function InstallmentList({ installments, saleId }: InstallmentListProps) {
   if (!installments || installments.length === 0) {
     return <p>Nenhuma parcela encontrada para esta venda.</p>;
   }

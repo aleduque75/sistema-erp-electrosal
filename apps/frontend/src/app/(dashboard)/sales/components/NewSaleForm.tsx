@@ -86,6 +86,20 @@ export function NewSaleForm({ onSave }: any) {
     return paymentOptions.find(opt => opt.value === paymentConditionId);
   }, [paymentConditionId, paymentOptions]);
 
+  const currentPaymentMethod = useMemo(() => {
+    if (!selectedPaymentCondition) return null;
+    if (selectedPaymentCondition.value === 'CREDIT_CARD') return 'CREDIT_CARD';
+    if (selectedPaymentCondition.value === 'METAL') return 'METAL';
+    if (selectedPaymentCondition.isTerm) {
+      const term = paymentTerms.find(t => t.id === selectedPaymentCondition.value);
+      if (term && term.installmentsDays.length === 1 && selectedPaymentCondition.label.toLowerCase().includes('vista')) {
+        return 'A_VISTA';
+      }
+      return 'A_PRAZO';
+    }
+    return null;
+  }, [selectedPaymentCondition]);
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -177,13 +191,17 @@ export function NewSaleForm({ onSave }: any) {
         paymentMethod = 'CREDIT_CARD';
       } else if (selectedPaymentCondition.value === 'METAL') {
         paymentMethod = 'METAL';
+        paymentTermId = null; // Garantir que seja null para METAL
       } else if (selectedPaymentCondition.isTerm) {
-        paymentTermId = selectedPaymentCondition.value;
+        paymentTermId = selectedPaymentCondition.value; // Atribui o ID do termo de pagamento
         if (selectedPaymentCondition.label.toLowerCase().includes('vista')) {
           paymentMethod = 'A_VISTA';
+          paymentTermId = null; // Se for A_VISTA, o paymentTermId deve ser null
+        } else {
+          paymentMethod = 'A_PRAZO'; // Se não for A_VISTA, é A_PRAZO
         }
       }
-    }
+  }
 
     const payload = {
       pessoaId: formData.clientId,
@@ -311,7 +329,7 @@ export function NewSaleForm({ onSave }: any) {
                   )}
                 />
               )}
-              {selectedPaymentCondition && selectedPaymentCondition.label.toLowerCase().includes('vista') && (
+              {currentPaymentMethod === 'A_VISTA' && (
                 <Controller
                   name="contaCorrenteId"
                   control={control}

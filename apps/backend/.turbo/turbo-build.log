@@ -1,0 +1,56 @@
+
+
+> backend@0.0.1 build /home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend
+> nest build
+
+[1m[31mERROR[39m[22m in [1m./src/metal-receivable-payments/metal-receivable-payments.controller.ts:3:29[39m[22m
+[90mTS2307: [39mCannot find module '../../auth/decorators/current-user.decorator' or its corresponding type declarations.
+  [0m [90m 1 |[39m [36mimport[39m { [33mController[39m[33m,[39m [33mPost[39m[33m,[39m [33mBody[39m[33m,[39m [33mUseGuards[39m } [36mfrom[39m [32m'@nestjs/common'[39m[33m;[39m
+   [90m 2 |[39m [36mimport[39m { [33mAuthGuard[39m } [36mfrom[39m [32m'@nestjs/passport'[39m[33m;[39m
+  [31m[1m>[22m[39m[90m 3 |[39m [36mimport[39m { [33mCurrentUser[39m } [36mfrom[39m [32m'../../auth/decorators/current-user.decorator'[39m[33m;[39m
+   [90m   |[39m                             [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+   [90m 4 |[39m [36mimport[39m { [33mCreateMetalReceivablePaymentDto[39m } [36mfrom[39m [32m'./dtos/create-payment.dto'[39m[33m;[39m
+   [90m 5 |[39m [36mimport[39m { [33mCreateMetalReceivablePaymentUseCase[39m } [36mfrom[39m [32m'./use-cases/create-payment.use-case'[39m[33m;[39m
+   [90m 6 |[39m[0m
+
+[1m[31mERROR[39m[22m in [1m./src/metal-receivable-payments/metal-receivable-payments.module.ts:4:30[39m[22m
+[90mTS2307: [39mCannot find module '../../prisma/prisma.module' or its corresponding type declarations.
+  [0m [90m 2 |[39m [36mimport[39m { [33mMetalReceivablePaymentsController[39m } [36mfrom[39m [32m'./metal-receivable-payments.controller'[39m[33m;[39m
+   [90m 3 |[39m [36mimport[39m { [33mCreateMetalReceivablePaymentUseCase[39m } [36mfrom[39m [32m'./use-cases/create-payment.use-case'[39m[33m;[39m
+  [31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { [33mPrismaModule[39m } [36mfrom[39m [32m'../../prisma/prisma.module'[39m[33m;[39m
+   [90m   |[39m                              [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+   [90m 5 |[39m
+   [90m 6 |[39m [33m@[39m[33mModule[39m({
+   [90m 7 |[39m   imports[33m:[39m [[33mPrismaModule[39m][33m,[39m[0m
+
+[1m[31mERROR[39m[22m in [1m./src/metal-receivables/metal-receivables.controller.ts:3:29[39m[22m
+[90mTS2307: [39mCannot find module '../../auth/decorators/current-user.decorator' or its corresponding type declarations.
+  [0m [90m 1 |[39m [36mimport[39m { [33mController[39m[33m,[39m [33mGet[39m[33m,[39m [33mQuery[39m[33m,[39m [33mUseGuards[39m } [36mfrom[39m [32m'@nestjs/common'[39m[33m;[39m
+   [90m 2 |[39m [36mimport[39m { [33mAuthGuard[39m } [36mfrom[39m [32m'@nestjs/passport'[39m[33m;[39m
+  [31m[1m>[22m[39m[90m 3 |[39m [36mimport[39m { [33mCurrentUser[39m } [36mfrom[39m [32m'../../auth/decorators/current-user.decorator'[39m[33m;[39m
+   [90m   |[39m                             [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+   [90m 4 |[39m [36mimport[39m { [33mMetalReceivablesService[39m } [36mfrom[39m [32m'./metal-receivables.service'[39m[33m;[39m
+   [90m 5 |[39m
+   [90m 6 |[39m [33m@[39m[33mUseGuards[39m([33mAuthGuard[39m([32m'jwt'[39m))[0m
+
+[1m[31mERROR[39m[22m in [1m./src/metal-receivables/metal-receivables.module.ts:4:30[39m[22m
+[90mTS2307: [39mCannot find module '../../prisma/prisma.module' or its corresponding type declarations.
+  [0m [90m 2 |[39m [36mimport[39m { [33mMetalReceivablesController[39m } [36mfrom[39m [32m'./metal-receivables.controller'[39m[33m;[39m
+   [90m 3 |[39m [36mimport[39m { [33mMetalReceivablesService[39m } [36mfrom[39m [32m'./metal-receivables.service'[39m[33m;[39m
+  [31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { [33mPrismaModule[39m } [36mfrom[39m [32m'../../prisma/prisma.module'[39m[33m;[39m
+   [90m   |[39m                              [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+   [90m 5 |[39m
+   [90m 6 |[39m [33m@[39m[33mModule[39m({
+   [90m 7 |[39m   imports[33m:[39m [[33mPrismaModule[39m][33m,[39m[0m
+
+[1m[31mERROR[39m[22m in [1m./src/metal-receivables/metal-receivables.service.ts:2:31[39m[22m
+[90mTS2307: [39mCannot find module '../../prisma/prisma.service' or its corresponding type declarations.
+  [0m [90m 1 |[39m [36mimport[39m { [33mInjectable[39m } [36mfrom[39m [32m'@nestjs/common'[39m[33m;[39m
+  [31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m { [33mPrismaService[39m } [36mfrom[39m [32m'../../prisma/prisma.service'[39m[33m;[39m
+   [90m   |[39m                               [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+   [90m 3 |[39m [36mimport[39m { [33mPrisma[39m } [36mfrom[39m [32m'@prisma/client'[39m[33m;[39m
+   [90m 4 |[39m
+   [90m 5 |[39m [33m@[39m[33mInjectable[39m()[0m
+
+webpack 5.100.2 compiled with [1m[31m5 errors[39m[22m in 5921 ms
+[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m

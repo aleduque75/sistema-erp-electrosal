@@ -6,7 +6,7 @@ export class PayAccountsRecWithMetalCreditDto {
   metalCreditId: string;
 
   @IsNumber()
-  @Min(0.000001) // Assuming metal amounts can be very small
+  @Min(0.000001)
   @IsNotEmpty()
   amountInGrams: number;
 
