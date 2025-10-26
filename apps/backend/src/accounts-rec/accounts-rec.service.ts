@@ -53,6 +53,7 @@ export class AccountsRecService {
       include: {
         sale: { include: { pessoa: { include: { client: true } } } },
         transacoes: true, // Include transactions
+        saleInstallments: true,
       },
     });
 
@@ -72,9 +73,9 @@ export class AccountsRecService {
         sale: {
           include: {
             pessoa: { include: { client: true } },
-            installments: true, // Include sale installments
           },
         },
+        saleInstallments: true,
       },
     });
     if (!account) {

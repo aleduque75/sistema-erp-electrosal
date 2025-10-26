@@ -17,9 +17,9 @@ interface AccountRec {
   receiveDate: string;
   received: boolean;
   receivedAt?: string;
-  saleId?: string; // Add saleId
-  installments?: SaleInstallment[]; // Add installments
-  sale?: { // Add sale object to AccountRec interface
+  saleId?: string;
+  saleInstallments?: SaleInstallment[];
+  sale?: {
     status: SaleStatus;
   };
 }
@@ -50,8 +50,7 @@ export default function AccountRecDetailPage() {
       setAccount({
         ...response.data,
         amount: parseFloat(response.data.amount),
-        installments: response.data.sale?.installments || [], // Map installments
-        saleId: response.data.sale?.id || undefined, // Map saleId
+        saleInstallments: response.data.saleInstallments || [],
       });
     } catch (err: any) {
       setError(err.message);
@@ -82,10 +81,10 @@ export default function AccountRecDetailPage() {
       <p><strong>Receive Date:</strong> {new Date(account.receiveDate).toLocaleDateString()}</p>
       <p><strong>Received:</strong> {account.received ? 'Yes' : 'No'}</p>
       {account.received && <p><strong>Received At:</strong> {account.receivedAt ? new Date(account.receivedAt).toLocaleDateString() : 'N/A'}</p>}
-      {account.saleId && account.installments && account.installments.length > 0 && account.sale?.status === 'FINALIZADO' && (
+      {account.saleId && account.saleInstallments && account.saleInstallments.length > 0 && (
         <div className="mt-6">
           <h2 className="text-xl font-bold mb-3">Parcelas da Venda</h2>
-          <InstallmentList installments={account.installments} saleId={account.saleId!} onInstallmentPaid={fetchAccountRec} />
+          <InstallmentList installments={account.saleInstallments} saleId={account.saleId!} onInstallmentPaid={fetchAccountRec} />
         </div>
       )}
 

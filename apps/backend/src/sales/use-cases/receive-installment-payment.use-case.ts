@@ -80,13 +80,17 @@ export class ReceiveInstallmentPaymentUseCase {
           throw new BadRequestException("Nenhuma conta de 'Receita Padrão' foi configurada para registrar recebimentos.");
         }
 
+        const totalInstallments = await tx.saleInstallment.count({ where: { saleId: installment.sale.id } });
+        const installmentNumber = String(installment.installmentNumber).padStart(2, '0');
+        const totalInstallmentsPadded = String(totalInstallments).padStart(2, '0');
+
         await tx.transacao.create({
           data: {
             organizationId,
             contaCorrenteId: contaCorrenteId,
             contaContabilId: settings.defaultReceitaContaId, // FIX: Use defaultReceitaContaId
             tipo: TipoTransacaoPrisma.CREDITO,
-            descricao: `Recebimento de parcela #${installment.installmentNumber} da venda #${installment.sale.orderNumber} (Venda ID: ${installment.sale.id})`, // FIX: Add sale ID for linking
+            descricao: `Recebimento (${installment.sale.pessoa.name}) - p-${installmentNumber}/${totalInstallmentsPadded} (Venda #${installment.sale.orderNumber})`,
             valor: finalAmountReceivedBRL,
             goldAmount: finalAmountReceivedGold,
             goldPrice: finalQuotation,

@@ -1,99 +1,264 @@
-## Pendências Resolvidas
-
-### 1. Duplicação de `sales_installment` para vendas à vista e em metal
-
-**Problema:** Ao confirmar uma venda com pagamento `A_VISTA` ou `METAL`, o sistema estava criando duas entradas em `sales_installment`: uma `PENDING` (provavelmente de um processo anterior ou de um estado inicial da venda) e outra `PAID` (criada no `confirm-sale.use-case.ts`). Isso gerava redundância e inconsistência.
-
-**Análise:**
-*   O `create-sale.use-case.ts` não cria `sales_installment` para vendas `A_VISTA` ou `METAL`. Ele só cria parcelas para vendas `A_PRAZO` (com `paymentTermId`).
-*   O `confirm-sale.use-case.ts` estava criando uma `sales_installment` com status `PAID` para vendas `A_VISTA` e `METAL`, mesmo já tendo criado um `accountRec` que representa o recebimento.
-
-**Solução:**
-*   Removida a criação da `sales_installment` dentro dos blocos de `paymentMethod === 'A_VISTA'` e `paymentMethod === 'METAL'` no arquivo `apps/backend/src/sales/use-cases/confirm-sale.use-case.ts`. O `accountRec` já é suficiente para registrar o recebimento nesses casos.
-
-### 2. Origem de `price` e `costPriceAtSale` em `SaleItem`
-
-**Problema:** Dúvida sobre a origem dos valores `price` e `costPriceAtSale` em `SaleItem`, especialmente o `costPriceAtSale` sendo `0.00`.
-
-**Análise:**
-*   **`price` (preço de venda do item):** Este valor é obtido diretamente do `createSaleDto` (dados de entrada da criação da venda, geralmente vindos do frontend ou de importações). No exemplo, R$ 532,79 foi o preço unitário informado na criação da venda.
-*   **`costPriceAtSale` (custo do item no momento da venda):** Este valor é obtido do `costPrice` do `inventoryLot` (lote de inventário) associado ao `SaleItem` no momento da criação da venda. Se o valor é `0.00`, significa que o `costPrice` do `inventoryLot` correspondente era `0.00`. Isso indica que o custo do lote de inventário não foi preenchido corretamente durante sua entrada no sistema.
-
-**Próximos Passos:**
-*   Verificar a entrada de dados para `inventoryLot`s para garantir que o `costPrice` seja preenchido corretamente.
-
-### 3. `AccountRec` não era criado para vendas `A_PRAZO`
-
-**Problema:** Ao confirmar uma venda `A_PRAZO`, o sistema não estava criando o registro correspondente em `AccountRec`. Isso ocorria porque uma correção anterior para evitar duplicidade de `sale_installment` removeu indevidamente a criação do `AccountRec`.
-
-**Análise:** O `create-sale.use-case.ts` cria as `sale_installment` com status `PENDING`, mas nenhum `AccountRec` era gerado no fluxo de confirmação para vendas `A_PRAZO`.
-
-**Solução:** Reintroduzida a lógica no `confirm-sale.use-case.ts` para criar um único `AccountRec` para a venda `A_PRAZO`, representando o valor total a receber. As `sale_installment` existentes são então vinculadas a este novo `AccountRec`.
-
-### 4. `sale_installment` não lançado para vendas `A_VISTA` (Reaberto)
-
-**Problema:** "Pedido com venda a vista ele , não esta lançando no Sale_installment"
-
-**Análise:** A decisão inicial foi remover a criação de `sale_installment` para `A_VISTA` no `confirm-sale.use-case.ts`, considerando `accountRec` como o registro principal. No entanto, o usuário espera que `sale_installment` seja lançado.
-
-**Solução:** Reintroduzida a criação de `saleInstallment` para vendas `A_VISTA` no `confirm-sale.use-case.ts`, com status `PAID` e vinculada ao `accountRec` correto.
-
-### 5. `sale_installment` não lançado para recebimento em metal, mas deveria (Reaberto)
-
-**Problema:** "pedido para recebimento em metal , lançou em pure_metal_lots corretamente, não lança no e Sale_installment deveria"
-
-**Análise:** A decisão inicial foi remover a criação de `sale_installment` para `METAL` no `confirm-sale.use-case.ts`. No entanto, o usuário espera que `sale_installment` seja lançado.
-
-**Solução:** Reintroduzida a criação de `saleInstallment` para vendas `METAL` no `confirm-sale.use-case.ts`, com status `PAID` e vinculada ao `accountRec` correto.
-
-### 6. `metal_accounts_entries` negativo para recebimento em metal
-
-**Problema:** "o pedidos que fiz para receber em metal, ele lançou em pure_meta_lots ok, mas lançou tambem negativo em metal_accounts_entries, não entendi esses lançamentos"
-
-**Análise:** O lançamento negativo em `metal_accounts_entries` para a conta do cliente é o comportamento **correto** quando o cliente paga com metal, pois o metal está saindo da conta do cliente.
-
-**Solução:** Adicionada uma descrição mais clara ao `metalAccountEntry` no `confirm-sale.use-case.ts` para vendas `METAL`, indicando que é uma saída da conta do cliente.
-
-### 7. `sale_installment` duplicado para vendas `A_PRAZO`
-
-**Problema:** "fiz um pedido 28 dias ele considerou a prazo , duplicou em sale_installmensts um PAID e um PENDING"
-
-**Análise:** O `create-sale.use-case.ts` cria a `sale_installment` `PENDING`. O `confirm-sale.use-case.ts` não deveria criar `accountRec`s e `sale_installment`s para `A_PRAZO`.
-
-**Solução:** Removida a criação de `accountRec` e `saleInstallment` dentro do loop `for` no bloco `else if (paymentMethod === 'A_PRAZO')` em `confirm-sale.use-case.ts`.
-
-### 8. Pagamento com crédito de metal (metal_credit vs metal_accounts_entries)
-
-**Problema:** "fui pagar com o credito de metal, que deve estar trazendo somente de metal_credit e não esta de metal_accounts_entries que foi onde o sistema lançou o credito do pedido, tem que verificar isso"
-
-**Análise:** O `pay-accounts-rec-with-metal-credit.use-case.ts` já usa `metalCredit` para verificar o saldo. A confusão pode ser na visualização ou no entendimento de como `MetalCredit` e `MetalAccountEntry` se relacionam.
-
-**Próximos Passos:**
-*   Manter a lógica atual no backend.
-*   Considerar uma explicação mais clara da diferença entre `MetalCredit` (saldo disponível) e `MetalAccountEntry` (movimentação na conta de metal) na documentação ou no frontend.
-
-### 9. `pure_metal_lots` com descrição nula
-
-**Problema:** "ai paguei uma em metal e um a em caixa/bancos, ele lançou em pure_metal_lots, mas não colocoiu descrição deixou null"
-
-**Análise:** A descrição do `pure_metal_lots` no `confirm-sale.use-case.ts` já foi corrigida para incluir mais detalhes. Se o problema persiste, pode ser em outro local de criação de `pure_metal_lots` ou na visualização.
-
-**Próximos Passos:**
-*   Verificar se há outros locais de criação de `pure_metal_lots` que não preenchem a descrição.
-*   Verificar como a descrição é exibida no frontend/recuperada do banco de dados.
-
-### 10. `sale_installment` duplicado para vendas `A_PRAZO` (Resolvido, mas reaberto para esclarecimento)
-
-**Problema:** "ficou estranho o a receber ter uma parcela e o sale_adjustment ter duas, porque o a receber é o accountRec , é qaqui que deveria ficar as 2 parcelas tambem"
-
-**Análise:** O `AccountRec` representa o valor total a receber da venda, enquanto `SaleInstallment` representa as parcelas individuais. A implementação atual cria um `AccountRec` para o total e várias `SaleInstallment` para as parcelas, vinculadas ao `AccountRec`. O problema é de visualização no frontend, que não exibe as parcelas associadas ao `AccountRec`.
-
-**Solução:** O backend foi ajustado para retornar as `SaleInstallment` associadas ao `AccountRec`. O frontend foi modificado para exibir essas parcelas na página de detalhes do `AccountRec` e permitir o registro de pagamento para cada parcela individualmente.
 
 
 
-#Deixar vendas a prazo para resolver depois, 
+#Vendas a prazo para resolver, 
+Vendas ao realizar uma venda a prazo, ele cria as parcelas em sale_installment, e lanço uma duplicata em accountRec, tem que ter um jeito de mostrar em accountRec as parcelar para pode receber a parcela.
+Vendas com recebimento em metal, ele esta lançando em pure_metal_lots corretamente , só que lança tambem em metal_account_entries não deveria.
 
+TESTE VENDA 1/28 DAIS
+
+cria a venda status atual pendente
+
+SALE
+id	71fb5231-2cf1-4ed7-a0bb-a6359b5e7e32
+orderNumber	31728
+totalAmount	14952.00
+feeAmount	0.00
+netAmount	14952.00
+paymentMethod	A_PRAZO
+createdAt	2025-10-26 12:18:59.165
+updatedAt	2025-10-26 12:18:59.165
+organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
+paymentTermId	264ff14d-c67f-4d39-af69-2821ec042559
+pessoaId	c808e676-6e26-44aa-a676-c4c606b4711d
+goldPrice	712.00
+goldValue	21.0000
+totalCost	0.00
+commissionAmount	0.00
+commissionDetails	[{"productId": "560168c3-ae76-4227-8b51-598ecafe6587", "productName": "El Sal 68%", "productGroupId": {"value": "fd0ef974-a1a5-4d15-a168-a461a8856b8c"}, "productGroupName": "Aurocianeto 68%"}]
+externalId	
+status	PENDENTE
+shippingCost	0.00
+
+SALE_INSTALLMENT
+
+id	44c33645-25b7-4fbd-bc5e-6b4f263d5024
+saleId	71fb5231-2cf1-4ed7-a0bb-a6359b5e7e32
+amount	7476.000000000000840000000000000000
+dueDate	2025-10-27 12:18:59.165
+paidAt	
+createdAt	2025-10-26 12:18:59.176
+updatedAt	2025-10-26 12:18:59.176
+installmentNumber	1
+status	PENDING
+accountRecId	
+
+id	ff3c88e3-567b-4c8c-b694-f5403cde4f3b
+saleId	71fb5231-2cf1-4ed7-a0bb-a6359b5e7e32
+amount	7476.000000000000000000000000000000
+dueDate	2025-11-23 12:18:59.165
+paidAt	
+createdAt	2025-10-26 12:18:59.176
+updatedAt	2025-10-26 12:18:59.176
+installmentNumber	2
+status	PENDING
+accountRecId	
+
+SALEITEM
+
+id	381757fe-1222-4ac5-b689-3488b37370b5
+saleId	71fb5231-2cf1-4ed7-a0bb-a6359b5e7e32
+productId	560168c3-ae76-4227-8b51-598ecafe6587
+quantity	29.4
+price	508.57
+createdAt	2025-10-26 12:18:59.165
+updatedAt	2025-10-26 12:18:59.165
+costPriceAtSale	0.00
+inventoryLotId	1b45e781-b2da-454b-bad4-139943fad5db
+externalId	
+
+AO CONFIRMAR A VENDA STATUS FINALIZADO
+
+id	8d90f1e4-4227-41c4-83f2-5b2515c62b5a
+saleId	71fb5231-2cf1-4ed7-a0bb-a6359b5e7e32
+description	Receber de FAFA BANHOS DE RODIO (a prazo) venda #31728
+amount	14952.00
+dueDate	2025-11-23 12:18:59.165
+received	false
+receivedAt	
+createdAt	2025-10-26 12:24:23.336
+updatedAt	2025-10-26 12:24:23.336
+contaCorrenteId	
+organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
+transacaoId	
+externalId	
+amountPaid	0.00
+goldAmount	21.0000
+goldAmountPaid	0.0000
+
+
+RECEBI UMA PARCELA EM CAIXA ITAU
+
+id	8d90f1e4-4227-41c4-83f2-5b2515c62b5a
+saleId	71fb5231-2cf1-4ed7-a0bb-a6359b5e7e32
+description	Receber de FAFA BANHOS DE RODIO (a prazo) venda #31728
+amount	14952.00
+dueDate	2025-11-23 12:18:59.165
+received	false
+receivedAt	
+createdAt	2025-10-26 12:24:23.336
+updatedAt	2025-10-26 12:26:13.538
+contaCorrenteId	
+organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
+transacaoId	
+externalId	
+amountPaid	7476.00
+goldAmount	21.0000
+goldAmountPaid	10.5000 - coloca como o valor recebido 10,50 que esta certo
+
+SALE ADJUSTMANET
+
+id	c71aef2e-fd7a-4a6d-8adf-817eac08fa00
+saleId	71fb5231-2cf1-4ed7-a0bb-a6359b5e7e32
+organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
+paymentReceivedBRL	0.00
+paymentQuotation	
+paymentEquivalentGrams	0.0000
+saleExpectedGrams	
+grossDiscrepancyGrams	
+costsInBRL	0.00
+costsInGrams	
+netDiscrepancyGrams	
+createdAt	2025-10-26 12:24:23.348
+updatedAt	2025-10-26 12:26:13.548
+grossProfitBRL	0.00
+netProfitBRL	0.00
+otherCostsBRL	0.00
+totalCostBRL	0.00
+
+aqui deveriua ter o valor de quantidade 20 gr e recebido 10,50 e o lucro com 9,50 gr negativo, porque na pratica temos uma parcela em aberto seria -9,50 e 10,50 a receber contabilmente falando
+
+TRANSACOES 
+
+id	328c7c1a-d7c1-48fc-9694-f5d7b6f45f42
+tipo	CREDITO
+valor	7476.00
+moeda	BRL
+descricao	Recebimento (FAFA BANHOS DE RODIO) - p-01/02 (Venda #31728)
+dataHora	2025-10-26 00:00:00
+contaContabilId	19926dfb-4cf8-404e-b658-0beac3de4201 (venda de produtos, correto)
+contaCorrenteId	15343932-e645-4cf7-ad6a-c24ae1f2cbe0
+createdAt	2025-10-26 12:26:13.534
+updatedAt	2025-10-26 12:26:13.534
+fitId	
+organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
+goldAmount	10.5000
+status	ATIVA
+accountRecId	8d90f1e4-4227-41c4-83f2-5b2515c62b5a
+goldPrice	712.00
+
+RECEBI DUAS PARCELAS
+o a receber elas não aparecem mais que é o correto, ok
+
+SALE ADJUSTMENT
+id	c71aef2e-fd7a-4a6d-8adf-817eac08fa00
+saleId	71fb5231-2cf1-4ed7-a0bb-a6359b5e7e32
+organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
+paymentReceivedBRL	7476.00
+paymentQuotation	712.00
+paymentEquivalentGrams	10.5000
+saleExpectedGrams	20.0000
+grossDiscrepancyGrams	-9.5000
+costsInBRL	0.00
+costsInGrams	0.0000
+netDiscrepancyGrams	-9.5000
+createdAt	2025-10-26 12:24:23.348
+updatedAt	2025-10-26 12:31:47.592
+grossProfitBRL	7476.00
+netProfitBRL	7476.00
+otherCostsBRL	0.00
+totalCostBRL	0.00
+
+fica negativo, teria que ter o revebimento de 21 gr , ai o lucro ficaria de 1gr
+
+o ACCOUNTREC
+id	8d90f1e4-4227-41c4-83f2-5b2515c62b5a
+saleId	71fb5231-2cf1-4ed7-a0bb-a6359b5e7e32
+description	Receber de FAFA BANHOS DE RODIO (a prazo) venda #31728
+amount	14952.00
+dueDate	2025-11-23 12:18:59.165
+received	true
+receivedAt	2025-10-26 00:00:00
+createdAt	2025-10-26 12:24:23.336
+updatedAt	2025-10-26 12:31:47.58
+contaCorrenteId	
+organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
+transacaoId	
+externalId	
+amountPaid	14952.00
+goldAmount	21.0000
+goldAmountPaid	21.0000
+
+correto fica com o goldAmountPaid	21.0000 e quita o pedido 
+
+TRANSACOES 
+
+id	328c7c1a-d7c1-48fc-9694-f5d7b6f45f42
+tipo	CREDITO
+valor	7476.00
+moeda	BRL
+descricao	Recebimento (FAFA BANHOS DE RODIO) - p-01/02 (Venda #31728)
+dataHora	2025-10-26 00:00:00
+contaContabilId	19926dfb-4cf8-404e-b658-0beac3de4201
+contaCorrenteId	15343932-e645-4cf7-ad6a-c24ae1f2cbe0
+createdAt	2025-10-26 12:26:13.534
+updatedAt	2025-10-26 12:26:13.534
+fitId	
+organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
+goldAmount	10.5000
+status	ATIVA
+accountRecId	8d90f1e4-4227-41c4-83f2-5b2515c62b5a
+goldPrice	712.00
+
+id	a7e1d86a-a69d-49e9-bb96-90fbf2b8679f
+tipo	CREDITO
+valor	7476.00
+moeda	BRL
+descricao	Recebimento (FAFA BANHOS DE RODIO) - p-02/02 (Venda #31728)
+dataHora	2025-10-26 00:00:00
+contaContabilId	19926dfb-4cf8-404e-b658-0beac3de4201
+contaCorrenteId	de7fe87d-af02-44eb-b979-734c05d86493
+createdAt	2025-10-26 12:31:47.573
+updatedAt	2025-10-26 12:31:47.573
+fitId	
+organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
+goldAmount	10.5000
+status	ATIVA
+accountRecId	8d90f1e4-4227-41c4-83f2-5b2515c62b5a
+goldPrice	712.00
+
+lançou as duas parcelas correto
+
+outros testes e continua errado
+
+
+##
+fiz uma venda para 28 dias e o lucro continua errado , uma de prata 54% que o grupo é COST BASED
+sale esta correto
+paymentEquivalentGrams	0.0000 veio zerado deveria ter pego o custo do lote que foi de 4800 / 712 = 6,74 porque é COST BASED
+ai o lucro seria 9,12 (6500 / 712) - 6,74 = 2,38 de lucro
+
+fiz uma venda 1/28 de Sal 68 que tem o grupo de porduto e é um grupro de reação e é QUANTITY BASED
+sale_adjustment
+d	21cb36a1-3f52-4e9d-b1f4-16966f3b3cab
+saleId	e45c6d39-1646-44b6-a84b-b31847ba9606
+organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
+paymentReceivedBRL	7476.00
+paymentQuotation	712.00
+paymentEquivalentGrams	10.5000 - aqui como o pagamento das 2 parcxelas foram feito teria de ser 21 gr
+saleExpectedGrams	21.0000 - aqui estou confuso , não seria 20 a quantidade do pedido ?
+grossDiscrepancyGrams	-10.5000 - aqui o lucro seria de 1 gr 
+costsInBRL	0.00
+costsInGrams	0.0000
+netDiscrepancyGrams	-10.5000
+createdAt	2025-10-26 12:49:17.065
+updatedAt	2025-10-26 12:52:39.004
+grossProfitBRL	7476.00
+netProfitBRL	7476.00
+otherCostsBRL	0.00
+totalCostBRL	0.00
+
+##
 
 #Podemos ver material prima, ela é utilizada na recuperação, e tambem na reação, poderia ter entrada por pedido de compra, gerar contas a pagar, poder ou não seer revenda
 

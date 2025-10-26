@@ -44,7 +44,7 @@ interface AccountRec {
     pessoa?: { name: string };
     createdAt?: string;
   };
-  installments?: SaleInstallment[]; // Add installments
+  saleInstallments?: SaleInstallment[]; // Add saleInstallments
   saleId?: string; // Add saleId
 }
 interface MetalCredit {
@@ -67,7 +67,7 @@ interface ReceivePaymentFormProps {
 }
 
 const formSchema = z.object({
-  paymentMethod: z.enum(["financial", "metalCredit", "metal"], { required_error: "Selecione um método de pagamento." }),
+  paymentMethod: z.enum(["FINANCIAL", "METAL_CREDIT", "METAL"], { required_error: "Selecione um método de pagamento." }),
   contaCorrenteId: z.string().optional(),
   amountReceived: z.coerce
     .number()
@@ -109,7 +109,7 @@ const formSchema = z.object({
         path: ["receivedAt"],
       });
     }
-  } else if (data.paymentMethod === "metalCredit") {
+  } else if (data.paymentMethod === "METAL_CREDIT") {
     if (!data.metalCreditId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -131,7 +131,7 @@ const formSchema = z.object({
         path: ["quotationBuyPrice"],
       });
     }
-  } else if (data.paymentMethod === "metal") {
+  } else if (data.paymentMethod === "METAL") {
     if (!data.metalType) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -189,7 +189,7 @@ export function ReceivePaymentForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      paymentMethod: "financial",
+      paymentMethod: "FINANCIAL",
       amountReceived: parseFloat(remainingBRL.toFixed(2)), // Default to remaining BRL amount
       receivedAt: accountRec.sale?.createdAt ? new Date(accountRec.sale.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       contaCorrenteId: "",
@@ -203,8 +203,8 @@ export function ReceivePaymentForm({
 
   // Update amountReceived based on selected installment
   useEffect(() => {
-    if (selectedInstallmentId && accountRec.installments) {
-      const selectedInstallment = accountRec.installments.find(inst => inst.id === selectedInstallmentId);
+    if (selectedInstallmentId && accountRec.saleInstallments) {
+      const selectedInstallment = accountRec.saleInstallments.find(inst => inst.id === selectedInstallmentId);
       if (selectedInstallment) {
         form.setValue("amountReceived", parseFloat(Number(selectedInstallment.amount).toFixed(2)));
         form.clearErrors("amountReceived"); // Clear any previous errors on amountReceived
@@ -213,7 +213,7 @@ export function ReceivePaymentForm({
       // If no installment is selected or it's not an installment sale, default to remainingBRL
       form.setValue("amountReceived", parseFloat(remainingBRL.toFixed(2)));
     }
-  }, [selectedInstallmentId, accountRec.installments, remainingBRL, form]);
+  }, [selectedInstallmentId, accountRec.saleInstallments, remainingBRL, form]);
 
   const selectedPaymentMethod = form.watch("paymentMethod");
   const selectedMetalCreditId = form.watch("metalCreditId");
@@ -232,9 +232,9 @@ export function ReceivePaymentForm({
   }, [accountRec, selectedQuotationBuyPrice, isGoldBased, remainingBRL, remainingGold]);
 
   useEffect(() => {
-    if (selectedPaymentMethod === "financial") {
+    if (selectedPaymentMethod === "FINANCIAL") {
       api.get("/contas-correntes").then((res) => setContasCorrentes(res.data));
-    } else if (selectedPaymentMethod === "metalCredit" && accountRec.clientId) {
+    } else if (selectedPaymentMethod === "METAL_CREDIT" && accountRec.clientId) {
       api.get(`/metal-credits/client/${accountRec.clientId}`).then((res) => {
         setMetalCredits(res.data.map((mc: any) => ({
           id: mc._id.value,
@@ -260,7 +260,7 @@ export function ReceivePaymentForm({
   }, [selectedPaymentMethod, accountRec.clientId, form]);
 
   useEffect(() => {
-    if ((selectedPaymentMethod === "metalCredit" || selectedPaymentMethod === "metal") && maxGramsToApply > 0) {
+    if ((selectedPaymentMethod === "METAL_CREDIT" || selectedPaymentMethod === "METAL") && maxGramsToApply > 0) {
       form.setValue("amountInGrams", parseFloat(maxGramsToApply.toFixed(6)));
     }
   }, [maxGramsToApply, selectedPaymentMethod, form]);
@@ -298,13 +298,13 @@ export function ReceivePaymentForm({
         purity: data.purity,
       };
 
-      if (data.paymentMethod === "financial") {
+      if (data.paymentMethod === "FINANCIAL") {
         payload.contaCorrenteId = data.contaCorrenteId;
         payload.amountReceived = data.amountReceived;
-      } else if (data.paymentMethod === "metalCredit") {
+      } else if (data.paymentMethod === "METAL_CREDIT") {
         payload.metalCreditId = data.metalCreditId;
         payload.amountInGrams = data.amountInGrams;
-      } else if (data.paymentMethod === "metal") {
+      } else if (data.paymentMethod === "METAL") {
         payload.amountInGrams = data.amountInGrams;
       }
 
@@ -316,19 +316,19 @@ export function ReceivePaymentForm({
         );
       } else {
         // Otherwise, proceed with the existing AccountRec payment
-        if (data.paymentMethod === "financial") {
+        if (data.paymentMethod === "FINANCIAL") {
           response = await api.patch(`/accounts-rec/${accountRec.id}/receive`, {
             contaCorrenteId: data.contaCorrenteId,
             amountReceived: data.amountReceived,
             receivedAt: data.receivedAt,
           });
-        } else if (data.paymentMethod === "metalCredit") {
+        } else if (data.paymentMethod === "METAL_CREDIT") {
           response = await api.patch(`/accounts-rec/${accountRec.id}/pay-with-metal-credit`, {
             metalCreditId: data.metalCreditId,
             amountInGrams: data.amountInGrams,
             customBuyPrice: data.quotationBuyPrice,
           });
-        } else if (data.paymentMethod === "metal") {
+        } else if (data.paymentMethod === "METAL") {
           response = await api.patch(`/accounts-rec/${accountRec.id}/pay-with-metal`, {
             metalType: data.metalType,
             amountInGrams: data.amountInGrams,
@@ -381,7 +381,7 @@ export function ReceivePaymentForm({
           </div>
         </div>
 
-        {accountRec.installments && accountRec.installments.length > 0 && (
+        {accountRec.saleInstallments && accountRec.saleInstallments.length > 0 && (
           <FormField
             name="selectedInstallmentId"
             control={form.control}
@@ -395,7 +395,7 @@ export function ReceivePaymentForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {accountRec.installments
+                    {accountRec.saleInstallments
                       .filter(inst => inst.status === 'PENDING') // Only show pending installments
                       .map((inst) => (
                         <SelectItem key={inst.id} value={inst.id}>
@@ -423,9 +423,9 @@ export function ReceivePaymentForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="financial">Dinheiro / Transferência</SelectItem>
-                  <SelectItem value="metalCredit">Crédito de Metal</SelectItem>
-                  <SelectItem value="metal">Receber em Metal</SelectItem>
+                  <SelectItem value="FINANCIAL">Dinheiro / Transferência</SelectItem>
+                  <SelectItem value="METAL_CREDIT">Crédito de Metal</SelectItem>
+                  <SelectItem value="METAL">Receber em Metal</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -433,7 +433,7 @@ export function ReceivePaymentForm({
           )}
         />
 
-        {selectedPaymentMethod === "financial" && (
+        {selectedPaymentMethod === "FINANCIAL" && (
           <>
             <FormField
               name="amountReceived"
@@ -504,7 +504,7 @@ export function ReceivePaymentForm({
           </>
         )}
 
-        {selectedPaymentMethod === "metalCredit" && (
+        {selectedPaymentMethod === "METAL_CREDIT" && (
           <>
             <FormField
               name="metalCreditId"
@@ -576,7 +576,7 @@ export function ReceivePaymentForm({
           </>
         )}
 
-        {selectedPaymentMethod === "metal" && (
+        {selectedPaymentMethod === "METAL" && (
           <>
             <FormField
               name="metalType"

@@ -31,6 +31,7 @@ interface AccountRec {
   sale?: { id: string; orderNumber: number };
   pessoa?: { name: string };
   clientId: string;
+  saleInstallments?: any[];
 }
 
 interface SaleDetails extends AccountRec { /* Combine for simplicity */ }

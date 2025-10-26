@@ -18,7 +18,7 @@ export class CalculateSaleAdjustmentUseCase {
     tx?: PrismaTransactionClient,
   ): Promise<void> {
     const prismaClient = tx || this.prisma;
-    this.logger.log(`Iniciando cálculo de ajuste para a venda ID: ${saleId}`);
+    this.logger.log(`[SALE_ADJUSTMENT] Iniciando cálculo de ajuste para a venda ID: ${saleId}`);
 
     const sale = await prismaClient.sale.findFirst({
       where: { id: saleId, organizationId },
@@ -26,6 +26,15 @@ export class CalculateSaleAdjustmentUseCase {
         accountsRec: {
           include: {
             transacoes: true, // Corrected from transacao to transacoes
+          },
+        },
+        installments: { // Include installments and their transactions
+          include: {
+            accountRec: {
+              include: {
+                transacoes: true,
+              },
+            },
           },
         },
         saleItems: {
@@ -40,7 +49,7 @@ export class CalculateSaleAdjustmentUseCase {
       },
     });
 
-    this.logger.log(`Venda encontrada: ${JSON.stringify(sale, null, 2)}`);
+    this.logger.log(`[SALE_ADJUSTMENT] Venda encontrada: ${JSON.stringify(sale, null, 2)}`);
 
     if (!sale) {
       throw new NotFoundException(`Venda com ID ${saleId} não encontrada.`);
@@ -51,38 +60,28 @@ export class CalculateSaleAdjustmentUseCase {
 
     if (sale.paymentMethod === 'METAL') {
       this.logger.log(
-        `Venda em metal. Usando valores da própria venda para cálculo de ajuste.`,
+        `[SALE_ADJUSTMENT] Venda em metal. Usando valores da própria venda para cálculo de ajuste.`,
       );
       paymentReceivedBRL = new Decimal(sale.netAmount || 0);
       paymentEquivalentGrams = new Decimal(sale.goldValue || 0);
     } else {
-      this.logger.log(`Venda financeira. Buscando transações de pagamento.`);
-      const hasTransactions = sale.accountsRec.some(
-        (ar) => ar.transacoes.length > 0,
+      this.logger.log(`[SALE_ADJUSTMENT] Venda financeira. Buscando transações de pagamento.`);
+      
+      const allTransactions = sale.installments.flatMap(
+        (i) => i.accountRec?.transacoes || [],
       );
-      if (!hasTransactions) {
-        this.logger.warn(
-          `Nenhuma transação de pagamento encontrada para a venda ${saleId}.`,
-        );
-      }
 
-      // Sum up all transaction values from all account receivables
-      paymentReceivedBRL = sale.accountsRec.reduce((sum, ar) => {
-        const transactionsTotal = ar.transacoes.reduce(
-          (transSum, trans) => transSum.plus(trans.valor),
-          new Decimal(0),
-        );
-        return sum.plus(transactionsTotal);
-      }, new Decimal(0));
+      paymentReceivedBRL = allTransactions.reduce(
+        (sum, t) => sum.plus(t.valor || 0),
+        new Decimal(0),
+      );
+      this.logger.log(`[SALE_ADJUSTMENT] Total BRL recebido das transações: ${paymentReceivedBRL}`);
 
-      // Sum up all gold amounts from all account receivables
-      paymentEquivalentGrams = sale.accountsRec.reduce((sum, ar) => {
-        const transactionsTotal = ar.transacoes.reduce(
-          (transSum, trans) => transSum.plus(trans.goldAmount || 0),
-          new Decimal(0),
-        );
-        return sum.plus(transactionsTotal);
-      }, new Decimal(0));
+      paymentEquivalentGrams = allTransactions.reduce(
+        (sum, t) => sum.plus(t.goldAmount || 0),
+        new Decimal(0),
+      );
+      this.logger.log(`[SALE_ADJUSTMENT] Total Ouro recebido (g): ${paymentEquivalentGrams}`);
     }
 
     // Lógica de cálculo de lucro em BRL (Reais)
@@ -98,80 +97,85 @@ export class CalculateSaleAdjustmentUseCase {
     const netProfitBRL = grossProfitBRL.minus(otherCostsBRL);
 
     // Manter a lógica antiga para discrepância em ouro, se aplicável
-    let paymentQuotation: Decimal | null = null;
+    let paymentQuotation: Decimal | null = sale.goldPrice; // Try to get from sale first
     let saleExpectedGrams: Decimal | null = null;
     let grossDiscrepancyGrams: Decimal | null = null;
     let costsInGrams: Decimal | null = null;
     let netDiscrepancyGrams: Decimal | null = null;
 
-    if (paymentEquivalentGrams && !paymentEquivalentGrams.isZero()) {
-      paymentQuotation = paymentReceivedBRL.dividedBy(paymentEquivalentGrams);
-
-      saleExpectedGrams = new Decimal(0);
-      for (const item of sale.saleItems) {
-        let itemExpectedGrams = new Decimal(0);
-        const calcMethod = item.product.productGroup?.adjustmentCalcMethod;
-
-        this.logger.debug(
-          `[ADJ_CALC] Item: ${item.product.name}, Method: ${calcMethod}, Qty: ${item.quantity}, GoldValue: ${item.product.goldValue}`,
-        );
-
-        switch (calcMethod) {
-          case 'COST_BASED':
-            if (paymentQuotation && !paymentQuotation.isZero()) {
-              const itemTotalCost = new Decimal(item.costPriceAtSale || 0).times(
-                item.quantity,
-              );
-              itemExpectedGrams = itemTotalCost.dividedBy(paymentQuotation);
-            } else {
-              this.logger.warn(
-                `Não foi possível calcular os gramas esperados para o item ${item.id} (COST_BASED) porque a cotação do pagamento é zero ou nula.`,
-              );
-            }
-            break;
-
-          case 'QUANTITY_BASED':
-          default:
-            this.logger.debug(
-              `[ADJ_CALC] Item: ${item.product.name}, isReactionProductGroup: ${item.product.productGroup?.isReactionProductGroup}`,
-            );
-            // If this product comes from a reaction group, its quantity is already the gold value.
-            if (item.product.productGroup?.isReactionProductGroup) {
-              this.logger.debug(
-                `[ADJ_CALC] Produto de Reação. Calculando com base no goldValue.`,
-              );
-              const goldValue = new Decimal(item.product.goldValue || 0);
-              if (goldValue.isZero()) {
-                this.logger.warn(
-                  `Produto ${item.productId} (reação) tem teor de ouro (goldValue) zero ou nulo. Gramas esperadas para este item será 0.`,
-                );
-                itemExpectedGrams = new Decimal(0);
-              } else {
-                itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
-                this.logger.debug(
-                  `[ADJ_CALC] Produto de Reação Result: ${itemExpectedGrams}`,
-                );
-              }
-            } else {
-              // This is the original logic for other products (resale items, etc.)
-              const goldValue = new Decimal(item.product.goldValue || 0);
-              if (goldValue.isZero()) {
-                this.logger.warn(
-                  `Produto ${item.productId} tem teor de ouro (goldValue) zero ou nulo. Gramas esperadas para este item será 0.`,
-                );
-                itemExpectedGrams = new Decimal(0);
-              } else {
-                itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
-                this.logger.debug(
-                  `[ADJ_CALC] QUANTITY_BASED (padrão) Result: ${itemExpectedGrams}`,
-                );
-              }
-            }
-            break;
-        }
-        saleExpectedGrams = saleExpectedGrams.plus(itemExpectedGrams);
+    // Determine paymentQuotation from transactions if not on sale
+    if ((!paymentQuotation || paymentQuotation.isZero()) && !paymentReceivedBRL.isZero()) {
+      if (!paymentEquivalentGrams.isZero()) {
+        paymentQuotation = paymentReceivedBRL.dividedBy(paymentEquivalentGrams);
       }
+    }
 
+    saleExpectedGrams = new Decimal(0);
+    for (const item of sale.saleItems) {
+      let itemExpectedGrams = new Decimal(0);
+      const calcMethod = item.product.productGroup?.adjustmentCalcMethod;
+
+      this.logger.debug(
+        `[ADJ_CALC] Item: ${item.product.name}, Method: ${calcMethod}, Qty: ${item.quantity}, GoldValue: ${item.product.goldValue}`,
+      );
+
+      switch (calcMethod) {
+        case 'COST_BASED':
+          if (paymentQuotation && !paymentQuotation.isZero()) {
+            const itemTotalCost = new Decimal(item.costPriceAtSale || 0).times(
+              item.quantity,
+            );
+            itemExpectedGrams = itemTotalCost.dividedBy(paymentQuotation);
+          } else {
+            this.logger.warn(
+              `Não foi possível calcular os gramas esperados para o item ${item.id} (COST_BASED) porque a cotação do pagamento é zero ou nula.`,
+            );
+          }
+          break;
+
+        case 'QUANTITY_BASED':
+        default:
+          this.logger.debug(
+            `[ADJ_CALC] Item: ${item.product.name}, isReactionProductGroup: ${item.product.productGroup?.isReactionProductGroup}`,
+          );
+          // If this product comes from a reaction group, its quantity is already the gold value.
+          if (item.product.productGroup?.isReactionProductGroup) {
+            this.logger.debug(
+              `[ADJ_CALC] Produto de Reação. Calculando com base no goldValue.`,
+            );
+            const goldValue = new Decimal(item.product.goldValue || 0);
+            if (goldValue.isZero()) {
+              this.logger.warn(
+                `Produto ${item.productId} (reação) tem teor de ouro (goldValue) zero ou nulo. Gramas esperadas para este item será 0.`,
+              );
+              itemExpectedGrams = new Decimal(0);
+            } else {
+              itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
+              this.logger.debug(
+                `[ADJ_CALC] Produto de Reação Result: ${itemExpectedGrams}`,
+              );
+            }
+          } else {
+            // This is the original logic for other products (resale items, etc.)
+            const goldValue = new Decimal(item.product.goldValue || 0);
+            if (goldValue.isZero()) {
+              this.logger.warn(
+                `Produto ${item.productId} tem teor de ouro (goldValue) zero ou nulo. Gramas esperadas para este item será 0.`,
+              );
+              itemExpectedGrams = new Decimal(0);
+            } else {
+              itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
+              this.logger.debug(
+                `[ADJ_CALC] QUANTITY_BASED (padrão) Result: ${itemExpectedGrams}`,
+              );
+            }
+          }
+          break;
+      }
+      saleExpectedGrams = saleExpectedGrams.plus(itemExpectedGrams);
+    }
+
+    if (paymentEquivalentGrams) {
       grossDiscrepancyGrams = paymentEquivalentGrams.minus(saleExpectedGrams);
 
       const laborCostEntry = await prismaClient.laborCostTableEntry.findFirst({
@@ -191,6 +195,7 @@ export class CalculateSaleAdjustmentUseCase {
 
       costsInGrams =
         otherCostsBRL.isZero() ||
+        !paymentQuotation || // Check if paymentQuotation is null
         !paymentQuotation.isFinite() ||
         paymentQuotation.isZero()
           ? new Decimal(0)
