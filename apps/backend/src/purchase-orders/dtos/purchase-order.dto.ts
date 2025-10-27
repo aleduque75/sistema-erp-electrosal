@@ -5,8 +5,12 @@ import { PurchaseOrderStatus } from '@prisma/client';
 
 export class CreatePurchaseOrderItemDto {
   @IsString()
-  @IsNotEmpty()
-  productId: string;
+  @IsOptional()
+  productId?: string;
+
+  @IsString()
+  @IsOptional()
+  rawMaterialId?: string;
 
   @IsNumber()
   @Transform(({ value }) => parseFloat(value))

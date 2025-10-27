@@ -54,6 +54,9 @@ import { MetalDepositsModule } from './metal-deposits/metal-deposits.module';
 import { DataCorrectionModule } from './data-correction/data-correction.module';
 import { SalesMovementImportModule } from './sales-movement-import/sales-movement-import.module';
 import { StockStatementModule } from './stock-statement/stock-statement.module';
+import { RawMaterialsModule } from './raw-materials.module';
+import { RawMaterialsController } from './raw-materials.controller';
+import { RawMaterialsService } from './raw-materials.service';
 
 @Module({
   imports: [
@@ -108,12 +111,14 @@ import { StockStatementModule } from './stock-statement/stock-statement.module';
     DataCorrectionModule,
     SalesMovementImportModule,
     StockStatementModule,
+    RawMaterialsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, RawMaterialsController],
   providers: [
     AppService,
     AuditLogService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    RawMaterialsService,
   ],
 })
 export class AppModule {}

@@ -8,6 +8,7 @@ import { StartRecoveryOrderUseCase } from './use-cases/start-recovery-order.use-
 import { UpdateRecoveryOrderPurityUseCase } from './use-cases/update-recovery-order-purity.use-case';
 import { MetalCreditsModule } from '../metal-credits/metal-credits.module';
 import { ProcessRecoveryFinalizationUseCase } from './use-cases/process-recovery-finalization.use-case';
+import { AddRawMaterialToRecoveryOrderUseCase } from './use-cases/add-raw-material.use-case';
 import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
 import { QuotationsModule } from '../quotations/quotations.module';
 import { ContasContabeisModule } from '../contas-contabeis/contas-contabeis.module';
@@ -33,6 +34,7 @@ import { PrismaPureMetalLotRepository } from './repositories/prisma-pure-metal-l
     StartRecoveryOrderUseCase,
     UpdateRecoveryOrderPurityUseCase,
     ProcessRecoveryFinalizationUseCase,
+    AddRawMaterialToRecoveryOrderUseCase,
   ],
   exports: ['IRecoveryOrderRepository'], // Export it
 })

@@ -6,33 +6,35 @@ export enum RecoveryOrderStatus {
   CANCELADA = "CANCELADA",
 }
 
+export interface AnaliseQuimicaResumida {
+  id: string;
+  numeroAnalise: string;
+  clienteName: string;
+  volumeOuPesoEntrada: number;
+  auLiquidoParaClienteGramas: number | null;
+  metalCreditGrams?: number | null;
+}
+
+export interface RawMaterialUsed {
+  id: string;
+  rawMaterialId: string;
+  rawMaterialName: string;
+  quantity: number;
+  cost: number;
+  unit: string;
+  goldEquivalentCost: number | null;
+}
+
 export interface RecoveryOrder {
   id: string;
-  numero: number;
-  data: string;
-  cliente: string;
   status: RecoveryOrderStatus;
-  totalMaterial: number;
-  totalAuApurado: number;
-  teorFinal: number | null | undefined; // <-- Teor final aplicado
-  auPuroRecuperadoGramas: number | null | undefined; // <-- Au puro recuperado
-  residuoGramas: number | null | undefined; // <-- Resíduo gerado
-  residueAnalysisId: string | null | undefined; // <-- ID da análise de resíduo gerada, se houver
-  observacoes: string | null;
-
-  chemicalAnalysisIds: string[]; // <-- Lista de IDs de análises
-  totalBrutoEstimadoGramas: number | null | undefined; // <-- Estimativa de peso
-  dataInicio: string; // <-- Data de início
-  dataFim: string | null | undefined;
-
-  resultadoProcessamentoGramas: number | null | undefined;
-  analisesEnvolvidas:
-    | {
-        id: string;
-        numeroAnalise: string;
-        clienteName: string;
-        volumeOuPesoEntrada: number; // <--- ADICIONAR ESTE CAMPO
-      }[]
-    | null
-    | undefined;
+  chemicalAnalysisIds: string[];
+  totalBrutoEstimadoGramas: number;
+  dataInicio: string;
+  dataFim: string | null;
+  auPuroRecuperadoGramas: number | null;
+  residuoGramas: number | null;
+  residueAnalysisId: string | null;
+  analisesEnvolvidas?: AnaliseQuimicaResumida[];
+  rawMaterialsUsed?: RawMaterialUsed[];
 }

@@ -25,6 +25,8 @@ import { RecoveryOrderStatusBadge } from "@/components/ui/recovery-order-status-
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
+import Link from "next/link";
+
 // Componente de Legenda
 const StatusLegend = () => (
   <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4 bg-muted rounded-md border mb-4">
@@ -58,7 +60,6 @@ import {
 } from "@/services/recoveryOrdersApi";
 import { UpdateRecoveryOrderPurityModal } from "./UpdateRecoveryOrderPurityModal";
 import { ProcessRecoveryFinalizationModal } from "./ProcessRecoveryFinalizationModal";
-import { ViewRecoveryOrderModal } from "./ViewRecoveryOrderModal";
 
 interface RecoveryOrdersTableProps {
   recoveryOrders: RecoveryOrder[];
@@ -73,7 +74,6 @@ export function RecoveryOrdersTable({
 }: RecoveryOrdersTableProps) {
   const [purityModalOpen, setPurityModalOpen] = useState(false);
   const [finalizationModalOpen, setFinalizationModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<RecoveryOrder | null>(null);
 
   const handleStartRecoveryOrder = async (recoveryOrderId: string) => {
@@ -84,11 +84,6 @@ export function RecoveryOrdersTable({
     } catch (error: any) {
       toast.error("Erro ao iniciar ordem de recuperação", { description: error.message });
     }
-  };
-
-  const handleOpenViewModal = (order: RecoveryOrder) => {
-    setSelectedOrder(order);
-    setIsViewModalOpen(true);
   };
 
   const handlePurityUpdateSuccess = () => {
@@ -220,11 +215,11 @@ export function RecoveryOrdersTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem
-                        onClick={() => handleOpenViewModal(order)}
-                      >
-                        <MoreHorizontal className="mr-2 h-4 w-4" />
-                        Ver Detalhes
+                      <DropdownMenuItem asChild>
+                        <Link href={`/recovery-orders/${order.id}`}>
+                          <MoreHorizontal className="mr-2 h-4 w-4" />
+                          Ver Detalhes
+                        </Link>
                       </DropdownMenuItem>
                       {order.status === RecoveryOrderStatus.PENDENTE && (
                         <DropdownMenuItem
@@ -283,11 +278,6 @@ export function RecoveryOrdersTable({
         onOpenChange={setFinalizationModalOpen}
         recoveryOrder={selectedOrder}
         onSuccess={handleFinalizationSuccess}
-      />
-      <ViewRecoveryOrderModal
-        isOpen={isViewModalOpen}
-        onOpenChange={setIsViewModalOpen}
-        recoveryOrder={selectedOrder}
       />
     </>
   );

@@ -21,6 +21,8 @@ import { UpdateRecoveryOrderPurityUseCase } from './use-cases/update-recovery-or
 import { ProcessRecoveryFinalizationUseCase } from './use-cases/process-recovery-finalization.use-case';
 import { UpdateRecoveryOrderPurityDto } from './dtos/update-recovery-order-purity.dto';
 import { FinalizeRecoveryOrderDto } from './dtos/finalize-recovery-order.dto';
+import { AddRawMaterialToRecoveryOrderUseCase } from './use-cases/add-raw-material.use-case';
+import { AddRawMaterialDto } from './dtos/add-raw-material.dto';
 import { IRecoveryOrderRepository } from '@sistema-erp-electrosal/core';
 
 @UseGuards(JwtAuthGuard)
@@ -31,6 +33,7 @@ export class RecoveryOrdersController {
     private readonly startRecoveryOrderUseCase: StartRecoveryOrderUseCase,
     private readonly updateRecoveryOrderPurityUseCase: UpdateRecoveryOrderPurityUseCase,
     private readonly processRecoveryFinalizationUseCase: ProcessRecoveryFinalizationUseCase,
+    private readonly addRawMaterialToRecoveryOrderUseCase: AddRawMaterialToRecoveryOrderUseCase,
     @Inject('IRecoveryOrderRepository')
     private readonly recoveryOrderRepository: IRecoveryOrderRepository,
   ) {}
@@ -48,6 +51,26 @@ export class RecoveryOrdersController {
     const organizationId = req.user?.orgId;
     const recoveryOrders = await this.recoveryOrderRepository.findAll(organizationId, filters);
     return recoveryOrders.map(RecoveryOrderResponseDto.fromDomain);
+  }
+
+  @Get(':id')
+  async getRecoveryOrderById(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() req
+  ): Promise<RecoveryOrderResponseDto> {
+    const organizationId = req.user?.orgId;
+    const recoveryOrder = await this.recoveryOrderRepository.findById(id, organizationId);
+    return RecoveryOrderResponseDto.fromDomain(recoveryOrder);
+  }
+
+  @Post(':id/raw-materials')
+  async addRawMaterial(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: AddRawMaterialDto,
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    await this.addRawMaterialToRecoveryOrderUseCase.execute(organizationId, id, dto);
   }
 
   @Patch(':id/start')

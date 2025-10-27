@@ -48,10 +48,12 @@ interface PurchaseOrder {
 }
 
 interface PurchaseOrderItem { // Define PurchaseOrderItem here as well
-  productId: string;
+  productId?: string;
+  rawMaterialId?: string;
   quantity: number;
   price: number;
   productName?: string;
+  rawMaterialName?: string;
 }
 
 export default function PurchaseOrdersPage() {

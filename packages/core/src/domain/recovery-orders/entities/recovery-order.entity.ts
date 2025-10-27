@@ -9,6 +9,18 @@ export interface AnaliseQuimicaResumida {
   numeroAnalise: string;
   clienteName: string;
   volumeOuPesoEntrada: number;
+  auLiquidoParaClienteGramas: number | null;
+  metalCreditGrams?: number | null;
+}
+
+export interface RawMaterialUsedResumida {
+  id: string;
+  rawMaterialId: string;
+  rawMaterialName: string;
+  quantity: number;
+  cost: number;
+  unit: string;
+  goldEquivalentCost?: number | null;
 }
 
 export interface RecoveryOrderProps {
@@ -39,18 +51,21 @@ export interface RecoveryOrderProps {
 
   // --- DADOS ENVOLVIDOS (POPULADOS PELO REPOSITÓRIO) ---
   analisesEnvolvidas?: AnaliseQuimicaResumida[];
+  rawMaterialsUsed?: RawMaterialUsedResumida[];
 }
 
 export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
   private _analisesEnvolvidas?: AnaliseQuimicaResumida[]; // Propriedade privada para as análises envolvidas
+  private _rawMaterialsUsed?: RawMaterialUsedResumida[];
 
   private constructor(props: RecoveryOrderProps, id?: UniqueEntityID) {
     super(props, id);
     this._analisesEnvolvidas = props.analisesEnvolvidas; // Inicializa a propriedade privada
+    this._rawMaterialsUsed = props.rawMaterialsUsed;
   }
 
   public static create(
-    props: Omit<RecoveryOrderProps, 'dataCriacao' | 'dataAtualizacao' | 'status' | 'resultadoProcessamentoGramas' | 'teorFinal' | 'auPuroRecuperadoGramas' | 'residuoGramas' | 'residueAnalysisId' | 'analisesEnvolvidas'>,
+    props: Omit<RecoveryOrderProps, 'dataCriacao' | 'dataAtualizacao' | 'status' | 'resultadoProcessamentoGramas' | 'teorFinal' | 'auPuroRecuperadoGramas' | 'residuoGramas' | 'residueAnalysisId' | 'analisesEnvolvidas' | 'rawMaterialsUsed'>,
     id?: UniqueEntityID
   ): RecoveryOrder {
     const now = new Date();
@@ -92,14 +107,20 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
   // Getter para as análises envolvidas
   get analisesEnvolvidas(): AnaliseQuimicaResumida[] | undefined { return this._analisesEnvolvidas; }
 
+  get rawMaterialsUsed(): RawMaterialUsedResumida[] | undefined { return this._rawMaterialsUsed; }
+
   // Método para definir as análises envolvidas (usado pelo repositório)
   public setAnalisesEnvolvidas(analises: AnaliseQuimicaResumida[]) {
     this._analisesEnvolvidas = analises;
   }
 
-  public update(dto: Partial<Omit<RecoveryOrderProps, 'totalBrutoEstimadoGramas' | 'organizationId' | 'chemicalAnalysisIds' | 'analisesEnvolvidas'>>) {
+  public setRawMaterialsUsed(rawMaterialsUsed: RawMaterialUsedResumida[]) {
+    this._rawMaterialsUsed = rawMaterialsUsed;
+  }
+
+  public update(dto: Partial<Omit<RecoveryOrderProps, 'totalBrutoEstimadoGramas' | 'organizationId' | 'chemicalAnalysisIds' | 'analisesEnvolvidas' | 'rawMaterialsUsed'>>) {
     // Prevent updating immutable fields
-    const { totalBrutoEstimadoGramas, organizationId, chemicalAnalysisIds, analisesEnvolvidas, ...updateDto } = dto as any;
+    const { totalBrutoEstimadoGramas, organizationId, chemicalAnalysisIds, analisesEnvolvidas, rawMaterialsUsed, ...updateDto } = dto as any;
     Object.assign(this.props, updateDto);
     this.props.dataAtualizacao = new Date();
   }

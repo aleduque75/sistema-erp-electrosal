@@ -18,13 +18,38 @@ export class PurchaseOrdersService {
     const { items, fornecedorId, paymentTermId, ...orderData } = data;
 
     return this.prisma.$transaction(async (tx) => {
-      // Validate if all productIds exist and belong to the organization
+      // Validate if all productIds or rawMaterialIds exist and belong to the organization
       for (const item of items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId, organizationId },
-        });
-        if (!product) {
-          throw new NotFoundException(`Produto com ID ${item.productId} não encontrado ou não pertence à organização.`);
+        if (item.productId && item.rawMaterialId) {
+          throw new BadRequestException(
+            `Item do pedido não pode ter productId e rawMaterialId ao mesmo tempo.`,
+          );
+        }
+
+        if (!item.productId && !item.rawMaterialId) {
+          throw new BadRequestException(
+            `Item do pedido precisa ter productId or rawMaterialId.`,
+          );
+        }
+
+        if (item.productId) {
+          const product = await tx.product.findUnique({
+            where: { id: item.productId, organizationId },
+          });
+          if (!product) {
+            throw new NotFoundException(
+              `Produto com ID ${item.productId} não encontrado ou não pertence à organização.`,
+            );
+          }
+        } else if (item.rawMaterialId) {
+          const rawMaterial = await tx.rawMaterial.findUnique({
+            where: { id: item.rawMaterialId, organizationId },
+          });
+          if (!rawMaterial) {
+            throw new NotFoundException(
+              `Matéria-prima com ID ${item.rawMaterialId} não encontrada ou não pertence à organização.`,
+            );
+          }
         }
       }
 
@@ -41,13 +66,14 @@ export class PurchaseOrdersService {
             createMany: {
               data: items.map((item) => ({
                 productId: item.productId,
+                rawMaterialId: item.rawMaterialId,
                 quantity: item.quantity,
                 price: item.price,
               })),
             },
           },
         },
-        include: { fornecedor: { include: { pessoa: true } }, items: { include: { product: true } } },
+        include: { fornecedor: { include: { pessoa: true } }, items: { include: { product: true, rawMaterial: true } } },
       });
       return newOrder;
     });
@@ -56,7 +82,7 @@ export class PurchaseOrdersService {
   async findAll(organizationId: string): Promise<PurchaseOrder[]> {
     return this.prisma.purchaseOrder.findMany({
       where: { organizationId },
-      include: { fornecedor: { include: { pessoa: true } }, items: { include: { product: true } } },
+      include: { fornecedor: { include: { pessoa: true } }, items: { include: { product: true, rawMaterial: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -64,7 +90,7 @@ export class PurchaseOrdersService {
   async findOne(organizationId: string, id: string): Promise<PurchaseOrder> {
     const order = await this.prisma.purchaseOrder.findFirst({
       where: { id, organizationId },
-      include: { fornecedor: { include: { pessoa: true } }, items: { include: { product: true } } },
+      include: { fornecedor: { include: { pessoa: true } }, items: { include: { product: true, rawMaterial: true } } },
     });
     if (!order) {
       throw new NotFoundException(`Pedido de Compra com ID ${id} não encontrado.`);
@@ -77,6 +103,12 @@ export class PurchaseOrdersService {
 
     return this.prisma.$transaction(async (tx) => {
       const existingOrder = await this.findOne(organizationId, id) as PurchaseOrderWithItems;
+
+      if (existingOrder.status === PurchaseOrderStatus.RECEIVED) {
+        throw new ConflictException(
+          'Não é possível alterar um pedido de compra com status RECEBIDO.',
+        );
+      }
 
       // Atualiza o cabeçalho do pedido
       let finalTotalAmount = existingOrder.totalAmount; // Default to current total
@@ -98,6 +130,40 @@ export class PurchaseOrdersService {
 
       // Sincroniza os itens do pedido
       if (items) {
+        for (const item of items) {
+          if (item.productId && item.rawMaterialId) {
+            throw new BadRequestException(
+              `Item do pedido não pode ter productId e rawMaterialId ao mesmo tempo.`,
+            );
+          }
+
+          if (!item.productId && !item.rawMaterialId) {
+            throw new BadRequestException(
+              `Item do pedido precisa ter productId or rawMaterialId.`,
+            );
+          }
+
+          if (item.productId) {
+            const product = await tx.product.findUnique({
+              where: { id: item.productId, organizationId },
+            });
+            if (!product) {
+              throw new NotFoundException(
+                `Produto com ID ${item.productId} não encontrado ou não pertence à organização.`,
+              );
+            }
+          } else if (item.rawMaterialId) {
+            const rawMaterial = await tx.rawMaterial.findUnique({
+              where: { id: item.rawMaterialId, organizationId },
+            });
+            if (!rawMaterial) {
+              throw new NotFoundException(
+                `Matéria-prima com ID ${item.rawMaterialId} não encontrada ou não pertence à organização.`,
+              );
+            }
+          }
+        }
+
         const existingItemIds = existingOrder.items.map((item) => item.id);
         const newItemIds = items.filter((item) => (item as any).id).map((item) => (item as any).id);
 
@@ -117,6 +183,7 @@ export class PurchaseOrdersService {
               where: { id: (item as any).id },
               data: {
                 productId: item.productId,
+                rawMaterialId: item.rawMaterialId,
                 quantity: item.quantity,
                 price: item.price,
               },
@@ -127,6 +194,7 @@ export class PurchaseOrdersService {
               data: {
                 purchaseOrderId: id,
                 productId: item.productId,
+                rawMaterialId: item.rawMaterialId,
                 quantity: item.quantity,
                 price: item.price,
               },
@@ -158,7 +226,7 @@ export class PurchaseOrdersService {
     const order = await this.prisma.purchaseOrder.findFirst({
       where: { id, organizationId },
       include: {
-        items: { include: { product: true } },
+        items: { include: { product: true, rawMaterial: true } },
         paymentTerm: true,
       },
     });
@@ -178,46 +246,58 @@ export class PurchaseOrdersService {
     return this.prisma.$transaction(async (tx) => {
       // 1. Create inventory lots and stock movements
       for (const item of order.items) {
-        const createdLot = await tx.inventoryLot.create({
-          data: {
-            organizationId: organizationId,
-            productId: item.productId,
-            costPrice: item.price, // Cost price from purchase order item
-            quantity: item.quantity,
-            remainingQuantity: item.quantity,
-            sourceType: 'PURCHASE_ORDER',
-            sourceId: order.id,
-            receivedDate: new Date(), // Current date
-          },
-        });
-
-        await tx.stockMovement.create({
-          data: {
-            organizationId,
-            productId: item.productId,
-            inventoryLotId: createdLot.id,
-            quantity: item.quantity, // Positive for incoming stock
-            type: 'COMPRA',
-            sourceDocument: `Pedido de Compra #${order.orderNumber}`,
-          }
-        });
-
-        // 2. Update product stock (this might be deprecated in the future in favor of calculated stock from lots)
-        this.logger.log(`Atualizando estoque do produto ${item.productId}. Quantidade: ${item.quantity}`);
-        const productBeforeUpdate = await tx.product.findUnique({ where: { id: item.productId } });
-        this.logger.log(`Estoque antes: ${productBeforeUpdate?.stock}`);
-
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              increment: item.quantity,
+        if (item.productId) {
+          const createdLot = await tx.inventoryLot.create({
+            data: {
+              organizationId: organizationId,
+              productId: item.productId,
+              costPrice: item.price, // Cost price from purchase order item
+              quantity: item.quantity,
+              remainingQuantity: item.quantity,
+              sourceType: 'PURCHASE_ORDER',
+              sourceId: order.id,
+              receivedDate: new Date(), // Current date
             },
-          },
-        });
+          });
 
-        const productAfterUpdate = await tx.product.findUnique({ where: { id: item.productId } });
-        this.logger.log(`Estoque depois: ${productAfterUpdate?.stock}`);
+          await tx.stockMovement.create({
+            data: {
+              organizationId,
+              productId: item.productId,
+              inventoryLotId: createdLot.id,
+              quantity: item.quantity, // Positive for incoming stock
+              type: 'COMPRA',
+              sourceDocument: `Pedido de Compra #${order.orderNumber}`,
+            }
+          });
+
+          // 2. Update product stock (this might be deprecated in the future in favor of calculated stock from lots)
+          this.logger.log(`Atualizando estoque do produto ${item.productId}. Quantidade: ${item.quantity}`);
+          const productBeforeUpdate = await tx.product.findUnique({ where: { id: item.productId } });
+          this.logger.log(`Estoque antes: ${productBeforeUpdate?.stock}`);
+
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              stock: {
+                increment: item.quantity,
+              },
+            },
+          });
+
+          const productAfterUpdate = await tx.product.findUnique({ where: { id: item.productId } });
+          this.logger.log(`Estoque depois: ${productAfterUpdate?.stock}`);
+        } else if (item.rawMaterialId) {
+          await tx.rawMaterial.update({
+            where: { id: item.rawMaterialId },
+            data: {
+              stock: {
+                increment: item.quantity,
+              },
+              cost: item.price, // Update raw material cost with the purchase price
+            },
+          });
+        }
       }
 
       // 2. Create accounts payable
@@ -256,7 +336,7 @@ export class PurchaseOrdersService {
         },
         include: {
           fornecedor: { include: { pessoa: true } },
-          items: { include: { product: true } },
+          items: { include: { product: true, rawMaterial: true } },
         },
       });
 

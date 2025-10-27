@@ -69,6 +69,12 @@ export const menuConfig: NavItem[] = [
         icon: Package,
         description: "Gerencie grupos e configure o método de cálculo de ajuste.",
       },
+      {
+        title: "Matérias-Primas",
+        href: "/raw-materials",
+        icon: Package,
+        description: "Gerencie suas matérias-primas.",
+      },
     ],
   },
   {

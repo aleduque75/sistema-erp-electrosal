@@ -44,16 +44,10 @@ import {
 } from "@/components/ui/dialog";
 
 // Interfaces
-interface FornecedorOption {
-  id: string; // ID da Pessoa
-  name: string; // Nome da Pessoa
-  fornecedor: object; // Para indicar que tem o papel de fornecedor
-}
-
-interface Product {
+interface RawMaterial {
   id: string;
   name: string;
-  price: number;
+  cost: number;
 }
 
 interface PaymentTerm {
@@ -62,11 +56,13 @@ interface PaymentTerm {
 }
 
 interface PurchaseOrderItem {
-  productId: string;
+  productId?: string;
+  rawMaterialId?: string;
   quantity: number;
   price: number;
   // Campos opcionais para exibição no frontend
   productName?: string;
+  rawMaterialName?: string;
 }
 
 interface PurchaseOrder {
@@ -87,7 +83,9 @@ interface PurchaseOrderFormProps {
 
 // Schema de validação para um item
 const itemSchema = z.object({
-  productId: z.string().min(1, "Produto é obrigatório."),
+  itemType: z.enum(["PRODUCT", "RAW_MATERIAL"]),
+  productId: z.string().optional(),
+  rawMaterialId: z.string().optional(),
   quantity: z.preprocess(
     (val) => Number(val),
     z.number().int().min(1, "Quantidade deve ser no mínimo 1.")
@@ -96,7 +94,15 @@ const itemSchema = z.object({
     (val) => Number(val),
     z.number().min(0.01, "Preço deve ser maior que zero.")
   ),
+}).refine(data => {
+  if (data.itemType === 'PRODUCT') return !!data.productId;
+  if (data.itemType === 'RAW_MATERIAL') return !!data.rawMaterialId;
+  return false;
+}, {
+  message: "Selecione um produto ou matéria-prima.",
+  path: ["productId"], // ou rawMaterialId, o path é mais para referência
 });
+
 
 // Schema de validação principal
 const formSchema = z.object({
@@ -114,8 +120,9 @@ type FormValues = z.infer<typeof formSchema>;
 export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProps) {
   const [fornecedores, setFornecedores] = useState<FornecedorOption[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<PurchaseOrderItem[]>(initialData?.items || []);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
@@ -139,34 +146,24 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
   const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
 
   useEffect(() => {
-    // Buscar fornecedores e produtos na montagem do componente
-    api.get("/pessoas?role=FORNECEDOR").then((res) => {
-      const mappedFornecedores = res.data.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-      }));
-      console.log("Fornecedores recebidos e mapeados:", mappedFornecedores);
-      setFornecedores(mappedFornecedores);
-    });
-
-    api.get("/products").then((res) => {
-      const mappedProducts = res.data.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-      }));
-      setProducts(mappedProducts);
+    Promise.all([
+      api.get("/pessoas?role=FORNECEDOR"),
+      api.get("/products"),
+      api.get("/raw-materials"),
+      api.get('/payment-terms'),
+    ]).then(([fornecedoresRes, productsRes, rawMaterialsRes, paymentTermsRes]) => {
+      setFornecedores(fornecedoresRes.data.map((p: any) => ({ id: p.id, name: p.name })));
+      setProducts(productsRes.data.map((p: any) => ({ id: p.id, name: p.name, price: p.price })));
+      setRawMaterials(rawMaterialsRes.data.map((r: any) => ({ id: r.id, name: r.name, cost: r.cost })));
+      setPaymentTerms(paymentTermsRes.data);
+    }).catch(() => {
+      toast.error("Falha ao carregar dados iniciais.");
     }).finally(() => {
-      setIsLoadingProducts(false);
+      setIsLoading(false);
     });
-
-    api.get('/payment-terms').then((res) => {
-      setPaymentTerms(res.data);
-    });
-  }, []); // Executa apenas uma vez
+  }, []);
 
   useEffect(() => {
-    // Reage a mudanças nos dados iniciais ou quando os produtos são carregados
     if (initialData) {
       reset({
         ...initialData,
@@ -174,21 +171,24 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
         expectedDeliveryDate: initialData.expectedDeliveryDate ? new Date(initialData.expectedDeliveryDate).toISOString().split("T")[0] : "",
       });
 
-      // Popula os itens com os nomes dos produtos para exibição,
-      // somente se os produtos já foram carregados.
-      if (products.length > 0) {
-        setItems(initialData.items.map(item => ({
+      if (products.length > 0 && rawMaterials.length > 0) {
+        const mappedItems = initialData.items.map(item => ({
           ...item,
-          productName: products.find(p => p.id === item.productId)?.name || "Produto Desconhecido"
-        })));
+          price: Number(item.price),
+          itemType: item.productId ? "PRODUCT" : "RAW_MATERIAL",
+          productName: products.find(p => p.id === item.productId)?.name,
+          rawMaterialName: rawMaterials.find(r => r.id === item.rawMaterialId)?.name,
+        }));
+        setItems(mappedItems);
+        form.setValue("items", mappedItems as any);
       }
     }
-  }, [initialData, products, reset]); // Depende de initialData, products e reset
+  }, [initialData, products, rawMaterials, reset]);
 
   const handleAddItem = (item: PurchaseOrderItem) => {
     setItems((prev) => {
       const newItems = [...prev, item];
-      form.setValue("items", newItems); // Atualiza o campo 'items' do formulário
+      form.setValue("items", newItems as any);
       return newItems;
     });
     setIsItemModalOpen(false);
@@ -197,7 +197,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
   const handleEditItem = (index: number, updatedItem: PurchaseOrderItem) => {
     setItems((prev) => {
       const newItems = prev.map((item, i) => (i === index ? updatedItem : item));
-      form.setValue("items", newItems); // Atualiza o campo 'items' do formulário
+      form.setValue("items", newItems as any);
       return newItems;
     });
     setIsItemModalOpen(false);
@@ -207,7 +207,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
   const handleRemoveItem = (index: number) => {
     setItems((prev) => {
       const newItems = prev.filter((_, i) => i !== index);
-      form.setValue("items", newItems); // Atualiza o campo 'items' do formulário
+      form.setValue("items", newItems as any);
       return newItems;
     });
   };
@@ -218,7 +218,12 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
         ...data,
         orderDate: new Date(data.orderDate).toISOString(),
         expectedDeliveryDate: data.expectedDeliveryDate ? new Date(data.expectedDeliveryDate).toISOString() : null,
-        items: items.map(item => ({ productId: item.productId, quantity: item.quantity, price: item.price }))
+        items: items.map(item => ({
+          productId: item.productId,
+          rawMaterialId: item.rawMaterialId,
+          quantity: item.quantity,
+          price: item.price
+        }))
       };
 
       if (initialData) {
@@ -298,7 +303,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
           render={({ field }) => (
             <FormItem>
               <FormLabel>Status</FormLabel>
-              <Select onValueChange={(value) => { console.log("Select onValueChange value:", value); field.onChange(value); }} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o status" />
@@ -349,7 +354,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Produto</TableHead>
+                <TableHead>Item</TableHead>
                 <TableHead>Quantidade</TableHead>
                 <TableHead>Preço Unitário</TableHead>
                 <TableHead>Total</TableHead>
@@ -366,10 +371,10 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
               ) : (
                 items.map((item, index) => (
                   <TableRow key={index}>
-                    <TableCell>{item.productName}</TableCell>
+                    <TableCell>{item.productName || item.rawMaterialName}</TableCell>
                     <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.price.toFixed(2)}</TableCell>
-                    <TableCell>{(item.quantity * item.price).toFixed(2)}</TableCell>
+                    <TableCell>{Number(item.price).toFixed(2)}</TableCell>
+                    <TableCell>{(item.quantity * Number(item.price)).toFixed(2)}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -398,10 +403,10 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
             <Button
               type="button"
               onClick={() => setIsItemModalOpen(true)}
-              disabled={isLoadingProducts}
+              disabled={isLoading}
             >
               <PlusCircle className="mr-2 h-4 w-4" />
-              {isLoadingProducts ? "Carregando..." : "Adicionar Item"}
+              {isLoading ? "Carregando..." : "Adicionar Item"}
             </Button>
           </div>
           <div className="text-right text-lg font-bold mt-4">
@@ -422,12 +427,13 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
           <DialogHeader>
             <DialogTitle>{editingItemIndex !== null ? "Editar Item" : "Adicionar Novo Item"}</DialogTitle>
             <DialogDescription>
-              Selecione um produto e defina a quantidade e o preço.
+              Selecione um produto ou matéria-prima e defina a quantidade e o preço.
             </DialogDescription>
           </DialogHeader>
           <ItemForm
             products={products}
-            isLoading={isLoadingProducts}
+            rawMaterials={rawMaterials}
+            isLoading={isLoading}
             onSave={editingItemIndex !== null ? handleEditItem.bind(null, editingItemIndex) : handleAddItem}
             initialData={editingItemIndex !== null ? items[editingItemIndex] : undefined}
             onCancel={() => {
@@ -444,23 +450,33 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
 // Componente de Formulário de Item (interno)
 interface ItemFormProps {
   products: Product[];
+  rawMaterials: RawMaterial[];
   isLoading: boolean;
   onSave: (item: PurchaseOrderItem) => void;
   onCancel: () => void;
   initialData?: PurchaseOrderItem;
 }
 
-function ItemForm({ products, isLoading, onSave, onCancel, initialData }: ItemFormProps) {
+function ItemForm({ products, rawMaterials, isLoading, onSave, onCancel, initialData }: ItemFormProps) {
   const form = useForm<z.infer<typeof itemSchema>>({
     resolver: zodResolver(itemSchema),
-    defaultValues: initialData || { productId: "", quantity: 1, price: 0 },
+    defaultValues: initialData ? {
+      ...initialData,
+      itemType: initialData.productId ? "PRODUCT" : "RAW_MATERIAL",
+    } : { itemType: "PRODUCT", quantity: 1, price: 0 },
   });
 
+  const itemType = form.watch("itemType");
+
   const onSubmit = (data: z.infer<typeof itemSchema>) => {
-    const selectedProduct = products.find(p => p.id === data.productId);
+    const selectedProduct = data.itemType === "PRODUCT" ? products.find(p => p.id === data.productId) : undefined;
+    const selectedRawMaterial = data.itemType === "RAW_MATERIAL" ? rawMaterials.find(r => r.id === data.rawMaterialId) : undefined;
+
     onSave({
       ...data,
-      productName: selectedProduct?.name || "Produto Desconhecido",
+      price: Number(data.price),
+      productName: selectedProduct?.name,
+      rawMaterialName: selectedRawMaterial?.name,
     });
   };
 
@@ -469,38 +485,88 @@ function ItemForm({ products, isLoading, onSave, onCancel, initialData }: ItemFo
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="productId"
+          name="itemType"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Produto</FormLabel>
-              <Select onValueChange={(value) => { console.log("Select onValueChange value:", value); field.onChange(value); }} defaultValue={field.value}>
+              <FormLabel>Tipo de Item</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione um produto" />
+                    <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {isLoading ? (
-                    <SelectItem value="loading" disabled>
-                      Carregando...
-                    </SelectItem>
-                  ) : products.length === 0 ? (
-                    <SelectItem value="empty" disabled>
-                      Nenhum produto encontrado.
-                    </SelectItem>
-                  ) : (
-                    products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                    ))
-                  )}
+                  <SelectItem value="PRODUCT">Produto</SelectItem>
+                  <SelectItem value="RAW_MATERIAL">Matéria-Prima</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {itemType === "PRODUCT" && (
+          <FormField
+            control={form.control}
+            name="productId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Produto</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um produto" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {isLoading ? (
+                      <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                    ) : (
+                      products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {itemType === "RAW_MATERIAL" && (
+          <FormField
+            control={form.control}
+            name="rawMaterialId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Matéria-Prima</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma matéria-prima" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {isLoading ? (
+                      <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                    ) : (
+                      rawMaterials.map((material) => (
+                        <SelectItem key={material.id} value={material.id}>
+                          {material.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
         <FormField
           control={form.control}
           name="quantity"

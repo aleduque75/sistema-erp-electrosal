@@ -9,6 +9,7 @@ import { RecoveryOrdersTable } from "@/components/recovery-orders/RecoveryOrders
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CreateRecoveryOrderModal } from "@/components/recovery-orders/CreateRecoveryOrderModal";
+import { RecoveryReport } from "@/components/recovery-orders/RecoveryReport";
 
 export default function RecoveryOrdersPage() {
   const [recoveryOrders, setRecoveryOrders] = useState<RecoveryOrder[]>([]);
@@ -47,6 +48,7 @@ export default function RecoveryOrdersPage() {
           Gerencie as ordens de recuperação de metais.
         </PageHeaderDescription>
       </PageHeader>
+      <RecoveryReport />
       <div className="flex justify-end mb-4">
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />

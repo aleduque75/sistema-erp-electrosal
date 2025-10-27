@@ -1,4 +1,4 @@
-import { RecoveryOrder, RecoveryOrderStatus, TipoMetal } from '@sistema-erp-electrosal/core';
+import { RecoveryOrder, RecoveryOrderStatus, TipoMetal, RawMaterialUsedResumida, AnaliseQuimicaResumida } from '@sistema-erp-electrosal/core';
 
 export class RecoveryOrderResponseDto {
   id: string;
@@ -27,7 +27,11 @@ export class RecoveryOrderResponseDto {
   // --- VÍNCULO COM RESÍDUO ---
   residueAnalysisId?: string;
 
+  rawMaterialsUsed?: RawMaterialUsedResumida[];
+  analisesEnvolvidas?: AnaliseQuimicaResumida[];
+
   static fromDomain(recoveryOrder: RecoveryOrder): RecoveryOrderResponseDto {
+    console.log('RecoveryOrder before DTO mapping:', recoveryOrder);
     const dto = new RecoveryOrderResponseDto();
     dto.id = recoveryOrder.id.toString();
     dto.organizationId = recoveryOrder.organizationId;
@@ -46,6 +50,16 @@ export class RecoveryOrderResponseDto {
     dto.auPuroRecuperadoGramas = recoveryOrder.auPuroRecuperadoGramas; // Mapeado
     dto.residuoGramas = recoveryOrder.residuoGramas; // Mapeado
     dto.residueAnalysisId = recoveryOrder.residueAnalysisId; // Mapeado
+    dto.rawMaterialsUsed = recoveryOrder.rawMaterialsUsed?.map(rmu => ({
+      id: rmu.id,
+      rawMaterialId: rmu.rawMaterialId,
+      rawMaterialName: rmu.rawMaterialName,
+      quantity: rmu.quantity,
+      cost: rmu.cost,
+      unit: rmu.unit,
+      goldEquivalentCost: rmu.goldEquivalentCost,
+    }));
+    dto.analisesEnvolvidas = recoveryOrder.analisesEnvolvidas;
     return dto;
   }
 }

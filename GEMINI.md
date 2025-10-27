@@ -437,3 +437,24 @@ Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, se
 
 # Pendencias e Resover 
 /home/aleduque/Documentos/cursos/sistema-erp-electrosal/pendencias.md
+
+### Histórico de Soluções e Decisões (continuação)
+
+**3. Implementação do Módulo de Matéria-Prima (Fase 1 e 2)**
+   - **Problema:** O sistema não tinha a capacidade de gerenciar matérias-primas, que são insumos essenciais para os processos de recuperação e reação química.
+   - **Solução Implementada:**
+     - **Criação do Módulo de Matéria-Prima (Backend):**
+       - **Modelo de Dados:** Adicionado o modelo `RawMaterial` ao `schema.prisma` para representar as matérias-primas, com campos como nome, custo, unidade e estoque.
+       - **CRUD:** Criado um novo módulo `raw-materials` no backend com todas as operações básicas (Criar, Ler, Atualizar, Deletar) para gerenciar as matérias-primas.
+       - **Integração com Pedidos de Compra:**
+         - Modificado o modelo `PurchaseOrderItem` para permitir a compra tanto de produtos quanto de matérias-primas.
+         - Ajustado o serviço de `purchase-orders` para validar e processar a compra de matérias-primas, atualizando o estoque corretamente quando um pedido de compra é recebido.
+     - **Integração da Matéria-Prima com os Processos (Backend):**
+       - **Rastreamento de Uso:** Criado o modelo `RawMaterialUsed` para rastrear a quantidade e o custo de cada matéria-prima utilizada em Ordens de Recuperação e Reações Químicas.
+       - **Integração com Ordens de Recuperação:**
+         - Adicionado um novo endpoint (`/recovery-orders/:id/raw-materials`) que permite adicionar uma matéria-prima a uma ordem de recuperação existente.
+         - A lógica de negócio calcula o custo equivalente em ouro da matéria-prima utilizada com base na cotação do dia e decrementa o estoque.
+       - **Integração com Reações Químicas:**
+         - Adicionado um novo endpoint (`/chemical-reactions/:id/raw-materials`) que permite adicionar uma matéria-prima a uma reação química existente.
+         - A lógica de negócio, similar à da recuperação, calcula o custo em ouro e atualiza o estoque.
+   - **Status:** Concluído.

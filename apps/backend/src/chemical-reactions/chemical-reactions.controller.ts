@@ -6,6 +6,8 @@ import { AdjustPurityUseCase } from './use-cases/adjust-purity.use-case';
 import { CreateChemicalReactionDto } from './dtos/create-chemical-reaction.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CompleteReactionDto } from './dtos/complete-reaction.dto';
+import { AddRawMaterialToChemicalReactionUseCase } from './use-cases/add-raw-material.use-case';
+import { AddRawMaterialDto } from './dtos/add-raw-material.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('chemical-reactions')
@@ -14,6 +16,7 @@ export class ChemicalReactionsController {
     private readonly createUseCase: CreateChemicalReactionUseCase,
     private readonly completeProductionStepUseCase: CompleteProductionStepUseCase,
     private readonly adjustPurityUseCase: AdjustPurityUseCase,
+    private readonly addRawMaterialToChemicalReactionUseCase: AddRawMaterialToChemicalReactionUseCase,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -22,6 +25,16 @@ export class ChemicalReactionsController {
     const organizationId = req.user?.orgId;
     const command = { organizationId, dto };
     return this.createUseCase.execute(command);
+  }
+
+  @Post(':id/raw-materials')
+  async addRawMaterial(
+    @Param('id') id: string,
+    @Body() dto: AddRawMaterialDto,
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    await this.addRawMaterialToChemicalReactionUseCase.execute(organizationId, id, dto);
   }
 
   @Patch(':id/complete-production')
@@ -59,6 +72,7 @@ export class ChemicalReactionsController {
         productionBatch: { include: { product: true } },
         outputProduct: true, // Adicionar esta linha
         lots: true,
+        rawMaterialsUsed: { include: { rawMaterial: true } },
       },
     });
   }

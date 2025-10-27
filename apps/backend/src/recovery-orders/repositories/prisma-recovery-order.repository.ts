@@ -1,14 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IRecoveryOrderRepository, RecoveryOrder, UniqueEntityID, RecoveryOrderStatus, AnaliseQuimicaResumida } from '@sistema-erp-electrosal/core';
-import { RecoveryOrder as PrismaRecoveryOrder, RecoveryOrderStatusPrisma, Prisma } from '@prisma/client';
+import { RecoveryOrder as PrismaRecoveryOrder, RecoveryOrderStatusPrisma, Prisma, RawMaterial as PrismaRawMaterial, RawMaterialUsed as PrismaRawMaterialUsed } from '@prisma/client';
 import { ListRecoveryOrdersDto } from '../dtos/list-recovery-orders.dto';
 
 @Injectable()
 export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
   constructor(private prisma: PrismaService) {}
 
-  private mapToDomain(dbData: PrismaRecoveryOrder, analisesEnvolvidas?: AnaliseQuimicaResumida[]): RecoveryOrder {
+  private mapToDomain(
+    dbData: PrismaRecoveryOrder & { rawMaterialsUsed?: (PrismaRawMaterialUsed & { rawMaterial: PrismaRawMaterial })[] },
+    analisesEnvolvidas?: AnaliseQuimicaResumida[]
+  ): RecoveryOrder {
     const { id, ...props } = dbData;
     const domainRecoveryOrder = RecoveryOrder.reconstitute(
       {
@@ -34,6 +37,20 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
 
     if (analisesEnvolvidas) {
       domainRecoveryOrder.setAnalisesEnvolvidas(analisesEnvolvidas);
+    }
+
+    if (dbData.rawMaterialsUsed !== undefined) {
+      domainRecoveryOrder.setRawMaterialsUsed(dbData.rawMaterialsUsed.map(rmu => ({
+        id: rmu.id,
+        rawMaterialId: rmu.rawMaterialId,
+        rawMaterialName: rmu.rawMaterial.name,
+        quantity: rmu.quantity,
+        cost: rmu.cost.toNumber(),
+        unit: rmu.rawMaterial.unit,
+        goldEquivalentCost: rmu.goldEquivalentCost?.toNumber() || null,
+      })));
+    } else {
+      domainRecoveryOrder.setRawMaterialsUsed([]);
     }
 
     return domainRecoveryOrder;
@@ -65,6 +82,13 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         id,
         organizationId,
       },
+      include: {
+        rawMaterialsUsed: {
+          include: {
+            rawMaterial: true,
+          },
+        },
+      },
     });
 
     if (!dbRecoveryOrder) {
@@ -80,9 +104,15 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         id: true,
         numeroAnalise: true,
         volumeOuPesoEntrada: true,
+        auLiquidoParaClienteGramas: true,
         cliente: {
           select: {
             name: true,
+          },
+        },
+        metalCredit: {
+          select: {
+            grams: true,
           },
         },
       },
@@ -93,6 +123,8 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       numeroAnalise: analise.numeroAnalise,
       clienteName: analise.cliente?.name || 'N/A',
       volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+      auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
+      metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
     }));
 
     return this.mapToDomain(dbRecoveryOrder, mappedAnalises);
@@ -116,6 +148,13 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
 
     const dbRecoveryOrders = await this.prisma.recoveryOrder.findMany({
       where: whereClause,
+      include: {
+        rawMaterialsUsed: {
+          include: {
+            rawMaterial: true,
+          },
+        },
+      },
       orderBy: { dataCriacao: 'desc' },
     });
 
@@ -131,9 +170,15 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
           id: true,
           numeroAnalise: true,
           volumeOuPesoEntrada: true,
+          auLiquidoParaClienteGramas: true,
           cliente: {
             select: {
               name: true,
+            },
+          },
+          metalCredit: {
+            select: {
+              grams: true,
             },
           },
         },
@@ -144,6 +189,8 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         numeroAnalise: analise.numeroAnalise,
         clienteName: analise.cliente?.name || 'N/A',
         volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+        auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
+        metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
       }));
 
       recoveryOrdersWithAnalyses.push(this.mapToDomain(dbRecoveryOrder, mappedAnalises));

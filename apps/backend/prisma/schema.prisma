@@ -49,6 +49,8 @@ model Organization {
   recoveryOrders          RecoveryOrder[]
   recuperacoes            Recuperacao[]
   saleAdjustments         SaleAdjustment[]
+  rawMaterials            RawMaterial[]
+  rawMaterialsUsed        RawMaterialUsed[]
   transacoes              Transacao[]
 }
 
@@ -170,6 +172,24 @@ model Product {
   inventoryLots             InventoryLot[]
   purchaseOrderItems        PurchaseOrderItem[]
   chemicalReactionsAsOutput chemical_reactions[]
+}
+
+model RawMaterial {
+  id                 String              @id @default(uuid())
+  organizationId     String
+  name               String
+  description        String?
+  unit               StockUnit           @default(GRAMS)
+  cost               Decimal             @db.Decimal(10, 2)
+  isForResale        Boolean             @default(false)
+  stock              Float?              @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  organization       Organization        @relation(fields: [organizationId], references: [id])
+  purchaseOrderItems PurchaseOrderItem[]
+  rawMaterialsUsed   RawMaterialUsed[]
+
+  @@map("raw_materials")
 }
 
 model ProductGroup {
@@ -687,12 +707,14 @@ model PurchaseOrder {
 model PurchaseOrderItem {
   id              String        @id @default(uuid())
   purchaseOrderId String
-  productId       String
+  productId       String?
+  rawMaterialId   String?
   quantity        Float
   price           Decimal       @db.Decimal(10, 2)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-  product         Product       @relation(fields: [productId], references: [id])
+  product         Product?      @relation(fields: [productId], references: [id])
+  rawMaterial     RawMaterial?  @relation(fields: [rawMaterialId], references: [id])
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
 
   @@map("purchase_order_items")
@@ -718,8 +740,29 @@ model RecoveryOrder {
   totalBrutoEstimadoGramas     Float
   organization                 Organization              @relation(fields: [organizationId], references: [id])
   residueAnalysis              AnaliseQuimica?           @relation("ResidueOfRecovery", fields: [residueAnalysisId], references: [id])
+  rawMaterialsUsed             RawMaterialUsed[]
 
   @@map("recovery_orders")
+}
+
+model RawMaterialUsed {
+  id                  String        @id @default(uuid())
+  organizationId      String
+  rawMaterialId       String
+  quantity            Float
+  cost                Decimal       @db.Decimal(10, 2)
+  goldEquivalentCost  Decimal?      @db.Decimal(10, 4)
+  recoveryOrderId     String?
+  chemicalReactionId  String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  organization       Organization        @relation(fields: [organizationId], references: [id])
+  rawMaterial        RawMaterial         @relation(fields: [rawMaterialId], references: [id])
+  recoveryOrder      RecoveryOrder?      @relation(fields: [recoveryOrderId], references: [id])
+  chemicalReaction   chemical_reactions? @relation(fields: [chemicalReactionId], references: [id])
+
+  @@map("raw_materials_used")
 }
 
 model MetalAccount {
@@ -824,6 +867,7 @@ model chemical_reactions {
   outputProduct                 Product                      @relation(fields: [outputProductId], references: [id])
   productionBatch               InventoryLot?                @relation("ReactionToBatch", fields: [productionBatchId], references: [id])
   lots                          pure_metal_lots[]            @relation("chemical_reactionsTopure_metal_lots")
+  rawMaterialsUsed              RawMaterialUsed[]
 
   @@map("chemical_reactions")
 }
@@ -866,6 +910,24 @@ model CrrCounter {
   updatedAt       DateTime @updatedAt
 
   @@map("crr_counters")
+}
+
+model EntityCounter {
+  id              String   @id @default(uuid())
+  organizationId  String
+  entityType      EntityType
+  lastNumber      Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([organizationId, entityType])
+  @@map("entity_counters")
+}
+
+enum EntityType {
+  RECOVERY_ORDER
+  CHEMICAL_REACTION
+  // Add other entity types as needed
 }
 
 model SaleAdjustment {
@@ -1026,4 +1088,6 @@ enum SaleAdjustmentCalcMethod {
 enum StockUnit {
   GRAMS
   KILOGRAMS
+  LITERS
+  UNITS
 }
