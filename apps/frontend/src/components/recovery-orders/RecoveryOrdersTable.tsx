@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -24,8 +24,6 @@ import { RecoveryOrderStatus } from '@/types/recovery-order';
 import { RecoveryOrderStatusBadge } from "@/components/ui/recovery-order-status-badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-
-import Link from "next/link";
 
 // Componente de Legenda
 const StatusLegend = () => (
@@ -56,25 +54,40 @@ const StatusLegend = () => (
 import {
   startRecoveryOrder,
   updateRecoveryOrderPurity,
+  getRecoveryOrderById,
   // finalizeRecoveryOrder, // Removed as per new workflow
 } from "@/services/recoveryOrdersApi";
 import { UpdateRecoveryOrderPurityModal } from "./UpdateRecoveryOrderPurityModal";
 import { ProcessRecoveryFinalizationModal } from "./ProcessRecoveryFinalizationModal";
+import { RecoveryOrderDetailsModal } from "./RecoveryOrderDetailsModal";
 
 interface RecoveryOrdersTableProps {
   recoveryOrders: RecoveryOrder[];
   isLoading: boolean;
   onRecoveryOrderUpdated: () => void;
+  onCancelRecoveryOrder: (recoveryOrderId: string) => void; // New prop
 }
 
 export function RecoveryOrdersTable({
   recoveryOrders,
   isLoading,
   onRecoveryOrderUpdated,
+  onCancelRecoveryOrder, // Destructure new prop
 }: RecoveryOrdersTableProps) {
   const [purityModalOpen, setPurityModalOpen] = useState(false);
   const [finalizationModalOpen, setFinalizationModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<RecoveryOrder | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+
+  // Efeito para atualizar selectedOrder quando recoveryOrders muda
+  useEffect(() => {
+    if (detailsModalOpen && selectedOrder && recoveryOrders.length > 0) {
+      const updatedOrder = recoveryOrders.find(order => order.id === selectedOrder.id);
+      if (updatedOrder) {
+        setSelectedOrder(updatedOrder);
+      }
+    }
+  }, [recoveryOrders, selectedOrder, detailsModalOpen]);
 
   const handleStartRecoveryOrder = async (recoveryOrderId: string) => {
     try {
@@ -106,6 +119,18 @@ export function RecoveryOrdersTable({
   const handleOpenFinalizationModal = (order: RecoveryOrder) => {
     setSelectedOrder(order);
     setFinalizationModalOpen(true);
+  };
+
+
+  const handleOpenDetailsModal = async (order: RecoveryOrder) => {
+    try {
+      const fetchedOrder = await getRecoveryOrderById(order.id);
+      setSelectedOrder(fetchedOrder);
+      setDetailsModalOpen(true);
+    } catch (error) {
+      toast.error("Erro ao carregar detalhes da ordem de recuperação.");
+      console.error("Erro ao buscar ordem de recuperação por ID:", error);
+    }
   };
 
   if (isLoading) {
@@ -199,7 +224,7 @@ export function RecoveryOrdersTable({
                       ))}
                     </div>
                   ) : (
-                    <span>{order.chemicalAnalysisIds.length} análises</span>
+                    <span>{(order.chemicalAnalysisIds ?? []).length} análises</span>
                   )}
                 </TableCell>
                 <TableCell className="font-semibold">{(order.totalBrutoEstimadoGramas || 0).toFixed(2)}g</TableCell>
@@ -215,12 +240,11 @@ export function RecoveryOrdersTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/recovery-orders/${order.id}`}>
-                          <MoreHorizontal className="mr-2 h-4 w-4" />
-                          Ver Detalhes
-                        </Link>
+                      <DropdownMenuItem onClick={() => handleOpenDetailsModal(order)}>
+                        <MoreHorizontal className="mr-2 h-4 w-4" />
+                        Ver Detalhes
                       </DropdownMenuItem>
+
                       {order.status === RecoveryOrderStatus.PENDENTE && (
                         <DropdownMenuItem
                           onClick={() => handleStartRecoveryOrder(order.id)}
@@ -259,6 +283,15 @@ export function RecoveryOrdersTable({
                           Cancelada
                         </DropdownMenuItem>
                       )}
+                      {(order.status === RecoveryOrderStatus.PENDENTE ||
+                        order.status === RecoveryOrderStatus.EM_ANDAMENTO) && (
+                        <DropdownMenuItem
+                          onClick={() => onCancelRecoveryOrder(order.id)}
+                        >
+                          <RotateCw className="mr-2 h-4 w-4" />
+                          Cancelar Ordem
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -278,6 +311,13 @@ export function RecoveryOrdersTable({
         onOpenChange={setFinalizationModalOpen}
         recoveryOrder={selectedOrder}
         onSuccess={handleFinalizationSuccess}
+      />
+
+      <RecoveryOrderDetailsModal
+        isOpen={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        recoveryOrder={selectedOrder}
+        onUpdate={onRecoveryOrderUpdated}
       />
     </>
   );

@@ -3,6 +3,8 @@ import { AggregateRoot } from "../../../_shared/domain/aggregate-root";
 import { RecoveryOrderStatus } from "../../enums/recovery-order-status.enum";
 import { TipoMetal } from '../../enums/tipo-metal.enum';
 
+import { Media } from '../../media/media.entity';
+
 // Define a interface para os dados resumidos da análise química
 export interface AnaliseQuimicaResumida {
   id: string;
@@ -25,6 +27,7 @@ export interface RawMaterialUsedResumida {
 
 export interface RecoveryOrderProps {
   organizationId: string;
+  orderNumber: string;
   metalType: TipoMetal;
   chemicalAnalysisIds: string[];
   status: RecoveryOrderStatus;
@@ -52,6 +55,8 @@ export interface RecoveryOrderProps {
   // --- DADOS ENVOLVIDOS (POPULADOS PELO REPOSITÓRIO) ---
   analisesEnvolvidas?: AnaliseQuimicaResumida[];
   rawMaterialsUsed?: RawMaterialUsedResumida[];
+  imageId?: string;
+  image?: Media; // TODO: import Media entity
 }
 
 export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
@@ -65,7 +70,7 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
   }
 
   public static create(
-    props: Omit<RecoveryOrderProps, 'dataCriacao' | 'dataAtualizacao' | 'status' | 'resultadoProcessamentoGramas' | 'teorFinal' | 'auPuroRecuperadoGramas' | 'residuoGramas' | 'residueAnalysisId' | 'analisesEnvolvidas' | 'rawMaterialsUsed'>,
+    props: Omit<RecoveryOrderProps, 'dataCriacao' | 'dataAtualizacao' | 'status' | 'resultadoProcessamentoGramas' | 'teorFinal' | 'auPuroRecuperadoGramas' | 'residuoGramas' | 'residueAnalysisId' | 'analisesEnvolvidas' | 'rawMaterialsUsed'> & { orderNumber: string },
     id?: UniqueEntityID
   ): RecoveryOrder {
     const now = new Date();
@@ -86,6 +91,7 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
   }
 
   get organizationId(): string { return this.props.organizationId; }
+  get orderNumber(): string { return this.props.orderNumber; }
   get metalType(): TipoMetal { return this.props.metalType; }
   get chemicalAnalysisIds(): string[] { return this.props.chemicalAnalysisIds; }
   get status(): RecoveryOrderStatus { return this.props.status; }
@@ -109,6 +115,9 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
 
   get rawMaterialsUsed(): RawMaterialUsedResumida[] | undefined { return this._rawMaterialsUsed; }
 
+  get imageId(): string | undefined { return this.props.imageId; }
+  get image(): any | undefined { return this.props.image; }
+
   // Método para definir as análises envolvidas (usado pelo repositório)
   public setAnalisesEnvolvidas(analises: AnaliseQuimicaResumida[]) {
     this._analisesEnvolvidas = analises;
@@ -118,9 +127,17 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
     this._rawMaterialsUsed = rawMaterialsUsed;
   }
 
-  public update(dto: Partial<Omit<RecoveryOrderProps, 'totalBrutoEstimadoGramas' | 'organizationId' | 'chemicalAnalysisIds' | 'analisesEnvolvidas' | 'rawMaterialsUsed'>>) {
+  public cancel() {
+    if (this.props.status === RecoveryOrderStatus.FINALIZADA) {
+      throw new Error('Não é possível cancelar uma Ordem de Recuperação FINALIZADA.');
+    }
+    this.props.status = RecoveryOrderStatus.CANCELADA;
+    this.props.dataAtualizacao = new Date();
+  }
+
+  public update(dto: Partial<Omit<RecoveryOrderProps, 'totalBrutoEstimadoGramas' | 'organizationId' | 'chemicalAnalysisIds' | 'analisesEnvolvidas' | 'rawMaterialsUsed' | 'orderNumber'>>) {
     // Prevent updating immutable fields
-    const { totalBrutoEstimadoGramas, organizationId, chemicalAnalysisIds, analisesEnvolvidas, rawMaterialsUsed, ...updateDto } = dto as any;
+    const { totalBrutoEstimadoGramas, organizationId, chemicalAnalysisIds, analisesEnvolvidas, rawMaterialsUsed, orderNumber, ...updateDto } = dto as any;
     Object.assign(this.props, updateDto);
     this.props.dataAtualizacao = new Date();
   }

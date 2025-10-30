@@ -10,11 +10,25 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CreateRecoveryOrderModal } from "@/components/recovery-orders/CreateRecoveryOrderModal";
 import { RecoveryReport } from "@/components/recovery-orders/RecoveryReport";
+import { toast } from "sonner"; // Import toast
+import { // Import AlertDialog components
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cancelRecoveryOrder } from "@/services/recoveryOrdersApi"; // Import cancelRecoveryOrder
 
 export default function RecoveryOrdersPage() {
   const [recoveryOrders, setRecoveryOrders] = useState<RecoveryOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false); // New state for confirmation dialog
+  const [recoveryOrderToCancel, setRecoveryOrderToCancel] = useState<string | null>(null); // New state for ID to cancel
 
   const fetchRecoveryOrders = async () => {
     setIsLoading(true);
@@ -35,6 +49,26 @@ export default function RecoveryOrdersPage() {
   const handleCreateSuccess = () => {
     setIsCreateModalOpen(false);
     fetchRecoveryOrders();
+  };
+
+  const handleCancelRecoveryOrder = (recoveryOrderId: string) => {
+    setRecoveryOrderToCancel(recoveryOrderId);
+    setIsCancelConfirmOpen(true);
+  };
+
+  const confirmCancelRecoveryOrder = async () => {
+    if (!recoveryOrderToCancel) return;
+    try {
+      await cancelRecoveryOrder(recoveryOrderToCancel);
+      toast.success("Ordem de Recuperação cancelada com sucesso!");
+      fetchRecoveryOrders(); // Refresh the list
+    } catch (error) {
+      toast.error("Falha ao cancelar a Ordem de Recuperação.");
+      console.error("Error canceling recovery order:", error);
+    } finally {
+      setRecoveryOrderToCancel(null);
+      setIsCancelConfirmOpen(false);
+    }
   };
 
   return (
@@ -59,12 +93,29 @@ export default function RecoveryOrdersPage() {
         recoveryOrders={recoveryOrders}
         isLoading={isLoading}
         onRecoveryOrderUpdated={fetchRecoveryOrders}
+        onCancelRecoveryOrder={handleCancelRecoveryOrder} // Pass the new handler
       />
       <CreateRecoveryOrderModal
         isOpen={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
         onSuccess={handleCreateSuccess}
       />
+
+      {/* Confirmation Dialog for Cancellation */}
+      <AlertDialog open={isCancelConfirmOpen} onOpenChange={setIsCancelConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Cancelamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja cancelar esta Ordem de Recuperação? Todas as análises químicas associadas serão revertidas para o status "Aprovado para Recuperação".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancelRecoveryOrder}>Sim</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Shell>
   );
 }

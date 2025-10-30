@@ -67,7 +67,7 @@
     "puppeteer": "^22.15.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "sharp": "^0.32.0",
+    "sharp": "^0.32.6",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.1.0",
     "vcard-parser": "^1.0.0",

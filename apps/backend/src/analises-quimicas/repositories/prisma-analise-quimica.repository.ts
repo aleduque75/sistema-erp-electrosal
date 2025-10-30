@@ -13,6 +13,8 @@ import {
   StatusAnaliseQuimicaPrisma,
 } from '@prisma/client';
 
+import { AnaliseQuimicaWithClientNameDto } from '../dtos/analise-quimica-with-client-name.dto';
+
 @Injectable()
 export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository {
   private readonly logger = new Logger(PrismaAnaliseQuimicaRepository.name);
@@ -71,7 +73,7 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
   async findById(
     id: string,
     organizationId: string,
-  ): Promise<AnaliseQuimica | null> {
+  ): Promise<AnaliseQuimica | null> { // Changed return type
     const dbAnalise = await this.prisma.analiseQuimica.findFirst({
       where: {
         id,
@@ -85,7 +87,12 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
         },
       },
     });
-    return this.mapToDomain(dbAnalise);
+
+    if (!dbAnalise) {
+      return null;
+    }
+
+    return this.mapToDomain(dbAnalise); // Directly return the domain entity
   }
 
   async findByNumeroAnalise(

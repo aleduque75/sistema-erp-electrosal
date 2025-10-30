@@ -1,6 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { CurrentUser } from '@auth/decorators/current-user.decorator';
 import { MetalReceivablesService } from './metal-receivables.service';
 
 @UseGuards(AuthGuard('jwt'))

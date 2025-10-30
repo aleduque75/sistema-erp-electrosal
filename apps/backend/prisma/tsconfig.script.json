@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../dist/prisma",
+    "rootDir": ".",
+    "module": "CommonJS",
+    "target": "ES2021"
+  },
+  "include": [
+    "correct-legacy-metal-sales.ts"
+  ]
+}

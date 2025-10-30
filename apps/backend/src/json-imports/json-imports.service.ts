@@ -436,11 +436,14 @@ export class JsonImportsService {
         itemsByOrderNumberMap.get(orderNumber)!.push(item);
       }
 
-      const financasByDuplicataMap = new Map<string, any>();
+      const financasByDuplicataMap = new Map<string, any[]>();
       for (const financa of financas) {
         const duplicataNumber = String(financa.duplicata).trim();
         if (duplicataNumber) {
-          financasByDuplicataMap.set(duplicataNumber, financa);
+          if (!financasByDuplicataMap.has(duplicataNumber)) {
+            financasByDuplicataMap.set(duplicataNumber, []);
+          }
+          financasByDuplicataMap.get(duplicataNumber)!.push(financa);
         }
       }
 
@@ -542,8 +545,12 @@ export class JsonImportsService {
           
           const saleDate = this.parseDate(pedido.data);
           const dateString = saleDate.toISOString().split('T')[0];
-          const goldPrice = dailyQuotesMap.get(dateString) || 0;
-          const goldValue = this.parseDecimal(pedido.valorTotalAu);
+          const pedidoCotacao = this.parseDecimal(pedido.cotacao);
+          const goldPrice =
+            pedidoCotacao > 0
+              ? pedidoCotacao
+              : dailyQuotesMap.get(dateString) || 0;
+          const goldValue = this.parseDecimal(pedido.quantidadeAu); // CORRIGIDO
 
           const newSale = await this.prisma.sale.create({
             data: {
@@ -611,6 +618,9 @@ export class JsonImportsService {
               }
 
               const accountRecExternalId = duplicata['unique id'];
+
+              const isReceived = duplicata.aberto === 'não';
+
               const newAccountRec = await this.prisma.accountRec.create({
                 data: {
                   organizationId: organizationId,
@@ -621,42 +631,50 @@ export class JsonImportsService {
                   amount: duplicataBRLValue.toDecimalPlaces(2),
                   goldAmount: duplicataGoldAmount.toDecimalPlaces(4),
                   dueDate: this.parseDate(duplicata.dataVencimento),
-                  received: duplicata.aberto === 'não',
+                  received: isReceived,
                   receivedAt:
-                    duplicata.aberto === 'não'
+                    isReceived
                       ? this.parseDate(duplicata.dataPagamento)
                       : null,
                   externalId: accountRecExternalId,
+                  amountPaid: isReceived
+                    ? duplicataBRLValue.toDecimalPlaces(2)
+                    : new Decimal(0),
+                  goldAmountPaid: isReceived
+                    ? duplicataGoldAmount.toDecimalPlaces(4)
+                    : new Decimal(0),
                 },
               });
 
               if (newAccountRec.received) {
-                const financa = financasByDuplicataMap.get(
+                const financasForDuplicata = financasByDuplicataMap.get(
                   String(duplicata.pedidoDuplicata).trim(),
                 );
-                if (financa) {
-                  const contaCorrenteName = String(financa.contaCorrente || '')
-                    .trim()
-                    .toLowerCase();
-                  const contaCorrenteId =
-                    contasCorrentesMap.get(contaCorrenteName);
+                if (financasForDuplicata && financasForDuplicata.length > 0) {
+                  for (const financa of financasForDuplicata) {
+                    const contaCorrenteName = String(financa.contaCorrente || '')
+                      .trim()
+                      .toLowerCase();
+                    const contaCorrenteId =
+                      contasCorrentesMap.get(contaCorrenteName);
 
-                  await this.prisma.transacao.create({
-                    data: {
-                      organizationId: organizationId,
-                      tipo: 'CREDITO', // CORRIGIDO: Pagamento recebido é um crédito
-                      valor: this.parseDecimal(financa.valorRecebido),
-                      goldAmount: this.parseDecimal(financa.valorRecebidoAu),
-                      moeda: 'BRL',
-                      descricao:
-                        financa.descricao ||
-                        `Pagamento para pedido ${orderNumber}`,
-                      dataHora: this.parseDate(financa.dataPagamento),
-                      contaContabilId: receitaConta.id,
-                      contaCorrenteId: contaCorrenteId,
-                      accountRecId: newAccountRec.id,
-                    },
-                  });
+                    await this.prisma.transacao.create({
+                      data: {
+                        organizationId: organizationId,
+                        tipo: 'CREDITO', // Pagamento recebido é um crédito
+                        valor: this.parseDecimal(financa.valorRecebido),
+                        goldAmount: this.parseDecimal(financa.valorRecebidoAu),
+                        moeda: 'BRL',
+                        descricao:
+                          financa.descricao ||
+                          `Pagamento para pedido ${orderNumber}`,
+                        dataHora: this.parseDate(financa.dataPagamento),
+                        contaContabilId: receitaConta.id,
+                        contaCorrenteId: contaCorrenteId,
+                        accountRecId: newAccountRec.id,
+                      },
+                    });
+                  }
                 } else {
                   this.logger.warn(
                     `Nenhuma financa encontrada para a duplicata ${duplicata.pedidoDuplicata}.`,

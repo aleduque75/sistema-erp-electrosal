@@ -57,6 +57,7 @@ import { StockStatementModule } from './stock-statement/stock-statement.module';
 import { RawMaterialsModule } from './raw-materials.module';
 import { RawMaterialsController } from './raw-materials.controller';
 import { RawMaterialsService } from './raw-materials.service';
+import { MetalCreditsModule } from './metal-credits/metal-credits.module';
 
 @Module({
   imports: [
@@ -112,6 +113,7 @@ import { RawMaterialsService } from './raw-materials.service';
     SalesMovementImportModule,
     StockStatementModule,
     RawMaterialsModule,
+    MetalCreditsModule,
   ],
   controllers: [AppController, RawMaterialsController],
   providers: [

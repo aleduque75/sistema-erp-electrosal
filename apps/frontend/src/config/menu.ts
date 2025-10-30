@@ -20,6 +20,7 @@ import {
   FlaskConical,
   Scale,
   ClipboardList, // Ícone para PCP
+  HandCoins, // Adicionado para Créditos de Clientes
 } from "lucide-react";
 import React from "react";
 
@@ -174,6 +175,12 @@ export const menuConfig: NavItem[] = [
         href: "/accounts-rec",
         icon: ArrowUpToLine,
         description: "Gerencie suas contas a receber.",
+      },
+      {
+        title: "Créditos de Clientes",
+        href: "/creditos-clientes",
+        icon: HandCoins,
+        description: "Consulte o saldo de metal que a empresa deve aos clientes.",
       },
       {
         title: "Contas Correntes",

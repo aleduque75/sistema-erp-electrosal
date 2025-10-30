@@ -6,6 +6,8 @@ import {
   UniqueEntityID,
 } from '@sistema-erp-electrosal/core';
 import { MetalCredit as PrismaMetalCredit } from '@prisma/client';
+import { MetalCreditWithClientNameDto } from '../dtos/metal-credit-with-client-name.dto';
+import { MetalCreditWithUsageDto, MetalAccountEntryDto, SaleUsageDto } from '../dtos/metal-credit-with-usage.dto';
 
 @Injectable()
 export class PrismaMetalCreditRepository implements IMetalCreditRepository {
@@ -70,9 +72,6 @@ export class PrismaMetalCreditRepository implements IMetalCreditRepository {
       where: {
         clientId,
         organizationId,
-        grams: {
-          gt: 0, // Only return credits with positive balance
-        },
       },
       orderBy: {
         date: 'asc',
@@ -81,4 +80,18 @@ export class PrismaMetalCreditRepository implements IMetalCreditRepository {
 
     return dbMetalCredits.map(this.mapToDomain);
   }
+
+  async findAll(organizationId: string): Promise<MetalCredit[]> {
+    const dbMetalCredits = await this.prisma.metalCredit.findMany({
+      where: {
+        organizationId,
+      },
+      orderBy: {
+        date: 'asc',
+      },
+    });
+
+    return dbMetalCredits.map(this.mapToDomain);
+  }
+
 }

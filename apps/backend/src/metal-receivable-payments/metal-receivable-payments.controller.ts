@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { CurrentUser } from '@auth/decorators/current-user.decorator';
 import { CreateMetalReceivablePaymentDto } from './dtos/create-payment.dto';
 import { CreateMetalReceivablePaymentUseCase } from './use-cases/create-payment.use-case';
 

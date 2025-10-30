@@ -1,5 +1,6 @@
 export interface ChemicalReactionDetails {
   id: string;
+  reactionNumber: string;
   status: 'STARTED' | 'PROCESSING' | 'PENDING_PURITY' | 'PENDING_PURITY_ADJUSTMENT' | 'COMPLETED' | 'CANCELED';
   auUsedGrams: number;
   productionBatch: { batchNumber: string; product: { name: string } } | null;

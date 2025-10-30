@@ -38,3 +38,12 @@ export const finalizeRecoveryOrder = async (
 ): Promise<void> => {
   await apiClient.patch(`/recovery-orders/${id}/finalize`, data);
 };
+
+export const cancelRecoveryOrder = async (id: string): Promise<void> => {
+  await apiClient.patch(`/recovery-orders/${id}/cancel`);
+};
+
+export const getRecoveryOrderById = async (id: string): Promise<RecoveryOrder> => {
+  const response = await apiClient.get(`/recovery-orders/${id}`);
+  return response.data;
+};

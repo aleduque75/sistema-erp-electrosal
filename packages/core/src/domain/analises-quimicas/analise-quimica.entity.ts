@@ -129,6 +129,19 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
       this.props.dataAtualizacao = new Date();
   }
 
+
+
+  public revertToPendingApproval() {
+    this.props.status = StatusAnaliseQuimica.ANALISADO_AGUARDANDO_APROVACAO;
+    this.props.dataAprovacaoCliente = null;
+    this.props.dataAtualizacao = new Date();
+  }
+
+  public clearOrdemDeRecuperacaoId() {
+    this.props.ordemDeRecuperacaoId = null;
+    this.props.dataAtualizacao = new Date();
+  }
+
   public reprovar() {
       this.props.status = StatusAnaliseQuimica.RECUSADO_PELO_CLIENTE;
       this.props.dataAtualizacao = new Date();

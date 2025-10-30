@@ -11,6 +11,7 @@ import {
   IMetalCreditRepository,
   MetalCredit,
 } from '@sistema-erp-electrosal/core';
+import { PrismaService } from '../../prisma/prisma.service'; // Import PrismaService
 
 export interface AprovarAnaliseCommand {
   analiseId: string;
@@ -25,6 +26,7 @@ export class AprovarAnaliseUseCase {
     private readonly analiseRepository: IAnaliseQuimicaRepository,
     @Inject('IMetalCreditRepository')
     private readonly metalCreditRepository: IMetalCreditRepository,
+    private readonly prisma: PrismaService, // Inject PrismaService
   ) {}
 
   async execute(command: AprovarAnaliseCommand): Promise<void> {
@@ -61,6 +63,42 @@ export class AprovarAnaliseUseCase {
     });
 
     await this.metalCreditRepository.create(metalCredit);
+
+    // --- Logic to create MetalAccount and MetalAccountEntry ---
+    let metalAccount = await this.prisma.metalAccount.findUnique({
+      where: {
+        organizationId_personId_type: {
+          organizationId: organizationId,
+          personId: analise.clienteId,
+          type: analise.metalType,
+        },
+      },
+    });
+
+    if (!metalAccount) {
+      this.logger.debug(`[APROVAR_ANALISE] Criando MetalAccount para cliente ${analise.clienteId} e metal ${analise.metalType}`);
+      metalAccount = await this.prisma.metalAccount.create({
+        data: {
+          organizationId: organizationId,
+          personId: analise.clienteId,
+          type: analise.metalType,
+        },
+      });
+    }
+
+    this.logger.debug(`[APROVAR_ANALISE] Criando MetalAccountEntry de CRÉDITO para MetalAccount ${metalAccount.id}`);
+    await this.prisma.metalAccountEntry.create({
+      data: {
+        metalAccountId: metalAccount.id,
+        date: new Date(),
+        description: `Crédito de metal referente à Análise Química ${analise.numeroAnalise}`,
+        grams: analise.auLiquidoParaClienteGramas || 0,
+        type: 'CREDIT',
+        sourceId: metalCredit.id.toString(), // Link to the MetalCredit
+      },
+    });
+    // --- End of MetalAccount and MetalAccountEntry creation logic ---
+
     await this.analiseRepository.save(analise);
   }
-}
+  }

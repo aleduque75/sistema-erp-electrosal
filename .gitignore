@@ -10,6 +10,7 @@ dist/
 **/dist/
 app-electrosal/
 
+
 # Ignorar arquivos de log e sistema
 npm-debug.log
 GEMINI.md
@@ -28,3 +29,25 @@ yarn-error.log
 .env.development.local
 .env.test.local
 .env.production.local
+
+apps/b
+
+# Ignorar diretórios de cache e logs do TurboRepo
+.turbo/
+
+# Ignorar arquivos de log do backend
+backend_logs.txt
+backend_stderr.log
+backend_stdout.log
+backend.log
+
+# Ignorar arquivos de backup e migração temporários
+backup.dump
+migration*.sql
+
+# Ignorar diretório de backups do backend
+apps/backend/backups/
+
+# Ignorar package-lock.json se pnpm for o gerenciador de pacotes principal
+package-lock.json
+apps/backend/uploads/

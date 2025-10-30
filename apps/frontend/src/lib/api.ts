@@ -14,6 +14,12 @@ const api = axios.create({
 // Interceptor de Requisição
 api.interceptors.request.use(
   (config) => {
+    if (config.headers.skipAuth) {
+      delete config.headers.Authorization;
+      delete config.headers.skipAuth; // Clean up the custom header
+      return config;
+    }
+
     if (typeof window !== "undefined") {
       const accessToken = localStorage.getItem("accessToken");
       if (accessToken) {

@@ -1,58 +1,113 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { PrismaService } from '../prisma/prisma.service';
+import { exec, execSync } from 'child_process';
 import * as path from 'path';
-import * as fs from 'fs';
-
-const execPromise = promisify(exec);
+import * as fs from 'fs/promises';
 
 @Injectable()
 export class BackupsService {
-  constructor(private configService: ConfigService) {}
+  private readonly logger = new Logger(BackupsService.name);
+  private readonly backupDir: string;
+  private readonly dbService: string;
+  private readonly dbUser: string;
+  private readonly dbName: string;
 
-  async createDatabaseBackup(organizationId: string): Promise<{ filePath: string }> {
-    // Extrai os detalhes do banco de dados da DATABASE_URL
-    const dbUrlString = this.configService.get<string>('DATABASE_URL');
-    if (!dbUrlString) {
-      throw new InternalServerErrorException('DATABASE_URL não está definida.');
-    }
-    const dbUrl = new URL(dbUrlString);
-    const dbUser = dbUrl.username;
-    const dbPassword = dbUrl.password;
-    const dbHost = dbUrl.hostname;
-    const dbPort = dbUrl.port;
-    const dbName = dbUrl.pathname.slice(1);
+  constructor(
+    private configService: ConfigService,
+    private prisma: PrismaService,
+  ) {
+    this.backupDir = path.join(process.cwd(), 'backups'); // Store backups in a 'backups' folder at the project root
+    this.dbService = this.configService.get<string>('DB_SERVICE_NAME', 'db'); // e.g., 'db' from docker-compose
+    this.dbUser = this.configService.get<string>('DATABASE_USER', 'aleduque');
+    this.dbName = this.configService.get<string>('DATABASE_NAME', 'sistema_electrosal_dev');
 
+    // Ensure backup directory exists
+    fs.mkdir(this.backupDir, { recursive: true }).catch(err => {
+      this.logger.error(`Failed to create backup directory: ${this.backupDir}`, err.stack);
+    });
+  }
+
+  async createBackup(): Promise<{ filename: string }> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupFileName = `backup-org-${organizationId}-${timestamp}.dump`;
+    const filename = `backup_${timestamp}.dump`;
+    const backupPath = path.join(this.backupDir, filename);
 
-    // Define um diretório de backups na raiz do projeto backend
-    const backupDir = path.join(__dirname, '..', '..', '..', 'backups');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
-    const backupFilePath = path.join(backupDir, backupFileName);
+    const command = `docker-compose exec -T ${this.dbService} pg_dump -U ${this.dbUser} -d ${this.dbName} > ${backupPath}`;
 
-    // Monta o comando do pg_dump
-    const command = `pg_dump -U ${dbUser} -h ${dbHost} -p ${dbPort} -F c -b -v -f "${backupFilePath}" ${dbName}`;
-
+    this.logger.log(`Creating backup: ${filename}`);
     try {
-      // Define a senha via variável de ambiente para segurança
-      const { stdout, stderr } = await execPromise(command, {
-        env: { ...process.env, PGPASSWORD: dbPassword },
-      });
-
-      if (stderr) {
-        console.error(`pg_dump stderr: ${stderr}`);
-      }
-      console.log(`pg_dump stdout: ${stdout}`);
-
-      return { filePath: backupFilePath };
-
+      // Use execSync for simplicity, but for very large backups, exec might be better
+      execSync(command);
+      this.logger.log(`Backup created successfully: ${filename}`);
+      return { filename };
     } catch (error) {
-      console.error('Erro ao executar pg_dump:', error);
-      throw new InternalServerErrorException('Falha ao criar o backup do banco de dados.');
+      this.logger.error(`Failed to create backup: ${error.message}`, error.stack);
+      throw new InternalServerErrorException('Falha ao criar backup do banco de dados.');
+    }
+  }
+
+  async listBackups(): Promise<{ filename: string; createdAt: Date; size: number }[]> {
+    try {
+      const files = await fs.readdir(this.backupDir);
+      const backupFiles = files.filter(file => file.endsWith('.dump'));
+
+      const detailedBackups = await Promise.all(backupFiles.map(async file => {
+        const filePath = path.join(this.backupDir, file);
+        const stats = await fs.stat(filePath);
+        return {
+          filename: file,
+          createdAt: stats.birthtime,
+          size: stats.size,
+        };
+      }));
+
+      return detailedBackups.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Newest first
+    } catch (error) {
+      this.logger.error(`Failed to list backups: ${error.message}`, error.stack);
+      throw new InternalServerErrorException('Falha ao listar backups.');
+    }
+  }
+
+  async restoreBackup(filename: string): Promise<{ message: string }> {
+    const backupPath = path.join(this.backupDir, filename);
+
+    if (!await fs.access(backupPath).then(() => true).catch(() => false)) {
+      throw new NotFoundException(`Arquivo de backup '${filename}' não encontrado.`);
+    }
+
+    const terminateConnectionsCommand = `docker-compose exec -T ${this.dbService} psql -U ${this.dbUser} -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '${this.dbName}' AND pid <> pg_backend_pid();"`;
+    const dropDbCommand = `docker-compose exec -T ${this.dbService} dropdb -U ${this.dbUser} ${this.dbName}`;
+    const createDbCommand = `docker-compose exec -T ${this.dbService} createdb -U ${this.dbUser} ${this.dbName}`;
+    // Get container ID dynamically
+    const containerId = execSync(`docker-compose ps -q ${this.dbService}`).toString().trim();
+    if (!containerId) {
+      throw new InternalServerErrorException(`Could not find container ID for service ${this.dbService}. Is the database service running?`);
+    }
+
+    // Copy backup file into the container
+    const containerBackupPath = `/tmp/${filename}`; // Temporary path inside the container
+    const copyCommand = `docker cp ${backupPath} ${containerId}:${containerBackupPath}`;
+    execSync(copyCommand);
+
+    // Restore from within the container
+    const restoreCommand = `docker-compose exec -T ${this.dbService} bash -c "set -e && psql -v ON_ERROR_STOP=1 -U ${this.dbUser} -d ${this.dbName} -f ${containerBackupPath} 2>&1"`;
+
+    this.logger.log(`Restoring backup: ${filename}`);
+    try {
+      this.logger.log('Terminating active database connections...');
+      execSync(terminateConnectionsCommand);
+      this.logger.log('Active connections terminated. Dropping database...');
+      execSync(dropDbCommand);
+      this.logger.log('Database dropped. Creating new database...');
+      execSync(createDbCommand);
+      this.logger.log('New database created. Restoring data...');
+      execSync(restoreCommand);
+      this.logger.log(`Backup '${filename}' restaurado com sucesso.`);
+      return { message: `Backup '${filename}' restaurado com sucesso.` };
+    } catch (error) {
+      this.logger.error(`Failed to restore backup: ${error.message}`, error.stack);
+      throw new InternalServerErrorException('Falha ao restaurar backup do banco de dados.');
     }
   }
 }

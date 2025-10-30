@@ -16,12 +16,26 @@ import { StatusLegend } from "@/components/analises-quimicas/StatusLegend";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { TipoMetal } from "@/types/tipo-metal";
+import { toast } from "sonner"; // Import toast
+import { // Import AlertDialog components
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { revertAnaliseQuimicaToPendingApproval } from "@/services/analisesApi"; // Import revertAnaliseQuimicaToPendingApproval
 
 export default function AnalisesQuimicasPage() {
   const [analises, setAnalises] = useState<AnaliseQuimica[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metalTypeFilter, setMetalTypeFilter] = useState<string>("all");
+  const [isRevertConfirmOpen, setIsRevertConfirmOpen] = useState(false); // New state for confirmation dialog
+  const [analiseToRevert, setAnaliseToRevert] = useState<string | null>(null); // New state for ID to revert
 
   const fetchAnalises = useCallback(async (metalType: string) => {
     setIsLoading(true);
@@ -44,6 +58,26 @@ export default function AnalisesQuimicasPage() {
   useEffect(() => {
     fetchAnalises(metalTypeFilter);
   }, [fetchAnalises, metalTypeFilter]);
+
+  const handleRevertToPendingApproval = (analiseId: string) => {
+    setAnaliseToRevert(analiseId);
+    setIsRevertConfirmOpen(true);
+  };
+
+  const confirmRevertToPendingApproval = async () => {
+    if (!analiseToRevert) return;
+    try {
+      await revertAnaliseQuimicaToPendingApproval(analiseToRevert);
+      toast.success("Análise revertida para 'Aguardando Aprovação' com sucesso!");
+      fetchAnalises(metalTypeFilter); // Refresh the list
+    } catch (error: any) {
+      toast.error("Falha ao reverter a Análise.");
+      console.error("Error reverting analysis:", error);
+    } finally {
+      setAnaliseToRevert(null);
+      setIsRevertConfirmOpen(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -99,9 +133,26 @@ export default function AnalisesQuimicasPage() {
             analises={analises}
             isLoading={isLoading}
             onAnaliseUpdated={fetchAnalises}
+            onRevertToPendingApproval={handleRevertToPendingApproval} // Pass the new handler
           />
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog for Reversion */}
+      <AlertDialog open={isRevertConfirmOpen} onOpenChange={setIsRevertConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Reversão de Análise</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja reverter esta Análise Química para o status "Aguardando Aprovação"? Isso removerá o crédito de metal associado e as entradas da conta de metal.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRevertToPendingApproval}>Sim</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import {
   UpdateAccountRecDto,
   ReceivePaymentDto,
 } from './dtos/account-rec.dto';
-import { AccountRec, Prisma, TipoTransacaoPrisma, TipoMetal } from '@prisma/client';
+import { AccountRec, Prisma, TipoTransacaoPrisma, TipoMetal, SaleInstallmentStatus } from '@prisma/client';
 import { SettingsService } from '../settings/settings.service';
 import { QuotationsService } from '../quotations/quotations.service';
 import { startOfDay } from 'date-fns';
@@ -106,11 +106,15 @@ export class AccountsRecService {
   ): Promise<any> {
     const accountToReceive = await this.prisma.accountRec.findFirst({
       where: { id, organizationId },
-      include: { sale: true },
+      include: { sale: true, transacoes: true }, // Include existing transactions
     });
 
     if (!accountToReceive) {
       throw new NotFoundException(`Conta a receber com ID ${id} não encontrada.`);
+    }
+
+    if (!data.payments || data.payments.length === 0) {
+      throw new BadRequestException('Nenhum pagamento foi fornecido.');
     }
 
     const updatedAccountRec = await this.prisma.$transaction(async (tx) => {
@@ -122,13 +126,10 @@ export class AccountsRecService {
       }
 
       const receivedAt = data.receivedAt ? new Date(data.receivedAt) : new Date();
-      const amountReceived = new Decimal(
-        data.amountReceived || accountToReceive.amount,
-      );
 
-      let paymentQuotation = accountToReceive.sale?.goldPrice;
-
-      if (!paymentQuotation || new Decimal(paymentQuotation).isZero()) {
+      // Determine paymentQuotation once for the entire AccountRec payment
+      let paymentQuotation: Decimal | null = accountToReceive.sale?.goldPrice ?? null;
+      if (!paymentQuotation || paymentQuotation.isZero()) {
         if (accountToReceive.saleId) {
           const paymentDate = startOfDay(receivedAt);
           const quotationForPaymentDay = await this.quotationsService.findByDate(
@@ -142,36 +143,85 @@ export class AccountsRecService {
               `Nenhuma cotação de ouro válida encontrada para a data ${receivedAt.toLocaleDateString()}. Não é possível registrar o recebimento.`,
             );
           }
-
           paymentQuotation = quotationForPaymentDay.buyPrice;
-
-                  await tx.sale.update({
-                    where: { id: accountToReceive.saleId },
-                    data: { goldPrice: paymentQuotation, paymentMethod: 'A_VISTA' },
-                  });        } else {
+        } else {
           throw new BadRequestException(
             'A cotação para a transação não pôde ser determinada.',
           );
         }
       }
 
-      const goldAmount = amountReceived.dividedBy(paymentQuotation);
+      // Calculate total amounts from new payments
+      const newTotalAmountReceived = data.payments.reduce(
+        (sum, p) => sum.plus(new Decimal(p.amount)),
+        new Decimal(0),
+      );
+      const newTotalGoldAmountReceived = data.payments.reduce(
+        (sum, p) => sum.plus(new Decimal(p.goldAmount || 0)),
+        new Decimal(0),
+      );
 
-      this.logger.log(`Receiving payment for account ${id}`);
-      this.logger.log(`Amount received: ${amountReceived}`);
-      this.logger.log(`Payment quotation: ${paymentQuotation}`);
-      this.logger.log(`Calculated gold amount: ${goldAmount}`);
+      // Calculate current paid amounts (from existing transactions)
+      const currentTotalAmountPaid = accountToReceive.transacoes.reduce(
+        (sum, t) => sum.plus(t.valor), // Assuming t.valor is Decimal
+        new Decimal(0),
+      );
+      const currentTotalGoldAmountPaid = accountToReceive.transacoes.reduce(
+        (sum, t) => sum.plus(t.goldAmount || 0), // Assuming t.goldAmount is Decimal
+        new Decimal(0),
+      );
 
+      // Sum up all amounts (existing + new)
+      const totalAmountPaid = currentTotalAmountPaid.plus(newTotalAmountReceived);
+      const totalGoldAmountPaid = currentTotalGoldAmountPaid.plus(newTotalGoldAmountReceived);
+
+      // Process each payment entry
+      for (const paymentEntry of data.payments) {
+        const amount = new Decimal(paymentEntry.amount);
+        let goldAmount = new Decimal(0);
+
+        if (paymentEntry.goldAmount && !new Decimal(paymentEntry.goldAmount).isZero()) {
+          goldAmount = new Decimal(paymentEntry.goldAmount);
+        } else if (paymentQuotation && !paymentQuotation.isZero()) {
+          goldAmount = amount.dividedBy(paymentQuotation);
+        } else {
+          throw new BadRequestException(
+            'Não foi possível determinar o valor em ouro para um dos pagamentos. Forneça goldAmount ou uma cotação válida.',
+          );
+        }
+
+        await tx.transacao.create({
+          data: {
+            organizationId,
+            contaCorrenteId: paymentEntry.contaCorrenteId,
+            contaContabilId: settings.defaultCaixaContaId!,
+            tipo: TipoTransacaoPrisma.CREDITO,
+            descricao: `Recebimento de: ${accountToReceive.description} (Parte)`,
+            valor: amount,
+            goldAmount: goldAmount.toDecimalPlaces(4),
+            goldPrice: paymentQuotation,
+            moeda: 'BRL',
+            dataHora: receivedAt,
+            accountRecId: accountToReceive.id, // Link to the AccountRec
+          },
+        });
+      }
+
+      // Update AccountRec status and paid amounts
+      const isFullyPaid = totalAmountPaid.greaterThanOrEqualTo(accountToReceive.amount);
+      
       const updated = await tx.accountRec.update({
         where: { id },
         data: {
-          received: true,
-          receivedAt: receivedAt,
-          contaCorrenteId: data.contaCorrenteId,
+          received: isFullyPaid,
+          receivedAt: isFullyPaid ? receivedAt : accountToReceive.receivedAt, // Only update receivedAt if fully paid
+          amountPaid: totalAmountPaid.toDecimalPlaces(2),
+          goldAmountPaid: totalGoldAmountPaid.toDecimalPlaces(4),
+          // contaCorrenteId: data.contaCorrenteId, // This should not be updated here, as it's now multiple
         },
       });
 
-      // Find and update the corresponding SaleInstallment
+      // Find and update the corresponding SaleInstallment (if any)
       const saleInstallment = await tx.saleInstallment.findFirst({
         where: { accountRecId: updated.id },
       });
@@ -180,30 +230,23 @@ export class AccountsRecService {
         await tx.saleInstallment.update({
           where: { id: saleInstallment.id },
           data: {
-            status: 'PAID',
-            paidAt: receivedAt,
+            status: isFullyPaid ? SaleInstallmentStatus.PAID : SaleInstallmentStatus.PARTIALLY_PAID,
+            paidAt: isFullyPaid ? receivedAt : saleInstallment.paidAt,
           },
         });
       }
 
-      await tx.transacao.create({
-        data: {
-          organizationId,
-          contaCorrenteId: data.contaCorrenteId,
-          contaContabilId: settings.defaultCaixaContaId!,
-          tipo: TipoTransacaoPrisma.CREDITO,
-          descricao: `Recebimento de: ${accountToReceive.description}`,
-          valor: amountReceived,
-          goldAmount: goldAmount,
-          goldPrice: paymentQuotation,
-          moeda: 'BRL',
-          dataHora: receivedAt,
-          accountRecId: updated.id, // Link to the AccountRec
-        },
-      });
+      // Update sale goldPrice if it was null
+      if (accountToReceive.saleId && (!accountToReceive.sale?.goldPrice || new Decimal(accountToReceive.sale.goldPrice).isZero())) {
+        await tx.sale.update({
+          where: { id: accountToReceive.saleId },
+          data: { goldPrice: paymentQuotation },
+        });
+      }
 
       return updated;
     });
+
     // After payment is registered, if it's linked to a sale, trigger adjustment calculation
     if (updatedAccountRec.saleId) {
       await this.calculateSaleAdjustmentUseCase.execute(

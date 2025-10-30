@@ -13,6 +13,8 @@ import {
   RecoveryOrderStatus,
   TipoMetal,
 } from '@sistema-erp-electrosal/core';
+import { GenerateNextNumberUseCase } from '../../common/use-cases/generate-next-number.use-case';
+import { EntityType } from '@prisma/client';
 
 export interface CreateRecoveryOrderCommand {
   organizationId: string;
@@ -27,10 +29,18 @@ export class CreateRecoveryOrderUseCase {
     private readonly recoveryOrderRepository: IRecoveryOrderRepository,
     @Inject('IAnaliseQuimicaRepository')
     private readonly analiseRepository: IAnaliseQuimicaRepository,
+    private readonly generateNextNumberUseCase: GenerateNextNumberUseCase,
   ) {}
 
   async execute(command: CreateRecoveryOrderCommand): Promise<RecoveryOrder> {
     const { organizationId, chemicalAnalysisIds, metalType } = command;
+
+    const orderNumber = await this.generateNextNumberUseCase.execute(
+      organizationId,
+      EntityType.RECOVERY_ORDER,
+      'REC-',
+      1,
+    );
 
     if (!chemicalAnalysisIds || chemicalAnalysisIds.length === 0) {
       throw new BadRequestException(
@@ -90,6 +100,7 @@ export class CreateRecoveryOrderUseCase {
 
     const recoveryOrder = RecoveryOrder.create({
       organizationId,
+      orderNumber,
       metalType,
       chemicalAnalysisIds,
       dataInicio: new Date(),
@@ -109,3 +120,4 @@ export class CreateRecoveryOrderUseCase {
     return createdRecoveryOrder;
   }
 }
+

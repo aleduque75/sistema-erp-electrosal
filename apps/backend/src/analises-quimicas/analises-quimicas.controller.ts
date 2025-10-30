@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator'; // Import CurrentUser
 
 import { RegistrarNovaAnaliseDto, LancarResultadoAnaliseDto, AnaliseQuimicaResponseDto } from '@sistema-erp-electrosal/core';
 
@@ -27,6 +28,8 @@ import { GerarPdfAnaliseUseCase } from './use-cases/gerar-pdf-analise.use-case';
 import { AprovarAnaliseUseCase } from './use-cases/aprovar-analise.use-case';
 import { ReprovarAnaliseUseCase } from './use-cases/reprovar-analise.use-case';
 import { RefazerAnaliseUseCase } from './use-cases/refazer-analise.use-case';
+import { AnaliseQuimicaWithClientNameDto } from './dtos/analise-quimica-with-client-name.dto'; // Import the new DTO
+import { RevertAnaliseQuimicaToPendingApprovalUseCase } from './use-cases/revert-analise-quimica-to-pending-approval.use-case'; // Import the new use case
 
 
 @UseGuards(JwtAuthGuard)
@@ -42,6 +45,7 @@ export class AnalisesQuimicasController {
 			private readonly aprovarAnaliseUseCase: AprovarAnaliseUseCase,
 			private readonly reprovarAnaliseUseCase: ReprovarAnaliseUseCase,
 			private readonly refazerAnaliseUseCase: RefazerAnaliseUseCase,
+			private readonly revertAnaliseQuimicaToPendingApprovalUseCase: RevertAnaliseQuimicaToPendingApprovalUseCase, // Inject the new use case
 		) {}
 
 		@Post()
@@ -66,9 +70,12 @@ export class AnalisesQuimicasController {
 	}
 
 	@Get(':id')
-	async buscarPorId(@Param('id', new ParseUUIDPipe()) id: string) {
-		const analise = await this.buscarAnalisePorIdUseCase.execute(id);
-		return AnaliseQuimicaResponseDto.fromDomain(analise);
+	async buscarPorId(
+        @Param('id', new ParseUUIDPipe()) id: string,
+        @CurrentUser('orgId') organizationId: string, // Get organizationId from CurrentUser
+    ): Promise<AnaliseQuimicaWithClientNameDto> {
+		const analise = await this.buscarAnalisePorIdUseCase.execute(id, organizationId);
+		return analise; // Return directly as use case already returns DTO
 	}
 
 	@Get(':id/pdf')
@@ -130,5 +137,15 @@ export class AnalisesQuimicasController {
 			const organizationId = req.user?.orgId;
 			const command = { analiseId: id, organizationId };
 			await this.refazerAnaliseUseCase.execute(command);
+		}
+
+		@Patch(':id/revert-to-pending-approval')
+		async revertToPendingApproval(
+			@Param('id', new ParseUUIDPipe()) id: string,
+			@Req() req,
+		) {
+			const organizationId = req.user?.orgId;
+			const command = { analiseId: id, organizationId };
+			await this.revertAnaliseQuimicaToPendingApprovalUseCase.execute(command);
 		}
 }

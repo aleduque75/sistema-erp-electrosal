@@ -47,7 +47,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
     const receivedAccounts = sale.accountsRec?.filter(ar => ar.received) || [];
 
     if (receivedAccounts.length > 0) {
-      const accountNames = receivedAccounts.map(ar => ar.transacao?.contaCorrente?.nome).filter(Boolean).join(', ');
+      const accountNames = receivedAccounts.flatMap(ar => ar.transacoes?.map(t => t.contaCorrente?.nome)).filter(Boolean).join(', ');
       return `Recebido em: ${accountNames}`;
     }
 
@@ -118,6 +118,45 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                   )}
                 </div>
               </div>
+
+              {/* Detalhes dos Pagamentos */}
+              <Card>
+                <CardHeader><CardTitle>Detalhes dos Pagamentos</CardTitle></CardHeader>
+                <CardContent>
+                  <Table size="sm">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Conta Corrente</TableHead>
+                        <TableHead className="text-right">Valor (BRL)</TableHead>
+                        <TableHead className="text-right">Valor (Au)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sale.accountsRec?.flatMap(ar => ar.transacoes || []).map((transacao) => (
+                        <TableRow key={transacao.id}>
+                          <TableCell>{transacao.contaCorrente?.nome || 'N/A'}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(transacao.valor)}</TableCell>
+                          <TableCell className="text-right">{formatGrams(transacao.goldAmount)} g</TableCell>
+                        </TableRow>
+                      ))}
+                      {sale.installments?.flatMap(inst => inst.accountRec?.transacoes || []).map((transacao) => (
+                        <TableRow key={transacao.id}>
+                          <TableCell>{transacao.contaCorrente?.nome || 'N/A'}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(transacao.valor)}</TableCell>
+                          <TableCell className="text-right">{formatGrams(transacao.goldAmount)} g</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Mensagem se não houver pagamentos */}
+                      {(!sale.accountsRec?.flatMap(ar => ar.transacoes || []).length &&
+                        !sale.installments?.flatMap(inst => inst.accountRec?.transacoes || []).length) && (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center text-muted-foreground">Nenhum pagamento registrado.</TableCell>
+                          </TableRow>
+                        )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
 
               {/* Itens da Venda */}
               <Card>

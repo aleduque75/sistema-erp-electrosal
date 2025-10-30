@@ -4,6 +4,7 @@ import { TipoMetal } from '../enums/tipo-metal.enum';
 
 export interface ChemicalReactionProps {
   organizationId: string;
+  reactionNumber: string;
   metalType: TipoMetal;
   reactionDate: Date;
   notes?: string;
@@ -25,7 +26,7 @@ export class ChemicalReaction extends AggregateRoot<ChemicalReactionProps> {
     super(props, id);
   }
 
-  public static create(props: ChemicalReactionProps, id?: UniqueEntityID): ChemicalReaction {
+  public static create(props: Omit<ChemicalReactionProps, 'sourceLotIds'> & { reactionNumber: string, sourceLotIds: string[] }, id?: UniqueEntityID): ChemicalReaction {
     const chemicalReaction = new ChemicalReaction(
       {
         ...props,
@@ -35,6 +36,7 @@ export class ChemicalReaction extends AggregateRoot<ChemicalReactionProps> {
     return chemicalReaction;
   }
 
+  get reactionNumber(): string { return this.props.reactionNumber; }
   get metalType(): TipoMetal { return this.props.metalType; }
 
   // Adicionar getters conforme necessário

@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
-
 import { Prisma } from '@prisma/client';
 
 type PrismaTransactionClient = Prisma.TransactionClient;
@@ -25,10 +24,10 @@ export class CalculateSaleAdjustmentUseCase {
       include: {
         accountsRec: {
           include: {
-            transacoes: true, // Corrected from transacao to transacoes
+            transacoes: true,
           },
         },
-        installments: { // Include installments and their transactions
+        installments: {
           include: {
             accountRec: {
               include: {
@@ -49,131 +48,86 @@ export class CalculateSaleAdjustmentUseCase {
       },
     });
 
-    this.logger.log(`[SALE_ADJUSTMENT] Venda encontrada: ${JSON.stringify(sale, null, 2)}`);
-
     if (!sale) {
       throw new NotFoundException(`Venda com ID ${saleId} não encontrada.`);
     }
 
-    let paymentReceivedBRL: Decimal;
-    let paymentEquivalentGrams: Decimal;
+    // Find the primary AccountRec for the sale
+    const primaryAccountRec = sale.accountsRec.find(ar => ar.saleId === saleId);
 
-    if (sale.paymentMethod === 'METAL') {
-      this.logger.log(
-        `[SALE_ADJUSTMENT] Venda em metal. Usando valores da própria venda para cálculo de ajuste.`,
-      );
-      paymentReceivedBRL = new Decimal(sale.netAmount || 0);
-      paymentEquivalentGrams = new Decimal(sale.goldValue || 0);
-    } else {
-      this.logger.log(`[SALE_ADJUSTMENT] Venda financeira. Buscando transações de pagamento.`);
-      
-      const allTransactions = sale.installments.flatMap(
-        (i) => i.accountRec?.transacoes || [],
-      );
+    if (!primaryAccountRec) {
+      this.logger.warn(`[SALE_ADJUSTMENT] Nenhuma conta a receber principal encontrada para a venda ID: ${saleId}. Pulando ajuste de BRL.`);
+      // Proceed with other calculations even if no primary AccountRec is found for BRL adjustment
+    }
 
-      paymentReceivedBRL = allTransactions.reduce(
+    // Calculate outstanding BRL balance for the primary AccountRec
+    let outstandingBRL = new Decimal(0);
+    if (primaryAccountRec) {
+      const totalPaidBRL = primaryAccountRec.transacoes.reduce(
         (sum, t) => sum.plus(t.valor || 0),
         new Decimal(0),
       );
-      this.logger.log(`[SALE_ADJUSTMENT] Total BRL recebido das transações: ${paymentReceivedBRL}`);
-
-      paymentEquivalentGrams = allTransactions.reduce(
-        (sum, t) => sum.plus(t.goldAmount || 0),
-        new Decimal(0),
-      );
-      this.logger.log(`[SALE_ADJUSTMENT] Total Ouro recebido (g): ${paymentEquivalentGrams}`);
+      outstandingBRL = primaryAccountRec.amount.minus(totalPaidBRL);
     }
 
-    // Lógica de cálculo de lucro em BRL (Reais)
-    const totalCostBRL = sale.saleItems.reduce((sum, item) => {
-      const itemCost = new Decimal(item.costPriceAtSale || 0).times(
-        item.quantity,
-      );
-      return sum.plus(itemCost);
-    }, new Decimal(0));
 
-    const grossProfitBRL = paymentReceivedBRL.minus(totalCostBRL);
-    const otherCostsBRL = new Decimal(sale.shippingCost || 0);
-    const netProfitBRL = grossProfitBRL.minus(otherCostsBRL);
+    // 1. Aggregate Payments
+    const allTransactions = [
+      ...sale.accountsRec.flatMap((ar) => ar.transacoes || []),
+      ...sale.installments.flatMap((i) => i.accountRec?.transacoes || []),
+    ];
 
-    // Manter a lógica antiga para discrepância em ouro, se aplicável
-    let paymentQuotation: Decimal | null = sale.goldPrice; // Try to get from sale first
-    let saleExpectedGrams: Decimal | null = null;
-    let grossDiscrepancyGrams: Decimal | null = null;
-    let costsInGrams: Decimal | null = null;
-    let netDiscrepancyGrams: Decimal | null = null;
+    const paymentReceivedBRL = allTransactions.reduce(
+      (sum, t) => sum.plus(t.valor || 0),
+      new Decimal(0),
+    );
+    const paymentEquivalentGrams = allTransactions.reduce(
+      (sum, t) => sum.plus(t.goldAmount || 0),
+      new Decimal(0),
+    );
 
-    // Determine paymentQuotation from transactions if not on sale
-    if ((!paymentQuotation || paymentQuotation.isZero()) && !paymentReceivedBRL.isZero()) {
-      if (!paymentEquivalentGrams.isZero()) {
-        paymentQuotation = paymentReceivedBRL.dividedBy(paymentEquivalentGrams);
-      }
+    // 2. Determine Effective Payment Quotation
+    let paymentQuotation: Decimal | null = null;
+    if (!paymentReceivedBRL.isZero() && !paymentEquivalentGrams.isZero()) {
+      paymentQuotation = paymentReceivedBRL.dividedBy(paymentEquivalentGrams);
+    } else {
+      paymentQuotation = sale.goldPrice; // Fallback to sale quotation
     }
 
-    saleExpectedGrams = new Decimal(0);
+    // 3. Calculate Expected Gold Grams and Total Cost
+    let saleExpectedGrams = new Decimal(0);
+    let totalCostBRL = new Decimal(0);
+
     for (const item of sale.saleItems) {
       let itemExpectedGrams = new Decimal(0);
       const calcMethod = item.product.productGroup?.adjustmentCalcMethod;
 
-      this.logger.debug(
-        `[ADJ_CALC] Item: ${item.product.name}, Method: ${calcMethod}, Qty: ${item.quantity}, GoldValue: ${item.product.goldValue}`,
-      );
-
       switch (calcMethod) {
         case 'COST_BASED':
           if (paymentQuotation && !paymentQuotation.isZero()) {
-            const itemTotalCost = new Decimal(item.costPriceAtSale || 0).times(
-              item.quantity,
-            );
+            const itemTotalCost = new Decimal(item.costPriceAtSale || 0).times(item.quantity);
             itemExpectedGrams = itemTotalCost.dividedBy(paymentQuotation);
-          } else {
-            this.logger.warn(
-              `Não foi possível calcular os gramas esperados para o item ${item.id} (COST_BASED) porque a cotação do pagamento é zero ou nula.`,
-            );
           }
           break;
-
-        case 'QUANTITY_BASED':
-        default:
-          this.logger.debug(
-            `[ADJ_CALC] Item: ${item.product.name}, isReactionProductGroup: ${item.product.productGroup?.isReactionProductGroup}`,
-          );
-          // If this product comes from a reaction group, its quantity is already the gold value.
-          if (item.product.productGroup?.isReactionProductGroup) {
-            this.logger.debug(
-              `[ADJ_CALC] Produto de Reação. Calculando com base no goldValue.`,
-            );
-            const goldValue = new Decimal(item.product.goldValue || 0);
-            if (goldValue.isZero()) {
-              this.logger.warn(
-                `Produto ${item.productId} (reação) tem teor de ouro (goldValue) zero ou nulo. Gramas esperadas para este item será 0.`,
-              );
-              itemExpectedGrams = new Decimal(0);
-            } else {
-              itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
-              this.logger.debug(
-                `[ADJ_CALC] Produto de Reação Result: ${itemExpectedGrams}`,
-              );
-            }
-          } else {
-            // This is the original logic for other products (resale items, etc.)
-            const goldValue = new Decimal(item.product.goldValue || 0);
-            if (goldValue.isZero()) {
-              this.logger.warn(
-                `Produto ${item.productId} tem teor de ouro (goldValue) zero ou nulo. Gramas esperadas para este item será 0.`,
-              );
-              itemExpectedGrams = new Decimal(0);
-            } else {
-              itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
-              this.logger.debug(
-                `[ADJ_CALC] QUANTITY_BASED (padrão) Result: ${itemExpectedGrams}`,
-              );
-            }
+        default: // QUANTITY_BASED
+          const goldValue = new Decimal(item.product.goldValue || 0);
+          if (!goldValue.isZero()) {
+            itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
           }
           break;
       }
       saleExpectedGrams = saleExpectedGrams.plus(itemExpectedGrams);
+      
+      // Corrected Total Cost Calculation
+      const itemCost = (paymentQuotation || new Decimal(0)).times(itemExpectedGrams);
+      totalCostBRL = totalCostBRL.plus(itemCost);
     }
+
+    // 4. Calculate Discrepancy and Profits in Grams
+    let grossDiscrepancyGrams: Decimal | null = null;
+    let costsInGrams: Decimal | null = null;
+    let netDiscrepancyGrams: Decimal | null = null;
+    let laborCostInGrams: Decimal = new Decimal(0);
 
     if (paymentEquivalentGrams) {
       grossDiscrepancyGrams = paymentEquivalentGrams.minus(saleExpectedGrams);
@@ -182,75 +136,234 @@ export class CalculateSaleAdjustmentUseCase {
         where: {
           organizationId: organizationId,
           minGrams: { lte: saleExpectedGrams.toNumber() },
-          OR: [
-            { maxGrams: { gte: saleExpectedGrams.toNumber() } },
-            { maxGrams: null },
-          ],
+          OR: [{ maxGrams: { gte: saleExpectedGrams.toNumber() } }, { maxGrams: null }],
         },
       });
-      const laborCostInGrams =
-        laborCostEntry ?
-          new Decimal(laborCostEntry.goldGramsCharged)
-        : new Decimal(0);
+      laborCostInGrams = laborCostEntry ? new Decimal(laborCostEntry.goldGramsCharged) : new Decimal(0);
 
+      const otherCostsBRL = new Decimal(sale.shippingCost || 0);
       costsInGrams =
-        otherCostsBRL.isZero() ||
-        !paymentQuotation || // Check if paymentQuotation is null
-        !paymentQuotation.isFinite() ||
-        paymentQuotation.isZero()
+        otherCostsBRL.isZero() || !paymentQuotation || !paymentQuotation.isFinite() || paymentQuotation.isZero()
           ? new Decimal(0)
           : otherCostsBRL.dividedBy(paymentQuotation);
 
-      netDiscrepancyGrams = grossDiscrepancyGrams
-        .minus(costsInGrams)
-        .minus(laborCostInGrams);
+      netDiscrepancyGrams = grossDiscrepancyGrams.plus(laborCostInGrams).minus(costsInGrams);
     }
 
-    const adjustmentData = {
-      saleId,
-      organizationId,
-      paymentReceivedBRL,
-      paymentQuotation,
-      paymentEquivalentGrams,
-      saleExpectedGrams,
-      grossDiscrepancyGrams,
-      costsInBRL: otherCostsBRL, // Renomeado para clareza
-      costsInGrams,
-      netDiscrepancyGrams,
-      // Novos campos BRL
-      totalCostBRL,
-      grossProfitBRL,
-      otherCostsBRL,
-      netProfitBRL,
-    };
+    // 5. Calculate Profits in BRL
+    const laborCostInBRL =
+      paymentQuotation && !paymentQuotation.isZero()
+        ? laborCostInGrams.times(paymentQuotation)
+        : new Decimal(0);
 
-    this.logger.log(`Dados do ajuste: ${JSON.stringify(adjustmentData, null, 2)}`);
+    const grossProfitBRL = paymentReceivedBRL.minus(totalCostBRL);
+    const otherCostsBRL = new Decimal(sale.shippingCost || 0);
+    const netProfitBRL = grossProfitBRL.plus(laborCostInBRL).minus(otherCostsBRL);
 
-    const saveAdjustment = async (client: PrismaTransactionClient) => {
-      await client.saleAdjustment.upsert({
-        where: { saleId },
-        create: adjustmentData,
-        update: adjustmentData,
-      });
+        // 6. Save Adjustment
 
-      await client.sale.update({
-        where: { id: saleId },
-        data: {
-          netAmount: paymentReceivedBRL,
-          goldPrice: paymentQuotation,
-          totalCost: totalCostBRL, // Atualiza o custo total da venda
-        },
-      });
-    };
+        const adjustmentData = {
 
-    if (tx) {
-      await saveAdjustment(tx);
-    } else {
-      await this.prisma.$transaction(async (newTx) => {
-        await saveAdjustment(newTx);
-      });
+          saleId,
+
+          organizationId,
+
+          paymentReceivedBRL,
+
+          paymentQuotation,
+
+          paymentEquivalentGrams,
+
+          saleExpectedGrams,
+
+          grossDiscrepancyGrams,
+
+          costsInBRL: otherCostsBRL,
+
+          costsInGrams,
+
+          netDiscrepancyGrams,
+
+          totalCostBRL,
+
+          grossProfitBRL,
+
+          otherCostsBRL,
+
+          netProfitBRL,
+
+        };
+
+    
+
+        this.logger.log(`Dados do ajuste: ${JSON.stringify(adjustmentData, null, 2)}`);
+
+    
+
+        const adjustAccountRec = async (client: PrismaTransactionClient) => {
+
+          if (
+
+            primaryAccountRec &&
+
+            paymentEquivalentGrams &&
+
+            saleExpectedGrams &&
+
+            paymentEquivalentGrams.greaterThanOrEqualTo(saleExpectedGrams) &&
+
+            outstandingBRL.greaterThan(new Decimal(0.01)) // Check for a positive outstanding BRL balance
+
+          ) {
+
+            this.logger.log(`[SALE_ADJUSTMENT] Ajustando AccountRec ${primaryAccountRec.id} para a venda ${saleId}. Saldo BRL pendente: ${outstandingBRL.toFixed(2)}`);
+
+    
+
+            // Find the "Perda por Variação de Cotação" ContaContabil
+
+            const lossAccount = await client.contaContabil.findFirst({
+
+              where: {
+
+                organizationId,
+
+                nome: "Perda por Variação de Cotação", // This should ideally be configurable
+
+                tipo: "DESPESA",
+
+              },
+
+            });
+
+    
+
+            if (!lossAccount) {
+
+              this.logger.error(`[SALE_ADJUSTMENT] Conta Contábil 'Perda por Variação de Cotação' não encontrada para a organização ${organizationId}. Não foi possível ajustar o AccountRec.`);
+
+              // Optionally, throw an error or create a default account
+
+            } else {
+
+              // Create a new Transacao for the adjustment
+
+              await client.transacao.create({
+
+                data: {
+
+                  tipo: "DEBITO",
+
+                  valor: outstandingBRL,
+
+                  moeda: "BRL",
+
+                  descricao: `Ajuste de Variação de Cotação - Venda ${sale.orderNumber}`,
+
+                  dataHora: new Date(),
+
+                  contaContabilId: lossAccount.id,
+
+                  organizationId,
+
+                  accountRecId: primaryAccountRec.id,
+
+                  goldAmount: new Decimal(0),
+
+                  goldPrice: new Decimal(0),
+
+                },
+
+              });
+
+    
+
+              // Update the AccountRec to mark it as fully received
+
+              await client.accountRec.update({
+
+                where: { id: primaryAccountRec.id },
+
+                data: {
+
+                  received: true,
+
+                  receivedAt: new Date(),
+
+                  amountPaid: primaryAccountRec.amount, // Mark as fully paid in BRL
+
+                },
+
+              });
+
+              this.logger.log(`[SALE_ADJUSTMENT] AccountRec ${primaryAccountRec.id} ajustado e transação de perda criada.`);
+
+            }
+
+          }
+
+        };
+
+    
+
+        const saveAdjustment = async (client: PrismaTransactionClient) => {
+
+          await client.saleAdjustment.upsert({
+
+            where: { saleId },
+
+            create: adjustmentData,
+
+            update: adjustmentData,
+
+          });
+
+    
+
+          await client.sale.update({
+
+            where: { id: saleId },
+
+            data: {
+
+              netAmount: paymentReceivedBRL,
+
+              goldPrice: paymentQuotation,
+
+              totalCost: totalCostBRL,
+
+            },
+
+          });
+
+        };
+
+    
+
+        if (tx) {
+
+          await saveAdjustment(tx);
+
+          await adjustAccountRec(tx); // Call adjustment within the same transaction
+
+        } else {
+
+          await this.prisma.$transaction(async (newTx) => {
+
+            await saveAdjustment(newTx);
+
+            await adjustAccountRec(newTx); // Call adjustment within the same transaction
+
+          });
+
+        }
+
+    
+
+        this.logger.log(`Ajuste da venda ${saleId} calculado e salvo com sucesso.`);
+
+      }
+
     }
 
-    this.logger.log(`Ajuste da venda ${saleId} calculado e salvo com sucesso.`);
-  }
-}
+    

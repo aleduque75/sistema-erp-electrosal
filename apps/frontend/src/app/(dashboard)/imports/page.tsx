@@ -3,7 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LegacyImport } from "./components/LegacyImport";
 import { OfxImport } from "./components/OfxImport";
-import { DataFixing } from "./components/DataFixing";
+import { BackupManager } from "@/components/backups/BackupManager";
 
 export default function ImportPage() {
   return (
@@ -12,7 +12,7 @@ export default function ImportPage() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="legacy">Importação Legado</TabsTrigger>
           <TabsTrigger value="ofx">Importação OFX</TabsTrigger>
-          <TabsTrigger value="data-fixing">Manutenção de Dados</TabsTrigger>
+          <TabsTrigger value="backups">Gerenciamento de Backups</TabsTrigger>
         </TabsList>
         <TabsContent value="legacy">
           <LegacyImport />
@@ -20,8 +20,8 @@ export default function ImportPage() {
         <TabsContent value="ofx">
           <OfxImport />
         </TabsContent>
-        <TabsContent value="data-fixing">
-          <DataFixing />
+        <TabsContent value="backups">
+          <BackupManager />
         </TabsContent>
       </Tabs>
     </div>

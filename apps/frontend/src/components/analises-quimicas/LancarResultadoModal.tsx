@@ -199,6 +199,9 @@ export function LancarResultadoModal({
               <div className="space-y-2 rounded-md border bg-muted/50 p-4">
                 <h4 className="font-medium text-sm">Resumo do Cálculo</h4>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  <p className="text-muted-foreground">Volume de Entrada</p>
+                  <p className="text-right font-mono">{analise.volumeOuPesoEntrada} {analise.unidadeEntrada}</p>
+
                   <p className="text-muted-foreground">Au Bruto Estimado (g)</p>
                   <p className="text-right font-mono">{summary.auEstimadoBrutoGramas}</p>
                   

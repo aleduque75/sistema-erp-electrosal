@@ -8,6 +8,8 @@ import {
   IsOptional,
   IsUUID,
   Min,
+  IsArray, // Added
+  ValidateNested, // Added
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -31,18 +33,29 @@ export class CreateAccountRecDto {
 
 export class UpdateAccountRecDto extends PartialType(CreateAccountRecDto) {}
 
-export class ReceivePaymentDto {
+export class PaymentEntryDto {
   @IsUUID()
   @IsNotEmpty()
   contaCorrenteId: string;
 
+  @IsNumber()
+  @Min(0.01)
+  amount: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  goldAmount?: number; // Optional for payments in gold
+}
+
+export class ReceivePaymentDto {
   @IsDate()
   @IsOptional()
   @Type(() => Date)
   receivedAt?: Date;
 
-  @IsNumber()
-  @Min(0.01)
-  @IsOptional()
-  amountReceived?: number;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PaymentEntryDto)
+  payments: PaymentEntryDto[];
 }

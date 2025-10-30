@@ -2,7 +2,9 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as Papa from 'papaparse';
 import { Decimal } from '@prisma/client/runtime/library';
-import { SaleInstallmentStatus, SaleStatus } from '@prisma/client';
+import { SaleInstallmentStatus, SaleStatus, EntityType } from '@prisma/client';
+import { GenerateNextNumberUseCase } from '../common/use-cases/generate-next-number.use-case';
+import { QuotationsService } from '../quotations/quotations.service';
 
 // Removed unused SalesMovementRow interface to avoid "defined but never used" lint/compile error.
 
@@ -10,7 +12,7 @@ import { SaleInstallmentStatus, SaleStatus } from '@prisma/client';
 export class SalesMovementImportUseCase {
   private readonly logger = new Logger(SalesMovementImportUseCase.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private readonly generateNextNumberUseCase: GenerateNextNumberUseCase, private readonly quotationsService: QuotationsService) {}
 
   private parseDecimal(value: string | number): number {
     if (typeof value === 'number') {
@@ -145,9 +147,17 @@ export class SalesMovementImportUseCase {
       const inputGoldGrams = new Decimal(info.creationGoldGrams);
       const outputSaltGrams = inputGoldGrams.times(1.47);
 
+      const reactionNumber = await this.generateNextNumberUseCase.execute(
+        organizationId,
+        EntityType.CHEMICAL_REACTION,
+        'REA-',
+        1,
+      );
+
       const reaction = await this.prisma.chemical_reactions.create({
         data: {
           organizationId,
+          reactionNumber,
           metalType: 'AU',
           status: 'COMPLETED',
           reactionDate: info.creationDate || new Date(),
@@ -195,6 +205,22 @@ export class SalesMovementImportUseCase {
     // --- ETAPA 2: PROCESSAMENTO DAS VENDAS ---
     const notFoundSales = new Set<number>();
     let processedSalesCount = 0;
+
+    // Fetch user settings for default accounts
+    const userSettings = await this.prisma.userSettings.findFirst({
+      where: {
+        user: {
+          organizationId: organizationId,
+        },
+      },
+      select: { defaultReceitaContaId: true, defaultCaixaContaId: true },
+    });
+
+    if (!userSettings || !userSettings.defaultReceitaContaId || !userSettings.defaultCaixaContaId) {
+      this.logger.warn('Contas padrão para recebimentos não configuradas nas UserSettings. Transações podem falhar.');
+      // Optionally throw an error or use fallback logic
+    }
+
     for (const row of rows) {
       const nDoPedidoValue = row['N_DO_PEDIDO'];
       const orderNumber = (typeof nDoPedidoValue === 'string' || typeof nDoPedidoValue === 'number') ? parseInt(String(nDoPedidoValue), 10) : NaN;
@@ -224,6 +250,14 @@ export class SalesMovementImportUseCase {
         notFoundSales.add(orderNumber);
         continue;
       }
+
+      // Update sale goldValue and totalCost
+      const calculatedTotalCost = sale.saleItems.reduce((sum, item) => sum.plus(new Decimal(item.costPriceAtSale || 0).times(item.quantity)), new Decimal(0));
+
+      await this.prisma.sale.update({
+        where: { id: sale.id },
+        data: { goldValue: finoQty, totalCost: calculatedTotalCost, netAmount: sale.totalAmount },
+      });
 
       if (sale.status === SaleStatus.PENDENTE) {
         this.logger.log(`Venda #${orderNumber} está com status ABERTO. Pulando processamento de parcelas e baixa de estoque.`);
@@ -293,6 +327,23 @@ export class SalesMovementImportUseCase {
         } else {
             const paymentDate = installmentToPay.dueDate;
 
+            // Buscar cotação para a data do pagamento
+            const quotation = await this.quotationsService.findByDate(
+              paymentDate,
+              'AU', // Assumindo que a transação é sempre em ouro
+              organizationId,
+            );
+
+            let goldAmount = new Decimal(0);
+            let goldPrice = new Decimal(0);
+
+            if (quotation) {
+              goldPrice = quotation.buyPrice;
+              goldAmount = new Decimal(installmentToPay.amount).dividedBy(goldPrice);
+            } else {
+              this.logger.warn(`Cotação não encontrada para a data ${paymentDate.toISOString()} para a venda #${orderNumber}. goldAmount será 0.`);
+            }
+
             await this.prisma.saleInstallment.update({
               where: { id: installmentToPay.id },
               data: { status: 'PAID', paidAt: paymentDate },
@@ -302,6 +353,23 @@ export class SalesMovementImportUseCase {
               await this.prisma.accountRec.update({
                 where: { id: installmentToPay.accountRecId },
                 data: { received: true, receivedAt: paymentDate },
+              });
+
+              // Criar Transacao
+              await this.prisma.transacao.create({
+                data: {
+                  organizationId,
+                  tipo: 'CREDITO',
+                  valor: new Decimal(installmentToPay.amount),
+                  moeda: 'BRL',
+                  descricao: `Pagamento Parcela ${installmentToPay.installmentNumber} Venda #${orderNumber}`,
+                  dataHora: paymentDate,
+                  contaContabilId: userSettings?.defaultReceitaContaId || 'default', // Usar ID da UserSettings
+                  contaCorrenteId: userSettings?.defaultCaixaContaId || 'default', // Usar ID da UserSettings
+                  goldAmount: goldAmount,
+                  goldPrice: goldPrice,
+                  accountRecId: installmentToPay.accountRecId,
+                },
               });
             }
             this.logger.log(`Parcela #${installmentToPay.installmentNumber} da venda #${orderNumber} conciliada.`);

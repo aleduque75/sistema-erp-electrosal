@@ -1,4 +1,6 @@
 export * from './domain/product';
+export * from './domain/media/media.entity';
+export * from './domain/media/media.repository';
 // This is a placeholder for shared types, interfaces, etc.
 export interface SharedType {
   id: string;

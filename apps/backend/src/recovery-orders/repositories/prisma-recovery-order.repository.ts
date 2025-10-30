@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IRecoveryOrderRepository, RecoveryOrder, UniqueEntityID, RecoveryOrderStatus, AnaliseQuimicaResumida } from '@sistema-erp-electrosal/core';
-import { RecoveryOrder as PrismaRecoveryOrder, RecoveryOrderStatusPrisma, Prisma, RawMaterial as PrismaRawMaterial, RawMaterialUsed as PrismaRawMaterialUsed } from '@prisma/client';
+import { RecoveryOrder as PrismaRecoveryOrder, RecoveryOrderStatusPrisma, Prisma, RawMaterial as PrismaRawMaterial, RawMaterialUsed as PrismaRawMaterialUsed, Media } from '@prisma/client';
+import { MediaMapper } from '../../media/mappers/media.mapper';
 import { ListRecoveryOrdersDto } from '../dtos/list-recovery-orders.dto';
 
 @Injectable()
@@ -9,7 +10,10 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
   constructor(private prisma: PrismaService) {}
 
   private mapToDomain(
-    dbData: PrismaRecoveryOrder & { rawMaterialsUsed?: (PrismaRawMaterialUsed & { rawMaterial: PrismaRawMaterial })[] },
+    dbData: PrismaRecoveryOrder & {
+      rawMaterialsUsed?: (PrismaRawMaterialUsed & { rawMaterial: PrismaRawMaterial })[];
+      images?: Media[];
+    },
     analisesEnvolvidas?: AnaliseQuimicaResumida[]
   ): RecoveryOrder {
     const { id, ...props } = dbData;
@@ -31,6 +35,7 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         auPuroRecuperadoGramas: props.auPuroRecuperadoGramas ?? undefined,
         residuoGramas: props.residuoGramas ?? undefined,
         residueAnalysisId: props.residueAnalysisId ?? undefined,
+        images: props.images ? props.images.map(MediaMapper.toDomain) : [],
       },
       UniqueEntityID.create(id),
     );
@@ -60,6 +65,7 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     const data = {
       id: recoveryOrder.id.toString(),
       organizationId: recoveryOrder.organizationId,
+      orderNumber: recoveryOrder.orderNumber,
       metalType: recoveryOrder.metalType,
       chemicalAnalysisIds: recoveryOrder.chemicalAnalysisIds,
       status: recoveryOrder.status as RecoveryOrderStatusPrisma,
@@ -76,6 +82,60 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     return this.mapToDomain(dbRecoveryOrder);
   }
 
+  async findByOrderNumber(orderNumber: string, organizationId: string): Promise<RecoveryOrder | null> {
+    const dbRecoveryOrder = await this.prisma.recoveryOrder.findFirst({
+      where: {
+        orderNumber,
+        organizationId,
+      },
+      include: {
+        rawMaterialsUsed: {
+          include: {
+            rawMaterial: true,
+          },
+        },
+      },
+    });
+
+    if (!dbRecoveryOrder) {
+      return null;
+    }
+
+    const analisesEnvolvidas = await this.prisma.analiseQuimica.findMany({
+      where: {
+        id: { in: dbRecoveryOrder.chemicalAnalysisIds },
+        organizationId: dbRecoveryOrder.organizationId,
+      },
+      select: {
+        id: true,
+        numeroAnalise: true,
+        volumeOuPesoEntrada: true,
+        auLiquidoParaClienteGramas: true,
+        cliente: {
+          select: {
+            name: true,
+          },
+        },
+        metalCredit: {
+          select: {
+            grams: true,
+          },
+        },
+      },
+    });
+
+    const mappedAnalises: AnaliseQuimicaResumida[] = analisesEnvolvidas.map(analise => ({
+      id: analise.id,
+      numeroAnalise: analise.numeroAnalise,
+      clienteName: analise.cliente?.name || 'N/A',
+      volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+      auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
+      metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
+    }));
+
+    return this.mapToDomain(dbRecoveryOrder, mappedAnalises);
+  }
+
   async findById(id: string, organizationId: string): Promise<RecoveryOrder | null> {
     const dbRecoveryOrder = await this.prisma.recoveryOrder.findFirst({
       where: {
@@ -88,6 +148,7 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
             rawMaterial: true,
           },
         },
+        images: true,
       },
     });
 
@@ -154,9 +215,11 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
             rawMaterial: true,
           },
         },
+        images: true,
       },
       orderBy: { dataCriacao: 'desc' },
     });
+
 
     const recoveryOrdersWithAnalyses: RecoveryOrder[] = [];
 
@@ -216,6 +279,9 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     const dbRecoveryOrder = await this.prisma.recoveryOrder.update({
       where: { id: recoveryOrder.id.toString() },
       data,
+      include: {
+        images: true,
+      },
     });
     return this.mapToDomain(dbRecoveryOrder);
   }

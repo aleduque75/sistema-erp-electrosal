@@ -23,6 +23,8 @@ import { AdjustPurityClientBlock } from "./[id]/components/adjust-purity-client-
 import { ChemicalReactionDetails } from "@/types/chemical-reaction";
 
 
+import { useRouter } from "next/navigation";
+
 // O tipo de dados que a tabela espera agora é a interface COMPLETA que o modal exige.
 // Isso resolve o erro de tipagem no `selectedReaction`.
 // Removido o alias Reaction, use ChemicalReactionDetails diretamente
@@ -37,11 +39,10 @@ const statusVariantMap: { [key in ChemicalReactionDetails['status']]: 'default' 
 };
 
 export default function ChemicalReactionsPage() {
+  const router = useRouter();
   // O tipo do estado agora é a interface completa
   const [reactions, setReactions] = useState<ChemicalReactionDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedReaction, setSelectedReaction] = useState<ChemicalReactionDetails | null>(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const fetchReactions = async () => {
     setIsLoading(true);
@@ -59,18 +60,18 @@ export default function ChemicalReactionsPage() {
     fetchReactions();
   }, []);
 
-  const handleOpenDetails = async (reactionId: string) => {
-    try {
-      // Aqui, garantimos que a resposta da API (ChemicalReactionDetails) é usada
-      const response = await api.get<ChemicalReactionDetails>(`/chemical-reactions/${reactionId}`);
-      setSelectedReaction(response.data);
-      setIsDetailsModalOpen(true);
-    } catch (error) {
-      toast.error("Falha ao buscar detalhes da reação.");
-    }
+  const handleOpenDetails = (reactionId: string) => {
+    router.push(`/producao/reacoes-quimicas/${reactionId}`);
   };
 
   const columns: ColumnDef<ChemicalReactionDetails>[] = [
+    {
+      accessorKey: 'reactionNumber',
+      header: 'Nº Reação',
+      cell: ({ row }) => {
+        return <div className="font-medium">{row.original.reactionNumber}</div>;
+      },
+    },
     {
       accessorKey: 'status',
       header: 'Status',
@@ -141,12 +142,6 @@ export default function ChemicalReactionsPage() {
 
   return (
     <>
-      {/* Agora selectedReaction é do tipo ChemicalReactionDetails completo */}
-      <ReactionDetailsModal
-        isOpen={isDetailsModalOpen}
-        onClose={() => setIsDetailsModalOpen(false)}
-        reaction={selectedReaction}
-      />
       <div className="space-y-4 p-4 md:p-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">Reações Químicas</h1>

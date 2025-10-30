@@ -8,4 +8,5 @@ export interface IMetalCreditRepository {
   findById(id: UniqueEntityID): Promise<MetalCredit | null>;
   updateGrams(id: UniqueEntityID, newGrams: number): Promise<MetalCredit>;
   findByClientId(clientId: string, organizationId: string): Promise<MetalCredit[]>;
+  findAll(organizationId: string): Promise<MetalCredit[]>;
 }

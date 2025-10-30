@@ -24,6 +24,8 @@ import { FinalizeRecoveryOrderDto } from './dtos/finalize-recovery-order.dto';
 import { AddRawMaterialToRecoveryOrderUseCase } from './use-cases/add-raw-material.use-case';
 import { AddRawMaterialDto } from './dtos/add-raw-material.dto';
 import { IRecoveryOrderRepository } from '@sistema-erp-electrosal/core';
+import { AssociateImageToRecoveryOrderUseCase } from './use-cases/associate-image-to-recovery-order.use-case';
+import { CancelRecoveryOrderUseCase } from './use-cases/cancel-recovery-order.use-case'; // Import the new use case
 
 @UseGuards(JwtAuthGuard)
 @Controller('recovery-orders')
@@ -34,6 +36,8 @@ export class RecoveryOrdersController {
     private readonly updateRecoveryOrderPurityUseCase: UpdateRecoveryOrderPurityUseCase,
     private readonly processRecoveryFinalizationUseCase: ProcessRecoveryFinalizationUseCase,
     private readonly addRawMaterialToRecoveryOrderUseCase: AddRawMaterialToRecoveryOrderUseCase,
+    private readonly cancelRecoveryOrderUseCase: CancelRecoveryOrderUseCase, // Inject the new use case
+    private readonly associateImageToRecoveryOrderUseCase: AssociateImageToRecoveryOrderUseCase, // Inject the new use case
     @Inject('IRecoveryOrderRepository')
     private readonly recoveryOrderRepository: IRecoveryOrderRepository,
   ) {}
@@ -103,5 +107,26 @@ export class RecoveryOrdersController {
     const organizationId = req.user?.orgId;
     const command = { recoveryOrderId: id, organizationId, ...dto };
     await this.processRecoveryFinalizationUseCase.execute(command);
+  }
+
+  @Patch(':id/cancel')
+  async cancelRecoveryOrder(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    const command = { recoveryOrderId: id, organizationId };
+    await this.cancelRecoveryOrderUseCase.execute(command);
+  }
+
+  @Patch(':id/image')
+  async associateImage(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: { mediaId: string },
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    const command = { recoveryOrderId: id, mediaId: body.mediaId, organizationId };
+    await this.associateImageToRecoveryOrderUseCase.execute(command);
   }
 }

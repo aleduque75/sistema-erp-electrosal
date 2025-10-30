@@ -6,7 +6,8 @@ import {
   Get,
   UseGuards,
   Param,
-  Res,
+  Query,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
@@ -36,20 +37,13 @@ export class MediaController {
       }),
     }),
   )
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
-    return this.mediaService.create(file);
+  async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req, @Query('recoveryOrderId') recoveryOrderId?: string) {
+    const organizationId = req.user?.orgId;
+    return this.mediaService.create(file, organizationId, recoveryOrderId);
   }
 
   @Get()
   findAll() {
     return this.mediaService.findAll();
-  }
-
-  @Public()
-  @Get(':id')
-  async findOne(@Param('id') id: string, @Res() res: Response) {
-    const media = await this.mediaService.findOne(id);
-    console.log(`Serving file: ${media.filename} from root: ./uploads`); // NOVO LOG
-    res.sendFile(media.filename, { root: './uploads' }); // Serve o arquivo estático
   }
 }

@@ -25,10 +25,21 @@ export interface RawMaterialUsed {
   goldEquivalentCost: number | null;
 }
 
+export interface Media {
+  id: string;
+  filename: string;
+  path: string;
+  mimetype: string;
+  size: number;
+  width?: number;
+  height?: number;
+}
+
 export interface RecoveryOrder {
   id: string;
+  orderNumber: string;
   status: RecoveryOrderStatus;
-  chemicalAnalysisIds: string[];
+  chemicalAnalysisIds?: string[];
   totalBrutoEstimadoGramas: number;
   dataInicio: string;
   dataFim: string | null;
@@ -37,4 +48,5 @@ export interface RecoveryOrder {
   residueAnalysisId: string | null;
   analisesEnvolvidas?: AnaliseQuimicaResumida[];
   rawMaterialsUsed?: RawMaterialUsed[];
+  images?: Media[]; // Novo campo para múltiplas imagens
 }

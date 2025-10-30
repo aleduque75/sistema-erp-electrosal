@@ -1,37 +1,33 @@
-import { Media } from '@sistema-erp-electrosal/core';
 import { Media as PrismaMedia } from '@prisma/client';
+import { Media, MediaProps, UniqueEntityID } from '@sistema-erp-electrosal/core';
 
 export class MediaMapper {
-  static toDomain(raw: PrismaMedia): Media {
-    return Media.create(
-      {
-        organizationId: raw.organizationId ?? undefined,
-        filename: raw.filename,
-        mimetype: raw.mimetype,
-        size: raw.size,
-        path: raw.path,
-        width: raw.width ?? undefined,
-        height: raw.height ?? undefined,
-        createdAt: raw.createdAt,
-        updatedAt: raw.updatedAt,
-      },
-      raw.id,
-    );
+  public static toDomain(prismaMedia: PrismaMedia): Media {
+    const props: MediaProps = {
+      filename: prismaMedia.filename,
+      mimetype: prismaMedia.mimetype,
+      size: prismaMedia.size,
+      path: prismaMedia.path,
+      width: prismaMedia.width,
+      height: prismaMedia.height,
+      organizationId: prismaMedia.organizationId,
+      createdAt: prismaMedia.createdAt,
+      updatedAt: prismaMedia.updatedAt,
+    };
+    return Media.create(props, new UniqueEntityID(prismaMedia.id));
   }
 
-  static toPersistence(media: Media): PrismaMedia {
+  public static toPersistence(media: Media): Omit<PrismaMedia, 'id' | 'createdAt' | 'updatedAt'> & { id?: string } {
     return {
       id: media.id.toString(),
-      organizationId: media.organizationId ?? null,
       filename: media.filename,
       mimetype: media.mimetype,
       size: media.size,
       path: media.path,
-      width: media.width ?? null,
-      height: media.height ?? null,
-      createdAt: media.createdAt,
-      updatedAt: media.updatedAt,
-      // landingPageLogos: [], // Relations are handled by Prisma, not directly mapped here
-    } as PrismaMedia; // Cast to PrismaMedia to satisfy type checking
+      width: media.width,
+      height: media.height,
+      organizationId: media.organizationId,
+      recoveryOrderId: media.recoveryOrderId,
+    };
   }
 }

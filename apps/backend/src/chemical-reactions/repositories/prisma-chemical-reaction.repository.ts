@@ -12,6 +12,7 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
     return ChemicalReaction.create(
       {
         organizationId: dbData.organizationId,
+        reactionNumber: dbData.reactionNumber,
         metalType: dbData.metalType,
         reactionDate: dbData.reactionDate,
         notes: dbData.notes || undefined,
@@ -35,12 +36,26 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
     const dbReaction = await this.prisma.chemical_reactions.create({
       data: {
         id: id.toString(),
+        reactionNumber: reaction.reactionNumber,
         ...reactionProps,
         lots: {
           connect: sourceLotIds.map((lotId) => ({ id: lotId })),
         },
       },
     });
+    return this.mapToDomain(dbReaction);
+  }
+
+  async findByReactionNumber(reactionNumber: string, organizationId: string): Promise<ChemicalReaction | null> {
+    const dbReaction = await this.prisma.chemical_reactions.findFirst({
+      where: {
+        reactionNumber,
+        organizationId,
+      },
+    });
+    if (!dbReaction) {
+      return null;
+    }
     return this.mapToDomain(dbReaction);
   }
 

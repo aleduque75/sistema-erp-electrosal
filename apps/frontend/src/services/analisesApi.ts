@@ -57,6 +57,10 @@ export const refazerAnaliseQuimica = async (id: string): Promise<void> => {
   await apiClient.patch(`/analises-quimicas/${id}/refazer`);
 };
 
+export const revertAnaliseQuimicaToPendingApproval = async (id: string): Promise<void> => {
+  await apiClient.patch(`/analises-quimicas/${id}/revert-to-pending-approval`);
+};
+
 export const getAnaliseQuimicaPdf = async (id: string): Promise<Blob> => {
   const response = await apiClient.get(`/analises-quimicas/${id}/pdf`, {
     responseType: "blob",

@@ -591,6 +591,8 @@ model Media {
   height           Int?
   width            Int?
   landingPageLogos LandingPage[]
+  recoveryOrderId String?
+  recoveryOrder   RecoveryOrder? @relation(fields: [recoveryOrderId], references: [id])
   organization     Organization? @relation(fields: [organizationId], references: [id])
 }
 
@@ -677,6 +679,8 @@ model MetalCredit {
   date               DateTime       @default(now())
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
+  status             MetalCreditStatus @default(PENDING) // New field
+  settledGrams       Decimal?       @db.Decimal(10, 4) @default(0) // New field
   chemicalAnalysis   AnaliseQuimica @relation(fields: [chemicalAnalysisId], references: [id])
   client             Pessoa         @relation(fields: [clientId], references: [id])
   organization       Organization   @relation(fields: [organizationId], references: [id])
@@ -723,6 +727,7 @@ model PurchaseOrderItem {
 model RecoveryOrder {
   id                           String                    @id @default(uuid())
   organizationId               String
+  orderNumber                  String                    @unique
   metalType                    TipoMetal                 @default(AU)
   chemicalAnalysisIds          String[]
   dataInicio                   DateTime                  @default(now())
@@ -741,7 +746,9 @@ model RecoveryOrder {
   organization                 Organization              @relation(fields: [organizationId], references: [id])
   residueAnalysis              AnaliseQuimica?           @relation("ResidueOfRecovery", fields: [residueAnalysisId], references: [id])
   rawMaterialsUsed             RawMaterialUsed[]
+  images                       Media[]
 
+  @@unique([organizationId, orderNumber])
   @@map("recovery_orders")
 }
 
@@ -845,6 +852,7 @@ model OperationalCost {
 model chemical_reactions {
   id                            String                       @id @default(uuid())
   organizationId                String
+  reactionNumber                String                       @unique
   metalType                     TipoMetal                    @default(AU)
   auUsedGrams                   Float
   notes                         String?
@@ -869,6 +877,7 @@ model chemical_reactions {
   lots                          pure_metal_lots[]            @relation("chemical_reactionsTopure_metal_lots")
   rawMaterialsUsed              RawMaterialUsed[]
 
+  @@unique([organizationId, reactionNumber])
   @@map("chemical_reactions")
 }
 
@@ -1090,4 +1099,11 @@ enum StockUnit {
   KILOGRAMS
   LITERS
   UNITS
+}
+
+enum MetalCreditStatus { // New enum
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  CANCELED
 }

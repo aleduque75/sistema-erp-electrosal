@@ -2,14 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Media } from '@sistema-erp-electrosal/core'; // Changed // Changed
 import { MediaMapper } from './mappers/media.mapper'; // Added
-import sharp from 'sharp';
+import * as sharp from 'sharp';
 import { join } from 'path';
 
 @Injectable()
 export class MediaService {
   constructor(private prisma: PrismaService) {}
 
-  async create(file: Express.Multer.File): Promise<Media> {
+  async create(file: Express.Multer.File, organizationId: string, recoveryOrderId?: string): Promise<Media> {
     const filePath = join(process.cwd(), file.path);
     const metadata = await sharp(filePath).metadata();
 
@@ -20,6 +20,8 @@ export class MediaService {
       path: `/uploads/${file.filename}`, // Caminho acessível via URL
       width: metadata.width,
       height: metadata.height,
+      organizationId: organizationId,
+      recoveryOrderId: recoveryOrderId, // Associar à RecoveryOrder
     });
 
     const prismaMedia = await this.prisma.media.create({

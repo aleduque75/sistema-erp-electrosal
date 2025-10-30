@@ -405,19 +405,7 @@ Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, se
 
 ### Histórico de Soluções e Decisões
 
-**1. Correção do Cálculo de Ajuste para Vendas Legadas**
-   - **Problema:** O processo de "Importar Dados Legados (Processo Completo)" estava calculando incorretamente o lucro (`grossDiscrepancyGrams`) para vendas de produtos como "El Sal 68%". Além disso, o processo travava no final, sem concluir.
-   - **Diagnóstico:**
-     - O cálculo de `saleExpectedGrams` aplicava uma conversão de teor de ouro (ex: 68.2%) a todos os produtos, quando para as vendas legadas, deveria usar a quantidade direta do item.
-     - O processo de recálculo (`backfill`) executava uma busca ao banco de dados para cada venda dentro de um loop (problema N+1), causando lentidão e travamento com muitas vendas.
-     - O campo `goldPrice` na entidade `Sale` não estava sendo atualizado com a cotação calculada.
-   - **Solução Implementada:**
-     - **Simplificação da Regra de Negócio:** A lógica no `CalculateSaleAdjustmentUseCase` foi simplificada. Agora, `saleExpectedGrams` é sempre a soma direta da quantidade dos itens da venda, alinhando-se à regra de negócio para as vendas importadas.
-     - **Otimização do Backfill:** O processo de `backfillSaleAdjustments` foi otimizado para buscar os dados de todas as vendas de uma só vez, mas a iteração ainda processa uma venda de cada vez para evitar erros de tipo complexos e garantir a robustez, resolvendo o problema de travamento.
-     - **Correção do `goldPrice`:** A lógica foi ajustada para garantir que, após o cálculo do ajuste, o campo `goldPrice` na entidade `Sale` seja preenchido com o `paymentQuotation` calculado.
-   - **Status:** Concluído. O processo de importação agora é robusto, não trava e calcula os ajustes de venda corretamente.
-
-**2. Correções no Processo de Importação Completa e Extrato de Estoque**
+**1. Correções no Processo de Importação Completa e Extrato de Estoque**
    - **Problema:** O processo de "Iniciar Importação Completa" apresentava falhas na criação de lotes, no tratamento de pedidos em aberto e na geração de contas a receber. Além disso, a tela de extrato de estoque necessitava de melhorias na ordenação.
    - **Diagnóstico:**
      - A importação de lotes estava incompleta porque o sistema sobrescrevia dados de lotes com o mesmo número no arquivo de movimentação.
@@ -430,6 +418,19 @@ Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, se
      - **Validação de Contas a Receber:** Implementada uma condição em `json-imports.service.ts` para impedir a criação de contas a receber (`AccountRec`) com valor bruto igual a zero.
      - **Ordenação do Extrato de Estoque:** A consulta no `stock-statement.service.ts` foi modificada para ordenar as movimentações por número do pedido (`orderNumber`) e, secundariamente, pela data, garantindo uma visualização clara e cronológica.
    - **Status:** Concluído. O processo de importação está mais robusto e as visualizações de dados mais precisas.
+
+**2. Refatoração Completa do Cálculo de Ajuste de Venda (`sale_adjustment`)**
+   - **Problema:** O cálculo do lucro em BRL (`netProfitBRL`) e em gramas (`netDiscrepancyGrams`) estava incorreto. O custo total (`totalCostBRL`) era calculado usando a quantidade física do item em vez dos gramas de ouro esperados. Além disso, a "mão de obra" (`laborCostInGrams`) era tratada como um custo, não como uma receita, e a cotação do pagamento (`paymentQuotation`) não estava sendo calculada corretamente a partir das transações.
+   - **Diagnóstico:**
+     - `totalCostBRL` usava `item.quantity` em vez de `itemExpectedGrams`.
+     - `paymentQuotation` usava o `goldPrice` da venda como fallback, em vez de priorizar a cotação efetiva das transações de pagamento.
+     - `netProfitBRL` não incluía o valor da mão de obra (`laborCostInBRL`).
+     - `netDiscrepancyGrams` subtraía a `laborCostInGrams` em vez de somar.
+   - **Solução Implementada (Refatoração do `CalculateSaleAdjustmentUseCase`):**
+     - **1. Cotação Efetiva do Pagamento:** A `paymentQuotation` agora é sempre calculada dividindo o `paymentReceivedBRL` pelo `paymentEquivalentGrams` das transações, garantindo o valor correto. O `sale.goldPrice` virou um fallback.
+     - **2. Custo Baseado em Ouro:** O `totalCostBRL` agora é calculado multiplicando o `costPriceAtSale` de cada item pelos seus respectivos `itemExpectedGrams`, refletindo o custo real baseado no ouro.
+     - **3. Mão de Obra como Receita:** A `laborCostInGrams` agora é somada ao `netDiscrepancyGrams`. Além disso, ela é convertida para `laborCostInBRL` (usando a `paymentQuotation`) e somada ao `netProfitBRL`.
+   - **Status:** Concluído. A lógica de cálculo de lucro e custo foi completamente reestruturada para seguir as regras de negócio corretas.
 
 
 # Vendas uma de produto de revenda, a comissão seria o que pagou menos o que vendeu, seria uma porcentagem desse lucrobruto em venda do sal de au 68$, que vira da reação, ai muda, eu cobro uma mão de obra, que seria por exemplo teria que ter uma tabela, abaixo de 19 gramas cobro 1 gr, isso pode ser altarado , mas seria como padrão, vamos dar um exemplo de uma venda de 10 gr, na cotação de venda 606 e tem frete de R$ 70,00, recebo R$ 6736,00 em metal 11,115 g, mas a cotação de compra do fornecedor é 605,entao seria  11,13, essa diferença seria para uma conta diferença_cotação de 0,014 gr, para calculo de comissão seria a 1 gr de mão de obra menos custos, que ai teria que colocar. é bem complexo deu para entendeer, e queria importar do sistema antigo, os clientes tem um externalId do sistema antigo queria vincular as vendas, elas então em /home/aleduque/Documentos/cursos/sistema-erp-electrosal/json-imports    

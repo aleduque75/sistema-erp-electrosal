@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateChemicalReactionDto } from '../dtos/create-chemical-reaction.dto';
-import { PureMetalLotStatus, ChemicalReactionStatusPrisma, TipoMetal } from '@prisma/client';
+import { PureMetalLotStatus, ChemicalReactionStatusPrisma, TipoMetal, EntityType } from '@prisma/client';
 import Decimal from 'decimal.js';
+import { GenerateNextNumberUseCase } from '../../common/use-cases/generate-next-number.use-case';
 
 export interface CreateChemicalReactionCommand {
   organizationId: string;
@@ -11,7 +12,7 @@ export interface CreateChemicalReactionCommand {
 
 @Injectable()
 export class CreateChemicalReactionUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly generateNextNumberUseCase: GenerateNextNumberUseCase) {}
 
   async execute(command: CreateChemicalReactionCommand): Promise<any> {
     const { organizationId, dto } = command;
@@ -26,6 +27,13 @@ export class CreateChemicalReactionUseCase {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      const reactionNumber = await this.generateNextNumberUseCase.execute(
+        organizationId,
+        EntityType.CHEMICAL_REACTION,
+        'REA-',
+        1,
+      );
+
       // 1. Validate output product
       const outputProduct = await tx.product.findUnique({
         where: { id: outputProductId, organizationId },
@@ -78,6 +86,7 @@ export class CreateChemicalReactionUseCase {
       const reaction = await tx.chemical_reactions.create({
         data: {
           organizationId,
+          reactionNumber,
           metalType, // Save the metal type
           notes,
           status: ChemicalReactionStatusPrisma.STARTED,

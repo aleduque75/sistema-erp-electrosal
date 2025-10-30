@@ -45,12 +45,14 @@ interface AnalisesQuimicasTableProps {
   analises: AnaliseQuimica[];
   isLoading: boolean;
   onAnaliseUpdated: () => void;
+  onRevertToPendingApproval: (analiseId: string) => void; // New prop
 }
 
 export function AnalisesQuimicasTable({
   analises,
   isLoading,
   onAnaliseUpdated,
+  onRevertToPendingApproval, // Destructure new prop
 }: AnalisesQuimicasTableProps) {
   const [analiseParaLancar, setAnaliseParaLancar] =
     useState<AnaliseQuimica | null>(null);
@@ -256,7 +258,18 @@ export function AnalisesQuimicasTable({
                             <ThumbsDown className="mr-2 h-4 w-4" />
                             Reprovar
                           </DropdownMenuItem>
-                          {/* ... restante do bloco ... */}
+                          <DropdownMenuItem
+                            onClick={() => setAnaliseParaLancar(analise)}
+                          >
+                            <FlaskConical className="mr-2 h-4 w-4" />
+                            Editar Resultado
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleRefazerAnalise(analise.id)}
+                          >
+                            <RotateCw className="mr-2 h-4 w-4" />
+                            Refazer Análise
+                          </DropdownMenuItem>
                         </>
                       )}
                       {analise.status === "APROVADO_PARA_RECUPERACAO" && (
@@ -270,7 +283,12 @@ export function AnalisesQuimicasTable({
                               ? "Baixando..."
                               : "Imprimir PDF"}
                           </DropdownMenuItem>
-                          {/* ... restante do bloco ... */}
+                          <DropdownMenuItem
+                            onClick={() => onRevertToPendingApproval(analise.id)}
+                          >
+                            <RotateCw className="mr-2 h-4 w-4" />
+                            Reverter para Aguardando Aprovação
+                          </DropdownMenuItem>
                         </>
                       )}
                     </DropdownMenuContent>

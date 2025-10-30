@@ -1,51 +1,71 @@
+"saleId": "f6d90f9c-d58e-4038-8357-7e0447b52ec2",
+"organizationId": "2a5bb448-056b-4b87-b02f-fec691dd658d", metalType
+"gramsReceived": "30.90"
+"purity": "1"
+"quotationUsed": "504"
+"originalPaymentDate":"2025-04-02T10:11:00.000Z"
+"description":"Pedido 31415 - Tecgalvano - Lote 1185"
 
+"saleId": "a648ab73-c3b3-43b5-84b4-58a1a51e1756",
+"organizationId": "2a5bb448-056b-4b87-b02f-fec691dd658d", metalType
+"gramsReceived": "34.69"
+"purity": "1"
+"quotationUsed": "570"
+"originalPaymentDate":"2025-04-14T00:00:00.000Z"
+"description":"Pedido 31495 - Cennabrass - Lote 1188"
 
+"saleId": "1adfa5a0-c391-4b59-ba27-4c19f1243b3f",
+"organizationId": "2a5bb448-056b-4b87-b02f-fec691dd658d", metalType
+"gramsReceived": "30.9"
+"purity": "1"
+"quotationUsed": "577"
+"originalPaymentDate":"2025-04-16T07:50:00.000Z"
+"description":"Pedido 31488 - Techgalvano - LOTE 1188"
 
-##
+"saleId": "6c7ad478-9439-4dce-8662-63c63bfa6f9b",
+"organizationId": "2a5bb448-056b-4b87-b02f-fec691dd658d", metalType
+"gramsReceived": "138.78"
+"purity": "1"
+"quotationUsed": "570"
+"originalPaymentDate":"2025-04-16T07:50:00.000Z"
+"description":"Pedido 31498 - CENNABRAS - LOTE 1188"
 
-#Podemos ver material prima, ela é utilizada na recuperação, e tambem na reação, poderia ter entrada por pedido de compra, gerar contas a pagar, poder ou não seer revenda
+"saleId": "0a499751-ebb5-4c87-a51c-301da07d4d61",
+"organizationId": "2a5bb448-056b-4b87-b02f-fec691dd658d", metalType
+"gramsReceived": "34.70"
+"purity": "1"
+"quotationUsed": "595"
+"originalPaymentDate":"2025-04-24T00:00:00.000Z"
+"description":"Pedido 31512 - CENNABRAS - LOTE 1189"
 
-na recuperação, ter uma opção de colocar a quantidade em uma recuperação, finalizada ou não, exemplo uma recuparação que ja terminou , mas me dar a opção de inserir materia prime, ele computar exemplo utilizai 1 kg de po de zinco que custou R$ 80,00 pegar a cotação do dia da recuperação e dividir, 80 / 720 exemplo = 0,11 gr, ai tambem utilizou acido nitrico 4 lt, R$ 120,00 / 720 = 0,16 gr, em um relatorio de recuperação teria os valores retirados teria que ser algo assim
+"saleId": "38c125dc-1ed1-4e5e-9b4e-14a5f59d811e",
+"organizationId": "2a5bb448-056b-4b87-b02f-fec691dd658d", metalType
+"gramsReceived": "208.16"
+"purity": "1"
+"quotationUsed": "600"
+"originalPaymentDate":"2025-04-30T08:18:00.000Z"
+"description":"Pedido 31507 - CENNABRAS - LOTE 1189"
 
-analise 1 = recuperar 20 gr, paguei 16 gr para cliente
-analise 2 = recuperar 80 gr, paguei 65 gr para cliente
+"saleId": "c8bca9eb-b3c3-43b5-a1b7-be44c996b843",
+"organizationId": "2a5bb448-056b-4b87-b02f-fec691dd658d", metalType
+"gramsReceived": "34.69"
+"purity": "1"
+"quotationUsed": "595"
+"originalPaymentDate": "2025-05-05T00:00:00.000Z"
+"description":"Pedido 31526 - CENNABRAS - LOTE 1190"
 
-recuperação 100 gr da analise 1 e 2
-gastou material po de zinco = 0,15
-gastou material acido nitrico = 0,11
+"saleId": "d29311e5-12c0-4a73-961c-997c4089ae86",
+"organizationId": "2a5bb448-056b-4b87-b02f-fec691dd658d", metalType
+"gramsReceived": "30.9"
+"purity": "1"
+"quotationUsed": "595"
+"originalPaymentDate": "2025-05-15T00:00:00.000Z"
+"description":"Pedido 31521 -  Techgalvano - LOTE 1190"
 
-
-tirou 85 gr, ficou 15 como resuduo para recuperar
-
-em um periodo ira ter algumas recuperações que terão valores pagos para clientes e matrerias gastos
-
-ficaria algo como 
-
-Recuperado 350 gr
-Pago cliente 300 gr
-mateiral gasto 15 gr
-a recuperar 20 gr 
-
-Lucro 50 gr - 15 gr = 35 gr, mas tem 20 a recuperar em residuo
-
-algo assim, deu para entender
-
-  Proponho um plano em três fases:
-  Fase 1: Backend - Gestão Central de Matéria-Prima
-   1. Definir modelo RawMaterial (nome, descrição, unidade, custo, organização, revenda).
-   2. Criar módulo CRUD para RawMaterial.
-   3. Integrar com PurchaseOrder para gerar AccountsPayable.
-
-  Fase 2: Backend - Integração com Recuperação e Reação
-   1. Atualizar RecoveryOrder e ChemicalReaction para rastrear RawMaterialUsed.
-   2. Definir modelo RawMaterialUsed (quantidade, custo, custo equivalente em ouro).
-   3. Modificar casos de uso de RecoveryOrder e ChemicalReaction para incluir seleção e cálculo de custos de 
-      matéria-prima.
-   4. Ajustar cálculos financeiros para incluir custos de matéria-prima.
-
-  Fase 3: Frontend - UI para Matéria-Prima
-   1. Criar UI para CRUD de RawMaterial.
-   2. Integrar seleção e entrada de matéria-prima nos formulários de RecoveryOrder e ChemicalReaction.
-   3. Atualizar relatórios para exibir custos de matéria-prima e cálculos de lucro.
-
-  Aguardarei a aprovação do usuário para este plano.
+"saleId": "83e02e10-a620-49ed-a8f0-8f64c4d4dd51",
+"organizationId": "2a5bb448-056b-4b87-b02f-fec691dd658d", metalType
+"gramsReceived": "138.78"
+"purity": "1"
+"quotationUsed": "595"
+"originalPaymentDate": "2025-05-21T08:32:00.000Z"
+"description":"Pedido 31531 -  CENNABRAS - LOTE 1190"
