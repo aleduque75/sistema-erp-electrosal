@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsUUID, IsNumber, IsOptional, IsDate } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, IsNumber, IsOptional, IsDate, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateTransferDto {
@@ -10,15 +10,20 @@ export class CreateTransferDto {
   @IsUUID()
   destinationAccountId: string;
 
-  @IsNotEmpty()
+  @IsOptional() // Tornar opcional
   @IsNumber()
   @Type(() => Number)
-  amount: number;
+  amount?: number;
 
   @IsOptional()
   @IsNumber()
   @Type(() => Number)
   goldAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  quotation?: number; // Adicionar quotation
 
   @IsOptional()
   @IsString()
@@ -33,4 +38,9 @@ export class CreateTransferDto {
   @IsDate()
   @Type(() => Date)
   dataHora?: Date;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  mediaIds?: string[];
 }

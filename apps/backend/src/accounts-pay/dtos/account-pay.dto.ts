@@ -35,13 +35,17 @@ export class CreateAccountPayDto {
   isInstallment?: boolean;
 
   @IsInt()
-  @Min(2)
   @IsOptional()
   totalInstallments?: number;
 }
 
 // Agora o PartialType será reconhecido
-export class UpdateAccountPayDto extends PartialType(CreateAccountPayDto) {}
+export class UpdateAccountPayDto extends PartialType(CreateAccountPayDto) {
+  @IsDate()
+  @IsOptional()
+  @Type(() => Date)
+  createdAt?: Date;
+}
 
 export class PayAccountDto {
   @IsUUID()
@@ -52,6 +56,10 @@ export class PayAccountDto {
   @IsOptional()
   @Type(() => Date)
   paidAt?: Date;
+
+  @IsNumber()
+  @IsOptional()
+  quotation?: number;
 }
 
 export class SplitAccountPayDto {

@@ -29,8 +29,8 @@ export class AssociateImageToRecoveryOrderUseCase {
       throw new NotFoundException(`Media with ID ${mediaId} not found.`);
     }
 
-    recoveryOrder.props.imageId = media.id.toString();
+    media.props.recoveryOrderId = recoveryOrder.id.toString();
 
-    await this.recoveryOrderRepository.save(recoveryOrder);
+    await this.mediaRepository.save(media);
   }
 }

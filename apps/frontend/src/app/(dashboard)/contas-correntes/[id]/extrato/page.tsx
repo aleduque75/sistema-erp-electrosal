@@ -26,6 +26,7 @@ import {
   PlusCircle,
   ArrowRightLeft,
   MoreHorizontal,
+  Paperclip, // Adicionar Paperclip
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -52,6 +53,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TransacaoForm } from "../../transacao-form";
+import { TransferForm } from "../../components/transfer-form"; // Adicionar esta linha
+import { ImageGallery } from "@/components/shared/ImageGallery"; // Adicionar esta linha
 // import { TransferModal } from "@/components/transfer-modal"; // Removido
 import { Combobox } from "@/components/ui/combobox";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,6 +62,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { ContaCorrenteType } from "@sistema-erp-electrosal/core"; // Importamos o objeto Enum (valor)
 import { TransferFromSupplierAccountForm } from "../../components/transfer-from-supplier-account-form"; // Adicionado
 import { SaleDetailsModal } from "../../../sales/sale-details-modal";
+import { TransactionDetailsModal } from "../../components/TransactionDetailsModal"; // Adicionar import
 
 // Copied from sales/page.tsx
 
@@ -130,6 +134,13 @@ interface TransacaoExtrato {
     id: string;
     orderNumber: number;
   };
+  medias?: { id: string; path: string }[]; // Adicionar medias
+  contrapartida?: { // Adicionar contrapartida
+    contaCorrente: {
+      nome: string;
+    };
+  };
+  goldPrice?: number; // Adicionar goldPrice
 }
 
 interface ExtratoData {
@@ -158,6 +169,7 @@ export default function ExtratoPage() {
 
   const [isLancamentoModalOpen, setIsLancamentoModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo estado para o modal de transferência
+  const [isGenericTransferModalOpen, setIsGenericTransferModalOpen] = useState(false); // Novo estado para o modal de transferência genérico
   const [contasContabeis, setContasContabeis] = useState<any[]>([]);
   const [editingTransacaoId, setEditingTransacaoId] = useState<string | null>(
     null
@@ -176,6 +188,10 @@ export default function ExtratoPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newContaContabilId, setNewContaContabilId] = useState<string>("");
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [selectedMedias, setSelectedMedias] = useState<{ id: string; path: string }[]>([]);
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<TransacaoExtrato | null>(null); // Adicionar estado
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false); // Adicionar estado
 
   const handleViewSaleDetails = async (saleId: string) => {
     try {
@@ -371,6 +387,10 @@ export default function ExtratoPage() {
                 <Button onClick={() => setIsLancamentoModalOpen(true)}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Novo Lançamento
                 </Button>
+                {/* Botão de Transferência Genérica */}
+                <Button onClick={() => setIsGenericTransferModalOpen(true)}>
+                  <ArrowRightLeft className="mr-2 h-4 w-4" /> Transferir
+                </Button>
                 {/* CORRIGIDO: Usa a string literal 'FORNECEDOR_METAL' */}
                 {extrato?.contaCorrente.type === "FORNECEDOR_METAL" && (
                   <Button
@@ -527,6 +547,19 @@ export default function ExtratoPage() {
                                 (Venda #{t.sale.orderNumber})
                               </Button>
                             )}
+                            {t.medias && t.medias.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMedias(t.medias);
+                                  setIsMediaModalOpen(true);
+                                }}
+                              >
+                                <Paperclip className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell
@@ -597,6 +630,14 @@ export default function ExtratoPage() {
                                 }}
                               >
                                 Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedTransaction(t);
+                                  setIsDetailsModalOpen(true);
+                                }}
+                              >
+                                Detalhes
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => {
@@ -674,6 +715,26 @@ export default function ExtratoPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Novo Dialog para Transferência Genérica */}
+      <Dialog open={isGenericTransferModalOpen} onOpenChange={setIsGenericTransferModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transferência entre Contas Correntes</DialogTitle>
+            <DialogDescription>
+              Realize uma transferência de valores entre contas correntes.
+            </DialogDescription>
+          </DialogHeader>
+          <TransferForm
+            fromAccountId={id}
+            transferType={extrato?.contaCorrente.moeda === "BRL" ? "BRL" : "GOLD"}
+            onSave={() => {
+              setIsGenericTransferModalOpen(false);
+              fetchExtrato();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -692,6 +753,21 @@ export default function ExtratoPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={isMediaModalOpen} onOpenChange={setIsMediaModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Imagens da Transação</DialogTitle>
+          </DialogHeader>
+          <ImageGallery
+            media={selectedMedias}
+            onDeleteSuccess={() => {
+              setIsMediaModalOpen(false);
+              fetchExtrato();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
       {selectedSale && (
         <SaleDetailsModal
           sale={selectedSale}
@@ -699,6 +775,12 @@ export default function ExtratoPage() {
           onOpenChange={(open) => !open && setSelectedSale(null)}
         />
       )}
+
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+      />
     </>
   );
 }

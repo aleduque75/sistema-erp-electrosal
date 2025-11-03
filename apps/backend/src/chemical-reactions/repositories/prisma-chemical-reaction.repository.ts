@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ChemicalReaction, IChemicalReactionRepository, UniqueEntityID } from '@sistema-erp-electrosal/core';
-import { chemical_reactions as PrismaChemicalReaction } from '@prisma/client';
+import { chemical_reactions as PrismaChemicalReaction, Prisma } from '@prisma/client';
+
+type PrismaChemicalReactionWithLots = PrismaChemicalReaction & { lots: { id: string }[] };
 
 @Injectable()
 export class PrismaChemicalReactionRepository implements IChemicalReactionRepository {
   constructor(private prisma: PrismaService) {}
 
-  // O método mapToDomain precisará ser ajustado após a mudança no schema
-  private mapToDomain(dbData: PrismaChemicalReaction): ChemicalReaction {
+  private mapToDomain(dbData: PrismaChemicalReactionWithLots): ChemicalReaction {
     return ChemicalReaction.create(
       {
         organizationId: dbData.organizationId,
@@ -23,7 +24,7 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
         outputProductGrams: dbData.outputProductGrams,
         outputBasketLeftoverGrams: dbData.outputBasketLeftoverGrams || undefined,
         outputDistillateLeftoverGrams: dbData.outputDistillateLeftoverGrams || undefined,
-        sourceLotIds: [], // TODO: Popular isso após o ajuste do schema
+        sourceLotIds: dbData.lots ? dbData.lots.map(lot => lot.id) : [],
       },
       UniqueEntityID.create(dbData.id),
     );
@@ -42,7 +43,26 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
           connect: sourceLotIds.map((lotId) => ({ id: lotId })),
         },
       },
+      include: {
+        lots: { select: { id: true } },
+      },
     });
+    return this.mapToDomain(dbReaction);
+  }
+
+  async findById(id: string, organizationId: string): Promise<ChemicalReaction | null> {
+    const dbReaction = await this.prisma.chemical_reactions.findUnique({
+      where: {
+        id,
+        organizationId,
+      },
+      include: {
+        lots: { select: { id: true } },
+      },
+    });
+    if (!dbReaction) {
+      return null;
+    }
     return this.mapToDomain(dbReaction);
   }
 
@@ -51,6 +71,9 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
       where: {
         reactionNumber,
         organizationId,
+      },
+      include: {
+        lots: { select: { id: true } },
       },
     });
     if (!dbReaction) {
@@ -63,6 +86,9 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
     const dbReactions = await this.prisma.chemical_reactions.findMany({
       where: { organizationId },
       orderBy: { reactionDate: 'desc' },
+      include: {
+        lots: { select: { id: true } },
+      },
     });
     return dbReactions.map(this.mapToDomain);
   }

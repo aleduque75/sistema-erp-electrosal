@@ -4,6 +4,8 @@
 import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
 import { TipoMetal } from './tipo-metal';
 
+import { Media } from './media';
+
 // Definindo a interface simplificada do cliente localmente
 export interface ClienteAnalise {
   name: string;
@@ -39,4 +41,5 @@ export interface AnaliseQuimica {
   
   resultado?: any;
   pdfUrl?: string;
+  media?: Media[]; // Adicionado
 }

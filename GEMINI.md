@@ -172,7 +172,7 @@ Análise: crypto.randomUUID() é uma API nativa do Node.js (disponível em vers�
 
 Solução: Padronize! A abordagem de ter uma classe UniqueEntityID (Value Object) é a melhor prática em DDD.
 
-Escolha uma fonte: crypto.randomUUID() é uma ótima escolha, pois é nativo e não requer dependências.
+Escolha uma fonte: crypto.randomUUID() é a ótima escolha, pois é nativo e não requer dependências.
 
 Centralize a criação: O único lugar que deve chamar crypto.randomUUID() é dentro do construtor ou de um método estático da sua classe UniqueEntityID.
 
@@ -387,21 +387,10 @@ Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, se
 
 ### Objetivos Atuais
 
-**1. Criação da Entidade `Cotação`**
-   - **Tarefa:** Definir o modelo `Cotacao` no `schema.prisma` para registrar os preços diários de compra e venda dos metais.
-   - **Tarefa:** Criar o módulo backend (`cotacoes`) para gerenciar o CRUD (Create, Read, Update, Delete) das cotações.
-   - **Status:** A fazer.
 
-**2. Integração do Plano de Contas na Recuperação**
-   - **Tarefa:** Ao finalizar uma `OrdemDeRecuperacao`, o sistema deverá buscar a cotação do dia para o metal recuperado.
-   - **Tarefa:** Calcular o valor em Reais (R$) do metal puro obtido (`auPuroRecuperadoGramas`).
-   - **Tarefa:** Criar um `LancamentoFinanceiro` automático, debitando uma conta de `Estoque` e creditando uma conta de `Custo de Produção` ou `Variação de Ativo`.
-   - **Status:** A fazer.
 
-**3. Refatoração do Fluxo de Pagamentos e Entradas de Metal**
-   - **Tarefa:** Implementar a lógica para que um cliente possa pagar uma venda usando seu saldo de metal (`Conta de Metal`).
-   - **Tarefa:** Modelar e implementar o fluxo de compra de metal de fornecedores, incluindo o cenário onde um cliente deposita um valor diretamente para o fornecedor da empresa.
-   - **Status:** A fazer.
+
+
 
 ### Histórico de Soluções e Decisões
 
@@ -433,8 +422,6 @@ Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, se
    - **Status:** Concluído. A lógica de cálculo de lucro e custo foi completamente reestruturada para seguir as regras de negócio corretas.
 
 
-# Vendas uma de produto de revenda, a comissão seria o que pagou menos o que vendeu, seria uma porcentagem desse lucrobruto em venda do sal de au 68$, que vira da reação, ai muda, eu cobro uma mão de obra, que seria por exemplo teria que ter uma tabela, abaixo de 19 gramas cobro 1 gr, isso pode ser altarado , mas seria como padrão, vamos dar um exemplo de uma venda de 10 gr, na cotação de venda 606 e tem frete de R$ 70,00, recebo R$ 6736,00 em metal 11,115 g, mas a cotação de compra do fornecedor é 605,entao seria  11,13, essa diferença seria para uma conta diferença_cotação de 0,014 gr, para calculo de comissão seria a 1 gr de mão de obra menos custos, que ai teria que colocar. é bem complexo deu para entendeer, e queria importar do sistema antigo, os clientes tem um externalId do sistema antigo queria vincular as vendas, elas então em /home/aleduque/Documentos/cursos/sistema-erp-electrosal/json-imports    
-
 
 # Pendencias e Resover 
 /home/aleduque/Documentos/cursos/sistema-erp-electrosal/pendencias.md
@@ -459,3 +446,26 @@ Dentro do Domínio -> Fora do Domínio: Ao passar um ID para um repositório, se
          - Adicionado um novo endpoint (`/chemical-reactions/:id/raw-materials`) que permite adicionar uma matéria-prima a uma reação química existente.
          - A lógica de negócio, similar à da recuperação, calcula o custo em ouro e atualiza o estoque.
    - **Status:** Concluído.
+
+**4. Correção da Funcionalidade de Upload e Exibição de Imagens**
+   - **Problema:** Imagens não estavam sendo associadas ou exibidas corretamente tanto para "Análises Químicas" quanto para "Ordens de Recuperação". Em "Análises Químicas", o `analiseQuimicaId` estava vindo como `null` no backend, e em "Ordens de Recuperação", as imagens não eram exibidas, apesar de estarem associadas. A interface de upload e gerenciamento de imagens não era consistente entre as duas seções.
+   - **Diagnóstico:**
+     - Para "Análises Químicas", o campo `analiseQuimicaId` não existia na entidade `Media` (`packages/core`), fazendo com que o ID fosse descartado antes de ser persistido.
+     - Para "Ordens de Recuperação", a entidade `RecoveryOrder` (`packages/core`) esperava uma única `image` no singular, enquanto o repositório e o DTO estavam trabalhando com um array `images` no plural. Além disso, o `associateImageToRecoveryOrderUseCase` estava tentando atualizar a `RecoveryOrder` com um `imageId` em vez de atualizar a `Media` com o `recoveryOrderId`. A interface de usuário para upload era manual e não reutilizava os componentes genéricos.
+     - O `path` das imagens estava vindo como `undefined` no frontend devido a problemas de serialização/desserialização entre o backend e o frontend.
+   - **Solução Implementada:**
+     - **Backend (`packages/core`):**
+       - Adicionado `analiseQuimicaId?: string;` à interface `MediaProps` e um getter correspondente na classe `Media` (`media.entity.ts`).
+       - Corrigida a entidade `RecoveryOrder` (`recovery-order.entity.ts`) para usar uma propriedade `images?: Media[];` no plural, removendo as propriedades `image` e `imageId` no singular.
+     - **Backend (`apps/backend`):
+       - Criado um `MediaResponseDto` genérico (`media.response.dto.ts`) no módulo `media` para garantir a serialização correta de todas as propriedades da mídia.
+       - Modificado o `media.controller.ts` para usar o `MediaResponseDto` genérico ao retornar as mídias de uma análise química e de uma ordem de recuperação.
+       - Adicionado um método `findByRecoveryOrderId` ao `MediaService` e um endpoint correspondente no `MediaController` para buscar mídias associadas a ordens de recuperação.
+       - Corrigido o `associateImageToRecoveryOrderUseCase` para atualizar a entidade `Media` com o `recoveryOrderId`, em vez de tentar atualizar a `RecoveryOrder` com um `imageId`.
+       - Adicionado o método `save` à interface `IMediaRepository` e à sua implementação `PrismaMediaRepository` para permitir a atualização de entidades de mídia.
+     - **Frontend (`apps/frontend`):**
+       - Refatorado o componente `ImageUpload.tsx` para aceitar um objeto `entity` genérico (`{ type: 'analiseQuimica' | 'recoveryOrder', id: string }`), tornando-o reutilizável para diferentes tipos de entidades.
+       - Atualizado o `VisualizarAnaliseModal.tsx` para usar o `ImageUpload` com a nova prop `entity`.
+       - Reescrevi o `RecoveryOrderDetailsModal.tsx` para usar os componentes `ImageUpload` e `ImageGallery`, replicando a funcionalidade de upload e exclusão de imagens presente nas análises químicas, garantindo uma interface consistente.
+       - Adicionada a função `getMediaForRecoveryOrder` ao `mediaApi.ts` para buscar mídias de ordens de recuperação.
+   - **Status:** Concluído. A funcionalidade de upload e exibição de imagens agora é consistente e funciona corretamente para "Análises Químicas" e "Ordens de Recuperação".

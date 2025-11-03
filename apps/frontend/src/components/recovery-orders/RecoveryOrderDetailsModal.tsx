@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Importar useRouter
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -10,6 +10,10 @@ import { AddRawMaterialModal } from '@/app/(dashboard)/recovery-orders/[id]/add-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { X } from 'lucide-react';
+import { ImageUpload } from "@/components/shared/ImageUpload";
+import { ImageGallery } from "@/components/shared/ImageGallery";
+import { getMediaForRecoveryOrder } from "@/services/mediaApi";
+import { Media } from "@/types/media";
 
 interface RawMaterialUsed {
   id: string;
@@ -27,17 +31,7 @@ interface RecoveryOrder {
   totalBrutoEstimadoGramas: number;
   auPuroRecuperadoGramas: number | null;
   rawMaterialsUsed: RawMaterialUsed[];
-  images?: Media[]; // Novo campo para múltiplas imagens
-}
-
-interface Media {
-  id: string;
-  filename: string;
-  path: string;
-  mimetype: string;
-  size: number;
-  width?: number;
-  height?: number;
+  images?: Media[];
 }
 
 interface RecoveryOrderDetailsModalProps {
@@ -48,44 +42,33 @@ interface RecoveryOrderDetailsModalProps {
 }
 
 export function RecoveryOrderDetailsModal({ isOpen, onOpenChange, recoveryOrder, onUpdate }: RecoveryOrderDetailsModalProps) {
-  const router = useRouter(); // Inicializar useRouter
+  const router = useRouter();
   const [isAddRawMaterialModalOpen, setAddRawMaterialModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [media, setMedia] = useState<Media[]>([]);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setSelectedFile(event.target.files[0]);
+  const fetchMedia = async () => {
+    if (!recoveryOrder?.id) return;
+    setIsLoadingMedia(true);
+    try {
+      const fetchedMedia = await getMediaForRecoveryOrder(recoveryOrder.id);
+      setMedia(fetchedMedia);
+    } catch (error) {
+      toast.error("Erro ao carregar mídias da ordem de recuperação.");
+    } finally {
+      setIsLoadingMedia(false);
     }
   };
 
-  const handleUpload = async () => {
-    if (!selectedFile || !recoveryOrder) {
-      toast.error("Selecione um arquivo para enviar.");
-      return;
+  useEffect(() => {
+    if (isOpen && recoveryOrder) {
+      fetchMedia();
     }
+  }, [isOpen, recoveryOrder]);
 
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-
-    try {
-      const uploadResponse = await api.post(`/media/upload?recoveryOrderId=${recoveryOrder.id}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      toast.success("Imagem enviada com sucesso!");
-      onUpdate();
-      setSelectedFile(null);
-      onOpenChange(false); // Fechar o modal para forçar a re-renderização do pai
-      router.refresh(); // Forçar revalidação dos dados da página
-    } catch (error) {
-      toast.error("Falha ao enviar a imagem.");
-    } finally {
-      setIsUploading(false);
-    }
+  const handleMediaUpdate = () => {
+    fetchMedia();
+    onUpdate(); // Atualiza a lista principal
   };
 
   const handleRawMaterialAdded = () => {
@@ -121,24 +104,15 @@ export function RecoveryOrderDetailsModal({ isOpen, onOpenChange, recoveryOrder,
             <CardHeader>
               <CardTitle>Imagens da Ordem</CardTitle>
             </CardHeader>
-            <CardContent>
-              {recoveryOrder.images && recoveryOrder.images.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {recoveryOrder.images.map((img) => (
-                    <div key={img.id} className="relative group">
-                      <img src={`http://localhost:3002/media/${img.filename}`} alt={img.filename} className="max-w-full h-auto rounded-lg object-cover aspect-square" />
-                      {/* Adicionar botão de remover imagem aqui, se necessário */}
-                    </div>
-                  ))}                </div>
+            <CardContent className="space-y-4">
+              <ImageUpload entity={{ type: 'recoveryOrder', id: recoveryOrder.id }} onUploadSuccess={handleMediaUpdate} />
+              {isLoadingMedia ? (
+                <p>Carregando imagens...</p>
+              ) : media.length > 0 ? (
+                <ImageGallery media={media} onDeleteSuccess={handleMediaUpdate} />
               ) : (
-                <p>Nenhuma imagem associada.</p>
+                <p className="text-sm text-muted-foreground">Nenhuma imagem associada a esta ordem de recuperação.</p>
               )}
-              <div className="mt-4 flex items-center gap-2">
-                <input type="file" onChange={handleFileChange} className="flex-grow" />
-                <Button onClick={handleUpload} disabled={!selectedFile || isUploading}>
-                  {isUploading ? "Enviando..." : "Enviar Imagem"}
-                </Button>
-              </div>
             </CardContent>
           </Card>
 

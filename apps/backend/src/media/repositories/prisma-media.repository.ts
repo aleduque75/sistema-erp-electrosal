@@ -21,4 +21,13 @@ export class PrismaMediaRepository implements IMediaRepository {
     const prismaMedia = await this.prisma.media.create({ data });
     return MediaMapper.toDomain(prismaMedia);
   }
+
+  async save(media: Media): Promise<Media> {
+    const data = MediaMapper.toPersistence(media);
+    const prismaMedia = await this.prisma.media.update({
+      where: { id: media.id.toString() },
+      data,
+    });
+    return MediaMapper.toDomain(prismaMedia);
+  }
 }

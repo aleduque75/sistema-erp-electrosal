@@ -105,7 +105,7 @@ export class ContasCorrentesService {
       },
       include: {
         contaContabil: true,
-        accountRec: { // Corrected from AccountRec
+        accountRec: {
           include: {
             sale: {
               select: {
@@ -115,11 +115,26 @@ export class ContasCorrentesService {
             },
           },
         },
+        medias: true,
+        linkedTransaction: { // Incluir a transação vinculada
+          include: {
+            contaCorrente: {
+              select: {
+                nome: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { dataHora: 'asc' },
     });
 
-    // 4. Calcula os Saldos Finais (BRL e Gold)
+    // 4. Não precisamos mais buscar a contrapartida separadamente, já está incluída
+    const transacoesComContrapartida = transacoesNoPeriodo;
+
+    console.log('transacoesComContrapartida', transacoesComContrapartida); // Adicionar console.log
+
+    // 5. Calcula os Saldos Finais (BRL e Gold)
     const saldosFinais = transacoesNoPeriodo.reduce(
       (acc, transacao) => {
         const valorBRL = Number(transacao.valor);
@@ -142,10 +157,12 @@ export class ContasCorrentesService {
       saldoFinalBRL: saldosFinais.brl,
       saldoFinalGold: saldosFinais.gold,
       contaCorrente,
-      transacoes: transacoesNoPeriodo.map((t) => ({
+      transacoes: transacoesComContrapartida.map((t) => ({
         ...t,
         contaContabilNome: t.contaContabil?.nome,
-        sale: t.accountRec?.sale, // Corrected from t.AccountRec
+        sale: t.accountRec?.sale,
+        contrapartida: t.linkedTransaction ? { contaCorrente: { nome: t.linkedTransaction.contaCorrente?.nome || 'Conta Desconhecida' } } : null, // Usar linkedTransaction
+        goldPrice: t.goldPrice?.toNumber(),
       })),
     };
   }

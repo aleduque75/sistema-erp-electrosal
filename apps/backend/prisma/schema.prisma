@@ -52,6 +52,7 @@ model Organization {
   rawMaterials            RawMaterial[]
   rawMaterialsUsed        RawMaterialUsed[]
   transacoes              Transacao[]
+  pureMetalLotMovements   PureMetalLotMovement[]
 }
 
 model User {
@@ -342,9 +343,11 @@ model AccountPay {
   contaContabilId   String?
   organizationId    String
   transacaoId       String?        @unique
+  purchaseOrderId   String?        // Adicionado para vincular ao pedido de compra
   contaContabil     ContaContabil? @relation(fields: [contaContabilId], references: [id])
   organization      Organization   @relation(fields: [organizationId], references: [id])
   transacao         Transacao?     @relation(fields: [transacaoId], references: [id])
+  purchaseOrder     PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
 
   @@map("accounts_pay")
 }
@@ -476,6 +479,10 @@ model Transacao {
   organization    Organization        @relation(fields: [organizationId], references: [id])
   status          TransacaoStatus     @default(ATIVA)
   accountRec      AccountRec?         @relation(fields: [accountRecId], references: [id])
+  medias          Media[]
+  linkedTransactionId String?             @unique
+  linkedTransaction   Transacao?          @relation("Transfer", fields: [linkedTransactionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transfer            Transacao?          @relation("Transfer")
 
   @@unique([contaCorrenteId, fitId])
   @@map("transacoes")
@@ -593,8 +600,16 @@ model Media {
   landingPageLogos LandingPage[]
   recoveryOrderId String?
   recoveryOrder   RecoveryOrder? @relation(fields: [recoveryOrderId], references: [id])
+  analiseQuimicaId String?
+  analiseQuimica   AnaliseQuimica? @relation(fields: [analiseQuimicaId], references: [id])
+  chemicalReactionId String?
+  chemicalReaction   chemical_reactions? @relation(fields: [chemicalReactionId], references: [id])
   organization     Organization? @relation(fields: [organizationId], references: [id])
 }
+
+// ...
+
+
 
 model CreditCardFee {
   id             String       @id @default(uuid())
@@ -664,6 +679,7 @@ model AnaliseQuimica {
   metalCredit                 MetalCredit?
   recoveryOrderAsResidue      RecoveryOrder?             @relation("ResidueOfRecovery")
   recuperacoes                Recuperacao[]
+  media                       Media[]
 
   @@unique([organizationId, numeroAnalise])
   @@map("analises_quimicas")
@@ -696,6 +712,7 @@ model PurchaseOrder {
   totalAmount          Decimal             @db.Decimal(10, 2)
   status               PurchaseOrderStatus @default(PENDING)
   orderDate            DateTime            @default(now())
+  receivedAt           DateTime?
   expectedDeliveryDate DateTime?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
@@ -704,6 +721,7 @@ model PurchaseOrder {
   fornecedor           Fornecedor          @relation(fields: [fornecedorId], references: [pessoaId])
   organization         Organization        @relation(fields: [organizationId], references: [id])
   paymentTerm          PaymentTerm?        @relation(fields: [paymentTermId], references: [id])
+  accountsPay          AccountPay[]
 
   @@map("purchase_orders")
 }
@@ -876,6 +894,7 @@ model chemical_reactions {
   productionBatch               InventoryLot?                @relation("ReactionToBatch", fields: [productionBatchId], references: [id])
   lots                          pure_metal_lots[]            @relation("chemical_reactionsTopure_metal_lots")
   rawMaterialsUsed              RawMaterialUsed[]
+  medias                        Media[]
 
   @@unique([organizationId, reactionNumber])
   @@map("chemical_reactions")
@@ -883,6 +902,7 @@ model chemical_reactions {
 
 model pure_metal_lots {
   id                 String               @id @default(uuid())
+  lotNumber          String?              @unique
   organizationId     String
   sourceType         String
   sourceId           String
@@ -899,6 +919,29 @@ model pure_metal_lots {
   Organization       Organization         @relation(fields: [organizationId], references: [id])
   sale               Sale?                @relation(fields: [saleId], references: [id])
   chemical_reactions chemical_reactions[] @relation("chemical_reactionsTopure_metal_lots")
+  movements          PureMetalLotMovement[]
+}
+
+model PureMetalLotMovement {
+  id             String                   @id @default(uuid())
+  organizationId String
+  pureMetalLotId String
+  type           PureMetalLotMovementType
+  grams          Float
+  date           DateTime                 @default(now())
+  notes          String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  organization   Organization             @relation(fields: [organizationId], references: [id])
+  pureMetalLot   pure_metal_lots          @relation(fields: [pureMetalLotId], references: [id])
+
+  @@map("pure_metal_lot_movements")
+}
+
+enum PureMetalLotMovementType {
+  ENTRY
+  EXIT
+  ADJUSTMENT
 }
 
 model ProductionBatchCounter {
@@ -936,6 +979,7 @@ model EntityCounter {
 enum EntityType {
   RECOVERY_ORDER
   CHEMICAL_REACTION
+  PURE_METAL_LOT
   // Add other entity types as needed
 }
 
@@ -1010,6 +1054,7 @@ enum ContaCorrenteType {
   BANCO
   FORNECEDOR_METAL
   EMPRESTIMO
+  CLIENTE // Adicionado
 }
 
 enum StatusAnaliseQuimicaPrisma {

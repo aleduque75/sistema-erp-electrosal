@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import {
   Trash2,
   PlusCircle,
   GitCommitHorizontal,
+  Info,
 } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { addDays } from "date-fns";
@@ -44,9 +45,12 @@ import {
 } from "@/components/ui/dialog";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AccountPayForm } from "./components/account-pay-form"; // <-- CORRIGIDO AQUI
 import { SplitAccountPayForm } from "./components/split-account-pay-form";
 import { PayAccountForm } from "./components/pay-account-form"; // Added
+import { AccountPayDetailsView } from "./components/account-pay-details-view";
 import { formatInTimeZone } from "date-fns-tz";
 
 interface AccountPay {
@@ -78,6 +82,9 @@ export default function AccountsPayPage() {
     to: new Date(),
   });
 
+  const [filter, setFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("pending");
+
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [accountToEdit, setAccountToEdit] = useState<AccountPay | null>(null);
   const [accountToDelete, setAccountToDelete] = useState<AccountPay | null>(
@@ -86,6 +93,7 @@ export default function AccountsPayPage() {
   const [accountToPay, setAccountToPay] = useState<AccountPay | null>(null);
   const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
   const [accountToSplit, setAccountToSplit] = useState<AccountPay | null>(null);
+  const [accountToView, setAccountToView] = useState<AccountPay | null>(null);
 
   const fetchAccounts = useCallback(async () => {
     if (!date?.from || !date?.to) return;
@@ -95,6 +103,9 @@ export default function AccountsPayPage() {
         startDate: date.from.toISOString().split("T")[0],
         endDate: date.to.toISOString().split("T")[0],
       });
+      if (statusFilter && statusFilter !== 'all') {
+        params.append('status', statusFilter);
+      }
       const response = await api.get(`/accounts-pay?${params.toString()}`);
       setAccounts(response.data.accounts || []);
       setTotal(response.data.total || 0);
@@ -103,13 +114,20 @@ export default function AccountsPayPage() {
     } finally {
       setIsFetching(false);
     }
-  }, [date]);
+  }, [date, statusFilter]);
 
   useEffect(() => {
     if (user && !loading) {
       fetchAccounts();
     }
-  }, [user, loading, fetchAccounts]);
+  }, [user, loading, fetchAccounts, statusFilter]);
+
+  const filteredAccounts = useMemo(() => {
+    return accounts.filter(acc => {
+      const searchTerm = filter.toLowerCase();
+      return searchTerm === '' || acc.description.toLowerCase().includes(searchTerm);
+    });
+  }, [accounts, filter]);
 
   const handleSave = () => {
     setIsFormModalOpen(false);
@@ -200,6 +218,9 @@ export default function AccountsPayPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setAccountToView(account)}>
+                  <Info className="mr-2 h-4 w-4" /> Detalhes
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={account.paid}
                   onClick={() => setAccountToPay(account)}
@@ -241,27 +262,42 @@ export default function AccountsPayPage() {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-4 p-4 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <h1 className="text-2xl font-bold">Contas a Pagar</h1>
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <DateRangePicker
-              date={date}
-              onDateChange={setDate}
-              className="w-full sm:w-auto"
-            />
             <Button onClick={handleOpenNewModal} className="w-full sm:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Conta
             </Button>
           </div>
         </div>
+
+        <div className="flex items-center gap-4">
+            <Input 
+              placeholder="Filtrar por descrição..."
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="max-w-sm"
+            />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="paid">Pago</SelectItem>
+              </SelectContent>
+            </Select>
+            <DateRangePicker date={date} onDateChange={setDate} />
+        </div>
+
         <Card>
           <CardContent className="pt-6">
             <DataTable
               columns={columns}
-              data={accounts}
-              filterColumnId="description"
+              data={filteredAccounts}
               isLoading={isFetching}
             />
           </CardContent>
@@ -315,9 +351,8 @@ export default function AccountsPayPage() {
           </DialogHeader>
           {accountToPay && (
             <PayAccountForm
-              accountId={accountToPay.id}
+              account={accountToPay}
               onSave={handlePaymentSave}
-              initialAmount={accountToPay.amount}
             />
           )}
         </DialogContent>
@@ -333,6 +368,16 @@ export default function AccountsPayPage() {
             </DialogDescription>
           </DialogHeader>
           {accountToSplit && <SplitAccountPayForm onSave={handleSplitSave} />}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!accountToView} onOpenChange={(open) => !open && setAccountToView(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Conta a Pagar</DialogTitle>
+            <DialogDescription>{accountToView?.description}</DialogDescription>
+          </DialogHeader>
+          {accountToView && <AccountPayDetailsView account={accountToView} />}
         </DialogContent>
       </Dialog>
     </>

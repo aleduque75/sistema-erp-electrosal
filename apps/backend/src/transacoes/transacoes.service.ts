@@ -5,10 +5,14 @@ import { CreateTransferDto } from './dtos/create-transfer.dto';
 import { CreateTransacaoDto } from './dtos/create-transacao.dto';
 import { UpdateTransacaoDto } from './dtos/update-transacao.dto';
 import { BulkCreateTransacaoDto } from './dtos/bulk-create-transacao.dto';
+import { MediaService } from '../media/media.service'; // Importar MediaService
 
 @Injectable()
 export class TransacoesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mediaService: MediaService, // Injetar MediaService
+  ) {}
 
   async updateTransacao(
     organizationId: string,
@@ -35,7 +39,40 @@ export class TransacoesService {
     organizationId: string,
     dto: CreateTransferDto,
   ): Promise<{ debitTransaction: Transacao; creditTransaction: Transacao }> {
-    const { sourceAccountId, destinationAccountId, amount, goldAmount, description, contaContabilId, dataHora } = dto;
+    const { sourceAccountId, destinationAccountId, description, contaContabilId, dataHora, mediaIds } = dto;
+    let { amount, goldAmount, quotation } = dto;
+
+    if (!amount && !goldAmount) {
+      throw new Error('É necessário fornecer o valor em BRL ou em metal.');
+    }
+
+    if (!quotation && (amount && !goldAmount || !amount && goldAmount)) {
+        // Se a cotação não for fornecida e for necessária para a conversão, busca a cotação do dia
+        const today = new Date().toISOString().split('T')[0];
+        const quotationData = await this.prisma.quotation.findFirst({
+            where: {
+                organizationId,
+                metal: 'AU',
+                date: new Date(today),
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+        if (quotationData) {
+            quotation = quotationData.buyPrice.toNumber();
+        } else {
+            throw new Error('Cotação não encontrada para a data de hoje. Por favor, forneça a cotação manualmente.');
+        }
+    }
+
+    if (quotation) { // Garantir que a cotação existe antes de usar
+        if (amount && !goldAmount) {
+            goldAmount = amount / quotation;
+        } else if (!amount && goldAmount) {
+            amount = goldAmount * quotation;
+        }
+    }
 
     // 1. Validar se as contas existem e pertencem à organização
     const sourceAccount = await this.prisma.contaCorrente.findFirst({
@@ -57,7 +94,7 @@ export class TransacoesService {
       data: {
         organizationId,
         tipo: 'DEBITO',
-        valor: amount,
+        valor: amount || 0,
         goldAmount: goldAmount || 0,
         moeda: 'BRL', // Assumindo BRL para transferências de valor
         descricao: description || `Transferência para ${destinationAccount.nome}`,
@@ -72,41 +109,82 @@ export class TransacoesService {
       data: {
         organizationId,
         tipo: 'CREDITO',
-        valor: amount,
+        valor: amount || 0,
         goldAmount: goldAmount || 0,
         moeda: 'BRL', // Assumindo BRL para transferências de valor
         descricao: description || `Transferência de ${sourceAccount.nome}`,
-        dataHora: dataHora || new Date(),
+        dataHora: dataHora ? new Date(dataHora) : new Date(),
         contaContabilId,
         contaCorrenteId: destinationAccountId,
       },
     });
 
-    // TODO: Considerar vincular as duas transações (e.g., com um campo 'linkedTransactionId')
-    // para facilitar a conciliação e visualização de pares de transferência.
+    // 4. Vincular as duas transações
+    await this.prisma.transacao.update({
+      where: { id: debitTransaction.id },
+      data: { linkedTransactionId: creditTransaction.id },
+    });
+    await this.prisma.transacao.update({
+      where: { id: creditTransaction.id },
+      data: { linkedTransactionId: debitTransaction.id },
+    });
 
-    return { debitTransaction, creditTransaction };
+    // Associar mídias às transações de débito e crédito
+    if (mediaIds && mediaIds.length > 0) {
+      await this.mediaService.associateMediaWithTransacao(
+        debitTransaction.id,
+        mediaIds,
+        organizationId,
+      );
+      await this.mediaService.associateMediaWithTransacao(
+        creditTransaction.id,
+        mediaIds,
+        organizationId,
+      );
+    }
+
+    return {
+      debitTransaction: await this.findOne(debitTransaction.id, organizationId),
+      creditTransaction: await this.findOne(creditTransaction.id, organizationId),
+    };
   }
 
   async create(
     data: CreateTransacaoDto,
     organizationId: string,
+    tx?: any,
   ): Promise<Transacao> {
-    const { valor, goldAmount, ...restData } = data;
-    return this.prisma.transacao.create({
+    const prisma = tx || this.prisma;
+    const { valor, goldAmount, mediaIds, ...restData } = data;
+    const newTransacao = await prisma.transacao.create({
       data: {
         ...restData,
         valor: valor ?? 0,
         goldAmount: goldAmount,
         organizationId,
-        moeda: 'BRL', // TODO: This should probably come from the account
+        moeda: 'BRL',
       },
     });
+
+    if (mediaIds && mediaIds.length > 0) {
+      await this.mediaService.associateMediaWithTransacao(
+        newTransacao.id,
+        mediaIds,
+        organizationId,
+        tx,
+      );
+    }
+
+    return this.findOne(newTransacao.id, organizationId, tx); // Reutilizar o findOne para incluir as mídias
   }
 
-  async findOne(id: string, organizationId: string): Promise<Transacao> {
-    const transacao = await this.prisma.transacao.findFirst({
+  async findOne(id: string, organizationId: string, tx?: any): Promise<Transacao> {
+    const prisma = tx || this.prisma;
+    const transacao = await prisma.transacao.findFirst({
       where: { id, organizationId },
+      include: {
+        medias: true, // Incluir as mídias
+      },
     });
     if (!transacao) {
       throw new NotFoundException(`Transação com ID ${id} não encontrada.`);
@@ -120,10 +198,28 @@ export class TransacoesService {
     organizationId: string,
   ): Promise<Transacao> {
     await this.findOne(id, organizationId); // Garante a posse
-    return this.prisma.transacao.update({
+    const { mediaIds, ...restData } = data;
+
+    const updatedTransacao = await this.prisma.transacao.update({
       where: { id },
-      data,
+      data: restData,
     });
+
+    if (mediaIds) {
+      // Primeiro, desassociar todas as mídias existentes
+      await this.prisma.media.updateMany({
+        where: { transacaoId: id },
+        data: { transacaoId: null },
+      });
+      // Depois, associar as novas mídias
+      await this.mediaService.associateMediaWithTransacao(
+        id,
+        mediaIds,
+        organizationId,
+      );
+    }
+
+    return this.findOne(id, organizationId);
   }
 
   async remove(id: string, organizationId: string): Promise<Transacao> {
@@ -181,6 +277,9 @@ export class TransacoesService {
         organizationId,
         contaCorrenteId: null,
       },
+      include: {
+        medias: true,
+      },
       orderBy: {
         dataHora: 'desc',
       },
@@ -203,9 +302,11 @@ export class TransacoesService {
       throw new NotFoundException(`Conta corrente com ID ${contaCorrenteId} não encontrada.`);
     }
 
-    return this.prisma.transacao.update({
+    await this.prisma.transacao.update({
       where: { id: transacaoId },
       data: { contaCorrenteId },
     });
+
+    return this.findOne(transacaoId, organizationId);
   }
 }

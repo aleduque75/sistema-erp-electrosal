@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Prisma } from '@prisma/client';
 import { CreatePurchaseOrderDto, UpdatePurchaseOrderDto } from './dtos/purchase-order.dto';
 import { CreateMetalPurchaseFromSupplierUseCase, CreateMetalPurchaseFromSupplierCommand } from './use-cases/create-metal-purchase-from-supplier.use-case'; // Import the use case and its command DTO
+import { ReceivePurchaseOrderDto } from './dtos/receive-purchase-order.dto';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('purchase-orders')
@@ -32,8 +33,11 @@ export class PurchaseOrdersController {
   }
 
   @Get()
-  findAll(@CurrentUser('organizationId') organizationId: string) {
-    return this.purchaseOrdersService.findAll(organizationId);
+  findAll(
+    @CurrentUser('organizationId') organizationId: string,
+    @Query('fornecedorId') fornecedorId?: string,
+  ) {
+    return this.purchaseOrdersService.findAll(organizationId, fornecedorId);
   }
 
   @Get(':id')
@@ -57,8 +61,9 @@ export class PurchaseOrdersController {
   receive(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
+    @Body() receiveDto: ReceivePurchaseOrderDto,
   ) {
-    return this.purchaseOrdersService.receive(organizationId, id);
+    return this.purchaseOrdersService.receive(organizationId, id, receiveDto.receivedAt);
   }
 
   @Delete(':id')

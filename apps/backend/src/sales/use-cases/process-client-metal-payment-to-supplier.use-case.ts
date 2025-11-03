@@ -20,6 +20,7 @@ export interface ProcessClientMetalPaymentToSupplierCommand {
   saleId: string;
   supplierPessoaId: string;
   grams: number;
+  metalType: TipoMetal;
   notes?: string;
 }
 
@@ -38,7 +39,7 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
   async execute(
     command: ProcessClientMetalPaymentToSupplierCommand,
   ): Promise<void> {
-    const { organizationId, saleId, supplierPessoaId, grams, notes } = command;
+    const { organizationId, saleId, supplierPessoaId, grams, metalType, notes } = command;
 
     if (grams <= 0) {
       throw new BadRequestException(
@@ -60,7 +61,7 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
     const supplierMetalAccount =
       await this.metalAccountRepository.findByPersonId(
         supplierPessoaId,
-        TipoMetal.AU, // Assumindo pagamento em ouro
+        metalType,
         organizationId,
       );
 
@@ -73,7 +74,7 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
     // 3. Encontrar a MetalAccount do cliente (para deduzir o saldo, se aplicável)
     const clientMetalAccount = await this.metalAccountRepository.findByPersonId(
       sale.pessoaId,
-      TipoMetal.AU,
+      metalType,
       organizationId,
     );
 
@@ -113,17 +114,18 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
     });
 
     // 7. Criar Transação Financeira (em BRL) para registrar o pagamento da venda
-    const latestGoldQuote = await this.quotationsService.findLatest(
-      TipoMetal.AU,
+    const latestQuote = await this.quotationsService.findLatest(
+      metalType,
       organizationId,
+      new Date(),
     );
-    if (!latestGoldQuote || latestGoldQuote.sellPrice.lessThanOrEqualTo(0)) {
+    if (!latestQuote || latestQuote.buyPrice.lessThanOrEqualTo(0)) {
       throw new BadRequestException(
-        'Nenhuma cotação de ouro de venda encontrada para hoje.',
+        `Nenhuma cotação de compra para ${metalType} encontrada para hoje.`,
       );
     }
 
-    const valorBRL = new Decimal(grams).times(latestGoldQuote.sellPrice);
+    const valorBRL = new Decimal(grams).times(latestQuote.buyPrice);
 
     const settings = await this.settingsService.findOne(organizationId); // Assumindo que findOne pode buscar por organizationId
     if (

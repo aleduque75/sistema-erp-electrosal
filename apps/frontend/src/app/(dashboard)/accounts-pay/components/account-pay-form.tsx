@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Interfaces
 interface AccountPay {
@@ -28,6 +29,7 @@ interface AccountPay {
   contaContabilId?: string | null;
   isInstallment?: boolean;
   totalInstallments?: number;
+  createdAt: string; // Adicionado
 }
 interface ContaContabil {
   id: string;
@@ -50,18 +52,18 @@ const formSchema = z
     totalInstallments: z.coerce
       .number()
       .int()
-      .min(2, "Mínimo de 2 parcelas")
       .optional(),
+    createdAt: z.string().optional(), // Adicionado
   })
   .refine(
     (data) => {
-      if (data.isInstallment && !data.totalInstallments) {
-        return false;
+      if (data.isInstallment) {
+        return data.totalInstallments && data.totalInstallments >= 2;
       }
       return true;
     },
     {
-      message: "O número de parcelas é obrigatório.",
+      message: "O número de parcelas deve ser 2 ou mais.",
       path: ["totalInstallments"],
     }
   );
@@ -69,6 +71,7 @@ const formSchema = z
 type FormValues = z.infer<typeof formSchema>;
 
 export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
+  const { user } = useAuth();
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -78,9 +81,10 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
       dueDate: account
         ? new Date(account.dueDate).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
-      contaContabilId: account?.contaContabilId || null,
+      contaContabilId: account?.contaContabilId || user?.settings?.defaultDespesaContaId || null,
       isInstallment: account?.isInstallment || false,
       totalInstallments: account?.totalInstallments || 2,
+      createdAt: account ? new Date(account.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
     },
   });
 
@@ -95,8 +99,11 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
 
   const onSubmit = async (data: FormValues) => {
     try {
-      const payload = { ...data, dueDate: new Date(data.dueDate) };
+      const { createdAt, ...rest } = data;
+      const payload: any = { ...rest, dueDate: new Date(data.dueDate) };
+
       if (account) {
+        payload.createdAt = createdAt ? new Date(createdAt) : undefined;
         await api.patch(`/accounts-pay/${account.id}`, payload);
         toast.success("Conta atualizada com sucesso!");
       } else {
@@ -180,8 +187,23 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
           )}
         />
 
+        {account && (
+          <FormField
+            name="createdAt"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Data de Entrada</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
         {/* Só mostra a opção de parcelar ao CRIAR uma nova conta */}
-        {!account && (
           <>
             <FormField
               control={form.control}
@@ -191,7 +213,12 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
                   <FormControl>
                     <Checkbox
                       checked={field.value}
-                      onCheckedChange={field.onChange}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                        if (!checked) {
+                          form.setValue("totalInstallments", undefined);
+                        }
+                      }}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
@@ -217,7 +244,6 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
               />
             )}
           </>
-        )}
 
         <div className="flex justify-end">
           <Button type="submit" disabled={form.formState.isSubmitting}>

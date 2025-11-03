@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AnaliseQuimica } from '@/types/analise-quimica';
+import { Media } from '@/types/media'; // NOVO IMPORT
 import { format } from "date-fns";
 import { Printer, X, Paperclip } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +19,9 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/shared/ImageUpload"; // NOVO IMPORT
+import { ImageGallery } from "@/components/shared/ImageGallery"; // NOVO IMPORT
+import { getMediaForAnaliseQuimica } from "@/services/mediaApi"; // NOVO IMPORT
 
 interface VisualizarAnaliseModalProps {
   isOpen: boolean;
@@ -49,7 +53,46 @@ export function VisualizarAnaliseModal({
   onOpenChange,
   analise,
 }: VisualizarAnaliseModalProps) {
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState<string | null>(null); // Armazena o ID da análise sendo baixada
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<string | null>(null);
+  const [media, setMedia] = useState<Media[]>([]); // NOVO ESTADO
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false); // NOVO ESTADO
+
+  // Efeito para carregar as mídias quando o modal é aberto ou a análise muda
+  useEffect(() => {
+    if (isOpen && analise?.id) {
+      const fetchMedia = async () => {
+        setIsLoadingMedia(true);
+        try {
+          const fetchedMedia = await getMediaForAnaliseQuimica(analise.id);
+          setMedia(fetchedMedia);
+        } catch (error) {
+          toast.error("Erro ao carregar mídias da análise.");
+          console.error("Erro ao carregar mídias:", error);
+        } finally {
+          setIsLoadingMedia(false);
+        }
+      };
+      fetchMedia();
+    }
+  }, [isOpen, analise?.id]);
+
+  const handleMediaUpdate = () => {
+    if (analise?.id) {
+      const fetchMedia = async () => {
+        setIsLoadingMedia(true);
+        try {
+          const fetchedMedia = await getMediaForAnaliseQuimica(analise.id);
+          setMedia(fetchedMedia);
+        } catch (error) {
+          toast.error("Erro ao recarregar mídias da análise.");
+          console.error("Erro ao recarregar mídias:", error);
+        } finally {
+          setIsLoadingMedia(false);
+        }
+      };
+      fetchMedia();
+    }
+  };
 
   if (!analise) {
     return null;
@@ -189,7 +232,7 @@ export function VisualizarAnaliseModal({
                 <h3 className="text-lg font-semibold text-primary">Valores Finais</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {analise.taxaServicoPercentual != null && (
-                    <DetailItem label="% Serviço" value={analise.taxaServicoPercentual} unit="%" />
+                    <DetailItem label="% Serviço" value={analise.taxaServual} unit="%" />
                   )}
                   {analise.auEstimadoRecuperavelGramas != null && (
                     <DetailItem label="Au Estimado Líquido" value={analise.auEstimadoRecuperavelGramas} unit="g" />
@@ -201,6 +244,24 @@ export function VisualizarAnaliseModal({
               </div>
             </>
           )}
+
+          {/* Seção de Imagens */}
+          <Separator />
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-primary">Imagens</h3>
+            {analise.id ? ( // Adicionada verificação aqui
+              <ImageUpload entity={{ type: 'analiseQuimica', id: analise.id }} onUploadSuccess={handleMediaUpdate} />
+            ) : (
+              <p className="text-sm text-muted-foreground">ID da análise não disponível para upload de imagens.</p>
+            )}
+            {isLoadingMedia ? (
+              <p>Carregando imagens...</p>
+            ) : media.length > 0 ? (
+              <ImageGallery media={media} onDeleteSuccess={handleMediaUpdate} />
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhuma imagem associada a esta análise.</p>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 p-4 bg-muted/50 border-t print:hidden">

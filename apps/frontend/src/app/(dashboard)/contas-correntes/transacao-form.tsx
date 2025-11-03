@@ -1,5 +1,3 @@
-"use client";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,6 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
+import { ImageUpload } from "@/components/shared/ImageUpload"; // Importar ImageUpload
+import { ImageGallery } from "@/components/shared/ImageGallery"; // Importar ImageGallery
 
 const formSchema = z.object({
   descricao: z.string().min(3, "A descrição é obrigatória."),
@@ -37,13 +37,14 @@ const formSchema = z.object({
   dataHora: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de data inválido (AAAA-MM-DD)."),
+  mediaIds: z.array(z.string()).optional(), // Adicionar mediaIds ao schema
 });
 
 interface TransacaoFormProps {
   contaCorrenteId: string;
   onSave: () => void;
   initialData?: TransacaoExtrato | null;
-  moeda?: string; // This prop is no longer the main driver, but can be kept for context
+  moeda?: string;
 }
 
 interface TransacaoExtrato {
@@ -55,6 +56,7 @@ interface TransacaoExtrato {
   tipo: "CREDITO" | "DEBITO";
   contaContabilId: string;
   contaContabilNome: string;
+  medias?: { id: string; path: string }[]; // Adicionar medias ao TransacaoExtrato
 }
 interface ContaContabil {
   id: string;
@@ -65,11 +67,16 @@ interface ContaContabil {
 export function TransacaoForm({ contaCorrenteId, onSave, initialData }: TransacaoFormProps) {
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
   const [quotation, setQuotation] = useState(0);
+  const [uploadedMedia, setUploadedMedia] = useState<{ id: string; path: string }[]>(initialData?.medias || []);
+
 
   type FormValues = z.infer<typeof formSchema>;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      mediaIds: initialData?.medias?.map(media => media.id) || [],
+    }
   });
 
   const { watch, setValue, reset } = form;
@@ -127,7 +134,9 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
       reset({
         ...initialData,
         dataHora: initialData.dataHora.split('T')[0],
+        mediaIds: initialData.medias?.map(media => media.id) || [],
       });
+      setUploadedMedia(initialData.medias || []);
     } else {
       reset({
         dataHora: new Date().toISOString().split("T")[0],
@@ -136,7 +145,9 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
         valor: 0,
         goldAmount: 0,
         contaContabilId: "",
+        mediaIds: [],
       });
+      setUploadedMedia([]);
     }
   }, [initialData, reset]);
 
@@ -293,6 +304,30 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
             </FormItem>
           )}
         />
+
+        <div className="space-y-4">
+          <FormLabel>Imagens Anexadas</FormLabel>
+          {initialData?.id && (
+            <ImageUpload
+              entity={{ type: 'transacao', id: initialData.id }}
+              onMediaUploadSuccess={(media) => {
+                setUploadedMedia((prev) => [...prev, media]);
+                form.setValue('mediaIds', [...(form.getValues('mediaIds') || []), media.id]);
+              }}
+            />
+          )}
+          <ImageGallery
+            media={uploadedMedia}
+            onRemoveMedia={(mediaIdToRemove) => {
+              setUploadedMedia((prev) => prev.filter((media) => media.id !== mediaIdToRemove));
+              form.setValue(
+                'mediaIds',
+                form.getValues('mediaIds')?.filter((id) => id !== mediaIdToRemove) || [],
+              );
+            }}
+          />
+        </div>
+
         <Button type="submit" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? "Salvando..." : "Salvar Lançamento"}
         </Button>

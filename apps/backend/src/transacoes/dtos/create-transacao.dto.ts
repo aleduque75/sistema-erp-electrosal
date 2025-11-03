@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsDate, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsDate, IsEnum, IsNotEmpty, IsOptional, IsArray } from 'class-validator';
 import { TipoTransacaoPrisma } from '@prisma/client';
 
 export class CreateTransacaoDto {
@@ -29,4 +29,9 @@ export class CreateTransacaoDto {
   @IsString()
   @IsOptional()
   contaCorrenteId?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  mediaIds?: string[];
 }

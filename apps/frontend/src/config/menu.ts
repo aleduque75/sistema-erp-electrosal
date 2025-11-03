@@ -157,6 +157,12 @@ export const menuConfig: NavItem[] = [
         icon: PlusCircle,
         description: "Faça uma entrada ou saída manual no estoque.",
       },
+      { // Novo item
+        title: "Lotes de Metal Puro",
+        href: "/pure-metal-lots",
+        icon: Package, // Pode ser outro ícone se preferir
+        description: "Gerencie os lotes de metal puro disponíveis.",
+      },
     ],
   },
   {
@@ -229,6 +235,12 @@ export const menuConfig: NavItem[] = [
         href: "/financeiro/recebimentos-metais",
         icon: Wallet, // Re-using icon, can be changed
         description: "Gerencie os recebimentos de metal pendentes.",
+      },
+      {
+        title: "Pagar Cliente com Metal",
+        href: "/metal-payments/pay-client",
+        icon: HandCoins, // Re-using icon, can be changed
+        description: "Registre o pagamento a um cliente utilizando metal do estoque.",
       },
       {
         title: "Ajuste de Transação",

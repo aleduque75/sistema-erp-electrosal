@@ -26,7 +26,7 @@ export default async function DashboardLayout({
         logoImage={landingPageData?.logoImage}
         logoText={landingPageData?.logoText}
       />
-      <main className="flex-1 container mx-auto p-4 sm:p-6 md:p-8">
+      <main className="flex-1">
         {children}
       </main>
     </div>

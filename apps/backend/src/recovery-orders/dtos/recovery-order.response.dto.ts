@@ -1,26 +1,5 @@
-import { RecoveryOrder, RecoveryOrderStatus, TipoMetal, RawMaterialUsedResumida, AnaliseQuimicaResumida, Media } from '@sistema-erp-electrosal/core';
-
-export class MediaResponseDto {
-  id: string;
-  filename: string;
-  path: string;
-  mimetype: string;
-  size: number;
-  width?: number;
-  height?: number;
-
-  static fromDomain(media: Media): MediaResponseDto {
-    const dto = new MediaResponseDto();
-    dto.id = media.id.toString();
-    dto.filename = media.filename;
-    dto.path = media.path;
-    dto.mimetype = media.mimetype;
-    dto.size = media.size;
-    dto.width = media.width;
-    dto.height = media.height;
-    return dto;
-  }
-}
+import { RecoveryOrder, RecoveryOrderStatus, TipoMetal, RawMaterialUsedResumida, AnaliseQuimicaResumida } from '@sistema-erp-electrosal/core';
+import { MediaResponseDto } from '../../media/dtos/media.response.dto';
 
 export class RecoveryOrderResponseDto {
   id: string;

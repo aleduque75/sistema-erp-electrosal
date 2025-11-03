@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { AccountsPayService } from './accounts-pay.service';
 import {
@@ -34,9 +35,20 @@ export class AccountsPayController {
   }
 
   @Get()
-  findAll(@CurrentUser('orgId') organizationId: string) {
-    // <-- Pega o orgId do token
-    return this.accountsPayService.findAll(organizationId); // <-- Passa o orgId para o serviço
+  findAll(
+    @CurrentUser('orgId') organizationId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('status') status?: 'pending' | 'paid' | 'all',
+  ) {
+    const parsedStartDate = startDate ? new Date(startDate) : undefined;
+    const parsedEndDate = endDate ? new Date(endDate) : undefined;
+    return this.accountsPayService.findAll(
+      organizationId,
+      parsedStartDate,
+      parsedEndDate,
+      status,
+    );
   }
 
   @Get('summary/by-category')

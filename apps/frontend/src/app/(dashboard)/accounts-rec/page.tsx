@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { ReceivePaymentForm } from './components/receive-payment-form';
 import { SaleDetailsView } from '../sales/components/SaleDetailsView';
 
@@ -204,7 +204,7 @@ export default function AccountsRecPage() {
                 <SelectItem value="received">Recebido</SelectItem>
               </SelectContent>
             </Select>
-            <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
         </div>
 
         <Card>

@@ -55,8 +55,7 @@ export interface RecoveryOrderProps {
   // --- DADOS ENVOLVIDOS (POPULADOS PELO REPOSITÓRIO) ---
   analisesEnvolvidas?: AnaliseQuimicaResumida[];
   rawMaterialsUsed?: RawMaterialUsedResumida[];
-  imageId?: string;
-  image?: Media; // TODO: import Media entity
+  images?: Media[];
 }
 
 export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
@@ -115,8 +114,7 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
 
   get rawMaterialsUsed(): RawMaterialUsedResumida[] | undefined { return this._rawMaterialsUsed; }
 
-  get imageId(): string | undefined { return this.props.imageId; }
-  get image(): any | undefined { return this.props.image; }
+  get images(): Media[] | undefined { return this.props.images; }
 
   // Método para definir as análises envolvidas (usado pelo repositório)
   public setAnalisesEnvolvidas(analises: AnaliseQuimicaResumida[]) {

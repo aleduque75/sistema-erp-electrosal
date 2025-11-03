@@ -149,7 +149,7 @@ export class ProcessRecoveryFinalizationUseCase {
 
     // --- Create Financial Transaction ---
     if (auPuroRecuperadoGramas > 0) {
-      const cotacao = await this.cotacoesService.findLatest(recoveryOrder.metalType, organizationId);
+      const cotacao = await this.cotacoesService.findLatest(recoveryOrder.metalType, organizationId, new Date());
       if (cotacao && parseFloat(cotacao.buyPrice.toString()) > 0) {
         const valorBRL = auPuroRecuperadoGramas * parseFloat(cotacao.buyPrice.toString());
         this.logger.log(`Valor BRL do metal recuperado: ${valorBRL}`);

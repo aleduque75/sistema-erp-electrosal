@@ -11,15 +11,18 @@ export class SettingsService {
 
   // Busca as configurações do usuário, ou cria se não existirem
   async findOne(userId: string): Promise<UserSettings> {
+    console.log('[DEBUG] SettingsService.findOne - userId:', userId);
     let prismaSettings = await this.prisma.userSettings.findUnique({
       where: { userId },
     });
     console.log('[DEBUG] SettingsService - prismaSettings (raw):', prismaSettings);
     if (!prismaSettings) {
+      console.log('[DEBUG] SettingsService.findOne - Criando novas configurações para o usuário:', userId);
       const newSettings = UserSettings.create({ userId });
       prismaSettings = await this.prisma.userSettings.create({
         data: UserSettingsMapper.toPersistence(newSettings),
       });
+      console.log('[DEBUG] SettingsService.findOne - Novas configurações criadas:', prismaSettings);
     }
     const domainSettings = UserSettingsMapper.toDomain(prismaSettings);
     console.log('[DEBUG] SettingsService - domainSettings:', domainSettings);

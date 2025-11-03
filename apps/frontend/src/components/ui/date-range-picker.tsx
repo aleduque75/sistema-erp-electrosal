@@ -20,7 +20,7 @@ interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> 
   onDateChange: (date: DateRange | undefined) => void;
 }
 
-export function DatePickerWithRange({ className, date, onDateChange }: DatePickerWithRangeProps) {
+export function DateRangePicker({ className, date, onDateChange }: DatePickerWithRangeProps) {
   return (
     <div className={cn('grid gap-2', className)}>
       <Popover>

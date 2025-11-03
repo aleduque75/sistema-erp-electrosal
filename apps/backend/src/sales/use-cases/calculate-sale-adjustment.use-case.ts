@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
-import { Prisma } from '@prisma/client';
+import { Prisma, TipoMetal } from '@prisma/client';
 
 type PrismaTransactionClient = Prisma.TransactionClient;
 
@@ -158,150 +158,149 @@ export class CalculateSaleAdjustmentUseCase {
 
     const grossProfitBRL = paymentReceivedBRL.minus(totalCostBRL);
     const otherCostsBRL = new Decimal(sale.shippingCost || 0);
-    const netProfitBRL = grossProfitBRL.plus(laborCostInBRL).minus(otherCostsBRL);
-
-        // 6. Save Adjustment
-
-        const adjustmentData = {
-
-          saleId,
-
-          organizationId,
-
-          paymentReceivedBRL,
-
-          paymentQuotation,
-
-          paymentEquivalentGrams,
-
-          saleExpectedGrams,
-
-          grossDiscrepancyGrams,
-
-          costsInBRL: otherCostsBRL,
-
-          costsInGrams,
-
-          netDiscrepancyGrams,
-
-          totalCostBRL,
-
-          grossProfitBRL,
-
-          otherCostsBRL,
-
-          netProfitBRL,
-
-        };
-
+        const netProfitBRL = grossProfitBRL.plus(laborCostInBRL).minus(otherCostsBRL);
     
+            // 6. Save Adjustment
+    
+            const adjustmentData = {
+    
+              saleId,
+    
+              organizationId,
+    
+              paymentReceivedBRL,
+    
+              paymentQuotation,
+    
+              paymentEquivalentGrams,
+    
+              saleExpectedGrams,
+    
+              grossDiscrepancyGrams,
+    
+              costsInBRL: otherCostsBRL,
+    
+              costsInGrams,
+    
+              netDiscrepancyGrams,
+    
+              totalCostBRL,
+    
+              grossProfitBRL,
+    
+              otherCostsBRL,
+    
+              netProfitBRL,
+    
+            };    
 
         this.logger.log(`Dados do ajuste: ${JSON.stringify(adjustmentData, null, 2)}`);
 
     
 
         const adjustAccountRec = async (client: PrismaTransactionClient) => {
-
+          // Lógica existente para ajuste de AccountRec em BRL
           if (
-
             primaryAccountRec &&
-
             paymentEquivalentGrams &&
-
             saleExpectedGrams &&
-
             paymentEquivalentGrams.greaterThanOrEqualTo(saleExpectedGrams) &&
-
             outstandingBRL.greaterThan(new Decimal(0.01)) // Check for a positive outstanding BRL balance
-
           ) {
-
             this.logger.log(`[SALE_ADJUSTMENT] Ajustando AccountRec ${primaryAccountRec.id} para a venda ${saleId}. Saldo BRL pendente: ${outstandingBRL.toFixed(2)}`);
 
-    
-
-            // Find the "Perda por Variação de Cotação" ContaContabil
-
             const lossAccount = await client.contaContabil.findFirst({
-
               where: {
-
                 organizationId,
-
                 nome: "Perda por Variação de Cotação", // This should ideally be configurable
-
                 tipo: "DESPESA",
-
               },
-
             });
 
-    
-
             if (!lossAccount) {
-
               this.logger.error(`[SALE_ADJUSTMENT] Conta Contábil 'Perda por Variação de Cotação' não encontrada para a organização ${organizationId}. Não foi possível ajustar o AccountRec.`);
-
-              // Optionally, throw an error or create a default account
-
             } else {
-
-              // Create a new Transacao for the adjustment
-
               await client.transacao.create({
-
                 data: {
-
                   tipo: "DEBITO",
-
                   valor: outstandingBRL,
-
                   moeda: "BRL",
-
                   descricao: `Ajuste de Variação de Cotação - Venda ${sale.orderNumber}`,
-
                   dataHora: new Date(),
-
                   contaContabilId: lossAccount.id,
-
                   organizationId,
-
                   accountRecId: primaryAccountRec.id,
-
                   goldAmount: new Decimal(0),
-
                   goldPrice: new Decimal(0),
-
                 },
-
               });
-
-    
-
-              // Update the AccountRec to mark it as fully received
 
               await client.accountRec.update({
-
                 where: { id: primaryAccountRec.id },
-
                 data: {
-
                   received: true,
-
                   receivedAt: new Date(),
-
-                  amountPaid: primaryAccountRec.amount, // Mark as fully paid in BRL
-
+                  amountPaid: primaryAccountRec.amount,
                 },
-
               });
-
               this.logger.log(`[SALE_ADJUSTMENT] AccountRec ${primaryAccountRec.id} ajustado e transação de perda criada.`);
-
             }
-
           }
 
+          // Nova lógica para diferença de cotação em pagamentos de metal
+          if (sale.paymentMethod === 'METAL' || sale.paymentMethod === 'METAL_CREDIT') {
+            const paymentDate = sale.updatedAt; // Usar a data de atualização da venda como data do pagamento
+            const metalType = sale.saleItems[0]?.product?.goldValue ? TipoMetal.AU : TipoMetal.AU; // Assumindo AU por enquanto, precisa ser mais dinâmico
+
+            const buyQuotation = await this.prisma.quotation.findFirst({
+              where: {
+                organizationId,
+                metal: metalType,
+                date: { lte: paymentDate },
+                tipoPagamento: null, // Cotação de compra geral
+              },
+              orderBy: { date: 'desc' },
+            });
+
+            if (buyQuotation && paymentQuotation && !paymentQuotation.isZero()) {
+              const buyPrice = new Decimal(buyQuotation.buyPrice);
+              const salePrice = paymentQuotation; // Cotação efetiva da venda
+
+              if (!buyPrice.equals(salePrice)) {
+                const differenceInGrams = paymentEquivalentGrams.times(salePrice.minus(buyPrice)).dividedBy(salePrice);
+                const differenceInBRL = differenceInGrams.times(buyPrice);
+
+                if (!differenceInGrams.isZero()) {
+                  const differenceAccount = await client.contaContabil.findFirst({
+                    where: {
+                      organizationId,
+                      nome: "Perda por Variação de Cotação", // Usando a conta existente
+                      tipo: "DESPESA", // O tipo da conta deve ser DESPESA
+                    },
+                  });
+
+                  if (!differenceAccount) {
+                    this.logger.error(`[SALE_ADJUSTMENT] Conta Contábil 'Perda por Variação de Cotação' não encontrada para a organização ${organizationId}.`);
+                  } else {
+                    await client.transacao.create({
+                      data: {
+                        tipo: differenceInGrams.greaterThan(0) ? "CREDITO" : "DEBITO", // Crédito para ganho, Débito para perda
+                        valor: differenceInBRL.abs(),
+                        moeda: "BRL",
+                        descricao: `Ajuste de Diferença de Cotação (${metalType}) - Venda ${sale.orderNumber}`,
+                        dataHora: paymentDate,
+                        contaContabilId: differenceAccount.id,
+                        organizationId,
+                        goldAmount: differenceInGrams.abs(),
+                        goldPrice: buyPrice,
+                      },
+                    });
+                    this.logger.log(`[SALE_ADJUSTMENT] Transação de diferença de cotação criada: ${differenceInGrams.toFixed(4)}g (${differenceInBRL.toFixed(2)} BRL).`);
+                  }
+                }
+              }
+            }
+          }
         };
 
     

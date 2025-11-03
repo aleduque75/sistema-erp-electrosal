@@ -40,9 +40,10 @@ const statusVariantMap: { [key in ChemicalReactionDetails['status']]: 'default' 
 
 export default function ChemicalReactionsPage() {
   const router = useRouter();
-  // O tipo do estado agora é a interface completa
   const [reactions, setReactions] = useState<ChemicalReactionDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedReaction, setSelectedReaction] = useState<ChemicalReactionDetails | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchReactions = async () => {
     setIsLoading(true);
@@ -60,8 +61,21 @@ export default function ChemicalReactionsPage() {
     fetchReactions();
   }, []);
 
-  const handleOpenDetails = (reactionId: string) => {
-    router.push(`/producao/reacoes-quimicas/${reactionId}`);
+  const handleOpenDetails = async (reactionId: string) => {
+    try {
+      const response = await api.get(`/chemical-reactions/${reactionId}`);
+      setSelectedReaction(response.data);
+      setIsModalOpen(true);
+    } catch (error) {
+      toast.error("Falha ao carregar detalhes da reação.");
+      console.error("Failed to fetch reaction details:", error);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedReaction(null);
+    fetchReactions(); // Refresh the list after closing the modal
   };
 
   const columns: ColumnDef<ChemicalReactionDetails>[] = [
@@ -123,16 +137,6 @@ export default function ChemicalReactionsPage() {
                 Ver Detalhes
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {/* NOTA: Estes componentes devem ser encapsulados em DropdownMenuItem ou similar, 
-              pois o DropdownMenuContent só aceita DropdownMenuItems diretamente. */}
-              {/* Deixando-os como estavam no seu código para evitar novos erros JSX, mas idealmente seria:
-              <DropdownMenuItem asChild><ProductionStepClientBlock ... /></DropdownMenuItem> */}
-              {(reaction.status === 'STARTED' || reaction.status === 'PROCESSING') && (
-                <ProductionStepClientBlock reactionId={reaction.id} auUsedGrams={reaction.auUsedGrams} />
-              )}
-              {reaction.status === 'PENDING_PURITY_ADJUSTMENT' && (
-                <AdjustPurityClientBlock reactionId={reaction.id} />
-              )}
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -167,6 +171,11 @@ export default function ChemicalReactionsPage() {
           </CardContent>
         </Card>
       </div>
+      <ReactionDetailsModal
+        reaction={selectedReaction}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </>
   );
 }

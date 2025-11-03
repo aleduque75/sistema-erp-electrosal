@@ -58,6 +58,8 @@ import { RawMaterialsModule } from './raw-materials.module';
 import { RawMaterialsController } from './raw-materials.controller';
 import { RawMaterialsService } from './raw-materials.service';
 import { MetalCreditsModule } from './metal-credits/metal-credits.module';
+import { PureMetalLotMovementsModule } from './pure-metal-lot-movements/pure-metal-lot-movements.module';
+import { MetalPaymentsModule } from './metal-payments/metal-payments.module';
 
 @Module({
   imports: [
@@ -114,6 +116,8 @@ import { MetalCreditsModule } from './metal-credits/metal-credits.module';
     StockStatementModule,
     RawMaterialsModule,
     MetalCreditsModule,
+    PureMetalLotMovementsModule,
+    MetalPaymentsModule,
   ],
   controllers: [AppController, RawMaterialsController],
   providers: [

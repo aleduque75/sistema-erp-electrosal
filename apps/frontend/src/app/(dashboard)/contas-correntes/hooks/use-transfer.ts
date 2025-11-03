@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -36,17 +34,23 @@ export function useTransfer(transferType: "BRL" | "GOLD", currentAccountId: stri
   }, [fetchAccounts]);
 
   const performTransfer = async (data: {
-    fromAccountId: string;
-    toAccountId: string;
-    amount: number;
+    sourceAccountId: string; // Renomear
+    destinationAccountId: string; // Renomear
+    amount?: number;
+    goldAmount?: number;
+    quotation?: number;
     description?: string;
+    mediaIds?: string[];
+    dataHora?: string;
   }) => {
     try {
       const endpoint = transferType === "BRL" ? "/transacoes/transfer" : "/metal-accounts/transfer-gold";
       await api.post(endpoint, data);
       toast.success("Transferência realizada com sucesso!");
-    } catch (error) {
-      toast.error("Falha ao realizar transferência.");
+    } catch (error: any) { // Adicionar any para acessar response
+      toast.error("Falha ao realizar transferência.", {
+        description: error.response?.data?.message || "Ocorreu um erro desconhecido",
+      });
     }
   };
 

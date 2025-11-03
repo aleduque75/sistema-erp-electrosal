@@ -12,6 +12,8 @@ export interface MediaProps {
   createdAt: Date;
   updatedAt: Date;
   recoveryOrderId?: string; // Adicionado para associar a RecoveryOrder
+  analiseQuimicaId?: string; // Adicionado para associar a AnaliseQuimica
+  transacaoId?: string; // Adicionado
 }
 
 export class Media extends Entity<MediaProps> {
@@ -39,6 +41,8 @@ export class Media extends Entity<MediaProps> {
   get height(): number | null | undefined { return this.props.height; }
   get organizationId(): string | null | undefined { return this.props.organizationId; }
   get recoveryOrderId(): string | null | undefined { return this.props.recoveryOrderId; }
+  get analiseQuimicaId(): string | null | undefined { return this.props.analiseQuimicaId; }
+  get transacaoId(): string | null | undefined { return this.props.transacaoId; } // Adicionado
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
 }

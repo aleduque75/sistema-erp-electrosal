@@ -189,6 +189,7 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     // Mapeamento manual para garantir que o nome do cliente seja anexado
     return dbAnalises.map(dbAnalise => {
       const { cliente, ...analiseProps } = dbAnalise;
+      console.log(`ID da análise do banco de dados: ${dbAnalise.id}`); // Adicionar este log
       const domainAnalise = AnaliseQuimica.reconstituir(
         {
           ...analiseProps,

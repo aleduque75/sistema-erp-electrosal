@@ -79,9 +79,15 @@ export class PurchaseOrdersService {
     });
   }
 
-  async findAll(organizationId: string): Promise<PurchaseOrder[]> {
+  async findAll(organizationId: string, fornecedorId?: string): Promise<PurchaseOrder[]> {
+    const where: Prisma.PurchaseOrderWhereInput = { organizationId };
+
+    if (fornecedorId) {
+      where.fornecedorId = fornecedorId;
+    }
+
     return this.prisma.purchaseOrder.findMany({
-      where: { organizationId },
+      where,
       include: { fornecedor: { include: { pessoa: true } }, items: { include: { product: true, rawMaterial: true } } },
       orderBy: { createdAt: 'desc' },
     });
@@ -222,12 +228,15 @@ export class PurchaseOrdersService {
     });
   }
 
-  async receive(organizationId: string, id: string): Promise<PurchaseOrder> {
+  async receive(organizationId: string, id: string, receivedAt: string): Promise<PurchaseOrder> {
+    const receptionDate = new Date(receivedAt);
+
     const order = await this.prisma.purchaseOrder.findFirst({
       where: { id, organizationId },
       include: {
         items: { include: { product: true, rawMaterial: true } },
         paymentTerm: true,
+        fornecedor: { include: { pessoa: true } },
       },
     });
 
@@ -256,7 +265,7 @@ export class PurchaseOrdersService {
               remainingQuantity: item.quantity,
               sourceType: 'PURCHASE_ORDER',
               sourceId: order.id,
-              receivedDate: new Date(), // Current date
+              receivedDate: receptionDate, // Use provided date
             },
           });
 
@@ -301,14 +310,13 @@ export class PurchaseOrdersService {
       }
 
       // 2. Create accounts payable
-      const today = new Date();
       const totalAmount = new Decimal(order.totalAmount);
       const installmentsDays = order.paymentTerm!.installmentsDays;
       const numInstallments = installmentsDays.length;
       const installmentAmount = totalAmount.dividedBy(numInstallments).toDecimalPlaces(2);
 
       for (let i = 0; i < numInstallments; i++) {
-        const dueDate = addDays(today, installmentsDays[i]);
+        const dueDate = addDays(receptionDate, installmentsDays[i]);
         // Adjust last installment for rounding differences
         const amount = (i === numInstallments - 1) 
           ? totalAmount.minus(installmentAmount.times(numInstallments - 1))
@@ -317,12 +325,13 @@ export class PurchaseOrdersService {
         await tx.accountPay.create({
           data: {
             organizationId,
-            description: `Parcela ${i + 1}/${numInstallments} do Pedido de Compra #${order.orderNumber}`,
+            description: `Fornecedor: ${order.fornecedor.pessoa.name} - Parcela ${i + 1}/${numInstallments} do Pedido de Compra #${order.orderNumber}`,
             amount: amount,
             dueDate: dueDate,
             isInstallment: true,
             installmentNumber: i + 1,
             totalInstallments: numInstallments,
+            purchaseOrderId: order.id, // Link to the purchase order
             // TODO: Link to a 'contaContabil' for purchases
           },
         });
@@ -333,6 +342,7 @@ export class PurchaseOrdersService {
         where: { id },
         data: {
           status: PurchaseOrderStatus.RECEIVED,
+          receivedAt: receptionDate, // Save the reception date
         },
         include: {
           fornecedor: { include: { pessoa: true } },

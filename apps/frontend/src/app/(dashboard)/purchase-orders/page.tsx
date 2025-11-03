@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { MoreHorizontal } from "lucide-react";
+
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,6 +14,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,17 +24,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { PurchaseOrderForm } from "./purchase-order-form";
+import { PurchaseOrderDetailsView } from "./components/purchase-order-details-view";
+import { MoreHorizontal, Info, Edit } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Label } from "@/components/ui/label";
 
 // Interfaces
 interface PurchaseOrder {
@@ -63,20 +61,44 @@ export default function PurchaseOrdersPage() {
   const [orderToEdit, setOrderToEdit] = useState<PurchaseOrder | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
   const [orderToReceive, setOrderToReceive] = useState<PurchaseOrder | null>(null);
+  const [receptionDate, setReceptionDate] = useState<Date | undefined>(new Date());
+  const [orderToView, setOrderToView] = useState<PurchaseOrder | null>(null);
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
+  const [filter, setFilter] = useState(""); // Add filter state
 
   const fetchPurchaseOrders = useCallback(async () => {
     if (!user) return;
     try {
-      const response = await api.get("/purchase-orders");
+      const response = await api.get(`/purchase-orders`);
       setPurchaseOrders(response.data);
     } catch (err) {
       toast.error("Falha ao buscar pedidos de compra.");
     }
   }, [user]);
 
+  const filteredPurchaseOrders = useMemo(() => {
+    return purchaseOrders.filter(order => {
+      const searchTerm = filter.toLowerCase();
+      const matchesText = searchTerm === '' ||
+        order.orderNumber.toLowerCase().includes(searchTerm) ||
+        order.fornecedor.pessoa.name.toLowerCase().includes(searchTerm);
+
+      const matchesSupplier = supplierFilter === '' || order.fornecedorId === supplierFilter;
+
+      return matchesText && matchesSupplier;
+    });
+  }, [purchaseOrders, filter, supplierFilter]);
+
   useEffect(() => {
     fetchPurchaseOrders();
   }, [fetchPurchaseOrders]);
+
+  useEffect(() => {
+    api.get("/pessoa?type=JURIDICA&isSupplier=true").then((res) => {
+      setSuppliers(res.data.map((p: any) => ({ id: p.id, name: p.name })));
+    });
+  }, []);
 
   const handleOpenNewModal = () => {
     setOrderToEdit(null);
@@ -107,9 +129,14 @@ export default function PurchaseOrdersPage() {
   };
 
   const handleReceive = async () => {
-    if (!orderToReceive) return;
+    if (!orderToReceive || !receptionDate) {
+      toast.error("Selecione uma data de recebimento.");
+      return;
+    }
     try {
-      await api.post(`/purchase-orders/${orderToReceive.id}/receive`);
+      await api.post(`/purchase-orders/${orderToReceive.id}/receive`, {
+        receivedAt: receptionDate.toISOString(),
+      });
       toast.success("Mercadoria recebida com sucesso!");
       setOrderToReceive(null);
       fetchPurchaseOrders();
@@ -154,9 +181,15 @@ export default function PurchaseOrdersPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => handleOpenEditModal(order)}>
-                Editar
-              </DropdownMenuItem>
+              {order.status === 'PENDING' ? (
+                <DropdownMenuItem onClick={() => handleOpenEditModal(order)}>
+                  <Edit className="mr-2 h-4 w-4" /> Editar
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => setOrderToView(order)}>
+                  <Info className="mr-2 h-4 w-4" /> Detalhes
+                </DropdownMenuItem>
+              )}
               {order.status === 'PENDING' && (
                 <DropdownMenuItem onClick={() => setOrderToReceive(order)}>
                   Receber Mercadoria
@@ -179,25 +212,42 @@ export default function PurchaseOrdersPage() {
   if (loading) return <p className="text-center p-10">Carregando...</p>;
 
   return (
-    <>
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
+    <div className="p-4 md:p-8 space-y-4">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Pedidos de Compra</h1>
         <Button onClick={handleOpenNewModal}>Novo Pedido de Compra</Button>
       </div>
 
+      <div className="flex items-center gap-4">
+        <Input
+          placeholder="Filtrar por número do pedido ou fornecedor..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="max-w-sm"
+        />
+        <Combobox
+          options={[{ value: "", label: "Todos os Fornecedores" }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
+          value={supplierFilter}
+          onChange={setSupplierFilter}
+          placeholder="Filtrar por Fornecedor..."
+          searchPlaceholder="Buscar fornecedor..."
+          emptyText="Nenhum fornecedor encontrado."
+        />
+      </div>
+
       <Card>
         <CardContent className="pt-6">
-          <div className="overflow-x-auto">
-            <DataTable columns={columns} data={purchaseOrders} filterColumnId="orderNumber" />
-          </div>
+          <DataTable columns={columns} data={filteredPurchaseOrders} />
         </CardContent>
       </Card>
+
 
       <ResponsiveDialog
         open={isFormModalOpen}
         onOpenChange={setIsFormModalOpen}
         title={orderToEdit ? "Editar Pedido de Compra" : "Novo Pedido de Compra"}
         description="Preencha os detalhes do pedido de compra aqui."
+        className="max-w-4xl"
       >
         <PurchaseOrderForm initialData={orderToEdit} onSave={handleSave} />
       </ResponsiveDialog>
@@ -233,10 +283,19 @@ export default function PurchaseOrdersPage() {
           <DialogHeader>
             <DialogTitle>Confirmar Recebimento</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja confirmar o recebimento da mercadoria para o pedido "{orderToReceive?.orderNumber}"?
-              Esta ação irá atualizar o estoque e gerar as contas a pagar.
+              Selecione a data de recebimento da mercadoria para o pedido "{orderToReceive?.orderNumber}".
             </DialogDescription>
           </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="reception-date" className="text-right">
+                Data de Recebimento
+              </Label>
+              <div className="col-span-3">
+                <DatePicker date={receptionDate} setDate={setReceptionDate} />
+              </div>
+            </div>
+          </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Cancelar</Button>
@@ -247,6 +306,16 @@ export default function PurchaseOrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+
+      <Dialog open={!!orderToView} onOpenChange={(isOpen) => !isOpen && setOrderToView(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Pedido de Compra</DialogTitle>
+            <DialogDescription>Pedido #{orderToView?.orderNumber}</DialogDescription>
+          </DialogHeader>
+          {orderToView && <PurchaseOrderDetailsView order={orderToView} />}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

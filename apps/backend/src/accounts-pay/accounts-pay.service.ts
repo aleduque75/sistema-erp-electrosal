@@ -74,14 +74,20 @@ export class AccountsPayService {
     organizationId: string,
     startDate?: Date,
     endDate?: Date,
+    status?: 'pending' | 'paid' | 'all',
   ): Promise<any> {
     const where: Prisma.AccountPayWhereInput = {
       organizationId,
-      dueDate: {
-        gte: startDate,
-        lte: endDate,
-      },
     };
+
+    if (status === 'pending') {
+      where.paid = false;
+    } else if (status === 'paid') {
+      where.paid = true;
+      where.dueDate = { gte: startDate, lte: endDate };
+    } else { // status === 'all' or undefined
+      where.dueDate = { gte: startDate, lte: endDate };
+    }
 
     const accounts = await this.prisma.accountPay.findMany({
       where,
@@ -89,8 +95,17 @@ export class AccountsPayService {
       orderBy: { dueDate: 'asc' },
     });
 
+    const totalWhere: Prisma.AccountPayWhereInput = {
+      organizationId,
+      paid: false,
+    };
+
+    if (status !== 'pending') {
+      totalWhere.dueDate = { gte: startDate, lte: endDate };
+    }
+
     const totalResult = await this.prisma.accountPay.aggregate({
-      where: { ...where, paid: false },
+      where: totalWhere,
       _sum: {
         amount: true,
       },
@@ -145,6 +160,10 @@ export class AccountsPayService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      const goldAmount = data.quotation && data.quotation > 0
+        ? new Decimal(accountToPay.amount).div(data.quotation)
+        : undefined;
+
       const newTransaction = await tx.transacao.create({
         data: {
           organizationId,
@@ -155,6 +174,8 @@ export class AccountsPayService {
           valor: accountToPay.amount,
           moeda: 'BRL',
           dataHora: data.paidAt || new Date(),
+          goldAmount: goldAmount,
+          goldPrice: data.quotation,
         },
       });
 
