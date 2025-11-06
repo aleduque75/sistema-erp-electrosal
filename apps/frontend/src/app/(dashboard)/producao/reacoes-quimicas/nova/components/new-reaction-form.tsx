@@ -36,15 +36,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PlusCircle, Trash2 } from "lucide-react";
-import {
-  Dialog,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { MetalLotSelectionModal } from "./metal-lot-selection-modal";
 import { TipoMetal } from "@/types/tipo-metal";
 
 // ZOD SCHEMA for the creation step
 const formSchema = z.object({
+  reactionDate: z.string().min(1, "Data da reação é obrigatória."),
   metalType: z.nativeEnum(TipoMetal, { required_error: "Selecione um tipo de metal." }),
   notes: z.string().optional(),
   sourceLots: z
@@ -87,6 +85,7 @@ export function NewReactionForm() {
   const form = useForm<NewReactionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      reactionDate: new Date().toISOString().split("T")[0],
       metalType: TipoMetal.AU,
       notes: "",
       sourceLots: [],
@@ -117,6 +116,10 @@ export function NewReactionForm() {
 
   const selectedOutputProductGroupId = form.watch("outputProductGroupId");
   const selectedMetalType = form.watch("metalType");
+  const sourceLots = form.watch("sourceLots");
+  const totalGramsToUse = useMemo(() => {
+    return sourceLots.reduce((acc, lot) => acc + (lot.gramsToUse || 0), 0);
+  }, [sourceLots]);
   
   const selectedOutputProduct = useMemo(() => {
     const group = productGroups?.find((pg) => pg.id === selectedOutputProductGroupId);
@@ -153,12 +156,11 @@ export function NewReactionForm() {
     }
 
     try {
+      const { outputProductGroupId, ...restOfValues } = values;
       const payload = {
-        metalType: values.metalType,
-        notes: values.notes,
+        ...restOfValues,
+        reactionDate: new Date(values.reactionDate).toISOString(),
         outputProductId: selectedOutputProduct.id,
-        sourceLots: values.sourceLots,
-        batchNumber: values.batchNumber,
       };
 
       await api.post("/chemical-reactions", payload);
@@ -183,6 +185,19 @@ export function NewReactionForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="reactionDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data da Reação</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="metalType"
@@ -210,7 +225,7 @@ export function NewReactionForm() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">
-                  Insumos (Entrada de Metal)
+                  Insumos (Entrada de Metal) - Total: {totalGramsToUse.toFixed(3)}g
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">

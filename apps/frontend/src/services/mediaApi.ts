@@ -37,6 +37,18 @@ export const uploadMediaForTransacao = async (file: File, transacaoId: string): 
   return response.data;
 };
 
+export const uploadMediaForChemicalReaction = async (file: File, chemicalReactionId: string): Promise<Media> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await api.post<Media>(`/media/upload?chemicalReactionId=${chemicalReactionId}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
 export const getMediaForAnaliseQuimica = async (analiseQuimicaId: string): Promise<Media[]> => {
   const response = await api.get<Media[]>(`/media/analise-quimica/${analiseQuimicaId}`);
   return response.data;

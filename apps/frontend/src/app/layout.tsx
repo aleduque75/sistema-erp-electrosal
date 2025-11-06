@@ -6,8 +6,8 @@ import { Toaster } from "sonner";
 import { QueryProvider } from "@/components/providers/query-provider";
 
 export const metadata = {
-  title: 'Sistema Beleza',
-  description: 'Sistema de gestão para salões de beleza e clínicas de estética',
+  title: 'Sistema Electrosal',
+  description: 'Sistema de gestão para Galvanicas',
   viewport: 'width=device-width, initial-scale=1',
 };
 

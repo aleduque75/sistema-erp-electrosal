@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsNumber, IsString, IsEnum } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsDateString,
+} from 'class-validator';
 import { TipoMetal } from '@prisma/client';
 
 export class PayAccountsRecWithMetalDto {
@@ -17,4 +24,8 @@ export class PayAccountsRecWithMetalDto {
   @IsNotEmpty()
   @IsNumber()
   purity: number;
+
+  @IsOptional()
+  @IsDateString()
+  receivedAt?: string;
 }

@@ -479,7 +479,7 @@ model Transacao {
   organization    Organization        @relation(fields: [organizationId], references: [id])
   status          TransacaoStatus     @default(ATIVA)
   accountRec      AccountRec?         @relation(fields: [accountRecId], references: [id])
-  medias          Media[]
+  medias          Media[] @relation("TransacaoToMedia")
   linkedTransactionId String?             @unique
   linkedTransaction   Transacao?          @relation("Transfer", fields: [linkedTransactionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   transfer            Transacao?          @relation("Transfer")
@@ -605,6 +605,8 @@ model Media {
   chemicalReactionId String?
   chemicalReaction   chemical_reactions? @relation(fields: [chemicalReactionId], references: [id])
   organization     Organization? @relation(fields: [organizationId], references: [id])
+  transacaoId      String?
+  transacao        Transacao? @relation("TransacaoToMedia", fields: [transacaoId], references: [id])
 }
 
 // ...
@@ -892,7 +894,7 @@ model chemical_reactions {
   organization                  Organization                 @relation(fields: [organizationId], references: [id])
   outputProduct                 Product                      @relation(fields: [outputProductId], references: [id])
   productionBatch               InventoryLot?                @relation("ReactionToBatch", fields: [productionBatchId], references: [id])
-  lots                          pure_metal_lots[]            @relation("chemical_reactionsTopure_metal_lots")
+  lots                          ChemicalReactionLot[]
   rawMaterialsUsed              RawMaterialUsed[]
   medias                        Media[]
 
@@ -906,6 +908,7 @@ model pure_metal_lots {
   organizationId     String
   sourceType         String
   sourceId           String
+  description        String?
   metalType          TipoMetal
   initialGrams       Float
   remainingGrams     Float
@@ -918,8 +921,20 @@ model pure_metal_lots {
   saleId             String?
   Organization       Organization         @relation(fields: [organizationId], references: [id])
   sale               Sale?                @relation(fields: [saleId], references: [id])
-  chemical_reactions chemical_reactions[] @relation("chemical_reactionsTopure_metal_lots")
+  chemicalReactions  ChemicalReactionLot[]
   movements          PureMetalLotMovement[]
+}
+
+model ChemicalReactionLot {
+  chemicalReactionId String
+  pureMetalLotId     String
+  gramsToUse         Float
+
+  chemicalReaction chemical_reactions @relation(fields: [chemicalReactionId], references: [id])
+  pureMetalLot     pure_metal_lots    @relation(fields: [pureMetalLotId], references: [id])
+
+  @@id([chemicalReactionId, pureMetalLotId])
+  @@map("chemical_reaction_lots")
 }
 
 model PureMetalLotMovement {

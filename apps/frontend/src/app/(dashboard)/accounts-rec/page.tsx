@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
@@ -18,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { ReceivePaymentForm } from './components/receive-payment-form';
+import { EditAccountRecForm } from './components/edit-account-rec-form';
 import { SaleDetailsView } from '../sales/components/SaleDetailsView';
 
 // Interfaces
@@ -44,11 +46,14 @@ const formatDate = (dateString?: string | null) => {
 };
 
 export default function AccountsRecPage() {
+  const router = useRouter();
   const [accounts, setAccounts] = useState<AccountRec[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [accountToReceive, setAccountToReceive] = useState<AccountRec | null>(null);
   const [isViewSaleModalOpen, setIsViewSaleModalOpen] = useState(false);
   const [saleToView, setSaleToView] = useState<any | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [accountToEdit, setAccountToEdit] = useState<AccountRec | null>(null);
 
   // Filters State
   const [filter, setFilter] = useState('');
@@ -96,6 +101,20 @@ export default function AccountsRecPage() {
     const currentFilter = statusFilter;
     setStatusFilter('REFETCH');
     setTimeout(() => setStatusFilter(currentFilter), 0);
+  };
+
+  const handleSaveEdit = () => {
+    setIsEditModalOpen(false);
+    setAccountToEdit(null);
+    // Re-trigger fetch
+    const currentFilter = statusFilter;
+    setStatusFilter('REFETCH');
+    setTimeout(() => setStatusFilter(currentFilter), 0);
+  };
+
+  const handleEdit = (account: AccountRec) => {
+    setAccountToEdit(account);
+    setIsEditModalOpen(true);
   };
 
   const handleViewSale = async (saleId: string) => {
@@ -156,7 +175,7 @@ export default function AccountsRecPage() {
       header: "Status",
       cell: ({ row }) => (
         <Badge variant={row.original.received ? "default" : "secondary"}>
-          {row.original.received ? `Recebido em ${formatDate(row.original.receivedAt!)}` : "Pendente"}
+          {row.original.received ? `Recebido em ${formatDate(row.original.dueDate!)}` : "Pendente"}
         </Badge>
       ),
     },
@@ -172,6 +191,7 @@ export default function AccountsRecPage() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => handleViewSale(account.sale?.id!)} disabled={!account.sale}>Visualizar Venda</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEdit(account)}>Editar</DropdownMenuItem>
               <DropdownMenuSeparator />
               {!account.received && (
                 <DropdownMenuItem onClick={() => setAccountToReceive(account)}>Registrar Recebimento</DropdownMenuItem>
@@ -220,6 +240,16 @@ export default function AccountsRecPage() {
                     <DialogTitle>Registrar Recebimento</DialogTitle>
                 </DialogHeader>
                 {accountToReceive && <ReceivePaymentForm accountRec={accountToReceive} onSave={handleSavePayment} />}
+            </DialogContent>
+        </Dialog>
+
+        {/* Modal para Editar Conta a Receber */}
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Editar Conta a Receber</DialogTitle>
+                </DialogHeader>
+                {accountToEdit && <EditAccountRecForm accountRec={accountToEdit} onSave={handleSaveEdit} />}
             </DialogContent>
         </Dialog>
 

@@ -14,6 +14,7 @@ export interface MediaProps {
   recoveryOrderId?: string; // Adicionado para associar a RecoveryOrder
   analiseQuimicaId?: string; // Adicionado para associar a AnaliseQuimica
   transacaoId?: string; // Adicionado
+  chemicalReactionId?: string; // Adicionado para associar a ChemicalReaction
 }
 
 export class Media extends Entity<MediaProps> {
@@ -42,7 +43,8 @@ export class Media extends Entity<MediaProps> {
   get organizationId(): string | null | undefined { return this.props.organizationId; }
   get recoveryOrderId(): string | null | undefined { return this.props.recoveryOrderId; }
   get analiseQuimicaId(): string | null | undefined { return this.props.analiseQuimicaId; }
-  get transacaoId(): string | null | undefined { return this.props.transacaoId; } // Adicionado
+  get transacaoId(): string | null | undefined { return this.props.transacaoId; }
+  get chemicalReactionId(): string | null | undefined { return this.props.chemicalReactionId; }
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
 }

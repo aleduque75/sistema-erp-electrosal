@@ -16,6 +16,7 @@ export class MediaMapper {
       recoveryOrderId: prismaMedia.recoveryOrderId,
       analiseQuimicaId: prismaMedia.analiseQuimicaId, // Adicionado
       transacaoId: prismaMedia.transacaoId, // Adicionado
+      chemicalReactionId: prismaMedia.chemicalReactionId, // Adicionado
     };
     return Media.create(props, new UniqueEntityID(prismaMedia.id));
   }
@@ -33,6 +34,7 @@ export class MediaMapper {
       recoveryOrderId: media.recoveryOrderId,
       analiseQuimicaId: media.analiseQuimicaId, // Adicionado
       transacaoId: media.transacaoId, // Adicionado
+      chemicalReactionId: media.chemicalReactionId, // Adicionado
     };
   }
 }

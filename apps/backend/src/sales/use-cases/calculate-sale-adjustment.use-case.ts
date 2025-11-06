@@ -247,6 +247,7 @@ export class CalculateSaleAdjustmentUseCase {
             }
           }
 
+          /*
           // Nova lógica para diferença de cotação em pagamentos de metal
           if (sale.paymentMethod === 'METAL' || sale.paymentMethod === 'METAL_CREDIT') {
             const paymentDate = sale.updatedAt; // Usar a data de atualização da venda como data do pagamento
@@ -301,6 +302,7 @@ export class CalculateSaleAdjustmentUseCase {
               }
             }
           }
+          */
         };
 
     

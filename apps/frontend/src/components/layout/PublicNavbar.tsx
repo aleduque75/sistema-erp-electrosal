@@ -70,11 +70,11 @@ export function PublicNavbar({ logoText, logoImage }: PublicNavbarProps) {
       <>
         <Image
           src="/images/logo.png"
-          alt="Sistema Beleza Logo"
+          alt="Sistema Electrosal Logo"
           width={100}
           height={32}
         />
-        <span className="font-bold text-lg">Sistema Beleza</span>
+        <span className="font-bold text-lg">Sistema Electrosal</span>
       </>
     );
   };

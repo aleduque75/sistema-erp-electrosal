@@ -41,9 +41,10 @@ export class MediaController {
     @Query('recoveryOrderId') recoveryOrderId?: string, 
     @Query('analiseQuimicaId') analiseQuimicaId?: string,
     @Query('transacaoId') transacaoId?: string, // Adicionar transacaoId
+    @Query('chemicalReactionId') chemicalReactionId?: string,
   ): Promise<MediaResponseDto> { // Adicionar MediaResponseDto
     const organizationId = req.user?.orgId;
-    const newMedia = await this.mediaService.create(file, organizationId, recoveryOrderId, analiseQuimicaId, transacaoId); // Passar transacaoId
+    const newMedia = await this.mediaService.create(file, organizationId, recoveryOrderId, analiseQuimicaId, transacaoId, chemicalReactionId); // Passar chemicalReactionId
     return MediaResponseDto.fromDomain(newMedia); // Usar o DTO
   }
 

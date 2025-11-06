@@ -87,11 +87,20 @@ const formSchema = z.object({
     if (!data.payments || data.payments.length === 0) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Adicione pelo menos um pagamento.", path: ["payments"] });
     }
+    // Also validate contaCorrenteId for each payment if FINANCIAL
+    data.payments?.forEach((payment, index) => {
+      if (!payment.contaCorrenteId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A conta é obrigatória.", path: [`payments.${index}.contaCorrenteId`] });
+      }
+    });
   } else if (data.paymentMethod === "METAL_CREDIT") {
     if (!data.metalCreditId) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Selecione o crédito de metal.", path: ["metalCreditId"] });
     if (!data.amountInGrams || data.amountInGrams <= 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A quantidade em gramas é obrigatória.", path: ["amountInGrams"] });
     if (!data.quotationBuyPrice || data.quotationBuyPrice <= 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "O preço da cotação é obrigatório.", path: ["quotationBuyPrice"] });
   } else if (data.paymentMethod === "METAL") {
+    if (!data.receivedAt) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A data do recebimento é obrigatória.", path: ["receivedAt"] });
+    }
     if (!data.metalType) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "O tipo de metal é obrigatória.", path: ["metalType"] });
     if (!data.amountInGrams || data.amountInGrams <= 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A quantidade em gramas é obrigatória.", path: ["amountInGrams"] });
     if (!data.quotationBuyPrice || data.quotationBuyPrice <= 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A cotação é obrigatória.", path: ["quotationBuyPrice"] });
@@ -125,12 +134,11 @@ export function ReceivePaymentForm({
     defaultValues: {
       paymentMethod: "FINANCIAL",
       receivedAt: new Date().toISOString().split("T")[0],
-      payments: [{
-        amount: parseFloat(remainingBRL.toFixed(2)),
-        contaCorrenteId: "",
-        goldAmount: 0,
-      }],
       quotationBuyPrice: 0,
+      metalCreditId: "", // Initialize to empty string
+      amountInGrams: 0,
+      purity: 0,
+      metalType: undefined, // Initialize to undefined
     },
   });
 
@@ -141,6 +149,19 @@ export function ReceivePaymentForm({
   const quotationBuyPrice = form.watch("quotationBuyPrice");
   const selectedPaymentMethod = form.watch("paymentMethod");
   const selectedInstallmentId = form.watch("selectedInstallmentId");
+
+  // Effect to initialize payments when FINANCIAL is selected
+  useEffect(() => {
+    if (selectedPaymentMethod === "FINANCIAL" && (!form.getValues("payments") || form.getValues("payments")?.length === 0)) {
+      form.setValue("payments", [{
+        amount: parseFloat(remainingBRL.toFixed(2)),
+        contaCorrenteId: "",
+        goldAmount: 0,
+      }]);
+    } else if (selectedPaymentMethod !== "FINANCIAL" && form.getValues("payments")?.length > 0) {
+      form.setValue("payments", []); // Clear payments if not FINANCIAL
+    }
+  }, [selectedPaymentMethod, form, remainingBRL]);
 
   // Effect to fetch quotation when the single date changes
   useEffect(() => {
@@ -192,6 +213,8 @@ export function ReceivePaymentForm({
 
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    console.log("onSubmit called");
+    console.log("Form data:", data);
     try {
       let url: string;
       let payload: any;
@@ -215,26 +238,23 @@ export function ReceivePaymentForm({
             payments: data.payments,
           };
         }
-      } else {
-        // Logic for METAL and METAL_CREDIT (always flat payload)
-        payload = {
-            paymentMethod: data.paymentMethod,
+      } else { // METAL_CREDIT or METAL
+        if (data.paymentMethod === "METAL_CREDIT") {
+          payload = {
             metalCreditId: data.metalCreditId,
             amountInGrams: data.amountInGrams,
-            customBuyPrice: data.quotationBuyPrice, // For metal credit
-            quotation: data.quotationBuyPrice, // For metal payment
-            purity: data.purity,
+            customBuyPrice: data.quotationBuyPrice, // Use customBuyPrice for metal credit
+          };
+          url = `/accounts-rec/${accountRec.id}/pay-with-metal-credit`;
+        } else { // METAL
+          payload = {
             metalType: data.metalType,
-        };
-        if (isInstallmentPayment) {
-            url = `/sales/${accountRec.saleId}/installments/${data.selectedInstallmentId}/receive`;
-        } else {
-            // These endpoints have different names but similar flat payloads
-            if (data.paymentMethod === 'METAL_CREDIT') {
-                url = `/accounts-rec/${accountRec.id}/pay-with-metal-credit`;
-            } else { // METAL
-                url = `/accounts-rec/${accountRec.id}/pay-with-metal`;
-            }
+            amountInGrams: data.amountInGrams,
+            quotation: data.quotationBuyPrice, // Use quotation for metal payment
+            purity: data.purity,
+            receivedAt: data.receivedAt,
+          };
+          url = `/accounts-rec/${accountRec.id}/pay-with-metal`;
         }
       }
       
@@ -247,6 +267,8 @@ export function ReceivePaymentForm({
         toast.error(displayMessage);
     }
   };
+
+  console.log("Form Errors:", form.formState.errors);
 
   return (
     <Form {...form}>
@@ -379,7 +401,8 @@ export function ReceivePaymentForm({
         {(selectedPaymentMethod === "METAL_CREDIT" || selectedPaymentMethod === "METAL") && (
           <div className="grid grid-cols-2 gap-4">
             {selectedPaymentMethod === "METAL" && <FormField name="metalType" control={form.control} render={({ field }) => (<FormItem><FormLabel>Tipo de Metal</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="AU">Ouro (AU)</SelectItem><SelectItem value="AG">Prata (AG)</SelectItem><SelectItem value="RH">Ródio (RH)</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />}
-            {selectedPaymentMethod === "METAL_CREDIT" && <FormField name="metalCreditId" control={form.control} render={({ field }) => (<FormItem><FormLabel>Crédito de Metal</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl><SelectContent>{metalCredits.map((mc) => (<SelectItem key={mc.id} value={mc.id}>{mc.metalType} - {mc.grams.toFixed(4)}g ({mc.date})</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />}
+            {selectedPaymentMethod === "METAL" && <FormField name="receivedAt" control={form.control} render={({ field }) => (<FormItem><FormLabel>Data do Recebimento</FormLabel><FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />}
+            {selectedPaymentMethod === "METAL_CREDIT" && <FormField name="metalCreditId" control={form.control} render={({ field }) => (<FormItem><FormLabel>Crédito de Metal</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl><SelectContent>{metalCredits.map((mc) => (<SelectItem key={mc.id} value={mc.id}>{mc.metalType} - {mc.grams.toFixed(4)}g ({mc.date})</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />}
             <FormField name="amountInGrams" control={form.control} render={({ field }) => (<FormItem><FormLabel>Quantidade em Gramas</FormLabel><FormControl><Input type="number" step="0.000001" {...field} /></FormControl><FormMessage /></FormItem>)} />
             <FormField name="quotationBuyPrice" control={form.control} render={({ field }) => (<FormItem><FormLabel>Cotação (R$/g)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)} />
             {selectedPaymentMethod === "METAL" && <FormField name="purity" control={form.control} render={({ field }) => (<FormItem><FormLabel>Pureza (%)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)} />}

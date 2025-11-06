@@ -31,6 +31,7 @@ interface MetalLot {
   remainingGrams: number;
   sourceType: string;
   sourceId: string;
+  description?: string;
   notes?: string;
   sale?: { // Adicionado
     pessoa: { // Adicionado
@@ -73,9 +74,9 @@ export function MetalLotSelectionModal({
     const filtered = metalLots.filter(
       (lot) =>
         lot.id.includes(searchTerm) ||
-        lot.notes?.includes(searchTerm) ||
-        lot.sourceType.includes(searchTerm) ||
-        (lot.sourceType === 'SALE_PAYMENT' && lot.sale?.pessoa.name?.includes(searchTerm))
+        lot.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lot.sourceType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (lot.sourceType === 'SALE_PAYMENT' && lot.sale?.pessoa.name?.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     console.log("Filtered pure_metal_lots:", filtered);
     return filtered;
@@ -120,7 +121,7 @@ export function MetalLotSelectionModal({
   };
 
   return (
-    <DialogContent className="sm:max-w-[800px]">
+    <DialogContent className="sm:max-w-[1000px]">
       <DialogHeader>
         <DialogTitle>Selecionar Lotes de Metal</DialogTitle>
         <DialogDescription>
@@ -172,7 +173,7 @@ export function MetalLotSelectionModal({
                         />
                       </TableCell>
                       <TableCell>{lot.id.substring(0, 8)}</TableCell>
-                      <TableCell>{lot.notes || "-"}</TableCell>
+                      <TableCell>{lot.description || "-"}</TableCell>
                       <TableCell>{lot.sourceType}</TableCell>
                       <TableCell>{lot.sourceType === 'SALE_PAYMENT' ? lot.sale?.pessoa.name || '-' : '-'}</TableCell> {/* Exibe o cliente */}
                       <TableCell className="text-right">

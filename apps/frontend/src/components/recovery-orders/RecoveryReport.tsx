@@ -6,7 +6,7 @@ import { DateRange } from "react-day-picker";
 import { getRecoveryOrders } from "@/services/recoveryOrdersApi";
 import { RecoveryOrder } from "@/types/recovery-order";
 import { Button } from "@/components/ui/button";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -69,7 +69,7 @@ export function RecoveryReport() {
       </CardHeader>
       <CardContent>
         <div className="flex gap-4 items-center mb-4">
-          <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+          <DateRangePicker date={dateRange} onDateChange={setDateRange} />
           <Button onClick={handleGenerateReport} disabled={isLoading}>
             {isLoading ? "Gerando..." : "Gerar Relatório"}
           </Button>

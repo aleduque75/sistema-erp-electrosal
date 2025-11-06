@@ -15,6 +15,7 @@ export class MediaService {
     recoveryOrderId?: string,
     analiseQuimicaId?: string,
     transacaoId?: string,
+    chemicalReactionId?: string,
   ): Promise<Media> {
     const filePath = join(process.cwd(), file.path);
     const metadata = await sharp(filePath).metadata();
@@ -29,6 +30,7 @@ export class MediaService {
       organizationId: organizationId,
       recoveryOrderId: recoveryOrderId,
       analiseQuimicaId: analiseQuimicaId,
+      chemicalReactionId: chemicalReactionId,
     };
 
     if (transacaoId && transacaoId !== 'temp') {

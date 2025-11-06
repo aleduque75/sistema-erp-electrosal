@@ -7,12 +7,12 @@ import { Label } from "@/components/ui/label";
 import { UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { uploadMediaForAnaliseQuimica, uploadMediaForRecoveryOrder, uploadMediaForTransacao } from "@/services/mediaApi";
+import { uploadMediaForAnaliseQuimica, uploadMediaForRecoveryOrder, uploadMediaForTransacao, uploadMediaForChemicalReaction } from "@/services/mediaApi";
 import { Media } from "@prisma/client"; // Importar Media
 
 interface ImageUploadProps {
   entity: {
-    type: 'analiseQuimica' | 'recoveryOrder' | 'transacao'; // Adicionar 'transacao'
+    type: 'analiseQuimica' | 'recoveryOrder' | 'transacao' | 'chemicalReaction'; // Adicionar 'chemicalReaction'
     id: string;
   };
   onMediaUploadSuccess: (media: Media) => void; // Renomear e adicionar parâmetro
@@ -39,6 +39,8 @@ export function ImageUpload({ entity, onMediaUploadSuccess }: ImageUploadProps) 
         newMedia = await uploadMediaForRecoveryOrder(file, entity.id);
       } else if (entity.type === 'transacao') {
         newMedia = await uploadMediaForTransacao(file, entity.id);
+      } else if (entity.type === 'chemicalReaction') {
+        newMedia = await uploadMediaForChemicalReaction(file, entity.id);
       } else {
         throw new Error("Tipo de entidade inválido para upload de imagem.");
       }

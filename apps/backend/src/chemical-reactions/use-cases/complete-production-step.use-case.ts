@@ -109,8 +109,10 @@ export class CompleteProductionStepUseCase {
         data: {
           organizationId,
           productId: reaction.outputProductId,
+          inventoryLotId: newInventoryLot.id,
           quantity: stockQuantity, // Positive quantity for stock increase
-          type: 'REACTION_OUTPUT', // Indicates it came from a reaction
+          type: 'ENTRADA_REACAO', // Indicates it came from a reaction
+          sourceDocument: `CRIACAO_LOTE #${batchNumber}`,
         },
       });
 

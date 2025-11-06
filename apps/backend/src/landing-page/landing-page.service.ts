@@ -28,7 +28,7 @@ export class LandingPageService {
         landingPage = await this.prisma.landingPage.create({
           data: {
             name: 'default',
-            logoText: 'Sistema Beleza',
+            logoText: 'Sistema Electrosal - Erp',
             logoImageId: null,
             customThemeName: null, // Changed from customTheme to customThemeName
             sections: {
@@ -37,9 +37,9 @@ export class LandingPageService {
                   order: 1,
                   type: 'hero',
                   content: {
-                    title: 'Gestão Completa para seu Salão de Beleza',
+                    title: 'Gestão Completa para sua galvânica',
                     description:
-                      'Agendamentos, clientes, estoque e financeiro em um só lugar. Foque na beleza, nós cuidamos da organização.',
+                      'Agendamentos, clientes, estoque e financeiro em um só lugar. Foque no seu negócio, nós cuidamos da organização.',
                     mainImage: '',
                     sideImages: [],
                     ctaButtonText: 'Entrar no Sistema',
@@ -54,7 +54,7 @@ export class LandingPageService {
                   content: {
                     title: 'Funcionalidades Principais',
                     description:
-                      'Tudo o que você precisa para gerenciar seu salão com eficiência e encantar seus clientes.',
+                      'Tudo o que você precisa para gerenciar sua galvânica com eficiência e simplicidade.',
                     items: [
                       {
                         icon: 'CalendarCheck',

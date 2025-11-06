@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; }
+    .container { padding: 20px; }
+    .header { text-align: center; margin-bottom: 20px; }
+    .details, .analysis-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .details th, .details td, .analysis-table th, .analysis-table td { border: 1px solid #ddd; padding: 8px; }
+    .details th { background-color: #f2f2f2; text-align: left; }
+    .analysis-table th { background-color: #f2f2f2; text-align: center; }
+    .text-right { text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Relatório de Ordem de Recuperação</h1>
+    </div>
+
+    <h2>Detalhes da Ordem</h2>
+    <table class="details">
+      <tr><th>Número da Ordem</th><td>{{recoveryOrder.orderNumber}}</td></tr>
+      <tr><th>Data de Entrada</th><td>{{recoveryOrder.entryDate}}</td></tr>
+      <tr><th>Status</th><td>{{recoveryOrder.status}}</td></tr>
+      <tr><th>Ouro Puro Recuperado (g)</th><td class="text-right">{{recoveryOrder.auPuroRecuperadoGramas}}</td></tr>
+      <tr><th>Observações</th><td>{{recoveryOrder.observacoes}}</td></tr>
+    </table>
+
+    <h2>Análises Químicas Utilizadas</h2>
+    <table class="analysis-table">
+      <thead>
+        <tr>
+          <th>Número da Análise</th>
+          <th>Peso Bruto (g)</th>
+          <th>Crédito de Metal (g)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each recoveryOrder.analisesEnvolvidas}}
+        <tr>
+          <td>{{this.numeroAnalise}}</td>
+          <td class="text-right">{{this.pesoBruto}}</td>
+          <td class="text-right">{{this.metalCreditGrams}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

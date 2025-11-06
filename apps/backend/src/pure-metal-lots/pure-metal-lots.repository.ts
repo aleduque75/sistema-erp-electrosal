@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, TipoMetal } from '@prisma/client';
 
 @Injectable()
 export class PureMetalLotsRepository {
@@ -10,15 +10,23 @@ export class PureMetalLotsRepository {
     return this.prisma.pure_metal_lots.create({ data });
   }
 
-  findAll(organizationId: string) {
+  findAll(organizationId: string, metalType?: TipoMetal, remainingGramsGt?: number) {
+    const where: Prisma.pure_metal_lotsWhereInput = { organizationId };
+
+    if (metalType) {
+      where.metalType = metalType;
+    }
+
+    if (remainingGramsGt !== undefined) {
+      where.remainingGrams = { gt: remainingGramsGt };
+    }
+
     return this.prisma.pure_metal_lots.findMany({
-      where: { organizationId },
+      where,
       orderBy: { entryDate: 'desc' },
       include: {
         sale: {
-          select: {
-            orderNumber: true,
-            totalAmount: true,
+          include: {
             pessoa: {
               select: {
                 name: true,
@@ -26,10 +34,14 @@ export class PureMetalLotsRepository {
             },
           },
         },
-        chemical_reactions: {
-          select: {
-            reactionNumber: true,
-            notes: true,
+        chemicalReactions: {
+          include: {
+            chemicalReaction: {
+              select: {
+                reactionNumber: true,
+                notes: true,
+              },
+            },
           },
         },
       },
@@ -41,17 +53,23 @@ export class PureMetalLotsRepository {
       where: { id, organizationId },
       include: {
         sale: {
-          select: {
-            id: true,
-            orderNumber: true,
-            totalAmount: true,
+          include: {
+            pessoa: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
-        chemical_reactions: {
-          select: {
-            id: true,
-            reactionNumber: true,
-            outputProductGrams: true,
+        chemicalReactions: {
+          include: {
+            chemicalReaction: {
+              select: {
+                id: true,
+                reactionNumber: true,
+                outputProductGrams: true,
+              },
+            },
           },
         },
       },

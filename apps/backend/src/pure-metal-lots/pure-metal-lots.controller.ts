@@ -1,5 +1,6 @@
 /// <reference types="../types/express" />
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
+import { TipoMetal } from '@prisma/client';
 import { PureMetalLotsService } from './pure-metal-lots.service';
 import { CreatePureMetalLotDto } from './dto/create-pure-metal-lot.dto';
 import { UpdatePureMetalLotDto } from './dto/update-pure-metal-lot.dto';
@@ -18,9 +19,10 @@ export class PureMetalLotsController {
   }
 
   @Get()
-  findAll(@Req() req: Request) {
+  findAll(@Req() req: Request, @Query('metalType') metalType?: TipoMetal, @Query('remainingGramsGt') remainingGramsGt?: string) {
     const organizationId = req.user['organizationId'];
-    return this.pureMetalLotsService.findAll(organizationId);
+    const remainingGramsGtFloat = remainingGramsGt ? parseFloat(remainingGramsGt) : undefined;
+    return this.pureMetalLotsService.findAll(organizationId, metalType, remainingGramsGtFloat);
   }
 
   @Get(':id')

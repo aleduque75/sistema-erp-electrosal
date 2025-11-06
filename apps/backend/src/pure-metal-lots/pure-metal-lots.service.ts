@@ -3,7 +3,7 @@ import { CreatePureMetalLotDto } from './dto/create-pure-metal-lot.dto';
 import { UpdatePureMetalLotDto } from './dto/update-pure-metal-lot.dto';
 import { PureMetalLotsRepository } from './pure-metal-lots.repository';
 import { EntityCounterService } from '../common/services/entity-counter.service';
-import { EntityType } from '@prisma/client';
+import { EntityType, TipoMetal } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class PureMetalLotsService {
     const nextLotNumber = await this.entityCounterService.getNextNumber(EntityType.PURE_METAL_LOT, organizationId);
     const lotNumber = `LMP-${String(nextLotNumber).padStart(6, '0')}`;
 
-    const entryDateObject = entryDate ? new Date(entryDate) : new Date();
+    const entryDateObject = entryDate ? new Date(`${entryDate}T12:00:00`) : new Date();
 
     return this.pureMetalLotsRepository.create({
       ...rest,
@@ -31,8 +31,8 @@ export class PureMetalLotsService {
     });
   }
 
-  async findAll(organizationId: string) {
-    const pureMetalLots = await this.pureMetalLotsRepository.findAll(organizationId);
+  async findAll(organizationId: string, metalType?: TipoMetal, remainingGramsGt?: number) {
+    const pureMetalLots = await this.pureMetalLotsRepository.findAll(organizationId, metalType, remainingGramsGt);
 
     const lotsWithOriginDetails = await Promise.all(pureMetalLots.map(async (lot) => {
       let originDetails: { name?: string; orderNumber?: string } = {};
@@ -53,8 +53,8 @@ export class PureMetalLotsService {
         if (metalCredit?.client?.name) {
           originDetails.name = metalCredit.client.name;
         }
-      } else if (lot.sourceType === 'CHEMICAL_REACTION' && lot.chemical_reactions && lot.chemical_reactions.length > 0) {
-        const reaction = lot.chemical_reactions[0];
+      } else if (lot.sourceType === 'CHEMICAL_REACTION' && lot.chemicalReactions && lot.chemicalReactions.length > 0) {
+        const reaction = lot.chemicalReactions[0].chemicalReaction;
         originDetails.orderNumber = reaction.reactionNumber;
         if (reaction.notes) {
           originDetails.name = reaction.notes; // Usando 'name' para as observações da reação
@@ -63,6 +63,7 @@ export class PureMetalLotsService {
 
       return {
         ...lot,
+        description: lot.description, // Adiciona a descrição
         sale: lot.sale ? {
           ...lot.sale,
           totalAmount: lot.sale.totalAmount ? Number(lot.sale.totalAmount) : undefined,
@@ -91,7 +92,12 @@ export class PureMetalLotsService {
   }
 
   async update(organizationId: string, id: string, updatePureMetalLotDto: UpdatePureMetalLotDto) {
-    return this.pureMetalLotsRepository.update(id, updatePureMetalLotDto);
+    const { entryDate, ...rest } = updatePureMetalLotDto;
+    const data: any = { ...rest };
+    if (entryDate) {
+      data.entryDate = new Date(`${entryDate}T12:00:00`);
+    }
+    return this.pureMetalLotsRepository.update(id, data);
   }
 
   async remove(organizationId: string, id: string) {

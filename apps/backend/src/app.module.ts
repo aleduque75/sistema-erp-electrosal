@@ -60,6 +60,7 @@ import { RawMaterialsService } from './raw-materials.service';
 import { MetalCreditsModule } from './metal-credits/metal-credits.module';
 import { PureMetalLotMovementsModule } from './pure-metal-lot-movements/pure-metal-lot-movements.module';
 import { MetalPaymentsModule } from './metal-payments/metal-payments.module';
+import { PdfModule } from './pdf/pdf.module';
 
 @Module({
   imports: [
@@ -118,6 +119,7 @@ import { MetalPaymentsModule } from './metal-payments/metal-payments.module';
     MetalCreditsModule,
     PureMetalLotMovementsModule,
     MetalPaymentsModule,
+    PdfModule,
   ],
   controllers: [AppController, RawMaterialsController],
   providers: [

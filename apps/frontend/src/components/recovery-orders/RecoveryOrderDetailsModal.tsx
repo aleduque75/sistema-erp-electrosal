@@ -83,9 +83,17 @@ export function RecoveryOrderDetailsModal({ isOpen, onOpenChange, recoveryOrder,
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl p-0">
-        <DialogHeader className="p-6 pb-4">
-          <DialogTitle>Detalhes da Ordem de Recuperação</DialogTitle>
-          <DialogDescription>ID: {recoveryOrder.id}</DialogDescription>
+        <DialogHeader className="p-6 pb-4 flex flex-row items-center justify-between">
+          <div>
+            <DialogTitle>Detalhes da Ordem de Recuperação</DialogTitle>
+            <DialogDescription>ID: {recoveryOrder.id}</DialogDescription>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => window.open(`/api/pdf/recovery-order/${recoveryOrder.id}`, '_blank')}
+          >
+            Gerar PDF
+          </Button>
         </DialogHeader>
         <div className="space-y-4 p-6 max-h-[80vh] overflow-y-auto">
           <Card>

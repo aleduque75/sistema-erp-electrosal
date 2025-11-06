@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Req, Get, Patch, Param } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, Patch, Param, Delete, Put } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateChemicalReactionUseCase } from './use-cases/create-chemical-reaction.use-case';
 import { CompleteProductionStepUseCase } from './use-cases/complete-production-step.use-case';
@@ -8,6 +8,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CompleteReactionDto } from './dtos/complete-reaction.dto';
 import { AddRawMaterialToChemicalReactionUseCase } from './use-cases/add-raw-material.use-case';
 import { AddRawMaterialDto } from './dtos/add-raw-material.dto';
+import { AssociateImageToChemicalReactionUseCase } from './use-cases/associate-image-to-chemical-reaction.use-case';
+import { AddPureMetalLotToChemicalReactionUseCase } from './use-cases/add-pure-metal-lot-to-chemical-reaction.use-case';
+import { RemovePureMetalLotFromChemicalReactionUseCase } from './use-cases/remove-pure-metal-lot-from-chemical-reaction.use-case';
+import { UpdateChemicalReactionUseCase } from './use-cases/update-chemical-reaction.use-case';
+import { UpdateChemicalReactionLotsUseCase } from './use-cases/update-chemical-reaction-lots.use-case';
+import { UpdateChemicalReactionDto } from './dtos/update-chemical-reaction.dto';
+import { UpdateChemicalReactionLotsDto } from './dtos/update-chemical-reaction-lots.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('chemical-reactions')
@@ -17,6 +24,11 @@ export class ChemicalReactionsController {
     private readonly completeProductionStepUseCase: CompleteProductionStepUseCase,
     private readonly adjustPurityUseCase: AdjustPurityUseCase,
     private readonly addRawMaterialToChemicalReactionUseCase: AddRawMaterialToChemicalReactionUseCase,
+    private readonly associateImageToChemicalReactionUseCase: AssociateImageToChemicalReactionUseCase,
+    private readonly addPureMetalLotToChemicalReactionUseCase: AddPureMetalLotToChemicalReactionUseCase,
+    private readonly removePureMetalLotFromChemicalReactionUseCase: RemovePureMetalLotFromChemicalReactionUseCase,
+    private readonly updateChemicalReactionUseCase: UpdateChemicalReactionUseCase,
+    private readonly updateChemicalReactionLotsUseCase: UpdateChemicalReactionLotsUseCase,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -27,6 +39,39 @@ export class ChemicalReactionsController {
     return this.createUseCase.execute(command);
   }
 
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateChemicalReactionDto,
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    const command = { chemicalReactionId: id, organizationId, dto };
+    return this.updateChemicalReactionUseCase.execute(command);
+  }
+
+  @Put(':id/lots')
+  async updateLots(
+    @Param('id') id: string,
+    @Body() dto: UpdateChemicalReactionLotsDto,
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    const command = { chemicalReactionId: id, organizationId, dto };
+    return this.updateChemicalReactionLotsUseCase.execute(command);
+  }
+
+  @Post(':id/associate-image')
+  async associateImage(
+    @Param('id') id: string,
+    @Body() body: { mediaId: string },
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    const command = { chemicalReactionId: id, mediaId: body.mediaId, organizationId };
+    return this.associateImageToChemicalReactionUseCase.execute(command);
+  }
+
   @Post(':id/raw-materials')
   async addRawMaterial(
     @Param('id') id: string,
@@ -35,6 +80,28 @@ export class ChemicalReactionsController {
   ) {
     const organizationId = req.user?.orgId;
     await this.addRawMaterialToChemicalReactionUseCase.execute(organizationId, id, dto);
+  }
+
+  @Post(':id/pure-metal-lots')
+  async addPureMetalLot(
+    @Param('id') id: string,
+    @Body() body: { pureMetalLotId: string },
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    const command = { chemicalReactionId: id, pureMetalLotId: body.pureMetalLotId, organizationId };
+    return this.addPureMetalLotToChemicalReactionUseCase.execute(command);
+  }
+
+  @Delete(':id/pure-metal-lots/:pureMetalLotId')
+  async removePureMetalLot(
+    @Param('id') id: string,
+    @Param('pureMetalLotId') pureMetalLotId: string,
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    const command = { chemicalReactionId: id, pureMetalLotId, organizationId };
+    return this.removePureMetalLotFromChemicalReactionUseCase.execute(command);
   }
 
   @Patch(':id/complete-production')
@@ -54,27 +121,49 @@ export class ChemicalReactionsController {
   @Get()
   async findAll(@Req() req) {
     const organizationId = req.user?.orgId;
-    return this.prisma.chemical_reactions.findMany({
+    const reactions = await this.prisma.chemical_reactions.findMany({
       where: { organizationId },
       include: {
         productionBatch: true,
+        lots: true,
       },
       orderBy: { reactionDate: 'desc' },
     });
+
+    return reactions.map(reaction => ({
+      ...reaction,
+      auUsedGrams: reaction.inputGoldGrams,
+    }));
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req) {
     const organizationId = req.user?.orgId;
-    return this.prisma.chemical_reactions.findUnique({
+    const reaction = await this.prisma.chemical_reactions.findUnique({
       where: { id, organizationId },
       include: {
         productionBatch: { include: { product: true } },
         outputProduct: true, // Adicionar esta linha
-        lots: true,
+        lots: {
+          include: {
+            pureMetalLot: true,
+          },
+        },
         rawMaterialsUsed: { include: { rawMaterial: true } },
       },
     });
+
+    if (!reaction) {
+      return null;
+    }
+
+    return {
+      ...reaction,
+      lots: reaction.lots.map(lot => ({
+        ...lot.pureMetalLot,
+        gramsToUse: lot.gramsToUse,
+      })),
+    };
   }
 
   @Get('leftovers/available')

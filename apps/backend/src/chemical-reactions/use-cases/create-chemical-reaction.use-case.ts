@@ -16,7 +16,7 @@ export class CreateChemicalReactionUseCase {
 
   async execute(command: CreateChemicalReactionCommand): Promise<any> {
     const { organizationId, dto } = command;
-    const { sourceLots, notes, outputProductId, metalType } = dto;
+    const { sourceLots, notes, outputProductId, metalType, reactionDate } = dto;
 
     if (!sourceLots || sourceLots.length === 0) {
       throw new BadRequestException('Pelo menos um lote de origem deve ser fornecido.');
@@ -90,6 +90,7 @@ export class CreateChemicalReactionUseCase {
           metalType, // Save the metal type
           notes,
           status: ChemicalReactionStatusPrisma.STARTED,
+          reactionDate: reactionDate ? new Date(reactionDate) : new Date(),
           auUsedGrams: totalGoldGrams.toNumber(),
           inputGoldGrams: totalGoldGrams.toNumber(),
           inputRawMaterialGrams: inputRawMaterialGrams.toNumber(),
@@ -99,7 +100,10 @@ export class CreateChemicalReactionUseCase {
           outputSilverGrams: 0, // Will be updated in the completion step
           outputProductId: outputProductId, // Link to the intended output product
           lots: {
-            connect: sourceLotIds.map(id => ({ id }))
+            create: sourceLots.map(lotInfo => ({
+              pureMetalLotId: lotInfo.pureMetalLotId,
+              gramsToUse: lotInfo.gramsToUse,
+            })),
           },
         },
       });

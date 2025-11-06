@@ -185,7 +185,19 @@ export default function SeparacaoPedidoPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="separation-date">Data da Separação</Label>
-              <Input id="separation-date" type="date" value={format(separationDate, 'yyyy-MM-dd')} onChange={(e) => setSeparationDate(new Date(e.target.value))} />
+              <Input
+                id="separation-date"
+                type="date"
+                value={separationDate && !isNaN(separationDate.getTime()) ? format(separationDate, 'yyyy-MM-dd') : ''}
+                onChange={(e) => {
+                  // Appending T00:00:00 makes it parse in the local timezone
+                  // instead of UTC, avoiding off-by-one-day errors.
+                  const date = new Date(`${e.target.value}T00:00:00`);
+                  if (!isNaN(date.getTime())) {
+                    setSeparationDate(date);
+                  }
+                }}
+              />
             </div>
           </div>
           <Separator />

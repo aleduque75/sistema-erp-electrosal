@@ -4,12 +4,13 @@ import {
   IsString,
   IsNotEmpty,
   IsNumber,
-  IsDate,
   IsOptional,
   IsUUID,
   Min,
   IsArray, // Added
   ValidateNested, // Added
+  IsDateString, // Added
+  IsDate, // Added
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -22,9 +23,8 @@ export class CreateAccountRecDto {
   @Min(0.01)
   amount: number;
 
-  @IsDate()
-  @Type(() => Date)
-  dueDate: Date;
+  @IsDateString()
+  dueDate: string;
 
   @IsUUID()
   @IsOptional()
@@ -49,10 +49,9 @@ export class PaymentEntryDto {
 }
 
 export class ReceivePaymentDto {
-  @IsDate()
+  @IsDateString()
   @IsOptional()
-  @Type(() => Date)
-  receivedAt?: Date;
+  receivedAt?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

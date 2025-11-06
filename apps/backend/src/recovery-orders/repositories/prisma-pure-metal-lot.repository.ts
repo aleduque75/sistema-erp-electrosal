@@ -47,4 +47,32 @@ export class PrismaPureMetalLotRepository implements IPureMetalLotRepository {
     const dbLot = await this.prisma.pure_metal_lots.create({ data });
     return this.mapToDomain(dbLot);
   }
+
+  async findById(id: string, organizationId: string): Promise<PureMetalLot | null> {
+    const dbLot = await this.prisma.pure_metal_lots.findFirst({
+      where: {
+        id,
+        organizationId,
+      },
+    });
+    if (!dbLot) {
+      return null;
+    }
+    return this.mapToDomain(dbLot);
+  }
+
+  async save(lot: PureMetalLot): Promise<PureMetalLot> {
+    const data = {
+      remainingGrams: lot.remainingGrams,
+      status: lot.status as any,
+      updatedAt: new Date(),
+    };
+
+    const dbLot = await this.prisma.pure_metal_lots.update({
+      where: { id: lot.id.toString() },
+      data,
+    });
+
+    return this.mapToDomain(dbLot);
+  }
 }

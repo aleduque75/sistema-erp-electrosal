@@ -18,7 +18,7 @@ export interface ChemicalReactionProps {
   outputBasketLeftoverGrams?: number;
   outputDistillateLeftoverGrams?: number;
   // Rastreabilidade
-  sourceLotIds: string[]; // Array de IDs dos lotes de metal puro usados
+  sourceLots: { pureMetalLotId: string; gramsToUse: number }[];
 }
 
 export class ChemicalReaction extends AggregateRoot<ChemicalReactionProps> {
@@ -26,7 +26,7 @@ export class ChemicalReaction extends AggregateRoot<ChemicalReactionProps> {
     super(props, id);
   }
 
-  public static create(props: Omit<ChemicalReactionProps, 'sourceLotIds'> & { reactionNumber: string, sourceLotIds: string[] }, id?: UniqueEntityID): ChemicalReaction {
+  public static create(props: Omit<ChemicalReactionProps, 'sourceLots'> & { reactionNumber: string, sourceLots: { pureMetalLotId: string; gramsToUse: number }[] }, id?: UniqueEntityID): ChemicalReaction {
     const chemicalReaction = new ChemicalReaction(
       {
         ...props,

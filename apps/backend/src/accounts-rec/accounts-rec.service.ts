@@ -31,11 +31,15 @@ export class AccountsRecService {
     organizationId: string,
     data: CreateAccountRecDto,
   ): Promise<AccountRec> {
+    const { dueDate, ...rest } = data;
+    const newData: any = { ...rest, organizationId };
+    if (dueDate && typeof dueDate === 'string' && dueDate.trim().length > 0) {
+      newData.dueDate = new Date(`${dueDate}T12:00:00`);
+    } else {
+      newData.dueDate = new Date();
+    }
     return this.prisma.accountRec.create({
-      data: {
-        ...data,
-        organizationId,
-      },
+      data: newData,
     });
   }
 
@@ -92,10 +96,29 @@ export class AccountsRecService {
     data: UpdateAccountRecDto,
   ): Promise<AccountRec> {
     await this.findOne(organizationId, id);
-    return this.prisma.accountRec.update({
+    const { dueDate, ...rest } = data;
+    const updatedData: any = { ...rest };
+    let newDueDate: Date | null = null;
+    if (dueDate && typeof dueDate === 'string' && dueDate.trim().length > 0) {
+      newDueDate = new Date(`${dueDate}T12:00:00`);
+      updatedData.dueDate = newDueDate;
+    } else if (!dueDate) {
+      updatedData.dueDate = null;
+    }
+
+    const updatedAccountRec = await this.prisma.accountRec.update({
       where: { id },
-      data,
+      data: updatedData,
     });
+
+    if (newDueDate) {
+      await this.prisma.transacao.updateMany({
+        where: { accountRecId: id },
+        data: { dataHora: newDueDate },
+      });
+    }
+
+    return updatedAccountRec;
   }
 
   async receive(
@@ -125,7 +148,14 @@ export class AccountsRecService {
         );
       }
 
-      const receivedAt = data.receivedAt ? new Date(data.receivedAt) : new Date();
+      let receivedAtDate: Date;
+      if (data.receivedAt && typeof data.receivedAt === 'string' && data.receivedAt.trim().length > 0) {
+        receivedAtDate = new Date(`${data.receivedAt}T12:00:00`);
+      } else {
+        receivedAtDate = new Date();
+      }
+
+      const receivedAt = receivedAtDate;
 
       // Determine paymentQuotation once for the entire AccountRec payment
       let paymentQuotation: Decimal | null = accountToReceive.sale?.goldPrice ?? null;

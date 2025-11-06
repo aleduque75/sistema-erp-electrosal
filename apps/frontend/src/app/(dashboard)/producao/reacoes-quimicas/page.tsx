@@ -15,6 +15,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { ReactionDetailsModal } from "./components/reaction-details-modal";
+import { PureMetalLotSelectionModal } from "./components/PureMetalLotSelectionModal";
 import { ProductionStepClientBlock } from "./[id]/components/production-step-client-block";
 import { AdjustPurityClientBlock } from "./[id]/components/adjust-purity-client-block";
 
@@ -44,6 +45,7 @@ export default function ChemicalReactionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedReaction, setSelectedReaction] = useState<ChemicalReactionDetails | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLotSelectionModalOpen, setIsLotSelectionModalOpen] = useState(false);
 
   const fetchReactions = async () => {
     setIsLoading(true);
@@ -76,6 +78,11 @@ export default function ChemicalReactionsPage() {
     setIsModalOpen(false);
     setSelectedReaction(null);
     fetchReactions(); // Refresh the list after closing the modal
+  };
+
+  const handleOpenLotSelectionModal = (reaction: ChemicalReactionDetails) => {
+    setSelectedReaction(reaction);
+    setIsLotSelectionModalOpen(true);
   };
 
   const columns: ColumnDef<ChemicalReactionDetails>[] = [
@@ -114,10 +121,10 @@ export default function ChemicalReactionsPage() {
       },
     },
     {
-      accessorKey: 'createdAt',
+      accessorKey: 'reactionDate',
       header: 'Data de Início',
       cell: ({ row }) => {
-        const date = new Date(row.getValue('createdAt') as string);
+        const date = new Date(row.getValue('reactionDate') as string);
         return <div>{date.toLocaleDateString('pt-BR')}</div>;
       },
     },
@@ -137,6 +144,17 @@ export default function ChemicalReactionsPage() {
                 Ver Detalhes
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              {reaction.status === 'STARTED' && (
+                <DropdownMenuItem onClick={() => handleOpenLotSelectionModal(reaction)}>
+                  Editar Lotes
+                </DropdownMenuItem>
+              )}
+              {(reaction.status === 'STARTED' || reaction.status === 'PROCESSING') && (
+                <ProductionStepClientBlock reactionId={reaction.id} auUsedGrams={reaction.auUsedGrams} />
+              )}
+              {reaction.status === 'PENDING_PURITY_ADJUSTMENT' && (
+                <AdjustPurityClientBlock reactionId={reaction.id} />
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -176,6 +194,18 @@ export default function ChemicalReactionsPage() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
+      {selectedReaction && (
+        <PureMetalLotSelectionModal
+          isOpen={isLotSelectionModalOpen}
+          onClose={() => setIsLotSelectionModalOpen(false)}
+          chemicalReactionId={selectedReaction.id}
+          currentLotIds={selectedReaction.lots?.map(lot => lot.id) ?? []}
+          onSave={() => {
+            fetchReactions();
+            setIsLotSelectionModalOpen(false);
+          }}
+        />
+      )}
     </>
   );
 }

@@ -132,7 +132,7 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
             <div className="flex justify-between items-center">
               <Label>Ouro Utilizado (Entrada):</Label>
               <Badge variant="secondary" className="text-lg p-2">
-                {auUsedGrams.toFixed(4)} g Au
+                {Number(auUsedGrams).toFixed(4)} g Au
               </Badge>
             </div>
             <div className="flex justify-between items-center">

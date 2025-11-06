@@ -23,14 +23,15 @@ export class PayAccountsRecWithMetalUseCase {
     userId: string,
     accountsRecId: string,
     dto: PayAccountsRecWithMetalDto,
-  ): Promise<{ accountRec: any, overpayment: number }> { // MODIFIED RETURN TYPE
-    const { metalType, amountInGrams, quotation, purity } = dto;
+  ): Promise<{ accountRec: any, overpayment: number }> {
+    const { metalType, amountInGrams, quotation, purity, receivedAt } = dto;
+    const paymentDate = receivedAt ? new Date(receivedAt) : new Date();
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Find AccountsReceivable
+      // 1. Find AccountsReceivable and include related sale and person
       const accountsRec = await tx.accountRec.findFirst({
         where: { id: accountsRecId, organizationId },
-        include: { sale: true },
+        include: { sale: { include: { pessoa: true } } },
       });
 
       if (!accountsRec) {
@@ -40,6 +41,7 @@ export class PayAccountsRecWithMetalUseCase {
         throw new BadRequestException(`Conta a receber com ID ${accountsRecId} já está paga.`);
       }
 
+      // 2. Calculate payment value
       const finalBuyPrice = new Decimal(quotation);
       if (finalBuyPrice.isZero() || finalBuyPrice.isNegative()) {
         throw new BadRequestException('O preço de compra da cotação deve ser positivo.');
@@ -50,81 +52,54 @@ export class PayAccountsRecWithMetalUseCase {
         throw new BadRequestException('A quantidade de gramas recebida deve ser positiva.');
       }
 
-      // 2. Determine if it's a gold-based or BRL-based receivable
-      const isGoldBased = accountsRec.goldAmount && new Decimal(accountsRec.goldAmount).isPositive();
+      const paymentValueInBRL = requestedGrams.times(finalBuyPrice);
 
-      let gramsToApply: Decimal;
-      let amountToApplyInBRL: Decimal;
-      let isFullyPaid: boolean;
-      let overpaymentGrams = new Decimal(0);
+      // 3. Determine amounts to apply and overpayment
+      const accountsRecRemainingBRL = new Decimal(accountsRec.amount).minus(new Decimal(accountsRec.amountPaid || 0));
+      const amountToApplyInBRL = Decimal.min(paymentValueInBRL, accountsRecRemainingBRL);
+      const overpaymentInBRL = paymentValueInBRL.minus(amountToApplyInBRL);
 
-      if (isGoldBased) {
-        // --- GOLD-BASED LOGIC ---
-        this.logger.log(`Executando lógica de pagamento baseada em OURO para AccountRec: ${accountsRec.id}`);
-        const accountsRecRemainingGold = new Decimal(accountsRec.goldAmount!).minus(new Decimal(accountsRec.goldAmountPaid || 0));
-        
-        gramsToApply = Decimal.min(requestedGrams, accountsRecRemainingGold);
-        overpaymentGrams = requestedGrams.minus(gramsToApply);
+      const overpaymentGrams = overpaymentInBRL.isPositive() && finalBuyPrice.isPositive()
+        ? overpaymentInBRL.dividedBy(finalBuyPrice)
+        : new Decimal(0);
 
-        const newGoldAmountPaid = new Decimal(accountsRec.goldAmountPaid || 0).plus(gramsToApply);
+      const gramsToApply = requestedGrams.minus(overpaymentGrams);
 
-        // Check if fully paid with a small tolerance for floating point inaccuracies
-        const difference = newGoldAmountPaid.minus(accountsRec.goldAmount!).abs();
-        isFullyPaid = newGoldAmountPaid.greaterThanOrEqualTo(accountsRec.goldAmount!) || difference.lessThan(0.00001);
+      // 4. Update AccountRec
+      const newAmountPaid = new Decimal(accountsRec.amountPaid || 0).plus(amountToApplyInBRL);
+      const newGoldAmountPaid = new Decimal(accountsRec.goldAmountPaid || 0).plus(gramsToApply);
 
-        amountToApplyInBRL = gramsToApply.times(finalBuyPrice);
+      const isFullyPaid = newAmountPaid.greaterThanOrEqualTo(new Decimal(accountsRec.amount).minus(0.001)); // Tolerance
 
-        await tx.accountRec.update({
-          where: { id: accountsRecId },
-          data: {
-            goldAmountPaid: newGoldAmountPaid.toDecimalPlaces(4),
-            amountPaid: new Decimal(accountsRec.amountPaid).plus(amountToApplyInBRL).toDecimalPlaces(2),
-            received: isFullyPaid,
-            receivedAt: isFullyPaid ? new Date() : null,
-          },
-        });
-
-      } else {
-        // --- BRL-BASED LOGIC ---
-        this.logger.log(`Executando lógica de pagamento baseada em BRL para AccountRec: ${accountsRec.id}`);
-        const accountsRecRemainingBRL = new Decimal(accountsRec.amount).minus(new Decimal(accountsRec.amountPaid || 0));
-        const potentialBRLValue = requestedGrams.times(finalBuyPrice);
-
-        amountToApplyInBRL = Decimal.min(potentialBRLValue, accountsRecRemainingBRL);
-        gramsToApply = amountToApplyInBRL.dividedBy(finalBuyPrice);
-        overpaymentGrams = requestedGrams.minus(gramsToApply);
-
-        const newAmountPaid = new Decimal(accountsRec.amountPaid || 0).plus(amountToApplyInBRL);
-
-        // Check if fully paid with a small tolerance for floating point inaccuracies
-        const difference = newAmountPaid.minus(accountsRec.amount).abs();
-        isFullyPaid = newAmountPaid.greaterThanOrEqualTo(accountsRec.amount) || difference.lessThan(0.01); // BRL has 2 decimal places
-
-        await tx.accountRec.update({
-          where: { id: accountsRecId },
-          data: {
-            amountPaid: newAmountPaid.toDecimalPlaces(2),
-            received: isFullyPaid,
-            receivedAt: isFullyPaid ? new Date() : null,
-          },
-        });
-      }
-
-      // 4. Create a new pure_metal_lot for the FULL received amount
-      await tx.pure_metal_lots.create({
+      await tx.accountRec.update({
+        where: { id: accountsRecId },
         data: {
-          organizationId,
-          sourceType: 'ACCOUNT_REC_PAYMENT',
-          sourceId: accountsRec.id,
-          metalType,
-          initialGrams: requestedGrams.toNumber(), // Use the full amount received
-          remainingGrams: requestedGrams.toNumber(),
-          purity: purity,
-          status: PureMetalLotStatus.AVAILABLE,
+          amountPaid: newAmountPaid.toDecimalPlaces(2),
+          goldAmountPaid: newGoldAmountPaid.toDecimalPlaces(4),
+          received: isFullyPaid,
+          receivedAt: isFullyPaid ? paymentDate : null,
         },
       });
 
-      // NEW: Handle Overpayment by creating a credit in the customer's metal account
+      // 5. Create a new pure_metal_lot for the FULL received amount
+      const description = `Pagamento da Venda #${accountsRec.sale?.orderNumber} - Cliente: ${accountsRec.sale?.pessoa.name}`
+      await tx.pure_metal_lots.create({
+        data: {
+          organizationId,
+          sourceType: 'PAGAMENTO_PEDIDO_CLIENTE',
+          sourceId: accountsRec.id,
+          saleId: accountsRec.saleId,
+          description,
+          metalType,
+          initialGrams: requestedGrams.toNumber(),
+          remainingGrams: requestedGrams.toNumber(),
+          purity: purity,
+          status: PureMetalLotStatus.AVAILABLE,
+          entryDate: paymentDate,
+        },
+      });
+
+      // 6. Handle Overpayment
       if (overpaymentGrams.isPositive()) {
         const pessoaId = accountsRec.sale?.pessoaId;
         if (pessoaId) {
@@ -139,7 +114,7 @@ export class PayAccountsRecWithMetalUseCase {
           await tx.metalAccountEntry.create({
             data: {
               metalAccountId: metalAccount.id,
-              date: new Date(),
+              date: paymentDate,
               description: `Crédito por pagamento excedente na Venda #${accountsRec.sale?.orderNumber}`,
               grams: overpaymentGrams.toDecimalPlaces(4),
               type: 'SALE_OVERPAYMENT',
@@ -149,7 +124,7 @@ export class PayAccountsRecWithMetalUseCase {
         }
       }
 
-      // 5. Create Financial Transaction
+      // 7. Create Financial Transaction for the APPLIED amount
       const settings = await this.settingsService.findOne(userId);
       if (!settings?.props.metalStockAccountId) {
         throw new BadRequestException("Nenhuma conta de estoque de metal padrão foi configurada.");
@@ -164,17 +139,17 @@ export class PayAccountsRecWithMetalUseCase {
           goldAmount: gramsToApply.toNumber(),
           goldPrice: finalBuyPrice.toNumber(),
           moeda: 'BRL',
-          dataHora: new Date(),
+          dataHora: paymentDate,
           accountRecId: accountsRec.id,
         },
       });
 
-      // 6. Update related entities
+      // 8. Update related entities
       const saleInstallment = await tx.saleInstallment.findFirst({ where: { accountRecId: accountsRec.id } });
       if (saleInstallment) {
         await tx.saleInstallment.update({
           where: { id: saleInstallment.id },
-          data: { status: isFullyPaid ? 'PAID' : 'PARTIALLY_PAID', paidAt: isFullyPaid ? new Date() : null },
+          data: { status: isFullyPaid ? 'PAID' : 'PARTIALLY_PAID', paidAt: isFullyPaid ? paymentDate : null },
         });
       }
       if (accountsRec.saleId) {
@@ -184,7 +159,7 @@ export class PayAccountsRecWithMetalUseCase {
         });
       }
 
-      // 7. Trigger Sale Adjustment
+      // 9. Trigger Sale Adjustment
       if (accountsRec.saleId) {
         await this.calculateSaleAdjustmentUseCase.execute(accountsRec.saleId, organizationId, tx);
       }

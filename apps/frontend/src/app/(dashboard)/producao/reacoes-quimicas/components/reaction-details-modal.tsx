@@ -5,6 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
+import { useState, useEffect } from "react";
+import { getChemicalReactionById } from "@/services/chemicalReactionsApi";
+import { ProductionStepClientBlock } from "../[id]/components/production-step-client-block";
+import { ImageUpload } from "@/components/shared/ImageUpload";
+
 // NOTA: Esta interface DEVE existir em '@/services/chemicalReactionsApi.ts'
 // Garanta que ela tenha todos os campos abaixo, especialmente outputProductGrams e updatedAt.
 export interface ChemicalReactionDetails {
@@ -24,6 +29,8 @@ export interface ChemicalReactionDetails {
         id: string;
         initialGrams: number;
         remainingGrams: number;
+        gramsToUse: number;
+        description: string | null;
         notes: string | null;
     }>;
 }
@@ -48,65 +55,157 @@ interface ReactionDetailsModalProps {
 }
 
 export function ReactionDetailsModal({ reaction, isOpen, onClose }: ReactionDetailsModalProps) {
-  if (!reaction) return null;
+
+  const [currentReaction, setCurrentReaction] = useState<ChemicalReactionDetails | null>(reaction);
+
+  const totalGramsToUse = currentReaction?.lots.reduce((acc, lot) => acc + (lot.gramsToUse || 0), 0) || 0;
+
+
+
+  // Update currentReaction when the prop changes
+
+  useEffect(() => {
+
+    setCurrentReaction(reaction);
+
+  }, [reaction]);
+
+
+
+  if (!currentReaction) return null;
+
+
 
   return (
+
     <Dialog open={isOpen} onOpenChange={onClose}>
+
       <DialogContent className="max-w-2xl">
+
         <DialogHeader>
+
           <DialogTitle>Detalhes da Reação</DialogTitle>
+
         </DialogHeader>
+
         <div className="space-y-6 p-4">
+
           <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">ID: {reaction.id}</p>
-            <Badge variant={statusVariantMap[reaction.status]} className="text-lg">{reaction.status.replace('_', ' ')}</Badge>
+
+            <p className="text-sm text-muted-foreground">ID: {currentReaction.id}</p>
+
+            <Badge variant={statusVariantMap[currentReaction.status]} className="text-lg">{currentReaction.status.replace('_', ' ')}</Badge>
+
           </div>
+
+
 
           <Separator />
 
+
+
           <div>
+
             <h3 className="font-semibold text-lg mb-2">Insumos</h3>
+
             <div className="grid gap-2">
-              <p><strong>Ouro Utilizado:</strong> {formatGrams(reaction.auUsedGrams)}</p>
-              {reaction.lots && reaction.lots.length > 0 ? (
+
+              <p><strong>Ouro Utilizado:</strong> {formatGrams(totalGramsToUse)}</p>
+
+              {currentReaction.lots && currentReaction.lots.length > 0 ? (
+
                 <div className="mt-2">
+
                   <p className="font-medium text-sm text-muted-foreground">Lotes de Metal (Insumo):</p>
+
                   <ul className="list-disc list-inside ml-4 text-sm">
-                    {reaction.lots.map(lot => (
+
+                    {currentReaction.lots.map(lot => (
+
                       <li key={lot.id}>
-                        Lote {lot.id.substring(0, 8)} ({lot.notes || '-'}) - {formatGrams(lot.initialGrams)} (Restante: {formatGrams(lot.remainingGrams)})
+
+                        Lote {lot.id.substring(0, 8)} ({lot.description || '-'}) - {formatGrams(lot.gramsToUse)} (Restante: {formatGrams(lot.remainingGrams)})
+
                       </li>
+
                     ))}
+
                   </ul>
+
                 </div>
+
               ) : (
+
                 <p className="text-sm text-muted-foreground">Nenhum lote de metal utilizado como insumo.</p>
+
               )}
+
             </div>
+
           </div>
+
+
 
           <Separator />
 
+
+
           <div>
+
             <h3 className="font-semibold text-lg mb-2">Resultados</h3>
+
             <div className="grid gap-2">
-              <p><strong>Lote Gerado:</strong> {reaction.productionBatch?.batchNumber}</p>
-              <p><strong>Produto:</strong> {reaction.productionBatch?.product.name}</p>
-              <p><strong>Quantidade Produzida:</strong> {formatGrams(reaction.outputProductGrams)}</p>
+
+              <p><strong>Lote Gerado:</strong> {currentReaction.productionBatch?.batchNumber}</p>
+
+              <p><strong>Produto:</strong> {currentReaction.productionBatch?.product.name}</p>
+
+              <p><strong>Quantidade Produzida:</strong> {formatGrams(currentReaction.outputProductGrams)}</p>
+
             </div>
+
           </div>
+
+
 
           <Separator />
 
+
+
           <div>
+
             <h3 className="font-semibold text-lg mb-2">Datas</h3>
+
             <div className="grid gap-2">
-              <p><strong>Iniciada em:</strong> {formatDate(reaction.createdAt)}</p>
-              <p><strong>Finalizada em:</strong> {reaction.status === 'COMPLETED' ? formatDate(reaction.updatedAt) : '-'}</p>
+
+              <p><strong>Iniciada em:</strong> {formatDate(currentReaction.createdAt)}</p>
+
+              <p><strong>Finalizada em:</strong> {currentReaction.status === 'COMPLETED' ? formatDate(currentReaction.updatedAt) : '-'}</p>
+
             </div>
+
           </div>
+
+
+
+          <Separator />
+
+
+
+          <div>
+
+            <h3 className="font-semibold text-lg mb-2">Imagens</h3>
+
+            <ImageUpload entity={{ type: 'chemicalReaction', id: currentReaction.id }} />
+
+          </div>
+
         </div>
+
       </DialogContent>
+
     </Dialog>
+
   );
+
 }

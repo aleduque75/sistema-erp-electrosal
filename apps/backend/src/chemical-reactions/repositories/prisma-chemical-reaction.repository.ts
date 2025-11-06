@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ChemicalReaction, IChemicalReactionRepository, UniqueEntityID } from '@sistema-erp-electrosal/core';
 import { chemical_reactions as PrismaChemicalReaction, Prisma } from '@prisma/client';
 
-type PrismaChemicalReactionWithLots = PrismaChemicalReaction & { lots: { id: string }[] };
+type PrismaChemicalReactionWithLots = PrismaChemicalReaction & { lots: { pureMetalLotId: string; gramsToUse: number }[] };
 
 @Injectable()
 export class PrismaChemicalReactionRepository implements IChemicalReactionRepository {
@@ -24,7 +24,7 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
         outputProductGrams: dbData.outputProductGrams,
         outputBasketLeftoverGrams: dbData.outputBasketLeftoverGrams || undefined,
         outputDistillateLeftoverGrams: dbData.outputDistillateLeftoverGrams || undefined,
-        sourceLotIds: dbData.lots ? dbData.lots.map(lot => lot.id) : [],
+        sourceLots: dbData.lots ? dbData.lots.map(lot => ({ pureMetalLotId: lot.pureMetalLotId, gramsToUse: lot.gramsToUse })) : [],
       },
       UniqueEntityID.create(dbData.id),
     );
@@ -32,7 +32,7 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
 
   async create(reaction: ChemicalReaction): Promise<ChemicalReaction> {
     const { id, props } = reaction;
-    const { sourceLotIds, ...reactionProps } = props;
+    const { sourceLots, ...reactionProps } = props;
 
     const dbReaction = await this.prisma.chemical_reactions.create({
       data: {
@@ -40,11 +40,14 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
         reactionNumber: reaction.reactionNumber,
         ...reactionProps,
         lots: {
-          connect: sourceLotIds.map((lotId) => ({ id: lotId })),
+          create: sourceLots.map(lot => ({
+            pureMetalLotId: lot.pureMetalLotId,
+            gramsToUse: lot.gramsToUse,
+          })),
         },
       },
       include: {
-        lots: { select: { id: true } },
+        lots: { select: { pureMetalLotId: true, gramsToUse: true } },
       },
     });
     return this.mapToDomain(dbReaction);
@@ -57,7 +60,7 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
         organizationId,
       },
       include: {
-        lots: { select: { id: true } },
+        lots: { select: { pureMetalLotId: true, gramsToUse: true } },
       },
     });
     if (!dbReaction) {
@@ -73,7 +76,7 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
         organizationId,
       },
       include: {
-        lots: { select: { id: true } },
+        lots: { select: { pureMetalLotId: true, gramsToUse: true } },
       },
     });
     if (!dbReaction) {
@@ -87,9 +90,28 @@ export class PrismaChemicalReactionRepository implements IChemicalReactionReposi
       where: { organizationId },
       orderBy: { reactionDate: 'desc' },
       include: {
-        lots: { select: { id: true } },
+        lots: { select: { pureMetalLotId: true, gramsToUse: true } },
       },
     });
     return dbReactions.map(this.mapToDomain);
+  }
+
+  async save(reaction: ChemicalReaction): Promise<void> {
+    const { id, props } = reaction;
+    const { sourceLots, ...reactionProps } = props;
+
+    await this.prisma.chemical_reactions.update({
+      where: { id: id.toString() },
+      data: {
+        ...reactionProps,
+        lots: {
+          deleteMany: {},
+          create: sourceLots.map(lot => ({
+            pureMetalLotId: lot.pureMetalLotId,
+            gramsToUse: lot.gramsToUse,
+          })),
+        },
+      },
+    });
   }
 }

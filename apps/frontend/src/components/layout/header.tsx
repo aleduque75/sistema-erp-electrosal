@@ -60,11 +60,11 @@ export function Header({ logoText, logoImage }: HeaderProps) {
       <>
         <Image
           src="/images/logo.png"
-          alt="Sistema Beleza Logo"
+          alt="Sistema Electrosal Logo"
           width={160}
           height={32}
         />
-        <span className="font-bold sm:inline-block">Sistema Beleza</span>
+        <span className="font-bold sm:inline-block">Sistema Electrosal - Erp</span>
       </>
     );
   };

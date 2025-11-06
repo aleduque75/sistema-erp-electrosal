@@ -8,10 +8,11 @@ import { SettingsModule } from '../settings/settings.module';
 import { QuotationsModule } from '../quotations/quotations.module';
 import { SalesModule } from '../sales/sales.module';
 import { UsersModule } from '../users/users.module';
+import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
 import { PrismaMetalCreditRepository } from '../metal-credits/repositories/prisma-metal-credit.repository';
 
 @Module({
-  imports: [PrismaModule, SettingsModule, QuotationsModule, SalesModule, UsersModule],
+  imports: [PrismaModule, SettingsModule, QuotationsModule, SalesModule, UsersModule, MetalAccountsModule],
   controllers: [AccountsRecController],
   providers: [
     AccountsRecService,
