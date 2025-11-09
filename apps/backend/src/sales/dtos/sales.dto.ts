@@ -3,13 +3,21 @@ import { Type } from 'class-transformer';
 import { IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested, IsEnum } from 'class-validator';
 import { TipoMetal } from '@prisma/client';
 
+class SaleItemLotDto {
+  @IsUUID() @IsNotEmpty() inventoryLotId: string;
+  @IsNumber() @Min(0.0001) quantity: number;
+}
+
 class SaleItemDto {
   @IsUUID() @IsNotEmpty() productId: string;
   @IsNumber()
   @Min(0.0001)
   quantity: number;
-  @IsNumber() @Min(0) price: number; // Adicionado
-  @IsUUID() @IsOptional() inventoryLotId?: string;
+  @IsNumber() @Min(0) price: number;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SaleItemLotDto)
+  lots: SaleItemLotDto[];
 }
 
 export class CreateSaleDto {

@@ -1,37 +1,46 @@
-inventory_lots
-id	0935223d-e8d4-4666-86db-35cf8912f68e
-organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
-productId	88613cb2-cccd-4f43-ad5b-d2ca305b4352
-batchNumber	1191
-costPrice	706.25
-quantity	814.086
-remainingQuantity	814.086
-sourceType	REACTION
-sourceId	ce56ae92-9e3a-42eb-abec-813b98b42897
-notes	
-receivedDate	2025-11-06 14:08:06.435
-createdAt	2025-11-06 14:08:06.436
-updatedAt	2025-11-06 14:08:06.436
+Entendi. Para implementar a seleção de múltiplos lotes em uma venda, preciso de uma grande mudança no frontend e backend.
 
-chemical_reactions
-id	ce56ae92-9e3a-42eb-abec-813b98b42897
-organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
-auUsedGrams	845.515
-notes	Reação Lote 1191
-outputProductGrams	814.086
-status	COMPLETED
-reactionDate	2025-06-03 00:00:00
-createdAt	2025-11-06 14:00:14.937
-updatedAt	2025-11-06 14:08:06.442
-productionBatchId	0935223d-e8d4-4666-86db-35cf8912f68e
-inputBasketLeftoverGrams	
-inputDistillateLeftoverGrams	
-inputGoldGrams	845.515
-inputRawMaterialGrams	760.117985
-outputBasketLeftoverGrams	128.4
-outputDistillateLeftoverGrams	163.315
-outputGoldGrams	553.800
-outputSilverGrams	0.000
-outputProductId	88613cb2-cccd-4f43-ad5b-d2ca305b4352
-metalType	AU
-reactionNumber	REA--1263
+  O Plano:
+
+  Backend:
+   1. `SaleItem` Model: Criarei um modelo SaleItemLot no schema.prisma para uma relação muitos-para-muitos entre SaleItem e 
+      InventoryLot, armazenando a quantidade de cada lote.
+   2. Lógica do Backend: Atualizarei o caso de uso de criação/atualização de vendas para lidar com múltiplas seleções de lote por 
+      item, criando entradas SaleItemLot e atualizando a remainingQuantity de cada InventoryLot. A lógica de movimentação de estoque 
+      também será ajustada.
+
+  Frontend:
+   1. UI de Seleção de Lote: Redesenharei a UI de seleção de lote para uma modal que permita visualizar, ordenar por data (FIFO), 
+      selecionar múltiplos lotes e calcular a quantidade restante.
+   2. Formulário de Venda: Atualizarei o formulário para usar a nova UI e enviar a estrutura de dados correta.
+
+  Próximos Passos:
+
+  Começarei pelo backend, modificando o schema.prisma para adicionar o modelo SaleItemLot, gerando uma nova migração e atualizando
+   os casos de uso e serviços. Em seguida, farei o frontend.
+
+  Vou começar lendo o schema.prisma para garantir que tenho a versão mais recente.
+
+
+
+  Prós:
+   * Rastreabilidade Completa: Teríamos rastreabilidade total de cada lote.
+   * Políticas de Inventário: Permitiria a implementação de FIFO e outras políticas.
+   * Custeio Preciso: O custo de cada SaleItem seria calculado com precisão.
+
+  Contras:
+   * Implementação Complexa: Exige mudanças no banco de dados, backend e frontend.
+   * Nova UI: Os usuários precisariam aprender uma nova interface.
+
+  Recomendação
+
+  Embora a consolidação de lotes seja mais simples, eu a desaconselho fortemente. A perda de rastreabilidade e a incapacidade de 
+  gerenciar o inventário adequadamente são desvantagens graves.
+
+  A seleção de múltiplos lotes é a solução correta, mais robusta e escalável. Estou pronto para implementá-la, começando pelas 
+  alterações no schema.prisma do backend, após ler a versão mais recente do arquivo.
+
+> ok
+
+✦ Certo, vou implementar a seleção de múltiplos lotes. Começarei modificando o schema.prisma para adicionar o modelo SaleItemLot e 
+  atualizar os modelos SaleItem e InventoryLot. Primeiro, lerei o schema.prisma para garantir que estou com a versão mais recente.

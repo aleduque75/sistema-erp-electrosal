@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { SaleStatus, Role } from '@prisma/client'; // Keep Sale for now, will refactor later
+import { LinkLotsToSaleItemDto } from './dtos/link-lots-to-sale-item.dto';
+import { LinkLotsToSaleItemUseCase } from './use-cases/link-lots-to-sale-item.use-case';
 import { CreateSaleDto, UpdateSaleDto, ConfirmSaleDto, ReceiveInstallmentPaymentDto } from './dtos/sales.dto';
 import { EditSaleDto } from './dtos/edit-sale.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -26,7 +28,7 @@ import { SeparateSaleUseCase } from './use-cases/separate-sale.use-case';
 import { BackfillSaleGoldValueUseCase } from './use-cases/backfill-sale-gold-value.use-case';
 import { BackfillInstallmentsUseCase } from './use-cases/backfill-installments.use-case';
 import { ProcessClientMetalPaymentToSupplierUseCase, ProcessClientMetalPaymentToSupplierCommand } from './use-cases/process-client-metal-payment-to-supplier.use-case';
-import { LinkSaleItemToBatchUseCase } from './use-cases/link-sale-item-to-batch.use-case';
+
 import { ReceiveInstallmentPaymentUseCase } from './use-cases/receive-installment-payment.use-case';
 import { LinkSaleItemToBatchDto } from './dtos/link-sale-item-to-batch.dto';
 
@@ -42,20 +44,15 @@ export class SalesController {
     private readonly confirmSaleUseCase: ConfirmSaleUseCase,
     private readonly cancelSaleUseCase: CancelSaleUseCase,
     private readonly finalizeSaleUseCase: FinalizeSaleUseCase,
+    private readonly linkLotsToSaleItemUseCase: LinkLotsToSaleItemUseCase,
     private readonly revertSaleUseCase: RevertSaleUseCase,
-    private readonly releaseToPcpUseCase: ReleaseToPcpUseCase,
     private readonly separateSaleUseCase: SeparateSaleUseCase,
-    private readonly backfillSaleGoldValueUseCase: BackfillSaleGoldValueUseCase,
-    private readonly processClientMetalPaymentToSupplierUseCase: ProcessClientMetalPaymentToSupplierUseCase,
+    private readonly releaseToPcpUseCase: ReleaseToPcpUseCase,
     private readonly backfillInstallmentsUseCase: BackfillInstallmentsUseCase,
-    private readonly linkSaleItemToBatchUseCase: LinkSaleItemToBatchUseCase,
     private readonly receiveInstallmentPaymentUseCase: ReceiveInstallmentPaymentUseCase,
   ) {}
 
-  @Post('link-item-to-batch')
-  async linkSaleItemToBatch(@Body() linkSaleItemToBatchDto: LinkSaleItemToBatchDto) {
-    return this.linkSaleItemToBatchUseCase.execute(linkSaleItemToBatchDto);
-  }
+
 
   @Post('backfill-installments')
   async backfillInstallments(@CurrentUser('organizationId') organizationId: string) {
@@ -90,6 +87,20 @@ export class SalesController {
   @Get('diagnose/:orderNumber')
   async diagnoseSale(@CurrentUser('organizationId') organizationId: string, @Param('orderNumber') orderNumber: string) {
     return this.salesService.diagnoseSale(organizationId, Number(orderNumber));
+  }
+
+  @Post('items/:id/link-lots')
+  async linkLotsToSaleItem(
+    @Param('id') id: string,
+    @Body() linkLotsDto: LinkLotsToSaleItemDto,
+    @Req() req: any,
+  ) {
+    const organizationId = req.user.organizationId;
+    return this.linkLotsToSaleItemUseCase.execute(
+      organizationId,
+      id,
+      linkLotsDto,
+    );
   }
 
   @Get('by-order-number/:orderNumber/transactions')

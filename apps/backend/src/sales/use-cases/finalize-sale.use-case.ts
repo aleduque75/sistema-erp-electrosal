@@ -16,7 +16,13 @@ export class FinalizeSaleUseCase {
     const finalizedSale = await this.prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findFirst({
         where: { id: saleId, organizationId },
-        include: { saleItems: true },
+        include: {
+          saleItems: {
+            include: {
+              saleItemLots: true,
+            },
+          },
+        },
       });
 
       if (!sale) {
@@ -38,22 +44,8 @@ export class FinalizeSaleUseCase {
       // If sale is being finalized from PCP (A_SEPARAR) without prior payment,
       // we must commit stock and create the financial receivable now.
       if (sale.status === SaleStatus.A_SEPARAR) {
-        // 1. Deduct Stock
-        for (const item of sale.saleItems) {
-          if (item.inventoryLotId) {
-            await tx.inventoryLot.update({
-              where: { id: item.inventoryLotId },
-              data: { remainingQuantity: { decrement: item.quantity } },
-            });
-          }
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: item.quantity } },
-          });
-          await tx.stockMovement.create({
-            data: { organizationId, productId: item.productId, quantity: -item.quantity, type: 'SALE_FINALIZED' },
-          });
-        }
+        // A dedução de estoque agora é feita no `separate-sale.use-case.ts`.
+        // Esta parte da lógica é para criar as entradas financeiras.
 
         // 2. Create Financial Receivable
         if (sale.paymentMethod === 'A_PRAZO' || sale.paymentMethod === 'CREDIT_CARD') {

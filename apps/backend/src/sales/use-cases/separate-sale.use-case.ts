@@ -34,7 +34,14 @@ export class SeparateSaleUseCase {
         this.logger.log('Starting transaction to separate sale');
         const saleWithItems = await tx.sale.findUnique({
           where: { id: saleId },
-          include: { saleItems: { include: { product: true } } },
+          include: {
+            saleItems: {
+              include: {
+                product: true,
+                saleItemLots: true,
+              },
+            },
+          },
         });
 
         if (!saleWithItems) {
@@ -43,35 +50,41 @@ export class SeparateSaleUseCase {
 
         for (const item of saleWithItems.saleItems) {
           this.logger.log(`Processing item ${item.id}`);
-          if (!item.inventoryLotId) {
-            throw new BadRequestException(`O item ${item.product.name} não possui um lote de estoque associado.`);
+          if (!(item as any).saleItemLots || (item as any).saleItemLots.length === 0) {
+            throw new BadRequestException(`O item ${item.product.name} não possui lotes de estoque associados.`);
           }
 
-          const quantityToDecrement = new Decimal(item.quantity).toNumber();
+          // Primeiro, decrementa o estoque dos lotes individuais
+          for (const saleItemLot of (item as any).saleItemLots) {
+            const lotQuantityToDecrement = new Decimal(saleItemLot.quantity).toNumber();
 
-          this.logger.log(`Decrementing stock for item ${item.id} from lot ${item.inventoryLotId} by ${quantityToDecrement}`);
-          await tx.inventoryLot.update({
-            where: { id: item.inventoryLotId },
-            data: { remainingQuantity: { decrement: quantityToDecrement } },
-          });
+            this.logger.log(`Decrementing stock for item ${item.id} from lot ${saleItemLot.inventoryLotId} by ${lotQuantityToDecrement}`);
+            await tx.inventoryLot.update({
+              where: { id: saleItemLot.inventoryLotId },
+              data: { remainingQuantity: { decrement: lotQuantityToDecrement } },
+            });
 
+            this.logger.log(`Creating stock movement for item ${item.id} and lot ${saleItemLot.inventoryLotId}`);
+            await tx.stockMovement.create({
+              data: {
+                organizationId,
+                productId: item.productId,
+                inventoryLotId: saleItemLot.inventoryLotId,
+                quantity: -lotQuantityToDecrement, // Negative for stock out
+                type: 'SALE_SEPARATED',
+                sourceDocument: `Venda #${saleWithItems.orderNumber}`,
+                createdAt: separationDate || saleWithItems.updatedAt,
+              }
+            });
+          }
+
+          // Depois, decrementa o estoque total do produto uma única vez
+          const totalItemQuantityToDecrement = new Decimal(item.quantity).toNumber();
           const currentStock = item.product.stock || 0;
+          this.logger.log(`Decrementing total product stock for item ${item.id} by ${totalItemQuantityToDecrement}`);
           await tx.product.update({
             where: { id: item.productId },
-            data: { stock: currentStock - quantityToDecrement },
-          });
-
-          this.logger.log(`Creating stock movement for item ${item.id}`);
-          await tx.stockMovement.create({
-            data: {
-              organizationId,
-              productId: item.productId,
-              inventoryLotId: item.inventoryLotId,
-              quantity: -quantityToDecrement, // Negative for stock out
-              type: 'SALE_SEPARATED',
-              sourceDocument: `Venda #${saleWithItems.orderNumber}`,
-              createdAt: separationDate || saleWithItems.updatedAt,
-            }
+            data: { stock: currentStock - totalItemQuantityToDecrement },
           });
         }
 

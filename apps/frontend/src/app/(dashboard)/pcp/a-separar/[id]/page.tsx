@@ -15,8 +15,18 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SelectLotsModal } from '../../../sales/components/SelectLotsModal';
 
-// Redefining Sale type to include full details needed for this page
+interface SaleItem { // Interface atualizada
+  id: string;
+  product: { id: string; name: string; };
+  quantity: number;
+  saleItemLots: {
+    inventoryLot: { batchNumber: string; };
+    quantity: number;
+  }[];
+}
+
 interface Sale {
   id: string;
   orderNumber: string;
@@ -30,12 +40,7 @@ interface Sale {
     cep?: string;
   };
   createdAt: string;
-  saleItems: {
-    id: string;
-    product: { name: string };
-    quantity: number;
-    inventoryLot?: { batchNumber?: string };
-  }[];
+  saleItems: SaleItem[];
 }
 
 export default function SeparacaoPedidoPage() {
@@ -44,9 +49,9 @@ export default function SeparacaoPedidoPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedSaleItemId, setSelectedSaleItemId] = useState<string | null>(null);
-  const [batchNumber, setBatchNumber] = useState('');
+  const [isSelectLotsModalOpen, setIsSelectLotsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedSaleItem, setSelectedSaleItem] = useState<SaleItem | null>(null);
 
   const fetchSale = () => {
     if (id) {
@@ -62,37 +67,32 @@ export default function SeparacaoPedidoPage() {
     fetchSale();
   }, [id]);
 
-  const handleOpenModal = (saleItemId: string) => {
-    setSelectedSaleItemId(saleItemId);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedSaleItemId(null);
-    setBatchNumber('');
-  };
-
-  const handleLinkBatch = async () => {
-    console.log('handleLinkBatch called');
-    if (!selectedSaleItemId || !batchNumber) {
-      toast.error('Por favor, insira o número do lote.');
-      return;
-    }
-
-    console.log('Sending request to /sales/link-item-to-batch with', { saleItemId: selectedSaleItemId, batchNumber });
-
+  const openLotSelector = async (item: SaleItem) => {
     try {
-      await api.post('/sales/link-item-to-batch', {
-        saleItemId: selectedSaleItemId,
-        batchNumber,
-      });
-      toast.success('Lote vinculado com sucesso!');
-      handleCloseModal();
-      fetchSale(); // Refresh sale data
+      const productWithLots = await api.get(`/products/${item.product.id}`);
+      setSelectedProduct(productWithLots.data);
+      setSelectedSaleItem(item);
+      setIsSelectLotsModalOpen(true);
     } catch (error) {
-      console.error('Error linking batch:', error);
-      toast.error('Falha ao vincular o lote. Verifique o número e tente novamente.');
+      toast.error("Falha ao carregar os lotes do produto.");
+    }
+  };
+
+  const handleLinkLots = async (data: { lots: { inventoryLotId: string; batchNumber: string; quantity: number }[] }) => {
+    if (!selectedSaleItem) return;
+    try {
+      const payload = {
+        lots: data.lots.map(lot => ({
+          inventoryLotId: lot.inventoryLotId,
+          quantity: lot.quantity,
+        })),
+      };
+      await api.post(`/sales/items/${selectedSaleItem.id}/link-lots`, payload);
+      toast.success("Lotes vinculados com sucesso!");
+      setIsSelectLotsModalOpen(false);
+      fetchSale(); // Recarregar os dados da venda
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Erro ao vincular os lotes.");
     }
   };
 
@@ -171,6 +171,13 @@ export default function SeparacaoPedidoPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-8">
+      <SelectLotsModal
+        open={isSelectLotsModalOpen}
+        onOpenChange={setIsSelectLotsModalOpen}
+        product={selectedProduct}
+        totalQuantityNeeded={selectedSaleItem?.quantity || 0}
+        onAddItem={handleLinkLots}
+      />
       <h1 className="text-2xl font-bold">Separação do Pedido #{sale.orderNumber}</h1>
       
       <Card>
@@ -215,40 +222,24 @@ export default function SeparacaoPedidoPage() {
               {sale.saleItems.map(item => (
                 <TableRow key={item.id}>
                   <TableCell>{item.product.name}</TableCell>
-                  <TableCell>{item.inventoryLot?.batchNumber || 'N/A'}</TableCell>
+                  <TableCell>
+                    {item.saleItemLots.length > 0
+                      ? item.saleItemLots.map(sil => `Lote: ${sil.inventoryLot.batchNumber} (Qtd: ${sil.quantity})`).join(', ')
+                      : 'N/A'}
+                  </TableCell>
                   <TableCell className="text-right">{item.quantity.toFixed(4)}</TableCell>
                   <TableCell>
-                    {!item.inventoryLot && (
-                      <Button onClick={() => handleOpenModal(item.id)}>Vincular Lote</Button>
-                    )}
+                    <Button onClick={() => openLotSelector(item)}>Vincular Lotes</Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-          <Button variant="outline" onClick={generatePDF}>Gerar PDF</Button>
-          <Button onClick={handleConfirmSeparation}>Confirmar Separação</Button>
-        </CardFooter>
-      </Card>
-
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Vincular Lote</DialogTitle>
-          </DialogHeader>
-          <Input
-            placeholder="Número do Lote"
-            value={batchNumber}
-            onChange={(e) => setBatchNumber(e.target.value)}
-          />
-          <DialogFooter>
-            <Button variant="secondary" onClick={handleCloseModal}>Cancelar</Button>
-            <Button onClick={handleLinkBatch}>Vincular</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+              <CardFooter className="flex justify-end gap-2">
+                <Button variant="outline" onClick={generatePDF}>Gerar PDF</Button>
+                <Button onClick={handleConfirmSeparation}>Confirmar Separação</Button>
+              </CardFooter>
+            </Card>
+          </div>  );
 }

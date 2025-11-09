@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react"; // NOVO
 import {
   Table,
   TableBody,
@@ -16,6 +17,9 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SelectLotsModal } from "./SelectLotsModal"; // NOVO
+import api from "@/lib/api"; // NOVO
+import { toast } from "sonner"; // NOVO
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -34,11 +38,17 @@ const formatGold = (value?: number | null) => {
 interface SaleItem {
   id: string;
   product: {
+    id: string; // Adicionado
     name: string;
   };
-  inventoryLotId?: string;
   quantity: number;
   price: number;
+  saleItemLots: {
+    inventoryLot: {
+      batchNumber: string;
+    };
+    quantity: number;
+  }[];
 }
 
 interface AccountRec {
@@ -76,6 +86,40 @@ interface SaleDetailsViewProps {
 }
 
 export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps) {
+  const [isSelectLotsModalOpen, setIsSelectLotsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedSaleItem, setSelectedSaleItem] = useState<SaleItem | null>(null);
+
+  const openLotSelector = async (item: SaleItem) => {
+    try {
+      // A interface do produto precisa ser compatível com a SelectLotsModal
+      const productWithLots = await api.get(`/products/${item.product.id}`);
+      setSelectedProduct(productWithLots.data);
+      setSelectedSaleItem(item);
+      setIsSelectLotsModalOpen(true);
+    } catch (error) {
+      toast.error("Falha ao carregar os lotes do produto.");
+    }
+  };
+
+  const handleLinkLots = async (data: { lots: { inventoryLotId: string; batchNumber: string; quantity: number }[] }) => {
+    if (!selectedSaleItem) return;
+    try {
+      const payload = {
+        lots: data.lots.map(lot => ({
+          inventoryLotId: lot.inventoryLotId,
+          quantity: lot.quantity,
+        })),
+      };
+      await api.post(`/sales/items/${selectedSaleItem.id}/link-lots`, payload);
+      toast.success("Lotes vinculados com sucesso!");
+      // O ideal seria recarregar os dados da venda para refletir a mudança
+      setIsSelectLotsModalOpen(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Erro ao vincular os lotes.");
+    }
+  };
+
   if (!sale) return null;
 
   console.log('Sale object in SaleDetailsView:', sale);
@@ -86,6 +130,13 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
 
   return (
     <div className="space-y-4">
+      <SelectLotsModal
+        open={isSelectLotsModalOpen}
+        onOpenChange={setIsSelectLotsModalOpen}
+        product={selectedProduct}
+        totalQuantityNeeded={selectedSaleItem?.quantity || 0}
+        onAddItem={handleLinkLots} // Reutilizando onAddItem para a lógica de vincular
+      />
       {/* ... (conteúdo existente do componente) ... */}
       <div className="grid grid-cols-2 gap-4 border-b pb-4">
         <div>
@@ -120,13 +171,18 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
                 <TableHead className="text-center">Qtd.</TableHead>
                 <TableHead className="text-right">Valor Unit.</TableHead>
                 <TableHead className="text-right">Subtotal</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sale.saleItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>{item.product.name}</TableCell>
-                  <TableCell>{item.inventoryLotId ? item.inventoryLotId.substring(0, 8) : 'N/A'}</TableCell>
+                  <TableCell>
+                    {item.saleItemLots.length > 0
+                      ? item.saleItemLots.map(sil => `Lote: ${sil.inventoryLot.batchNumber} (Qtd: ${sil.quantity})`).join(', ')
+                      : 'N/A'}
+                  </TableCell>
                   <TableCell className="text-center">{item.quantity}</TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(item.price)}
@@ -134,8 +190,11 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
                   <TableCell className="text-right">
                     {formatCurrency(item.price * item.quantity)}
                   </TableCell>
+                  <TableCell>
+                    <Button size="sm" onClick={() => openLotSelector(item)}>Vincular Lotes</Button>
+                  </TableCell>
                 </TableRow>
-              ))}
+              ))}}
             </TableBody>
           </Table>
         </CardContent>

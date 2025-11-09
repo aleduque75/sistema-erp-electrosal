@@ -224,11 +224,11 @@ model InventoryLot {
   receivedDate        DateTime             @default(now())
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
-  saleItems           SaleItem[]
   stockMovements      StockMovement[] // Adicionado para rastrear movimentações
   reaction            chemical_reactions?  @relation("ReactionToBatch")
   organization        Organization         @relation(fields: [organizationId], references: [id])
   product             Product              @relation(fields: [productId], references: [id])
+  saleItemLots        SaleItemLot[]
 
   @@map("inventory_lots")
 }
@@ -267,6 +267,7 @@ model Sale {
   externalId        String?           @unique
   status            SaleStatus        @default(PENDENTE)
   shippingCost      Decimal?          @db.Decimal(10, 2)
+  readyForPayment   Boolean           @default(false)
   accountsRec       AccountRec[]
   organization      Organization      @relation(fields: [organizationId], references: [id])
   paymentTerm       PaymentTerm?      @relation(fields: [paymentTermId], references: [id])
@@ -304,11 +305,24 @@ model SaleItem {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   costPriceAtSale Decimal       @db.Decimal(10, 2)
-  inventoryLotId  String?
   externalId      String?       @unique
-  inventoryLot    InventoryLot? @relation(fields: [inventoryLotId], references: [id])
   product         Product       @relation(fields: [productId], references: [id])
   sale            Sale          @relation(fields: [saleId], references: [id])
+  saleItemLots    SaleItemLot[]
+}
+
+model SaleItemLot {
+  id             String       @id @default(uuid())
+  saleItemId     String
+  inventoryLotId String
+  quantity       Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  saleItem       SaleItem     @relation(fields: [saleItemId], references: [id])
+  inventoryLot   InventoryLot @relation(fields: [inventoryLotId], references: [id])
+
+  @@unique([saleItemId, inventoryLotId])
+  @@map("sale_item_lots")
 }
 
 model SaleInstallment {

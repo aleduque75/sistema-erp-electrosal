@@ -10,7 +10,13 @@ export class RevertSaleUseCase {
     return this.prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findFirst({
         where: { id: saleId, organizationId },
-        include: { saleItems: true },
+        include: {
+          saleItems: {
+            include: {
+              saleItemLots: true,
+            },
+          },
+        },
       });
 
       if (!sale) {
@@ -23,10 +29,14 @@ export class RevertSaleUseCase {
 
       // 1. Reverse Stock Deduction
       for (const item of sale.saleItems) {
-        if (item.inventoryLotId) {
+        for (const saleItemLot of (item as any).saleItemLots) {
           await tx.inventoryLot.update({
-            where: { id: item.inventoryLotId },
-            data: { remainingQuantity: { increment: item.quantity } },
+            where: { id: saleItemLot.inventoryLotId },
+            data: {
+              remainingQuantity: {
+                increment: saleItemLot.quantity,
+              },
+            },
           });
         }
         await tx.product.update({

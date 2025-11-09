@@ -276,18 +276,34 @@ export class SalesMovementImportUseCase {
       const saleItemToUpdate = sale.saleItems.find(
         (item) =>
           item.productId === inventoryLot.productId &&
-          !item.inventoryLotId &&
           Math.abs(item.quantity - finoQty.toNumber()) < 0.001,
       );
 
       if (saleItemToUpdate) {
-        await this.prisma.saleItem.update({
-          where: { id: saleItemToUpdate.id },
-          data: { inventoryLotId: inventoryLot.id },
+        // Verificar se já existe um SaleItemLot para este item e lote
+        const existingSaleItemLot = await this.prisma.saleItemLot.findUnique({
+          where: {
+            saleItemId_inventoryLotId: {
+              saleItemId: saleItemToUpdate.id,
+              inventoryLotId: inventoryLot.id,
+            },
+          },
         });
-        this.logger.log(`SaleItem ${saleItemToUpdate.id} para a Venda #${sale.orderNumber} vinculado ao Lote ${inventoryLot.batchNumber}.`);
+
+        if (!existingSaleItemLot) {
+          await this.prisma.saleItemLot.create({
+            data: {
+              saleItemId: saleItemToUpdate.id,
+              inventoryLotId: inventoryLot.id,
+              quantity: saltQty.toNumber(), // Usar a quantidade do sal do arquivo de importação
+            },
+          });
+          this.logger.log(`SaleItemLot criado para SaleItem ${saleItemToUpdate.id} (Venda #${sale.orderNumber}) e Lote ${inventoryLot.batchNumber}.`);
+        } else {
+          this.logger.log(`SaleItemLot para SaleItem ${saleItemToUpdate.id} e Lote ${inventoryLot.batchNumber} já existe.`);
+        }
       } else {
-        this.logger.warn(`Nenhum SaleItem compatível (produto, sem lote, quantidade) encontrado na Venda #${sale.orderNumber} para vincular ao lote ${loteNumber}.`);
+        this.logger.warn(`Nenhum SaleItem compatível (produto, quantidade) encontrado na Venda #${sale.orderNumber} para vincular ao lote ${loteNumber}.`);
       }
 
       const existingMovement = await this.prisma.stockMovement.findFirst({

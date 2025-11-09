@@ -182,14 +182,20 @@ export class ProductsService {
     return prismaProducts;
   }
 
-  async findOne(organizationId: string, id: string): Promise<Product> {
+  async findOne(organizationId: string, id: string): Promise<any> { // Retorno modificado para any para evitar problemas com o mapper
     const prismaProduct = await this.prisma.product.findFirst({
       where: { id, organizationId },
-      include: { productGroup: true }, // Incluir o grupo do produto
+      include: {
+        productGroup: true,
+        inventoryLots: {
+          where: { remainingQuantity: { gt: 0 } },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
     if (!prismaProduct)
       throw new NotFoundException(`Produto com ID ${id} não encontrado.`);
-    return ProductMapper.toDomain(prismaProduct);
+    return prismaProduct; // Retornar o objeto do Prisma diretamente
   }
 
   async update(

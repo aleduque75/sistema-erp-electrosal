@@ -26,12 +26,23 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AddItemModal } from "./AddItemModal";
+import { SelectLotsModal } from "./SelectLotsModal";
+import { ProductSelectionModal } from "./ProductSelectionModal"; // NOVO
 
 // --- Interfaces ---
 interface Client { id: string; name: string; }
 interface Product { id: string; name: string; price: number; stock: number; inventoryLots: any[] }
-interface SaleItem { productId: string; name: string; quantity: number; price: number; stock: number; inventoryLotId?: string; batchNumber?: string; }
+interface SaleItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  lots: {
+    inventoryLotId: string;
+    batchNumber: string;
+    quantity: number;
+  }[];
+}
 interface ContaCorrente { id: string; nome: string; }
 interface Fee { id: string; installments: number; feePercentage: number; }
 interface PaymentTerm { id: string; name: string; installmentsDays: number[]; interestRate?: number; }
@@ -58,7 +69,9 @@ export function NewSaleForm({ onSave }: any) {
   const [absorbCreditCardFee, setAbsorbCreditCardFee] = useState(false);
   const [saleGoldQuote, setSaleGoldQuote] = useState(0);
   const [laborCostTable, setLaborCostTable] = useState<any[]>([]);
-  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [isSelectLotsModalOpen, setIsSelectLotsModalOpen] = useState(false);
+  const [isProductSelectionModalOpen, setIsProductSelectionModalOpen] = useState(false); // NOVO
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [freightAmount, setFreightAmount] = useState(0);
 
   const {
@@ -142,26 +155,27 @@ export function NewSaleForm({ onSave }: any) {
     }
   }, [paymentConditionId, numberOfInstallments, fees]);
 
-  const handleUpsertItem = (newItem: Omit<SaleItem, 'stock'>) => {
+  const handleAddItem = (newItem: SaleItem) => {
     setItems(currentItems => {
-      const existingItem = currentItems.find(
-        (item) => item.productId === newItem.productId && item.inventoryLotId === newItem.inventoryLotId
-      );
-
-      if (existingItem) {
-        return currentItems.map((item) =>
-          item.productId === newItem.productId && item.inventoryLotId === newItem.inventoryLotId
-            ? { ...item, quantity: Number(item.quantity) + Number(newItem.quantity) }
-            : item
-        );
-      } else {
-        return [...currentItems, { ...newItem, stock: 0 }]; // stock is not relevant here
+      // Lógica de "upsert" simplificada: se o produto já existe, substitui.
+      const existingItemIndex = currentItems.findIndex(item => item.productId === newItem.productId);
+      if (existingItemIndex > -1) {
+        const updatedItems = [...currentItems];
+        updatedItems[existingItemIndex] = newItem;
+        return updatedItems;
       }
+      return [...currentItems, newItem];
     });
   };
 
-  const handleRemoveItem = (productId: string, inventoryLotId?: string) =>
-    setItems(items.filter((item) => !(item.productId === productId && item.inventoryLotId === inventoryLotId)));
+  const handleRemoveItem = (productId: string) => { // MODIFICADO
+    setItems(items.filter((item) => item.productId !== productId));
+  }
+
+  const openLotSelector = (product: Product) => {
+    setSelectedProduct(product);
+    setIsSelectLotsModalOpen(true);
+  };
 
   const totalAmount = useMemo(
     () => items.reduce((total, item) => total + item.price * item.quantity, 0),
@@ -205,7 +219,15 @@ export function NewSaleForm({ onSave }: any) {
 
     const payload = {
       pessoaId: formData.clientId,
-      items: items.map(({ productId, quantity, price, inventoryLotId }) => ({ productId, quantity, price, inventoryLotId })),
+      items: items.map(({ productId, quantity, price, lots }) => ({
+        productId,
+        quantity,
+        price,
+        lots: lots.map(lot => ({
+          inventoryLotId: lot.inventoryLotId,
+          quantity: lot.quantity,
+        })),
+      })),
       feeAmount: totalAmount * (feePercentage / 100),
       freightAmount: freightAmount,
       paymentMethod,
@@ -231,14 +253,17 @@ export function NewSaleForm({ onSave }: any) {
       onSubmit={handleSubmit(onFinalizeSale)}
       className="flex flex-col h-full bg-background p-1 rounded-lg"
     >
-      <AddItemModal
-        open={isAddItemModalOpen}
-        onOpenChange={setIsAddItemModalOpen}
+      <SelectLotsModal
+        open={isSelectLotsModalOpen}
+        onOpenChange={setIsSelectLotsModalOpen}
+        product={selectedProduct}
+        onAddItem={handleAddItem}
+      />
+      <ProductSelectionModal
+        open={isProductSelectionModalOpen}
+        onOpenChange={setIsProductSelectionModalOpen}
         products={products}
-        items={items}
-        onAddItem={handleUpsertItem}
-        saleGoldQuote={saleGoldQuote}
-        laborCostTable={laborCostTable}
+        onProductSelect={openLotSelector}
       />
       <div className="flex flex-col lg:flex-row flex-1 gap-4">
         <div className="w-full lg:w-1/3 space-y-4">
@@ -348,7 +373,7 @@ export function NewSaleForm({ onSave }: any) {
                   )}
                 />
               )}
-               <Button type="button" variant="outline" onClick={() => setIsAddItemModalOpen(true)} className="w-full">
+               <Button type="button" variant="outline" onClick={() => setIsProductSelectionModalOpen(true)} className="w-full">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Adicionar Produto
               </Button>
@@ -374,14 +399,19 @@ export function NewSaleForm({ onSave }: any) {
                   </TableHeader>
                   <TableBody>
                     {items.length > 0 ? (
-                      items.map((item) => (
-                        <TableRow key={`${item.productId}-${item.inventoryLotId || 'stock'}`}>
-                          <TableCell>{item.name}{item.batchNumber && ` (Lote: ${item.batchNumber})`}</TableCell>
+                      items.map((item, index) => (
+                        <TableRow key={`${item.productId}-${index}`}>
+                          <TableCell>
+                            {item.name}
+                            <div className="text-xs text-muted-foreground">
+                              {item.lots.map(lot => `Lote: ${lot.batchNumber} (Qtd: ${lot.quantity.toFixed(4)})`).join(', ')}
+                            </div>
+                          </TableCell>
                           <TableCell>{Number(item.quantity).toFixed(4)}</TableCell>
                           <TableCell>{formatCurrency(item.price)}</TableCell>
                           <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
                           <TableCell>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.productId, item.inventoryLotId)}>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.productId)}>
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
                           </TableCell>

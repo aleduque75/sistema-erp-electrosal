@@ -67,7 +67,11 @@ export class SalesService {
         saleItems: {
           include: {
             product: true, // Inclui detalhes do produto em cada item
-            inventoryLot: true, // Inclui o lote para exibir o batchNumber
+            saleItemLots: { // MODIFICADO
+              include: {
+                inventoryLot: true,
+              },
+            },
           },
         },
         adjustment: true, // Include the sale adjustment data
@@ -100,7 +104,9 @@ export class SalesService {
           product: item.product
             ? { id: item.product.id, name: item.product.name }
             : null,
-          inventoryLot: item.inventoryLot, // Garante que o lote seja passado
+          // A lógica para exibir os lotes precisará ser ajustada no frontend
+          // Aqui, apenas garantimos que os dados sejam passados
+          saleItemLots: (item as any).saleItemLots,
         })),
       };
     });
@@ -134,7 +140,11 @@ export class SalesService {
           // Inclui os itens da venda
           include: {
             product: true, // Para cada item, inclui os dados do produto
-            inventoryLot: true,
+            saleItemLots: { // MODIFICADO
+              include: {
+                inventoryLot: true,
+              },
+            },
           },
         },
         accountsRec: { // Inclui os recebíveis associados
@@ -162,7 +172,9 @@ export class SalesService {
         product: item.product
           ? { id: item.product.id, name: item.product.name, goldValue: item.product.goldValue }
           : null,
-        inventoryLot: item.inventoryLot, // Garante que o lote seja passado
+        // A lógica para exibir os lotes precisará ser ajustada no frontend
+        // Aqui, apenas garantimos que os dados sejam passados
+        saleItemLots: (item as any).saleItemLots,
       })),
     };
 
@@ -190,7 +202,7 @@ export class SalesService {
       include: {
         saleItems: {
           include: {
-            inventoryLot: true, // Include inventoryLot to restore stock
+            saleItemLots: true, // MODIFICADO
           },
         },
       },
@@ -201,23 +213,16 @@ export class SalesService {
     }
 
     return this.prisma.$transaction(async (prisma) => {
-      // 1. Restaurar estoque dos produtos (agora via lotes)
+      // 1. Restaurar estoque dos produtos (agora via múltiplos lotes)
       for (const item of sale.saleItems) {
-        if (item.inventoryLotId) { // Only restore if it was linked to a lot
+        for (const saleItemLot of (item as any).saleItemLots) {
           await prisma.inventoryLot.update({
-            where: { id: item.inventoryLotId },
+            where: { id: saleItemLot.inventoryLotId },
             data: {
               remainingQuantity: {
-                increment: item.quantity,
+                increment: saleItemLot.quantity,
               },
             },
-          });
-        } else {
-          // Fallback for old sales or if inventoryLotId was null
-          // This should ideally not happen if all sales are linked to lots
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } },
           });
         }
       }

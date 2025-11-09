@@ -42,9 +42,7 @@ export class CreateSaleUseCase {
     }
 
     const productIds = items.map((item) => item.productId);
-    const inventoryLotIds = items
-      .map((item) => item.inventoryLotId)
-      .filter((id): id is string => !!id); // Filter out null/undefined
+    const allInventoryLotIds = items.flatMap((item) => item.lots.map((lot) => lot.inventoryLotId));
 
     const [rawProductsInDb, inventoryLotsInDb] = await Promise.all([
       this.prisma.product.findMany({
@@ -52,7 +50,7 @@ export class CreateSaleUseCase {
         include: { productGroup: true },
       }),
       this.prisma.inventoryLot.findMany({
-        where: { id: { in: inventoryLotIds }, organizationId },
+        where: { id: { in: allInventoryLotIds }, organizationId },
       }),
     ]);
 
@@ -68,28 +66,53 @@ export class CreateSaleUseCase {
     let totalCost = new Decimal(0);
     let totalCommissionAmount = new Decimal(0);
     const commissionDetails: any[] = [];
-    const saleItemsToCreate: Prisma.SaleItemCreateManySaleInput[] = [];
+    const saleItemsToCreate: Prisma.SaleItemCreateWithoutSaleInput[] = [];
+    const inventoryLotUpdates: { id: string; quantity: number }[] = [];
 
     for (const item of items) {
       const product = productsInDb.find((p) => p.id.toString() === item.productId);
       if (!product) throw new NotFoundException(`Produto com ID ${item.productId} não encontrado.`);
-
-      if (!item.inventoryLotId) {
-        throw new BadRequestException(`Item ${product.name} não possui um lote de inventário (inventoryLotId) especificado.`);
-      }
-      const inventoryLot = inventoryLotsMap.get(item.inventoryLotId);
-      if (!inventoryLot) throw new NotFoundException(`Lote de inventário com ID ${item.inventoryLotId} não encontrado.`);
 
       const productGroup = product.productGroup;
       if (!productGroup) throw new BadRequestException(`Produto "${product.name}" não possui um grupo associado.`);
 
       const itemPrice = new Decimal(item.price);
       const itemQuantity = new Decimal(item.quantity);
+
+      const totalLotQuantity = item.lots.reduce((sum, lot) => sum.plus(new Decimal(lot.quantity)), new Decimal(0));
+      const difference = totalLotQuantity.minus(itemQuantity).abs();
+      if (difference.greaterThan(new Decimal('0.0001'))) { // Permitir uma pequena tolerância
+        throw new BadRequestException(`A soma das quantidades dos lotes para o produto ${product.name} (${totalLotQuantity}) não corresponde à quantidade total do item (${itemQuantity}).`);
+      }
+
+      let itemTotalCost = new Decimal(0);
+      const saleItemLotsToCreate: Prisma.SaleItemLotCreateManySaleItemInput[] = [];
+
+      for (const lot of item.lots) {
+        const inventoryLot = inventoryLotsMap.get(lot.inventoryLotId);
+        if (!inventoryLot) throw new NotFoundException(`Lote de inventário com ID ${lot.inventoryLotId} não encontrado.`);
+
+        const lotQuantity = new Decimal(lot.quantity);
+        if (lotQuantity.greaterThan(new Decimal(inventoryLot.remainingQuantity))) {
+          throw new BadRequestException(`Quantidade insuficiente no lote ${inventoryLot.batchNumber} para o produto ${product.name}. Disponível: ${inventoryLot.remainingQuantity}, Solicitado: ${lotQuantity}.`);
+        }
+
+        const lotCostPrice = new Decimal(inventoryLot.costPrice);
+        itemTotalCost = itemTotalCost.plus(lotCostPrice.times(lotQuantity));
+        
+        saleItemLotsToCreate.push({
+          inventoryLotId: lot.inventoryLotId,
+          quantity: lot.quantity,
+        });
+
+        inventoryLotUpdates.push({
+          id: lot.inventoryLotId,
+          quantity: lot.quantity,
+        });
+      }
+
       totalAmount = totalAmount.plus(itemPrice.times(itemQuantity));
-      
-      const lotCostPrice = new Decimal(inventoryLot.costPrice);
-      const itemCost = lotCostPrice.times(itemQuantity);
-      totalCost = totalCost.plus(itemCost);
+      totalCost = totalCost.plus(itemTotalCost);
 
       // --- Commission Calculation Logic ---
       let itemCommission = new Decimal(0);
@@ -100,7 +123,7 @@ export class CreateSaleUseCase {
         productGroupName: productGroup.name,
       };
 
-      const itemProfit = itemPrice.times(itemQuantity).minus(itemCost);
+      const itemProfit = itemPrice.times(itemQuantity).minus(itemTotalCost);
       if (productGroup.commissionPercentage) {
         itemCommission = itemProfit.times(productGroup.commissionPercentage).dividedBy(100);
         currentItemCommissionDetails.itemProfit = itemProfit;
@@ -112,11 +135,15 @@ export class CreateSaleUseCase {
       // --- End Commission Logic ---
 
       saleItemsToCreate.push({
-        productId: product.id.toString(),
+        product: { connect: { id: product.id.toString() } }, // MODIFICADO
         quantity: item.quantity,
         price: itemPrice,
-        costPriceAtSale: lotCostPrice, // Cost at time of sale from the specific lot
-        inventoryLotId: item.inventoryLotId,
+        costPriceAtSale: itemTotalCost.dividedBy(itemQuantity), // Custo médio ponderado do item
+        saleItemLots: {
+          createMany: {
+            data: saleItemLotsToCreate,
+          },
+        },
       });
     }
 
@@ -152,6 +179,20 @@ export class CreateSaleUseCase {
         saleItems: { create: saleItemsToCreate },
       },
     });
+
+    // Update remainingQuantity for inventory lots
+    await this.prisma.$transaction(
+      inventoryLotUpdates.map((lotUpdate) =>
+        this.prisma.inventoryLot.update({
+          where: { id: lotUpdate.id },
+          data: {
+            remainingQuantity: {
+              decrement: lotUpdate.quantity,
+            },
+          },
+        }),
+      ),
+    );
 
     if (paymentTermId) {
       const paymentTerm = await this.prisma.paymentTerm.findUnique({
