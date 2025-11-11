@@ -24,28 +24,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, PackageSearch } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SelectLotsModal } from "./SelectLotsModal";
-import { ProductSelectionModal } from "./ProductSelectionModal"; // NOVO
+import { LotSelectionModal } from "@/components/sales/LotSelectionModal";
+import { Product } from "@/types/product";
+import { SaleItem, SaleItemLot } from "@/types/sale";
+import { InventoryLot } from "@/types/inventory-lot";
 
 // --- Interfaces ---
 interface Client { id: string; name: string; }
-interface Product { id: string; name: string; price: number; stock: number; inventoryLots: any[] }
-interface SaleItem {
-  productId: string;
-  name: string;
-  quantity: number;
-  price: number;
-  lots: {
-    inventoryLotId: string;
-    batchNumber: string;
-    quantity: number;
-  }[];
-}
 interface ContaCorrente { id: string; nome: string; }
 interface Fee { id: string; installments: number; feePercentage: number; }
-interface PaymentTerm { id: string; name: string; installmentsDays: number[]; interestRate?: number; }
+interface PaymentTerm { id:string; name: string; installmentsDays: number[]; interestRate?: number; }
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -68,10 +58,8 @@ export function NewSaleForm({ onSave }: any) {
   const [feePercentage, setFeePercentage] = useState(0);
   const [absorbCreditCardFee, setAbsorbCreditCardFee] = useState(false);
   const [saleGoldQuote, setSaleGoldQuote] = useState(0);
-  const [laborCostTable, setLaborCostTable] = useState<any[]>([]);
-  const [isSelectLotsModalOpen, setIsSelectLotsModalOpen] = useState(false);
-  const [isProductSelectionModalOpen, setIsProductSelectionModalOpen] = useState(false); // NOVO
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isLotModalOpen, setIsLotModalOpen] = useState(false);
+  const [itemToSelectLots, setItemToSelectLots] = useState<{ product: Product, itemIndex: number } | null>(null);
   const [freightAmount, setFreightAmount] = useState(0);
 
   const {
@@ -89,7 +77,7 @@ export function NewSaleForm({ onSave }: any) {
   const paymentOptions = useMemo(() => {
     const terms = paymentTerms.map(term => ({ value: term.id, label: term.name, isTerm: true }));
     return [
-      ...terms, 
+      ...terms,
       { value: 'CREDIT_CARD', label: 'Cartão de Crédito', isTerm: false },
       { value: 'METAL', label: 'Metal', isTerm: false },
     ];
@@ -116,7 +104,7 @@ export function NewSaleForm({ onSave }: any) {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [clientsRes, productsRes, contasRes, feesRes, orgSettingsRes, paymentTermsRes, quoteRes, laborTableRes] = await Promise.all([
+        const [clientsRes, productsRes, contasRes, feesRes, orgSettingsRes, paymentTermsRes, quoteRes] = await Promise.all([
           api.get("/pessoas?role=CLIENT"),
           api.get("/products"),
           api.get("/contas-correntes"),
@@ -124,7 +112,6 @@ export function NewSaleForm({ onSave }: any) {
           api.get("/settings/organization"),
           api.get("/payment-terms"),
           api.get("/quotations/latest?metal=AU"),
-          api.get("/labor-cost-table-entries"),
         ]);
         setClients(clientsRes.data.map((c: any) => ({ id: c.id, name: c.name })));
         setProducts(productsRes.data);
@@ -132,7 +119,6 @@ export function NewSaleForm({ onSave }: any) {
         setFees(feesRes.data);
         setAbsorbCreditCardFee(orgSettingsRes.data.absorbCreditCardFee);
         setPaymentTerms(paymentTermsRes.data);
-        setLaborCostTable(laborTableRes.data);
         if (quoteRes.data?.sellPrice) {
           setSaleGoldQuote(quoteRes.data.sellPrice);
           toast.info(`Cotação do Ouro carregada: ${formatCurrency(quoteRes.data?.sellPrice)}`);
@@ -155,26 +141,60 @@ export function NewSaleForm({ onSave }: any) {
     }
   }, [paymentConditionId, numberOfInstallments, fees]);
 
-  const handleAddItem = (newItem: SaleItem) => {
-    setItems(currentItems => {
-      // Lógica de "upsert" simplificada: se o produto já existe, substitui.
-      const existingItemIndex = currentItems.findIndex(item => item.productId === newItem.productId);
-      if (existingItemIndex > -1) {
-        const updatedItems = [...currentItems];
-        updatedItems[existingItemIndex] = newItem;
-        return updatedItems;
-      }
-      return [...currentItems, newItem];
-    });
+  const handleAddNewItem = () => {
+    const newItem: SaleItem = {
+      productId: '',
+      name: 'Novo Item',
+      quantity: 1,
+      price: 0,
+      lots: [],
+    };
+    setItems(currentItems => [...currentItems, newItem]);
   };
 
-  const handleRemoveItem = (productId: string) => { // MODIFICADO
-    setItems(items.filter((item) => item.productId !== productId));
+  const handleUpdateItem = (index: number, field: keyof SaleItem, value: any) => {
+    const updatedItems = [...items];
+    if (field === 'productId') {
+      const product = products.find(p => p.id === value);
+      if (product) {
+        updatedItems[index] = {
+          ...updatedItems[index],
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          lots: [], // Reset lots when product changes
+        };
+      }
+    } else {
+      updatedItems[index] = { ...updatedItems[index], [field]: value };
+    }
+    setItems(updatedItems);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
   }
 
-  const openLotSelector = (product: Product) => {
-    setSelectedProduct(product);
-    setIsSelectLotsModalOpen(true);
+  const openLotSelector = (itemIndex: number) => {
+    const item = items[itemIndex];
+    const product = products.find(p => p.id === item.productId);
+    if (!product) {
+      toast.error("Selecione um produto para o item antes de escolher os lotes.");
+      return;
+    }
+    setItemToSelectLots({ product, itemIndex });
+    setIsLotModalOpen(true);
+  };
+
+  const handleLotsSelected = (selectedLots: SaleItemLot[]) => {
+    if (itemToSelectLots === null) return;
+    const { itemIndex } = itemToSelectLots;
+    
+    const updatedItems = [...items];
+    updatedItems[itemIndex].lots = selectedLots;
+    setItems(updatedItems);
+    
+    setItemToSelectLots(null);
   };
 
   const totalAmount = useMemo(
@@ -192,6 +212,9 @@ export function NewSaleForm({ onSave }: any) {
 
   const onFinalizeSale = async (formData: any) => {
     if (items.length === 0) return toast.error("Adicione pelo menos um item à venda.");
+    if (items.some(item => !item.productId)) return toast.error("Todos os itens devem ter um produto selecionado.");
+    if (items.some(item => item.lots.length === 0)) return toast.error("Todos os itens devem ter lotes selecionados.");
+
     const isAVista = selectedPaymentCondition?.label.toLowerCase().includes('vista');
     if (isAVista && !formData.contaCorrenteId) return toast.error("Para vendas à vista, selecione a conta de destino.");
 
@@ -205,17 +228,11 @@ export function NewSaleForm({ onSave }: any) {
         paymentMethod = 'CREDIT_CARD';
       } else if (selectedPaymentCondition.value === 'METAL') {
         paymentMethod = 'METAL';
-        paymentTermId = null; // Garantir que seja null para METAL
       } else if (selectedPaymentCondition.isTerm) {
-        paymentTermId = selectedPaymentCondition.value; // Atribui o ID do termo de pagamento
-        if (selectedPaymentCondition.label.toLowerCase().includes('vista')) {
-          paymentMethod = 'A_VISTA';
-          paymentTermId = null; // Se for A_VISTA, o paymentTermId deve ser null
-        } else {
-          paymentMethod = 'A_PRAZO'; // Se não for A_VISTA, é A_PRAZO
-        }
+        paymentTermId = selectedPaymentCondition.value;
+        paymentMethod = selectedPaymentCondition.label.toLowerCase().includes('vista') ? 'A_VISTA' : 'A_PRAZO';
       }
-  }
+    }
 
     const payload = {
       pessoaId: formData.clientId,
@@ -223,10 +240,7 @@ export function NewSaleForm({ onSave }: any) {
         productId,
         quantity,
         price,
-        lots: lots.map(lot => ({
-          inventoryLotId: lot.inventoryLotId,
-          quantity: lot.quantity,
-        })),
+        lots,
       })),
       feeAmount: totalAmount * (feePercentage / 100),
       freightAmount: freightAmount,
@@ -253,18 +267,16 @@ export function NewSaleForm({ onSave }: any) {
       onSubmit={handleSubmit(onFinalizeSale)}
       className="flex flex-col h-full bg-background p-1 rounded-lg"
     >
-      <SelectLotsModal
-        open={isSelectLotsModalOpen}
-        onOpenChange={setIsSelectLotsModalOpen}
-        product={selectedProduct}
-        onAddItem={handleAddItem}
-      />
-      <ProductSelectionModal
-        open={isProductSelectionModalOpen}
-        onOpenChange={setIsProductSelectionModalOpen}
-        products={products}
-        onProductSelect={openLotSelector}
-      />
+      {itemToSelectLots && (
+        <LotSelectionModal
+          isOpen={isLotModalOpen}
+          onClose={() => setIsLotModalOpen(false)}
+          product={itemToSelectLots.product}
+          quantityRequired={items[itemToSelectLots.itemIndex].quantity}
+          existingLots={items[itemToSelectLots.itemIndex].lots}
+          onLotsSelected={handleLotsSelected}
+        />
+      )}
       <div className="flex flex-col lg:flex-row flex-1 gap-4">
         <div className="w-full lg:w-1/3 space-y-4">
           <Card className="h-full">
@@ -373,26 +385,27 @@ export function NewSaleForm({ onSave }: any) {
                   )}
                 />
               )}
-               <Button type="button" variant="outline" onClick={() => setIsProductSelectionModalOpen(true)} className="w-full">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar Produto
-              </Button>
             </CardContent>
           </Card>
         </div>
         <div className="w-full lg:w-2/3 space-y-4 flex flex-col">
           <Card className="flex-1 flex flex-col">
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between">
               <CardTitle className="text-lg">Itens da Venda</CardTitle>
+              <Button type="button" variant="outline" size="sm" onClick={handleAddNewItem}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Adicionar Item
+              </Button>
             </CardHeader>
             <CardContent className="flex-1 p-0">
               <ScrollArea className="h-[350px]">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Produto</TableHead>
+                      <TableHead className="w-[40%]">Produto</TableHead>
                       <TableHead>Qtd</TableHead>
                       <TableHead>Preço Unit.</TableHead>
+                      <TableHead>Lotes</TableHead>
                       <TableHead className="text-right">Subtotal</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
@@ -400,18 +413,42 @@ export function NewSaleForm({ onSave }: any) {
                   <TableBody>
                     {items.length > 0 ? (
                       items.map((item, index) => (
-                        <TableRow key={`${item.productId}-${index}`}>
+                        <TableRow key={index}>
                           <TableCell>
-                            {item.name}
-                            <div className="text-xs text-muted-foreground">
-                              {item.lots.map(lot => `Lote: ${lot.batchNumber} (Qtd: ${lot.quantity.toFixed(4)})`).join(', ')}
-                            </div>
+                            <Combobox
+                              options={products.map(p => ({ value: p.id, label: p.name }))}
+                              value={item.productId}
+                              onChange={(value) => handleUpdateItem(index, 'productId', value)}
+                              placeholder="Selecione um produto"
+                            />
                           </TableCell>
-                          <TableCell>{Number(item.quantity).toFixed(4)}</TableCell>
-                          <TableCell>{formatCurrency(item.price)}</TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => handleUpdateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                              className="w-24"
+                              step="0.0001"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.price}
+                              onChange={(e) => handleUpdateItem(index, 'price', parseFloat(e.target.value) || 0)}
+                              className="w-24"
+                              step="0.01"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button type="button" variant="outline" size="sm" onClick={() => openLotSelector(index)}>
+                              <PackageSearch className="mr-2 h-4 w-4" />
+                              ({item.lots.length})
+                            </Button>
+                          </TableCell>
                           <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
                           <TableCell>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.productId)}>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(index)}>
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
                           </TableCell>
@@ -419,10 +456,10 @@ export function NewSaleForm({ onSave }: any) {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center h-full">
+                        <TableCell colSpan={6} className="text-center h-full">
                           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                             <p>Nenhum item adicionado.</p>
-                            <p className="text-sm">Clique em "Adicionar Produto" para começar.</p>
+                            <p className="text-sm">Clique em "Adicionar Item" para começar.</p>
                           </div>
                         </TableCell>
                       </TableRow>
