@@ -15,7 +15,7 @@ export class CreateProductDto {
   @IsString() @IsNotEmpty() name: string;
   @IsString() @IsOptional() description?: string;
   @IsNumber() @Min(0) price: number;
-  @IsNumber() @IsOptional() stock?: number;
+  @IsNumber() stock!: number;
   @IsEnum(StockUnit) @IsOptional() stockUnit?: StockUnit;
   @IsNumber() @IsOptional() costPrice?: number; // Adicionado
   @IsNumber() @IsOptional() goldValue?: number; // Adicionado

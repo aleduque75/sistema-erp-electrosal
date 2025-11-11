@@ -377,6 +377,7 @@ model AccountRec {
   amountPaid      Decimal           @db.Decimal(10, 2) @default(0)
   goldAmount      Decimal?          @db.Decimal(12, 4)
   goldAmountPaid  Decimal?          @db.Decimal(12, 4) @default(0)
+  doNotUpdateSaleStatus Boolean       @default(false) // NOVO CAMPO
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   contaCorrenteId String?

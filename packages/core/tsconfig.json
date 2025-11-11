@@ -12,7 +12,9 @@
     "types": ["node"],
     "baseUrl": "./src",
     "paths": {
-      "@shared/*": ["_shared/*"]
+      "@shared/*": ["_shared/*"],
+      "@value-objects/*": ["value-objects/*"],
+      "@domain/*": ["domain/*"]
     }
   },
   "include": ["src"]

@@ -71,6 +71,9 @@ export class ConfirmSaleDto {
   @IsNumber()
   @IsOptional()
   updatedGoldPrice?: number;
+
+  @IsOptional() // Adicionado para permitir que a venda não seja finalizada imediatamente
+  keepSaleStatusPending?: boolean;
 }
 
 export class ReceiveInstallmentPaymentDto {

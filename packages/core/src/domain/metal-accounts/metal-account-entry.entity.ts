@@ -9,6 +9,7 @@ export interface MetalAccountEntryProps {
   date: Date;
   sourceId?: string; // Renomeado de relatedTransactionId
   description?: string;
+  organizationId: string;
 }
 
 export class MetalAccountEntry extends Entity<MetalAccountEntryProps> {

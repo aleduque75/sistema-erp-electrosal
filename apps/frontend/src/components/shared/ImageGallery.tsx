@@ -69,7 +69,12 @@ export function ImageGallery({ media, onDeleteSuccess }: ImageGalleryProps) {
 
       <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
         <DialogContent className="max-w-3xl p-0">
-          <Carousel className="w-full">
+          <Carousel 
+            className="w-full"
+            opts={{
+              startIndex: currentImageIndex,
+            }}
+          >
             <CarouselContent>
               {media.map((item, index) => (
                 <CarouselItem key={item.id}>

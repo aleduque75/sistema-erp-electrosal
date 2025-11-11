@@ -6,10 +6,10 @@ export class MediaResponseDto {
   path: string;
   mimetype: string;
   size: number;
-  width?: number;
-  height?: number;
-  recoveryOrderId?: string;
-  analiseQuimicaId?: string;
+  width?: number | null;
+  height?: number | null;
+  recoveryOrderId?: string | null;
+  analiseQuimicaId?: string | null;
 
   static fromDomain(media: Media): MediaResponseDto {
     const dto = new MediaResponseDto();
@@ -18,10 +18,10 @@ export class MediaResponseDto {
     dto.path = media.path;
     dto.mimetype = media.mimetype;
     dto.size = media.size;
-    dto.width = media.width;
-    dto.height = media.height;
-    dto.recoveryOrderId = media.recoveryOrderId;
-    dto.analiseQuimicaId = media.analiseQuimicaId;
+    dto.width = media.width ?? null;
+    dto.height = media.height ?? null;
+    dto.recoveryOrderId = media.recoveryOrderId ?? null;
+    dto.analiseQuimicaId = media.analiseQuimicaId ?? null;
     return dto;
   }
 

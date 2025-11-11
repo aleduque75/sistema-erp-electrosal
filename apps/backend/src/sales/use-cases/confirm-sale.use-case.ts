@@ -115,6 +115,7 @@ export class ConfirmSaleUseCase {
             dueDate: paymentDate,
             received: true,
             receivedAt: paymentDate,
+            doNotUpdateSaleStatus: confirmSaleDto.keepSaleStatusPending || false, // Adicionar esta linha
           },
         });
 
@@ -224,7 +225,9 @@ export class ConfirmSaleUseCase {
       const updatedSale = await tx.sale.update({
         where: { id: saleId },
         data: {
-          status: SaleStatus.FINALIZADO,
+          status: confirmSaleDto.keepSaleStatusPending
+            ? sale.status // Mantém o status original se keepSaleStatusPending for true
+            : SaleStatus.FINALIZADO, // Caso contrário, finaliza a venda
           paymentMethod: confirmSaleDto.paymentMethod,
           netAmount: finalNetAmount,
           totalAmount: finalTotalAmount,

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Sale } from '../page';
 import { TipoMetal } from '@/types/tipo-metal';
 
@@ -41,6 +42,7 @@ export function ConfirmSaleModal({
   const [accounts, setAccounts] = useState<ContaCorrente[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | undefined>(undefined);
   const [selectedMetalType, setSelectedMetalType] = useState<TipoMetal | undefined>(undefined);
+  const [keepSaleStatusPending, setKeepSaleStatusPending] = useState(false); // NOVO ESTADO
 
   useEffect(() => {
     if (open && sale?.paymentMethod === 'A_VISTA') {
@@ -54,6 +56,7 @@ export function ConfirmSaleModal({
     if (!open) {
       setSelectedAccountId(undefined);
       setSelectedMetalType(undefined);
+      setKeepSaleStatusPending(false); // RESETAR NOVO ESTADO
     }
   }, [open, sale]);
 
@@ -62,7 +65,12 @@ export function ConfirmSaleModal({
 
     setIsSubmitting(true);
     try {
-      const payload: { paymentMethod: string; contaCorrenteId?: string; paymentMetalType?: TipoMetal } = {
+      const payload: { 
+        paymentMethod: string; 
+        contaCorrenteId?: string; 
+        paymentMetalType?: TipoMetal;
+        keepSaleStatusPending?: boolean; // ADICIONAR AO TIPO DO PAYLOAD
+      } = {
         paymentMethod: sale.paymentMethod,
       };
 
@@ -80,6 +88,7 @@ export function ConfirmSaleModal({
           return;
         }
         payload.paymentMetalType = selectedMetalType;
+        payload.keepSaleStatusPending = keepSaleStatusPending; // ADICIONAR AO PAYLOAD
       }
 
       await api.post(`/sales/${sale.id}/confirm`, payload);
@@ -149,6 +158,16 @@ export function ConfirmSaleModal({
                   <SelectItem value={TipoMetal.RH}>Ródio (RH)</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* NOVO CHECKBOX */}
+              <div className="flex items-center space-x-2 pt-4">
+                <Checkbox
+                  id="keepSaleStatusPending"
+                  checked={keepSaleStatusPending}
+                  onCheckedChange={(checked) => setKeepSaleStatusPending(checked as boolean)}
+                />
+                <Label htmlFor="keepSaleStatusPending">Manter venda como 'A Separar' (pagamento em metal recebido, produto pendente)</Label>
+              </div>
             </div>
           )}
         </div>

@@ -13,12 +13,13 @@ export class MediaMapper {
       height: prismaMedia.height,
       organizationId: prismaMedia.organizationId,
       createdAt: prismaMedia.createdAt,
+      updatedAt: prismaMedia.updatedAt, // Adicionado
       recoveryOrderId: prismaMedia.recoveryOrderId,
       analiseQuimicaId: prismaMedia.analiseQuimicaId, // Adicionado
       transacaoId: prismaMedia.transacaoId, // Adicionado
       chemicalReactionId: prismaMedia.chemicalReactionId, // Adicionado
     };
-    return Media.create(props, new UniqueEntityID(prismaMedia.id));
+    return Media.create(props, UniqueEntityID.create(prismaMedia.id));
   }
 
   public static toPersistence(media: Media): Omit<PrismaMedia, 'id' | 'createdAt' | 'updatedAt'> & { id?: string } {
@@ -28,13 +29,13 @@ export class MediaMapper {
       mimetype: media.mimetype,
       size: media.size,
       path: media.path,
-      width: media.width,
-      height: media.height,
-      organizationId: media.organizationId,
-      recoveryOrderId: media.recoveryOrderId,
-      analiseQuimicaId: media.analiseQuimicaId, // Adicionado
-      transacaoId: media.transacaoId, // Adicionado
-      chemicalReactionId: media.chemicalReactionId, // Adicionado
+      width: media.width ?? null, // Corrigido
+      height: media.height ?? null, // Corrigido
+      organizationId: media.organizationId ?? null, // Corrigido
+      recoveryOrderId: media.recoveryOrderId ?? null, // Corrigido
+      analiseQuimicaId: media.analiseQuimicaId ?? null, // Corrigido
+      transacaoId: media.transacaoId ?? null, // Corrigido
+      chemicalReactionId: media.chemicalReactionId ?? null, // Corrigido
     };
   }
 }

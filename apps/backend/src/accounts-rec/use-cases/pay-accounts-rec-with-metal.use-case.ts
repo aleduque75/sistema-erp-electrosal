@@ -69,7 +69,20 @@ export class PayAccountsRecWithMetalUseCase {
       const newAmountPaid = new Decimal(accountsRec.amountPaid || 0).plus(amountToApplyInBRL);
       const newGoldAmountPaid = new Decimal(accountsRec.goldAmountPaid || 0).plus(gramsToApply);
 
-      const isFullyPaid = newAmountPaid.greaterThanOrEqualTo(new Decimal(accountsRec.amount).minus(0.001)); // Tolerance
+      // Comparar valores em BRL com 2 casas decimais
+      const accountsRecAmountBRL = new Decimal(accountsRec.amount).toDecimalPlaces(2);
+      const newAmountPaidBRL = newAmountPaid.toDecimalPlaces(2);
+
+      // Comparar valores em Gold com 4 casas decimais (se aplicável)
+      const accountsRecGoldAmount = new Decimal(accountsRec.goldAmount || 0).toDecimalPlaces(4);
+      const newGoldAmountPaidGold = newGoldAmountPaid.toDecimalPlaces(4);
+
+      // A venda é considerada totalmente paga se o valor em BRL pago for igual ao valor total da conta a receber em BRL
+      // E se o valor em ouro pago for igual ao valor total da conta a receber em ouro (se houver)
+      const isFullyPaidBRL = newAmountPaidBRL.equals(accountsRecAmountBRL);
+      const isFullyPaidGold = accountsRecGoldAmount.isZero() || newGoldAmountPaidGold.equals(accountsRecGoldAmount); // Se não há goldAmount, considera pago em ouro
+
+      const isFullyPaid = isFullyPaidBRL && isFullyPaidGold;
 
       await tx.accountRec.update({
         where: { id: accountsRecId },
@@ -152,7 +165,7 @@ export class PayAccountsRecWithMetalUseCase {
           data: { status: isFullyPaid ? 'PAID' : 'PARTIALLY_PAID', paidAt: isFullyPaid ? paymentDate : null },
         });
       }
-      if (accountsRec.saleId) {
+      if (accountsRec.saleId && !accountsRec.doNotUpdateSaleStatus) { // Adicionar condição !accountsRec.doNotUpdateSaleStatus
         await tx.sale.update({
           where: { id: accountsRec.saleId },
           data: { status: isFullyPaid ? SaleStatus.FINALIZADO : SaleStatus.PAGO_PARCIALMENTE },

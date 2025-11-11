@@ -5,7 +5,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { TipoMetal, TipoTransacaoPrisma } from '@prisma/client';
+import { TipoMetal, UniqueEntityID } from '@sistema-erp-electrosal/core';
+import { TipoTransacaoPrisma } from '@prisma/client';
 import { Decimal } from 'decimal.js';
 import {
   IMetalAccountRepository,
@@ -89,12 +90,12 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
 
     // 5. Criar MetalAccountEntry para o fornecedor (aumenta o saldo do fornecedor com a empresa)
     const supplierMetalAccountEntry = MetalAccountEntry.create({
-      metalAccountId: supplierMetalAccount.id.toString(),
+      metalAccountId: UniqueEntityID.create(supplierMetalAccount.id.toString()),
       date: new Date(),
       description:
         notes ||
         `Recebimento de metal do cliente ${sale.pessoaId} para a Venda #${sale.orderNumber}`,
-      grams: new Decimal(grams), // Valor positivo para aumentar o saldo do fornecedor
+      grams: new Decimal(grams).toNumber(), // Valor positivo para aumentar o saldo do fornecedor
       type: 'CLIENT_PAYMENT_TO_SUPPLIER',
       sourceId: saleId,
       organizationId,
@@ -102,12 +103,12 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
 
     // 6. Criar MetalAccountEntry para o cliente (diminui o saldo do cliente com a empresa)
     const clientMetalAccountEntry = MetalAccountEntry.create({
-      metalAccountId: clientMetalAccount.id.toString(),
+      metalAccountId: UniqueEntityID.create(clientMetalAccount.id.toString()),
       date: new Date(),
       description:
         notes ||
         `Pagamento da Venda #${sale.orderNumber} para o fornecedor ${supplierPessoaId}`,
-      grams: new Decimal(grams).negated(), // Valor negativo para deduzir do cliente
+      grams: new Decimal(grams).negated().toNumber(), // Valor negativo para deduzir do cliente
       type: 'CLIENT_PAYMENT_TO_SUPPLIER',
       sourceId: saleId,
       organizationId,
@@ -130,7 +131,7 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
     const settings = await this.settingsService.findOne(organizationId); // Assumindo que findOne pode buscar por organizationId
     if (
       !settings?.defaultReceitaContaId ||
-      !settings?.defaultContasAPagarContaId
+      !settings?.defaultContasAPagarContaId!
     ) {
       throw new BadRequestException(
         'Contas contábeis padrão para Receita ou Contas a Pagar não configuradas.',
@@ -168,7 +169,7 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
           descricao:
             notes ||
             `Pagamento de Venda #${sale.orderNumber} via fornecedor ${supplierPessoaId}`,
-          contaContabilId: settings.defaultReceitaContaId, // Conta de Receita
+          contaContabilId: settings.defaultReceitaContaId!, // Conta de Receita
           dataHora: new Date(),
         },
       });
@@ -183,7 +184,7 @@ export class ProcessClientMetalPaymentToSupplierUseCase {
           descricao:
             notes ||
             `Aumento de dívida com fornecedor ${supplierPessoaId} por pagamento de cliente`,
-          contaContabilId: settings.defaultContasAPagarContaId, // Conta de Contas a Pagar
+          contaContabilId: settings.defaultContasAPagarContaId!, // Conta de Contas a Pagar
           dataHora: new Date(),
         },
       });

@@ -343,8 +343,8 @@ export default function SalesPage() {
                   <DropdownMenuItem onClick={() => handleSeparateSale(sale.id)}>Marcar como Separado</DropdownMenuItem>
                 )}
 
-                {/* Ações para SEPARADO */}
-                {sale.status === 'SEPARADO' && (
+                {/* Ações para A_SEPARAR ou SEPARADO */}
+                {(sale.status === 'A_SEPARAR' || sale.status === 'SEPARADO') && (
                   <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>
                     Confirmar Venda
                   </DropdownMenuItem>

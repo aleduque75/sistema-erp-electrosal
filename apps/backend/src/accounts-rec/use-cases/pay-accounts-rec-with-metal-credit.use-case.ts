@@ -95,9 +95,11 @@ export class PayAccountsRecWithMetalCreditUseCase {
 
         const newGoldAmountPaid = new Decimal(accountsRec.goldAmountPaid || 0).plus(gramsToApply);
         
-        // Check if fully paid with a small tolerance for floating point inaccuracies
-        const difference = newGoldAmountPaid.minus(accountsRec.goldAmount!).abs();
-        isFullyPaid = newGoldAmountPaid.greaterThanOrEqualTo(accountsRec.goldAmount!) || difference.lessThan(0.00001);
+        // Comparar valores em Gold com 4 casas decimais
+        const accountsRecGoldAmount = new Decimal(accountsRec.goldAmount!).toDecimalPlaces(4);
+        const newGoldAmountPaidGold = newGoldAmountPaid.toDecimalPlaces(4);
+
+        isFullyPaid = newGoldAmountPaidGold.equals(accountsRecGoldAmount);
 
         amountToApplyInBRL = gramsToApply.times(finalBuyPrice);
         this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] amountToApplyInBRL (gold-based): ${amountToApplyInBRL}, isFullyPaid: ${isFullyPaid}`);
@@ -136,9 +138,11 @@ export class PayAccountsRecWithMetalCreditUseCase {
 
         const newAmountPaid = new Decimal(accountsRec.amountPaid || 0).plus(amountToApplyInBRL);
 
-        // Check if fully paid with a small tolerance for floating point inaccuracies
-        const difference = newAmountPaid.minus(accountsRec.amount).abs();
-        isFullyPaid = newAmountPaid.greaterThanOrEqualTo(accountsRec.amount) || difference.lessThan(0.01); // BRL has 2 decimal places
+        // Comparar valores em BRL com 2 casas decimais
+        const accountsRecAmountBRL = new Decimal(accountsRec.amount).toDecimalPlaces(2);
+        const newAmountPaidBRL = newAmountPaid.toDecimalPlaces(2);
+
+        isFullyPaid = newAmountPaidBRL.equals(accountsRecAmountBRL);
         this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] newAmountPaid: ${newAmountPaid}, isFullyPaid: ${isFullyPaid}`);
 
         // Update AccountRec BRL fields
@@ -211,7 +215,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
         });
         this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] SaleInstallment updated.`);
       }
-      if (accountsRec.saleId) {
+      if (accountsRec.saleId && !accountsRec.doNotUpdateSaleStatus) { // Adicionar condição !accountsRec.doNotUpdateSaleStatus
         await tx.sale.update({
           where: { id: accountsRec.saleId },
           data: { status: isFullyPaid ? SaleStatus.FINALIZADO : SaleStatus.PAGO_PARCIALMENTE },
