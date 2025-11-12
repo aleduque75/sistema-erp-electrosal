@@ -1176,6 +1176,14 @@ enum StockUnit {
   UNITS
 }
 
+enum StockMovementType {
+  ENTRY
+  EXIT
+  SALE
+  PURCHASE
+  ADJUSTMENT
+}
+
 enum MetalCreditStatus { // New enum
   PENDING
   PARTIALLY_PAID

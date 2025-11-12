@@ -190,6 +190,7 @@ export default function ExtratoPage() {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [selectedMedias, setSelectedMedias] = useState<{ id: string; path: string }[]>([]);
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+  const [initialImageIndex, setInitialImageIndex] = useState(0); // NOVO ESTADO
   const [selectedTransaction, setSelectedTransaction] = useState<TransacaoExtrato | null>(null); // Adicionar estado
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false); // Adicionar estado
 
@@ -554,6 +555,7 @@ export default function ExtratoPage() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedMedias(t.medias);
+                                  setInitialImageIndex(0); // Definir o índice inicial para 0 ao abrir a galeria
                                   setIsMediaModalOpen(true);
                                 }}
                               >
@@ -764,6 +766,7 @@ export default function ExtratoPage() {
               setIsMediaModalOpen(false);
               fetchExtrato();
             }}
+            initialIndex={initialImageIndex} // Passar o índice inicial
           />
         </DialogContent>
       </Dialog>

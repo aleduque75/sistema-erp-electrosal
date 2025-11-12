@@ -68,20 +68,64 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
   const [quotation, setQuotation] = useState(0);
   const [uploadedMedia, setUploadedMedia] = useState<{ id: string; path: string }[]>(initialData?.medias || []);
-
+  const [tipoLancamento, setTipoLancamento] = useState<'CREDITO' | 'DEBITO'>(initialData?.tipo || 'CREDITO');
 
   type FormValues = z.infer<typeof formSchema>;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      mediaIds: initialData?.medias?.map(media => media.id) || [],
-    }
+      dataHora: new Date().toISOString().split("T")[0],
+      tipo: "CREDITO",
+      descricao: "",
+      valor: 0,
+      goldAmount: 0,
+      contaContabilId: "",
+      mediaIds: [],
+    },
   });
 
   const { watch, setValue, reset } = form;
-  const tipoLancamento = watch("tipo");
   const dataHora = watch("dataHora");
+
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        ...initialData,
+        dataHora: initialData.dataHora.split('T')[0],
+        mediaIds: initialData.medias?.map(media => media.id) || [],
+      });
+      setTipoLancamento(initialData.tipo);
+      setUploadedMedia(initialData.medias || []);
+    } else {
+      reset();
+      setTipoLancamento('CREDITO');
+      setUploadedMedia([]);
+    }
+  }, [initialData, reset]);
+
+  useEffect(() => {
+    const fetchContas = async () => {
+      if (tipoLancamento) {
+        const endpoint = `/contas-contabeis?tipo=${tipoLancamento === "CREDITO" ? "RECEITA" : "DESPESA"}`;
+        try {
+          const res = await api.get(endpoint);
+          setContasContabeis(res.data);
+        } catch (error) {
+          setContasContabeis([]);
+        }
+      } else {
+        setContasContabeis([]);
+      }
+    };
+    fetchContas();
+  }, [tipoLancamento]);
+  
+  const handleTipoChange = (value: 'CREDITO' | 'DEBITO') => {
+    setTipoLancamento(value);
+    setValue('tipo', value);
+    setValue('contaContabilId', ''); // Resetar a conta contábil ao mudar o tipo
+  };
 
   // Fetch quotation when date changes
   useEffect(() => {
@@ -129,39 +173,6 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
     }
   };
 
-  useEffect(() => {
-    if (initialData) {
-      reset({
-        ...initialData,
-        dataHora: initialData.dataHora.split('T')[0],
-        mediaIds: initialData.medias?.map(media => media.id) || [],
-      });
-      setUploadedMedia(initialData.medias || []);
-    } else {
-      reset({
-        dataHora: new Date().toISOString().split("T")[0],
-        tipo: "CREDITO",
-        descricao: "",
-        valor: 0,
-        goldAmount: 0,
-        contaContabilId: "",
-        mediaIds: [],
-      });
-      setUploadedMedia([]);
-    }
-  }, [initialData, reset]);
-
-  useEffect(() => {
-    if (tipoLancamento) {
-      const endpoint = `/contas-contabeis?tipo=${tipoLancamento === "CREDITO" ? "RECEITA" : "DESPESA"}`;
-      api.get(endpoint).then((res) => {
-        setContasContabeis(res.data);
-      });
-    } else {
-      setContasContabeis([]);
-    }
-  }, [tipoLancamento]);
-
   const filteredOptions = useMemo(() => {
     return contasContabeis.map((c) => ({
       value: c.id,
@@ -197,7 +208,7 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
           render={({ field }) => (
             <FormItem>
               <FormLabel>Tipo de Lançamento</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={handleTipoChange} value={tipoLancamento}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione..." />
