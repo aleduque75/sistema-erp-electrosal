@@ -105,6 +105,11 @@ export class ContasCorrentesService {
       },
       include: {
         contaContabil: true,
+        fornecedor: {
+          include: {
+            pessoa: true,
+          },
+        },
         accountRec: {
           include: {
             sale: {
@@ -160,6 +165,7 @@ export class ContasCorrentesService {
       transacoes: transacoesComContrapartida.map((t) => ({
         ...t,
         contaContabilNome: t.contaContabil?.nome,
+        fornecedorNome: t.fornecedor?.pessoa?.name,
         sale: t.accountRec?.sale,
         contrapartida: t.linkedTransaction ? { contaCorrente: { nome: t.linkedTransaction.contaCorrente?.nome || 'Conta Desconhecida' } } : null, // Usar linkedTransaction
         goldPrice: t.goldPrice?.toNumber(),

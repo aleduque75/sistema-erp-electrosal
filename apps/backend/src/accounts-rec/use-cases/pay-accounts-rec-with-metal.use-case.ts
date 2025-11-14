@@ -80,7 +80,7 @@ export class PayAccountsRecWithMetalUseCase {
       // A venda é considerada totalmente paga se o valor em BRL pago for igual ao valor total da conta a receber em BRL
       // E se o valor em ouro pago for igual ao valor total da conta a receber em ouro (se houver)
       const isFullyPaidBRL = newAmountPaidBRL.equals(accountsRecAmountBRL);
-      const isFullyPaidGold = accountsRecGoldAmount.isZero() || newGoldAmountPaidGold.equals(accountsRecGoldAmount); // Se não há goldAmount, considera pago em ouro
+      const isFullyPaidGold = accountsRecGoldAmount.isZero() || newGoldAmountPaidGold.greaterThanOrEqualTo(accountsRecGoldAmount); // Se não há goldAmount, considera pago em ouro, ou se o pago for maior ou igual ao esperado
 
       const isFullyPaid = isFullyPaidBRL && isFullyPaidGold;
 

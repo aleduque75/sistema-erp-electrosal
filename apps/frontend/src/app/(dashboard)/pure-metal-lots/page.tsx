@@ -45,6 +45,15 @@ import {
 import { MoreHorizontal } from 'lucide-react';
 import { MovementsDialog } from './components/movements-dialog'; // Importar MovementsDialog
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+
 // Esquema de validação para o formulário de criação/edição de lote
 const formSchema = z.object({
   entryDate: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Data de entrada inválida." }),
@@ -56,13 +65,21 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
+const statusMapping = {
+  AVAILABLE: 'Disponível',
+  DEPLETED: 'Esgotado',
+  RESERVED: 'Reservado',
+};
+
 export default function PureMetalLotsPage() {
   const [pureMetalLots, setPureMetalLots] = useState<PureMetalLot[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLot, setEditingLot] = useState<PureMetalLot | null>(null);
-  const [isMovementsModalOpen, setIsMovementsModalOpen] = useState(false); // Novo estado
-  const [selectedLotIdForMovements, setSelectedLotIdForMovements] = useState<string | null>(null); // Novo estado
+  const [isMovementsModalOpen, setIsMovementsModalOpen] = useState(false);
+  const [selectedLotIdForMovements, setSelectedLotIdForMovements] = useState<string | null>(null);
+  const [hideZeroedLots, setHideZeroedLots] = useState(true);
+  const [metalTypeFilter, setMetalTypeFilter] = useState<string | 'all'>('all');
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -80,7 +97,10 @@ export default function PureMetalLotsPage() {
   const fetchPureMetalLots = async () => {
     try {
       setLoading(true);
-      const data = await getPureMetalLots();
+      const data = await getPureMetalLots({
+        hideZeroed: hideZeroedLots,
+        metalType: metalTypeFilter,
+      });
       setPureMetalLots(data);
     } catch (error) {
       toast.error('Erro ao carregar lotes de metal puro.');
@@ -92,7 +112,7 @@ export default function PureMetalLotsPage() {
 
   useEffect(() => {
     fetchPureMetalLots();
-  }, []);
+  }, [hideZeroedLots, metalTypeFilter]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -263,11 +283,32 @@ export default function PureMetalLotsPage() {
         </Dialog>
       </div>
 
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="hide-zeroed"
+            checked={hideZeroedLots}
+            onCheckedChange={(checked) => setHideZeroedLots(checked as boolean)}
+          />
+          <Label htmlFor="hide-zeroed">Esconder lotes zerados</Label>
+        </div>
+        <Select value={metalTypeFilter} onValueChange={setMetalTypeFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filtrar por metal" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Metais</SelectItem>
+            <SelectItem value="AU">Ouro (AU)</SelectItem>
+            <SelectItem value="AG">Prata (AG)</SelectItem>
+            <SelectItem value="RH">Ródio (RH)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Número do Lote</TableHead>
               <TableHead>Data de Entrada</TableHead>
               <TableHead>Origem</TableHead>
               <TableHead>Tipo Metal</TableHead>
@@ -280,8 +321,7 @@ export default function PureMetalLotsPage() {
           </TableHeader>
           <TableBody>
             {pureMetalLots.map((lot) => (
-              <TableRow key={lot.id}> {/* Manter key como lot.id por enquanto, para evitar erros de chave */}
-                <TableCell>{lot.lotNumber || lot.id}</TableCell> {/* Exibir lotNumber ou fallback para id */}
+              <TableRow key={lot.id}>
                 <TableCell>{new Date(lot.entryDate).toLocaleDateString()}</TableCell>
                 <TableCell>
                   {lot.originDetails?.orderNumber ? `${lot.originDetails.orderNumber} ` : ''}
@@ -292,7 +332,7 @@ export default function PureMetalLotsPage() {
                 <TableCell>{lot.initialGrams.toFixed(2)}</TableCell>
                 <TableCell>{lot.remainingGrams.toFixed(2)}</TableCell>
                 <TableCell>{lot.purity.toFixed(2)}%</TableCell>
-                <TableCell>{lot.status}</TableCell>
+                <TableCell>{statusMapping[lot.status as keyof typeof statusMapping] || lot.status}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

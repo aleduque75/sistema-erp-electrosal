@@ -61,6 +61,12 @@ interface AccountPay {
   paid: boolean;
   paidAt?: string | null;
   isInstallment?: boolean;
+  fornecedorId?: string | null;
+  fornecedor?: {
+    pessoa: {
+      name: string;
+    };
+  } | null;
 }
 
 const formatCurrency = (value?: number) =>
@@ -83,7 +89,7 @@ export default function AccountsPayPage() {
   });
 
   const [filter, setFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [accountToEdit, setAccountToEdit] = useState<AccountPay | null>(null);
@@ -179,6 +185,11 @@ export default function AccountsPayPage() {
 
   const columns: ColumnDef<AccountPay>[] = [
     { accessorKey: "description", header: "Descrição" },
+    {
+      accessorKey: "fornecedor.pessoa.name",
+      header: "Fornecedor",
+      cell: ({ row }) => row.original.fornecedor?.pessoa?.name || "N/A",
+    },
     {
       accessorKey: "amount",
       header: () => <div className="text-right">Valor</div>,

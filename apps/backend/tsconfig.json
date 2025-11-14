@@ -33,7 +33,8 @@
       "@settings/*": ["src/settings/*"],
       "@nestjs/mapped-types": ["./node_modules/@nestjs/mapped-types"],
       "bcryptjs": ["./node_modules/bcryptjs"],
-      "@shared/*": ["../../packages/core/dist/_shared/*"]
+      "@shared/*": ["../../packages/core/dist/_shared/*"],
+      "@/*": ["src/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

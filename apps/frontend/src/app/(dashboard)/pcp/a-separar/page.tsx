@@ -1,19 +1,76 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { ColumnDef } from '@tanstack/react-table';
-import Link from 'next/link';
+import { ArrowUpDown } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
-import { Sale } from '@/app/(dashboard)/sales/page'; // Reuse Sale type
+import { Input } from '@/components/ui/input';
+import { SeparationDialog } from './components/separation-dialog';
+
+export interface SaleInstallment {
+  id: string;
+  installmentNumber: number;
+  amount: number;
+  dueDate: string;
+  status: 'PENDING' | 'PAID' | 'OVERDUE';
+  paidAt?: string;
+}
+
+export interface PaymentTerm {
+  id: string;
+  name: string;
+  installmentsDays: number[];
+}
+
+export interface Sale {
+  id: string;
+  orderNumber: string;
+  pessoa: { name: string };
+  totalAmount: number;
+  feeAmount: number;
+  netAmount: number;
+  goldPrice: number;
+  goldValue: number;
+  paymentMethod: string;
+  createdAt: string;
+  status: 'PENDENTE' | 'CONFIRMADO' | 'A_SEPARAR' | 'SEPARADO' | 'FINALIZADO' | 'CANCELADO';
+  lucro?: number;
+  paymentAccountName?: string;
+  adjustment?: {
+    netDiscrepancyGrams: number;
+    paymentReceivedBRL: number;
+  };
+  accountsRec: {
+    id: string;
+    amount: number;
+    description: string;
+    received: boolean;
+  }[];
+  saleItems: {
+    id: string;
+    productId: string;
+    quantity: number;
+    price: number;
+    product: { name: string };
+    inventoryLotId?: string;
+    inventoryLot?: { batchNumber: string };
+  }[];
+  installments: SaleInstallment[]; // Added installments
+  paymentTerm?: PaymentTerm; // Added paymentTerm
+}
 
 export default function PcpPickingPage() {
   const [orders, setOrders] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [clientFilter, setClientFilter] = useState('');
+  const [productFilter, setProductFilter] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
 
   const fetchOrdersToSeparate = async () => {
     setIsLoading(true);
@@ -31,9 +88,56 @@ export default function PcpPickingPage() {
     fetchOrdersToSeparate();
   }, []);
 
+  const handleOpenDialog = (saleId: string) => {
+    setSelectedSaleId(saleId);
+    setIsDialogOpen(true);
+  };
+
+  const handleSeparationConfirmed = () => {
+    fetchOrdersToSeparate(); // Re-fetch orders after confirmation
+  };
+
+  const filteredOrders = useMemo(() => {
+    let filtered = orders;
+
+    if (clientFilter) {
+      filtered = filtered.filter(order =>
+        order.pessoa.name.toLowerCase().includes(clientFilter.toLowerCase())
+      );
+    }
+
+    if (productFilter) {
+      filtered = filtered.filter(order =>
+        order.saleItems.some(item =>
+          item.product.name.toLowerCase().includes(productFilter.toLowerCase())
+        )
+      );
+    }
+
+    return filtered;
+  }, [orders, clientFilter, productFilter]);
+
   const columns: ColumnDef<Sale>[] = [
-    { accessorKey: 'orderNumber', header: 'Nº Pedido' },
-    { accessorKey: 'pessoa.name', header: 'Cliente' },
+    {
+      accessorKey: 'orderNumber',
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            Nº Pedido
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        );
+      },
+      enableSorting: true,
+    },
+    {
+      accessorKey: 'pessoa.name',
+      header: 'Cliente',
+      cell: ({ row }) => row.original.pessoa.name,
+    },
     {
       header: 'Itens para Separar',
       cell: ({ row }) => {
@@ -54,9 +158,7 @@ export default function PcpPickingPage() {
       cell: ({ row }) => {
         return (
           <div className="text-right">
-            <Button asChild>
-              <Link href={`/pcp/a-separar/${row.original.id}`}>Separar</Link>
-            </Button>
+            <Button onClick={() => handleOpenDialog(row.original.id)}>Separar</Button>
           </div>
         );
       },
@@ -70,14 +172,40 @@ export default function PcpPickingPage() {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
-          <DataTable
-            columns={columns}
-            data={orders}
-            filterColumnId="orderNumber"
+        <CardHeader>
+          <CardTitle>Filtros</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 flex gap-4">
+          <Input
+            placeholder="Filtrar por cliente..."
+            value={clientFilter}
+            onChange={(e) => setClientFilter(e.target.value)}
+          />
+          <Input
+            placeholder="Filtrar por produto..."
+            value={productFilter}
+            onChange={(e) => setProductFilter(e.target.value)}
           />
         </CardContent>
       </Card>
+
+      <Card>
+        <CardContent className="pt-6">
+          <DataTable
+            columns={columns}
+            data={filteredOrders}
+            isLoading={isLoading}
+            filterColumnId="pessoa.name"
+          />
+        </CardContent>
+      </Card>
+
+      <SeparationDialog
+        saleId={selectedSaleId}
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSeparationConfirmed={handleSeparationConfirmed}
+      />
     </div>
   );
 }

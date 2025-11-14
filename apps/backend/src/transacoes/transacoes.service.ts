@@ -6,6 +6,7 @@ import { CreateTransacaoDto } from './dtos/create-transacao.dto';
 import { UpdateTransacaoDto } from './dtos/update-transacao.dto';
 import { BulkCreateTransacaoDto } from './dtos/bulk-create-transacao.dto';
 import { MediaService } from '../media/media.service'; // Importar MediaService
+import { GenericBulkUpdateTransacaoDto } from './dtos/generic-bulk-update-transacao.dto';
 
 @Injectable()
 export class TransacoesService {
@@ -13,6 +14,47 @@ export class TransacoesService {
     private prisma: PrismaService,
     private mediaService: MediaService, // Injetar MediaService
   ) {}
+
+  async bulkUpdate(
+    dto: GenericBulkUpdateTransacaoDto,
+    organizationId: string,
+  ): Promise<{ count: number }> {
+    console.log('--- TransacoesService.bulkUpdate ---');
+    console.log('Received DTO:', dto);
+
+    const { transactionIds, contaContabilId, fornecedorId } = dto;
+
+    const dataToUpdate: { contaContabilId?: string; fornecedorId?: string | null } = {};
+
+    if (contaContabilId) {
+      dataToUpdate.contaContabilId = contaContabilId;
+    }
+    if (fornecedorId) {
+      dataToUpdate.fornecedorId = fornecedorId;
+    } else if (fornecedorId === null) { // Explicitly allow unsetting the supplier
+      dataToUpdate.fornecedorId = null;
+    }
+
+    console.log('Constructed dataToUpdate:', dataToUpdate);
+
+    if (Object.keys(dataToUpdate).length === 0) {
+      console.log('Nothing to update, returning count 0.');
+      return { count: 0 }; // Nothing to update
+    }
+
+    const result = await this.prisma.transacao.updateMany({
+      where: {
+        id: {
+          in: transactionIds,
+        },
+        organizationId,
+      },
+      data: dataToUpdate,
+    });
+
+    console.log('prisma.transacao.updateMany result:', result);
+    return result;
+  }
 
   async updateTransacao(
     organizationId: string,
@@ -154,28 +196,57 @@ export class TransacoesService {
     organizationId: string,
     tx?: any,
   ): Promise<Transacao> {
-    const prisma = tx || this.prisma;
-    const { valor, goldAmount, mediaIds, ...restData } = data;
-    const newTransacao = await prisma.transacao.create({
-      data: {
-        ...restData,
-        valor: valor ?? 0,
-        goldAmount: goldAmount,
-        organizationId,
-        moeda: 'BRL',
-      },
+    console.log('--- TransacoesService.create ---');
+    console.log('Received data:', data);
+
+    return this.prisma.$transaction(async (prisma) => {
+      const { valor, goldAmount, mediaIds, fornecedorId, tipo, ...restData } = data;
+
+      const newTransacao = await prisma.transacao.create({
+        data: {
+          ...restData,
+          tipo,
+          fornecedorId,
+          valor: valor ?? 0,
+          goldAmount: goldAmount,
+          organizationId,
+          moeda: 'BRL',
+        },
+      });
+      console.log('Created Transacao:', newTransacao.id);
+
+      if (tipo === 'DEBITO' && fornecedorId) {
+        console.log('Condition met: Creating AccountPay...');
+        const newAccountPay = await prisma.accountPay.create({
+          data: {
+            organizationId,
+            description: data.descricao,
+            amount: data.valor ?? 0,
+            dueDate: data.dataHora,
+            paid: true,
+            paidAt: data.dataHora,
+            fornecedorId: fornecedorId,
+            contaContabilId: data.contaContabilId,
+            transacaoId: newTransacao.id,
+          },
+        });
+        console.log('Created AccountPay:', newAccountPay.id);
+      } else {
+        console.log('Condition NOT met: Skipping AccountPay creation.');
+        console.log(`Tipo: ${tipo}, FornecedorID: ${fornecedorId}`);
+      }
+
+      if (mediaIds && mediaIds.length > 0) {
+        await this.mediaService.associateMediaWithTransacao(
+          newTransacao.id,
+          mediaIds,
+          organizationId,
+          prisma,
+        );
+      }
+
+      return this.findOne(newTransacao.id, organizationId, prisma);
     });
-
-    if (mediaIds && mediaIds.length > 0) {
-      await this.mediaService.associateMediaWithTransacao(
-        newTransacao.id,
-        mediaIds,
-        organizationId,
-        tx,
-      );
-    }
-
-    return this.findOne(newTransacao.id, organizationId, tx); // Reutilizar o findOne para incluir as mídias
   }
 
   async findOne(id: string, organizationId: string, tx?: any): Promise<Transacao> {

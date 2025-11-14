@@ -15,6 +15,7 @@ import { CreateTransacaoDto } from './dtos/create-transacao.dto';
 import { UpdateTransacaoDto } from './dtos/update-transacao.dto';
 import { BulkCreateTransacaoDto } from './dtos/bulk-create-transacao.dto';
 import { BulkUpdateTransacaoDto } from './dtos/bulk-update-transacao.dto';
+import { GenericBulkUpdateTransacaoDto } from './dtos/generic-bulk-update-transacao.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateTransferDto } from './dtos/create-transfer.dto';
@@ -53,6 +54,14 @@ export class TransacoesController {
     @CurrentUser('orgId') organizationId: string,
   ) {
     return this.transacoesService.createMany(bulkCreateDto, organizationId);
+  }
+
+  @Post('bulk-update')
+  bulkUpdate(
+    @Body() bulkUpdateDto: GenericBulkUpdateTransacaoDto,
+    @CurrentUser('orgId') organizationId: string,
+  ) {
+    return this.transacoesService.bulkUpdate(bulkUpdateDto, organizationId);
   }
 
   @Get()

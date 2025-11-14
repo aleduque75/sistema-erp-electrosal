@@ -27,6 +27,7 @@ interface AccountPay {
   amount: number;
   dueDate: string;
   contaContabilId?: string | null;
+  fornecedorId?: string | null;
   isInstallment?: boolean;
   totalInstallments?: number;
   createdAt: string; // Adicionado
@@ -35,6 +36,10 @@ interface ContaContabil {
   id: string;
   nome: string;
   codigo: string;
+}
+interface Fornecedor {
+  id: string;
+  name: string;
 }
 interface AccountPayFormProps {
   account?: AccountPay | null;
@@ -48,6 +53,7 @@ const formSchema = z
     amount: z.coerce.number().positive("O valor deve ser maior que zero."),
     dueDate: z.string().min(1, "A data de vencimento é obrigatória."),
     contaContabilId: z.string().optional().nullable(),
+    fornecedorId: z.string().optional().nullable(), // NOVO CAMPO
     isInstallment: z.boolean().default(false),
     totalInstallments: z.coerce
       .number()
@@ -73,6 +79,7 @@ type FormValues = z.infer<typeof formSchema>;
 export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
   const { user } = useAuth();
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -82,6 +89,7 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
         ? new Date(account.dueDate).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
       contaContabilId: account?.contaContabilId || user?.settings?.defaultDespesaContaId || null,
+      fornecedorId: account?.fornecedorId || null, // NOVO CAMPO
       isInstallment: account?.isInstallment || false,
       totalInstallments: account?.totalInstallments || 2,
       createdAt: account ? new Date(account.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
@@ -91,10 +99,13 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
   const isInstallment = form.watch("isInstallment");
 
   useEffect(() => {
-    // Busca contas de Despesa e Passivo para o Contas a Pagar
     api
       .get("/contas-contabeis?tipo=DESPESA")
       .then((res) => setContasContabeis(res.data));
+    
+    api
+      .get("/pessoas?role=FORNECEDOR")
+      .then((res) => setFornecedores(res.data));
   }, []);
 
   const onSubmit = async (data: FormValues) => {
@@ -181,6 +192,26 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
                 value={field.value ?? undefined}
                 onChange={field.onChange}
                 placeholder="Selecione uma categoria..."
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          name="fornecedorId"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Fornecedor (Opcional)</FormLabel>
+              <Combobox
+                options={fornecedores.map((f) => ({
+                  value: f.id,
+                  label: f.name,
+                }))}
+                value={field.value ?? undefined}
+                onChange={field.onChange}
+                placeholder="Selecione um fornecedor..."
               />
               <FormMessage />
             </FormItem>

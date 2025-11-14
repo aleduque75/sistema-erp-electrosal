@@ -135,6 +135,8 @@ model Fornecedor {
   organization   Organization    @relation(fields: [organizationId], references: [id])
   pessoa         Pessoa          @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
   purchaseOrders PurchaseOrder[]
+  accountsPay    AccountPay[]
+  transacoes     Transacao[]
 
   @@map("fornecedores")
 }
@@ -358,10 +360,12 @@ model AccountPay {
   organizationId    String
   transacaoId       String?        @unique
   purchaseOrderId   String?        // Adicionado para vincular ao pedido de compra
+  fornecedorId      String?
   contaContabil     ContaContabil? @relation(fields: [contaContabilId], references: [id])
   organization      Organization   @relation(fields: [organizationId], references: [id])
   transacao         Transacao?     @relation(fields: [transacaoId], references: [id])
   purchaseOrder     PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  fornecedor        Fornecedor?    @relation(fields: [fornecedorId], references: [pessoaId])
 
   @@map("accounts_pay")
 }
@@ -488,12 +492,14 @@ model Transacao {
   goldAmount      Decimal?            @db.Decimal(10, 4)
   goldPrice       Decimal?            @db.Decimal(10, 2)
   accountRecId    String?
+  fornecedorId    String?
   AccountPay      AccountPay?
   contaContabil   ContaContabil       @relation(fields: [contaContabilId], references: [id])
   contaCorrente   ContaCorrente?      @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction)
   organization    Organization        @relation(fields: [organizationId], references: [id])
   status          TransacaoStatus     @default(ATIVA)
   accountRec      AccountRec?         @relation(fields: [accountRecId], references: [id])
+  fornecedor      Fornecedor?         @relation(fields: [fornecedorId], references: [pessoaId])
   medias          Media[] @relation("TransacaoToMedia")
   linkedTransactionId String?             @unique
   linkedTransaction   Transacao?          @relation("Transfer", fields: [linkedTransactionId], references: [id], onDelete: NoAction, onUpdate: NoAction)

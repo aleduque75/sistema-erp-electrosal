@@ -2,8 +2,15 @@ import { PureMetalLot, PureMetalLotMovement } from '@/types/pure-metal-lot';
 import api from '@/lib/api';
 
 // Funções para PureMetalLot
-export const getPureMetalLots = async (): Promise<PureMetalLot[]> => {
-  const response = await api.get('/pure-metal-lots');
+export const getPureMetalLots = async (filters: { hideZeroed: boolean; metalType: string | 'all' }): Promise<PureMetalLot[]> => {
+  const params = new URLSearchParams();
+  if (filters.hideZeroed) {
+    params.append('remainingGramsGt', '0');
+  }
+  if (filters.metalType !== 'all') {
+    params.append('metalType', filters.metalType);
+  }
+  const response = await api.get('/pure-metal-lots', { params });
   return response.data;
 };
 

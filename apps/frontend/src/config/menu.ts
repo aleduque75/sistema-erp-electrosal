@@ -20,7 +20,8 @@ import {
   FlaskConical,
   Scale,
   ClipboardList, // Ícone para PCP
-  HandCoins, // Adicionado para Créditos de Clientes
+  HandCoins,
+  BarChart2, // Adicionado para Créditos de Clientes
 } from "lucide-react";
 import React from "react";
 
@@ -246,8 +247,20 @@ export const menuConfig: NavItem[] = [
         title: "Ajuste de Transação",
         href: "/financeiro/ajuste-transacao",
         icon: Settings, // Re-using icon
-        description: "Corrija o valor ou a conta de uma transação de recebimento existente.",
-      },
-    ],
-  },
-];
+                  description: "Corrija o valor ou a conta de uma transação de recebimento existente.",
+                },
+              ],
+            },
+                {
+                  title: "Relatórios",
+                  href: "#",
+                  icon: BarChart2,
+                  subItems: [
+                    {
+                      title: "Extrato de Contas a Pagar",
+                      href: "/relatorios/contas-a-pagar",
+                      icon: ArrowDownToLine,
+                      description: "Relatório de contas a pagar por fornecedor e período.",
+                    },
+                  ],
+                },          ];

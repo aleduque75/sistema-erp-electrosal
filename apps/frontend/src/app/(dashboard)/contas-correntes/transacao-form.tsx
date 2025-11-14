@@ -34,6 +34,7 @@ const formSchema = z.object({
   contaContabilId: z.string({
     required_error: "Selecione uma conta contábil.",
   }),
+  fornecedorId: z.string().optional().nullable(),
   dataHora: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de data inválido (AAAA-MM-DD)."),
@@ -56,6 +57,7 @@ interface TransacaoExtrato {
   tipo: "CREDITO" | "DEBITO";
   contaContabilId: string;
   contaContabilNome: string;
+  fornecedorId?: string;
   medias?: { id: string; path: string }[]; // Adicionar medias ao TransacaoExtrato
 }
 interface ContaContabil {
@@ -63,9 +65,14 @@ interface ContaContabil {
   nome: string;
   codigo: string;
 }
+interface Fornecedor {
+  id: string;
+  name: string;
+}
 
 export function TransacaoForm({ contaCorrenteId, onSave, initialData }: TransacaoFormProps) {
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [quotation, setQuotation] = useState(0);
   const [uploadedMedia, setUploadedMedia] = useState<{ id: string; path: string }[]>(initialData?.medias || []);
   const [tipoLancamento, setTipoLancamento] = useState<'CREDITO' | 'DEBITO'>(initialData?.tipo || 'CREDITO');
@@ -81,6 +88,7 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
       valor: 0,
       goldAmount: 0,
       contaContabilId: "",
+      fornecedorId: null,
       mediaIds: [],
     },
   });
@@ -118,13 +126,26 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
         setContasContabeis([]);
       }
     };
+    const fetchFornecedores = async () => {
+      try {
+        const res = await api.get("/pessoas?role=FORNECEDOR");
+        setFornecedores(res.data);
+      } catch (error) {
+        setFornecedores([]);
+      }
+    };
+
     fetchContas();
+    fetchFornecedores();
   }, [tipoLancamento]);
   
   const handleTipoChange = (value: 'CREDITO' | 'DEBITO') => {
     setTipoLancamento(value);
     setValue('tipo', value);
     setValue('contaContabilId', ''); // Resetar a conta contábil ao mudar o tipo
+    if (value === 'CREDITO') {
+      setValue('fornecedorId', null); // Limpa o fornecedor se for crédito
+    }
   };
 
   // Fetch quotation when date changes
@@ -315,6 +336,28 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
             </FormItem>
           )}
         />
+
+        {tipoLancamento === 'DEBITO' && (
+          <FormField
+            control={form.control}
+            name="fornecedorId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fornecedor (Opcional)</FormLabel>
+                <Combobox
+                  options={fornecedores.map((f) => ({
+                    value: f.id,
+                    label: f.name,
+                  }))}
+                  value={field.value ?? undefined}
+                  onChange={field.onChange}
+                  placeholder="Selecione um fornecedor..."
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <div className="space-y-4">
           <FormLabel>Imagens Anexadas</FormLabel>

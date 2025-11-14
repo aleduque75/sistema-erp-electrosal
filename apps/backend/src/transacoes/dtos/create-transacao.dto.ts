@@ -30,6 +30,10 @@ export class CreateTransacaoDto {
   @IsOptional()
   contaCorrenteId?: string;
 
+  @IsString()
+  @IsOptional()
+  fornecedorId?: string;
+
   @IsArray()
   @IsString({ each: true })
   @IsOptional()

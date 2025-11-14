@@ -186,24 +186,6 @@ export class AccountsRecService {
         (sum, p) => sum.plus(new Decimal(p.amount)),
         new Decimal(0),
       );
-      const newTotalGoldAmountReceived = data.payments.reduce(
-        (sum, p) => sum.plus(new Decimal(p.goldAmount || 0)),
-        new Decimal(0),
-      );
-
-      // Calculate current paid amounts (from existing transactions)
-      const currentTotalAmountPaid = accountToReceive.transacoes.reduce(
-        (sum, t) => sum.plus(t.valor), // Assuming t.valor is Decimal
-        new Decimal(0),
-      );
-      const currentTotalGoldAmountPaid = accountToReceive.transacoes.reduce(
-        (sum, t) => sum.plus(t.goldAmount || 0), // Assuming t.goldAmount is Decimal
-        new Decimal(0),
-      );
-
-      // Sum up all amounts (existing + new)
-      const totalAmountPaid = currentTotalAmountPaid.plus(newTotalAmountReceived);
-      const totalGoldAmountPaid = currentTotalGoldAmountPaid.plus(newTotalGoldAmountReceived);
 
       // Process each payment entry
       for (const paymentEntry of data.payments) {
@@ -238,6 +220,19 @@ export class AccountsRecService {
       }
 
       // Update AccountRec status and paid amounts
+      const allTransactions = await tx.transacao.findMany({
+        where: { accountRecId: id },
+      });
+
+      const totalAmountPaid = allTransactions.reduce(
+        (sum, t) => sum.plus(t.valor),
+        new Decimal(0),
+      );
+      const totalGoldAmountPaid = allTransactions.reduce(
+        (sum, t) => sum.plus(t.goldAmount || 0),
+        new Decimal(0),
+      );
+
       const isFullyPaid = totalAmountPaid.greaterThanOrEqualTo(accountToReceive.amount);
       
       const updated = await tx.accountRec.update({

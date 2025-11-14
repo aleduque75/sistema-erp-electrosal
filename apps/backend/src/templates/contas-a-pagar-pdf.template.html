@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Contas a Pagar</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 10px;
+            line-height: 1.4;
+            color: #333;
+        }
+        .container {
+            width: 100%;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .header .logo {
+            max-width: 150px;
+            max-height: 75px;
+        }
+        .header .company-info {
+            text-align: right;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .header p {
+            margin: 0;
+            font-size: 12px;
+        }
+        h1.report-title {
+            text-align: center;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+        }
+        th {
+            background-color: #f7f7f7;
+            font-weight: bold;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .footer {
+            text-align: center;
+            font-size: 9px;
+            color: #777;
+            position: fixed;
+            bottom: 10mm;
+            width: 100%;
+        }
+        .summary-table th, .summary-table td {
+            border: none;
+            background-color: #f7f7f7;
+            font-size: 12px;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="%%LOGO_PLACEHOLDER%%" alt="Logo" class="logo">
+            <div class="company-info">
+                <h1>Relatório de Contas a Pagar</h1>
+                <p>Data de Emissão: {{formatarData dataEmissaoPdf}}</p>
+            </div>
+        </div>
+
+        <h1 class="report-title">Período de {{formatarData filters.startDate}} a {{formatarData filters.endDate}}</h1>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Fornecedor</th>
+                    <th>Vencimento</th>
+                    <th>Descrição</th>
+                    <th class="text-right">Valor</th>
+                    <th class="text-right">Valor Pago</th>
+                    <th class="text-right">Saldo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each entries}}
+                <tr>
+                    <td>{{this.supplierName}}</td>
+                    <td>{{formatarData this.dueDate}}</td>
+                    <td>{{this.description}}</td>
+                    <td class="text-right">{{formatarMoeda this.billedAmount}}</td>
+                    <td class="text-right">{{formatarMoeda this.paidAmount}}</td>
+                    <td class="text-right">{{formatarMoeda this.balance}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+
+        <table class="summary-table">
+            <tbody>
+                <tr>
+                    <th class="text-right">Total Faturado:</th>
+                    <td class="text-right">{{formatarMoeda summary.totalBilled}}</td>
+                </tr>
+                <tr>
+                    <th class="text-right">Total Pago:</th>
+                    <td class="text-right">{{formatarMoeda summary.totalPaid}}</td>
+                </tr>
+                <tr>
+                    <th class="text-right">Saldo Final:</th>
+                    <td class="text-right">{{formatarMoeda summary.finalBalance}}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="footer">
+        Página <span class="pageNumber"></span> de <span class="totalPages"></span>
+    </div>
+</body>
+</html>

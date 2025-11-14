@@ -130,6 +130,7 @@ interface TransacaoExtrato {
   tipo: "CREDITO" | "DEBITO";
   contaContabilId: string; // Adicionado
   contaContabilNome: string; // Adicionado
+  fornecedorNome?: string;
   sale?: {
     id: string;
     orderNumber: number;
@@ -187,6 +188,8 @@ export default function ExtratoPage() {
   const [descriptionFilter, setDescriptionFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newContaContabilId, setNewContaContabilId] = useState<string>("");
+  const [newFornecedorId, setNewFornecedorId] = useState<string>("");
+  const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [selectedMedias, setSelectedMedias] = useState<{ id: string; path: string }[]>([]);
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
@@ -209,6 +212,15 @@ export default function ExtratoPage() {
       setContasContabeis(response.data);
     } catch (err) {
       toast.error("Falha ao carregar contas contábeis.");
+    }
+  };
+
+  const fetchFornecedores = async () => {
+    try {
+      const response = await api.get("/pessoas?role=FORNECEDOR");
+      setFornecedores(response.data);
+    } catch (err) {
+      toast.error("Falha ao carregar fornecedores.");
     }
   };
 
@@ -253,6 +265,7 @@ export default function ExtratoPage() {
     if (id) {
       fetchExtrato();
       fetchContasContabeis();
+      fetchFornecedores();
     }
   }, [id, startDate, endDate]);
 
@@ -284,22 +297,45 @@ export default function ExtratoPage() {
   };
 
   const handleBulkUpdate = async () => {
-    if (selectedIds.length === 0 || !newContaContabilId) {
-      toast.error("Selecione as transações e a nova conta contábil.");
+    if (selectedIds.length === 0) {
+      toast.error("Selecione as transações a serem alteradas.");
+      return;
+    }
+    if (!newContaContabilId && !newFornecedorId) {
+      toast.error("Selecione uma nova conta contábil ou um novo fornecedor.");
       return;
     }
 
     try {
-      await api.post("/transacoes/bulk-update-conta-contabil", {
+      await api.post("/transacoes/bulk-update", {
         transactionIds: selectedIds,
-        contaContabilId: newContaContabilId,
+        contaContabilId: newContaContabilId || undefined,
+        fornecedorId: newFornecedorId || undefined,
       });
       toast.success("Transações atualizadas com sucesso!");
       setSelectedIds([]);
       setNewContaContabilId("");
+      setNewFornecedorId("");
       fetchExtrato();
     } catch (err) {
       toast.error("Falha ao atualizar transações.");
+    }
+  };
+
+  const handleBulkCreateAccountPay = async () => {
+    if (selectedIds.length === 0) {
+      toast.error("Selecione as transações para gerar as Contas a Pagar.");
+      return;
+    }
+    try {
+      const response = await api.post("/accounts-pay/bulk-create-from-transactions", {
+        transactionIds: selectedIds,
+      });
+      toast.success(`${response.data.count} conta(s) a pagar foram criadas ou atualizadas.`);
+      setSelectedIds([]);
+      fetchExtrato(); // Refresh data
+    } catch (err) {
+      toast.error("Falha ao gerar contas a pagar.");
     }
   };
 
@@ -450,12 +486,24 @@ export default function ExtratoPage() {
                     value: cc.id,
                     label: `${cc.codigo} - ${cc.nome}`,
                   }))}
-                  placeholder="Selecione a nova conta..."
+                  placeholder="Alterar Conta Contábil..."
                   onChange={setNewContaContabilId}
                   value={newContaContabilId}
                 />
               </div>
+              <div className="w-[300px]">
+                <Combobox
+                  options={fornecedores.map((f) => ({
+                    value: f.id,
+                    label: f.name,
+                  }))}
+                  placeholder="Alterar Fornecedor..."
+                  onChange={setNewFornecedorId}
+                  value={newFornecedorId}
+                />
+              </div>
               <Button onClick={handleBulkUpdate}>Alterar em Lote</Button>
+              <Button variant="secondary" onClick={handleBulkCreateAccountPay}>Gerar C.P.</Button>
             </div>
           )}
 
@@ -502,6 +550,7 @@ export default function ExtratoPage() {
                     </TableHead>
                     <TableHead>Data/Hora</TableHead>
                     <TableHead>Descrição</TableHead>
+                    <TableHead>Fornecedor</TableHead>
                     <TableHead>Conta Contábil</TableHead>
                     <TableHead className="text-right">
                       Valor ({currencyView === "BRL" ? "R$" : "Au"})
@@ -511,152 +560,158 @@ export default function ExtratoPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredTransacoes.length > 0 ? (
-                    filteredTransacoes.map((t, index) => (
-                      <TableRow
-                        key={t.id}
-                        onClick={() => handleToggleReconciled(t.id)}
-                        className={
-                          reconciledIds.includes(t.id)
-                            ? "bg-green-800/50 dark:bg-green-800 hover:bg-green-600/50 dark:hover:bg-green-700"
-                            : ""
-                        }
-                      >
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedIds.includes(t.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedIds([...selectedIds, t.id]);
-                              } else {
-                                setSelectedIds(
-                                  selectedIds.filter((id) => id !== t.id)
-                                );
-                              }
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>{formatDateTime(t.dataHora)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <span>{t.descricao}</span>
-                            {t.sale && (
-                              <Button
-                                variant="link"
-                                className="h-auto p-1 ml-2 whitespace-nowrap"
-                                onClick={() => handleViewSaleDetails(t.sale.id)}
-                              >
-                                (Venda #{t.sale.orderNumber})
-                              </Button>
-                            )}
-                            {t.medias && t.medias.length > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedMedias(t.medias);
-                                  setInitialImageIndex(0); // Definir o índice inicial para 0 ao abrir a galeria
-                                  setIsMediaModalOpen(true);
-                                }}
-                              >
-                                <Paperclip className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingTransacaoId(t.id);
-                          }}
-                          className="cursor-pointer hover:bg-muted/50"
+                    filteredTransacoes.map((t, index) => {
+                      const isEligibleForAccountPay = t.tipo === 'DEBITO' && !!t.fornecedorNome;
+                      return (
+                        <TableRow
+                          key={t.id}
+                          onClick={() => handleToggleReconciled(t.id)}
+                          className={
+                            reconciledIds.includes(t.id)
+                              ? "bg-green-800/50 dark:bg-green-800 hover:bg-green-600/50 dark:hover:bg-green-700"
+                              : ""
+                          }
                         >
-                          {editingTransacaoId === t.id ? (
-                            <Combobox
-                              options={contasContabeis.map((cc) => ({
-                                value: cc.id,
-                                label: `${cc.codigo} - ${cc.nome}`,
-                              }))}
-                              value={t.contaContabilId}
-                              onChange={(value) => {
-                                handleUpdateContaContabil(t.id, value);
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedIds.includes(t.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedIds([...selectedIds, t.id]);
+                                } else {
+                                  setSelectedIds(
+                                    selectedIds.filter((id) => id !== t.id)
+                                  );
+                                }
                               }}
-                              placeholder="Selecione a conta..."
+                              disabled={!isEligibleForAccountPay}
+                              title={!isEligibleForAccountPay ? 'Esta transação não pode ser convertida em Contas a Pagar (não é um débito ou não possui fornecedor).' : undefined}
                             />
-                          ) : (
-                            t.contaContabilNome
-                          )}
-                        </TableCell>
-                        <TableCell
-                          className={`text-right font-semibold ${t.tipo === "CREDITO" ? "text-green-600" : "text-red-600"}`}
-                        >
-                          {t.tipo === "CREDITO" ? "+ " : "- "}
-                          {currencyView === "BRL"
-                            ? formatCurrency(Math.abs(t.valor))
-                            : formatGold(Math.abs(t.goldAmount || 0))}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
+                          </TableCell>
+                          <TableCell>{formatDateTime(t.dataHora)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <span>{t.descricao}</span>
+                              {t.sale && (
+                                <Button
+                                  variant="link"
+                                  className="h-auto p-1 ml-2 whitespace-nowrap"
+                                  onClick={() => handleViewSaleDetails(t.sale.id)}
+                                >
+                                  (Venda #{t.sale.orderNumber})
+                                </Button>
+                              )}
+                              {t.medias && t.medias.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedMedias(t.medias);
+                                    setInitialImageIndex(0); // Definir o índice inicial para 0 ao abrir a galeria
+                                    setIsMediaModalOpen(true);
+                                  }}
+                                >
+                                  <Paperclip className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{t.fornecedorNome || 'N/A'}</TableCell>
+                          <TableCell
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTransacaoId(t.id);
+                            }}
+                            className="cursor-pointer hover:bg-muted/50"
+                          >
+                            {editingTransacaoId === t.id ? (
+                              <Combobox
+                                options={contasContabeis.map((cc) => ({
+                                  value: cc.id,
+                                  label: `${cc.codigo} - ${cc.nome}`,
+                                }))}
+                                value={t.contaContabilId}
+                                onChange={(value) => {
+                                  handleUpdateContaContabil(t.id, value);
+                                }}
+                                placeholder="Selecione a conta..."
+                              />
+                            ) : (
+                              t.contaContabilNome
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right font-semibold ${t.tipo === "CREDITO" ? "text-green-600" : "text-red-600"}`}
+                          >
+                            {t.tipo === "CREDITO" ? "+ " : "- "}
+                            {currencyView === "BRL"
+                              ? formatCurrency(Math.abs(t.valor))
+                              : formatGold(Math.abs(t.goldAmount || 0))}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span className="sr-only">Abrir menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <span className="sr-only">Abrir menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <DropdownMenuItem
-                                onClick={() => handleMove(t.id, "up")}
-                                disabled={index === 0}
-                              >
-                                Mover para Cima
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleMove(t.id, "down")}
-                                disabled={
-                                  index === filteredTransacoes.length - 1
-                                }
-                              >
-                                Mover para Baixo
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setEditingTransacao(t);
-                                  setIsLancamentoModalOpen(true);
-                                }}
-                              >
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedTransaction(t);
-                                  setIsDetailsModalOpen(true);
-                                }}
-                              >
-                                Detalhes
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setDeletingTransacaoId(t.id);
-                                  setIsDeleteModalOpen(true);
-                                }}
-                              >
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                                <DropdownMenuItem
+                                  onClick={() => handleMove(t.id, "up")}
+                                  disabled={index === 0}
+                                >
+                                  Mover para Cima
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleMove(t.id, "down")}
+                                  disabled={
+                                    index === filteredTransacoes.length - 1
+                                  }
+                                >
+                                  Mover para Baixo
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setEditingTransacao(t);
+                                    setIsLancamentoModalOpen(true);
+                                  }}
+                                >
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedTransaction(t);
+                                    setIsDetailsModalOpen(true);
+                                  }}
+                                >
+                                  Detalhes
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setDeletingTransacaoId(t.id);
+                                    setIsDeleteModalOpen(true);
+                                  }}
+                                >
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">
+                      <TableCell colSpan={7} className="text-center h-24">
                         Nenhuma transação no período selecionado.
                       </TableCell>
                     </TableRow>

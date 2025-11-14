@@ -61,6 +61,7 @@ import { MetalCreditsModule } from './metal-credits/metal-credits.module';
 import { PureMetalLotMovementsModule } from './pure-metal-lot-movements/pure-metal-lot-movements.module';
 import { MetalPaymentsModule } from './metal-payments/metal-payments.module';
 import { PdfModule } from './pdf/pdf.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -120,6 +121,7 @@ import { PdfModule } from './pdf/pdf.module';
     PureMetalLotMovementsModule,
     MetalPaymentsModule,
     PdfModule,
+    ReportsModule,
   ],
   controllers: [AppController, RawMaterialsController],
   providers: [

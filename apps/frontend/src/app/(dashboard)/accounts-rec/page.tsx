@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { ReceivePaymentForm } from './components/receive-payment-form';
 import { EditAccountRecForm } from './components/edit-account-rec-form';
-import { SaleDetailsView } from '../sales/components/SaleDetailsView';
+import { SaleDetailsView } from './components/sale-details-view';
 
 // Interfaces
 interface AccountRec {

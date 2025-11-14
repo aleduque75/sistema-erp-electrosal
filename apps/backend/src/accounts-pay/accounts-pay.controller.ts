@@ -16,8 +16,9 @@ import {
   CreateAccountPayDto,
   UpdateAccountPayDto,
   PayAccountDto,
-  SplitAccountPayDto, // <-- Adicionado
+  SplitAccountPayDto,
 } from './dtos/account-pay.dto';
+import { BulkCreateFromTransactionsDto } from './dtos/bulk-create-from-transactions.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -32,6 +33,14 @@ export class AccountsPayController {
     @Body() createDto: CreateAccountPayDto,
   ) {
     return this.accountsPayService.create(organizationId, createDto);
+  }
+
+  @Post('bulk-create-from-transactions')
+  bulkCreateFromTransactions(
+    @CurrentUser('orgId') organizationId: string,
+    @Body() dto: BulkCreateFromTransactionsDto,
+  ) {
+    return this.accountsPayService.bulkCreateFromTransactions(organizationId, dto.transactionIds);
   }
 
   @Get()

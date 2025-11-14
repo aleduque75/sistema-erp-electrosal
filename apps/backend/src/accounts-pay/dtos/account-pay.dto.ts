@@ -30,6 +30,10 @@ export class CreateAccountPayDto {
   @IsOptional()
   contaContabilId?: string;
 
+  @IsUUID()
+  @IsOptional()
+  fornecedorId?: string;
+
   @IsBoolean()
   @IsOptional()
   isInstallment?: boolean;

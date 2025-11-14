@@ -21,6 +21,73 @@ export class AccountsPayService {
     private settingsService: SettingsService, // Injected
   ) {}
 
+  async bulkCreateFromTransactions(
+    organizationId: string,
+    transactionIds: string[],
+  ): Promise<{ count: number }> {
+    console.log('Received transactionIds:', transactionIds);
+
+    let createdCount = 0;
+    await this.prisma.$transaction(async (tx) => {
+      for (const transacaoId of transactionIds) {
+        const transacao = await tx.transacao.findUnique({
+          where: { id: transacaoId },
+        });
+
+        if (!transacao) {
+          continue;
+        }
+        if (transacao.tipo !== 'DEBITO') {
+          continue;
+        }
+        if (!transacao.fornecedorId) {
+          continue;
+        }
+
+        const existingAccountPay = await tx.accountPay.findUnique({
+          where: { transacaoId: transacaoId },
+        });
+
+        if (existingAccountPay) {
+          // Se já existe, verificar se o fornecedorId precisa ser preenchido/atualizado
+          if (!existingAccountPay.fornecedorId && transacao.fornecedorId) {
+            await tx.accountPay.update({
+              where: { id: existingAccountPay.id },
+              data: {
+                fornecedorId: transacao.fornecedorId,
+              },
+            });
+            createdCount++; // Contar como "atualizado" para o feedback do frontend
+            console.log(`  -> UPDATED AccountPay ${existingAccountPay.id} with fornecedorId ${transacao.fornecedorId}`);
+          } else {
+            console.log(`  -> SKIPPING ${transacaoId}: AccountPay already exists and does not need fornecedorId update.`);
+          }
+          continue; // Continuar para a próxima transação
+        }
+
+        // Se não existe, criar um novo AccountPay
+        console.log(`  -> CREATING AccountPay for transacaoId: ${transacaoId}...`);
+        await tx.accountPay.create({
+          data: {
+            organizationId,
+            description: transacao.descricao || 'Descrição não informada',
+            amount: transacao.valor,
+            dueDate: transacao.dataHora,
+            paid: true,
+            paidAt: transacao.dataHora,
+            fornecedorId: transacao.fornecedorId,
+            contaContabilId: transacao.contaContabilId,
+            transacaoId: transacao.id,
+          },
+        });
+        createdCount++;
+        console.log(`  -> SUCCESS: AccountPay created for transacaoId: ${transacaoId}.`);
+      }
+    });
+    console.log(`Finished bulkCreateFromTransactions. Total created: ${createdCount}`);
+    return { count: createdCount };
+  }
+
   async create(
     organizationId: string,
     data: CreateAccountPayDto,
@@ -37,6 +104,7 @@ export class AccountsPayService {
         dueDate,
         totalInstallments,
         contaContabilId,
+        fornecedorId,
       } = data;
       const installmentValue = new Decimal(amount).div(totalInstallments);
 
@@ -49,6 +117,7 @@ export class AccountsPayService {
           amount: installmentValue,
           dueDate: addMonths(dueDate, i),
           contaContabilId,
+          fornecedorId,
           isInstallment: true,
           installmentNumber: i + 1,
           totalInstallments,
@@ -91,7 +160,14 @@ export class AccountsPayService {
 
     const accounts = await this.prisma.accountPay.findMany({
       where,
-      include: { contaContabil: true },
+      include: {
+        contaContabil: true,
+        fornecedor: {
+          include: {
+            pessoa: true,
+          },
+        },
+      },
       orderBy: { dueDate: 'asc' },
     });
 
