@@ -9,7 +9,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { Separator } from '@/components/ui/separator';
 
 const schema = z.object({
-  analiseQuimicaId: z.string().min(1, 'Obrigatório'),
+  chemicalAnalysisIds: z.array(z.string().min(1, 'Obrigatório')),
   status: z.string(),
   dataInicio: z.string(),
   descricaoProcesso: z.string().optional(),
@@ -20,16 +20,16 @@ const schema = z.object({
   observacoes: z.string().optional(),
 });
 
-type RecuperacaoFormValues = z.infer<typeof schema>;
+type RecoveryOrderFormValues = z.infer<typeof schema>;
 
-interface RecuperacaoFormProps {
-  onSubmit: (values: RecuperacaoFormValues) => void;
-  initialValues?: Partial<RecuperacaoFormValues>;
+interface RecoveryOrderFormProps {
+  onSubmit: (values: RecoveryOrderFormValues) => void;
+  initialValues?: Partial<RecoveryOrderFormValues>;
   isLoading?: boolean;
 }
 
-export function RecuperacaoForm({ onSubmit, initialValues, isLoading }: RecuperacaoFormProps) {
-  const form = useForm<RecuperacaoFormValues>({
+export function RecoveryOrderForm({ onSubmit, initialValues, isLoading }: RecoveryOrderFormProps) {
+  const form = useForm<RecoveryOrderFormValues>({
     resolver: zodResolver(schema),
     defaultValues: initialValues || { status: 'PENDENTE', dataInicio: new Date().toISOString().slice(0,10) },
   });
@@ -37,17 +37,17 @@ export function RecuperacaoForm({ onSubmit, initialValues, isLoading }: Recupera
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Nova Recuperação</CardTitle>
+        <CardTitle>Nova Recovery Order</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="analiseQuimicaId"
+              name="chemicalAnalysisIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ID da Análise Química*</FormLabel>
+                  <FormLabel>IDs das Análises Químicas*</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>

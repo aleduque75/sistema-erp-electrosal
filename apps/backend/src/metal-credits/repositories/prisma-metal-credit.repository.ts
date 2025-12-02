@@ -54,8 +54,10 @@ export class PrismaMetalCreditRepository implements IMetalCreditRepository {
   async updateGrams(
     id: UniqueEntityID,
     newGrams: number,
+    tx?: any,
   ): Promise<MetalCredit> {
-    const dbMetalCredit = await this.prisma.metalCredit.update({
+    const prisma = tx || this.prisma;
+    const dbMetalCredit = await prisma.metalCredit.update({
       where: { id: id.toString() },
       data: { grams: newGrams },
     });

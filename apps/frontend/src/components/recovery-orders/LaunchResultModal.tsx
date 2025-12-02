@@ -34,19 +34,19 @@ const enterResultSchema = z.object({
 
 type EnterResultFormData = z.infer<typeof enterResultSchema>;
 
-interface EnterResultModalProps {
+interface LaunchResultModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   recoveryOrder: RecoveryOrder | null;
   onSuccess: () => void;
 }
 
-export function UpdateRecoveryOrderPurityModal({ // Filename is kept, but this is now the "Enter Result" modal
+export function LaunchResultModal({ // Filename is kept, but this is now the "Enter Result" modal
   isOpen,
   onOpenChange,
   recoveryOrder,
   onSuccess,
-}: EnterResultModalProps) {
+}: LaunchResultModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<EnterResultFormData>({

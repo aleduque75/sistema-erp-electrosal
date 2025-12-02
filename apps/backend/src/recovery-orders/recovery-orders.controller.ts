@@ -10,7 +10,9 @@ import {
   Get,
   Inject,
   Query,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateRecoveryOrderUseCase } from './use-cases/create-recovery-order.use-case';
 import { CreateRecoveryOrderDto } from './dtos/create-recovery-order.dto';
@@ -25,7 +27,8 @@ import { AddRawMaterialToRecoveryOrderUseCase } from './use-cases/add-raw-materi
 import { AddRawMaterialDto } from './dtos/add-raw-material.dto';
 import { IRecoveryOrderRepository } from '@sistema-erp-electrosal/core';
 import { AssociateImageToRecoveryOrderUseCase } from './use-cases/associate-image-to-recovery-order.use-case';
-import { CancelRecoveryOrderUseCase } from './use-cases/cancel-recovery-order.use-case'; // Import the new use case
+import { CancelRecoveryOrderUseCase } from './use-cases/cancel-recovery-order.use-case';
+import { GerarPdfRecoveryOrderUseCase } from './use-cases/gerar-pdf-recovery-order.use-case';
 
 @UseGuards(JwtAuthGuard)
 @Controller('recovery-orders')
@@ -36,8 +39,9 @@ export class RecoveryOrdersController {
     private readonly updateRecoveryOrderPurityUseCase: UpdateRecoveryOrderPurityUseCase,
     private readonly processRecoveryFinalizationUseCase: ProcessRecoveryFinalizationUseCase,
     private readonly addRawMaterialToRecoveryOrderUseCase: AddRawMaterialToRecoveryOrderUseCase,
-    private readonly cancelRecoveryOrderUseCase: CancelRecoveryOrderUseCase, // Inject the new use case
-    private readonly associateImageToRecoveryOrderUseCase: AssociateImageToRecoveryOrderUseCase, // Inject the new use case
+    private readonly cancelRecoveryOrderUseCase: CancelRecoveryOrderUseCase,
+    private readonly associateImageToRecoveryOrderUseCase: AssociateImageToRecoveryOrderUseCase,
+    private readonly gerarPdfRecoveryOrderUseCase: GerarPdfRecoveryOrderUseCase,
     @Inject('IRecoveryOrderRepository')
     private readonly recoveryOrderRepository: IRecoveryOrderRepository,
   ) {}
@@ -65,6 +69,25 @@ export class RecoveryOrdersController {
     const organizationId = req.user?.orgId;
     const recoveryOrder = await this.recoveryOrderRepository.findById(id, organizationId);
     return RecoveryOrderResponseDto.fromDomain(recoveryOrder);
+  }
+
+  @Get(':id/pdf')
+  async gerarPdf(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Res() res: Response,
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    const pdfBuffer = await this.gerarPdfRecoveryOrderUseCase.execute({
+      recoveryOrderId: id,
+      organizationId,
+    });
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Length': pdfBuffer.length,
+      'Content-Disposition': `attachment; filename=recovery_order_${id}.pdf`,
+    });
+    res.send(pdfBuffer);
   }
 
   @Post(':id/raw-materials')

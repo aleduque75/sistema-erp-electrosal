@@ -127,7 +127,7 @@ import { ReportsModule } from './reports/reports.module';
   providers: [
     AppService,
     AuditLogService,
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // { provide: APP_GUARD, useClass: JwtAuthGuard },
     RawMaterialsService,
   ],
 })

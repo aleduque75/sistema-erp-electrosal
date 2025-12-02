@@ -232,7 +232,7 @@ export function VisualizarAnaliseModal({
                 <h3 className="text-lg font-semibold text-primary">Valores Finais</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {analise.taxaServicoPercentual != null && (
-                    <DetailItem label="% Serviço" value={analise.taxaServual} unit="%" />
+                    <DetailItem label="% Serviço" value={analise.taxaServicoPercentual} unit="%" />
                   )}
                   {analise.auEstimadoRecuperavelGramas != null && (
                     <DetailItem label="Au Estimado Líquido" value={analise.auEstimadoRecuperavelGramas} unit="g" />

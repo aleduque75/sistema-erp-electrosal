@@ -16,6 +16,13 @@ export class PrismaMediaRepository implements IMediaRepository {
     return MediaMapper.toDomain(prismaMedia);
   }
 
+  async findByRecoveryOrderId(recoveryOrderId: string): Promise<Media[]> {
+    const prismaMedias = await this.prisma.media.findMany({
+      where: { recoveryOrderId },
+    });
+    return prismaMedias.map(MediaMapper.toDomain);
+  }
+
   async create(media: Media): Promise<Media> {
     const data = MediaMapper.toPersistence(media);
     const prismaMedia = await this.prisma.media.create({ data });

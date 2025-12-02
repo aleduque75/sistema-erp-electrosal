@@ -37,19 +37,19 @@ const finalizeSchema = z.object({
 
 type FinalizeFormData = z.infer<typeof finalizeSchema>;
 
-interface ProcessRecoveryFinalizationModalProps {
+interface LaunchPurityModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   recoveryOrder: RecoveryOrder | null;
   onSuccess: () => void;
 }
 
-export function ProcessRecoveryFinalizationModal({
+export function LaunchPurityModal({
   isOpen,
   onOpenChange,
   recoveryOrder,
   onSuccess,
-}: ProcessRecoveryFinalizationModalProps) {
+}: LaunchPurityModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FinalizeFormData>({

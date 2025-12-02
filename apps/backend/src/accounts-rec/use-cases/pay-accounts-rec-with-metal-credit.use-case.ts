@@ -29,7 +29,8 @@ export class PayAccountsRecWithMetalCreditUseCase {
     dto: PayAccountsRecWithMetalCreditDto,
   ): Promise<any> {
     this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] Starting execution for accountsRecId: ${accountsRecId}, organizationId: ${organizationId}`);
-    const { metalCreditId, amountInGrams, quotationId, customBuyPrice } = dto;
+    const { metalCreditId, amountInGrams, quotationId, customBuyPrice, receivedAt } = dto;
+    const paymentDate = receivedAt ? new Date(receivedAt) : new Date();
 
     return this.prisma.$transaction(async (tx) => {
       this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] Transaction started.`);
@@ -99,7 +100,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
         const accountsRecGoldAmount = new Decimal(accountsRec.goldAmount!).toDecimalPlaces(4);
         const newGoldAmountPaidGold = newGoldAmountPaid.toDecimalPlaces(4);
 
-        isFullyPaid = newGoldAmountPaidGold.equals(accountsRecGoldAmount);
+        isFullyPaid = newGoldAmountPaidGold.greaterThanOrEqualTo(accountsRecGoldAmount);
 
         amountToApplyInBRL = gramsToApply.times(finalBuyPrice);
         this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] amountToApplyInBRL (gold-based): ${amountToApplyInBRL}, isFullyPaid: ${isFullyPaid}`);
@@ -111,7 +112,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
             goldAmountPaid: newGoldAmountPaid.toDecimalPlaces(4),
             amountPaid: new Decimal(accountsRec.amountPaid).plus(amountToApplyInBRL).toDecimalPlaces(2),
             received: isFullyPaid,
-            receivedAt: isFullyPaid ? new Date() : null,
+            receivedAt: isFullyPaid ? paymentDate : null,
           },
         });
         this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] AccountRec updated (gold-based).`);
@@ -142,7 +143,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
         const accountsRecAmountBRL = new Decimal(accountsRec.amount).toDecimalPlaces(2);
         const newAmountPaidBRL = newAmountPaid.toDecimalPlaces(2);
 
-        isFullyPaid = newAmountPaidBRL.equals(accountsRecAmountBRL);
+        isFullyPaid = newAmountPaidBRL.greaterThanOrEqualTo(accountsRecAmountBRL);
         this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] newAmountPaid: ${newAmountPaid}, isFullyPaid: ${isFullyPaid}`);
 
         // Update AccountRec BRL fields
@@ -151,7 +152,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
           data: {
             amountPaid: newAmountPaid.toDecimalPlaces(2),
             received: isFullyPaid,
-            receivedAt: isFullyPaid ? new Date() : null,
+            receivedAt: isFullyPaid ? paymentDate : null,
           },
         });
         this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] AccountRec updated (BRL-based).`);
@@ -166,7 +167,11 @@ export class PayAccountsRecWithMetalCreditUseCase {
       if (!accountsRec.sale || !accountsRec.sale.pessoaId) {
         throw new BadRequestException('A conta a receber não está associada a uma venda ou a um cliente.');
       }
-      const customerMetalAccount = await this.metalAccountRepository.findByPersonId(new UniqueEntityID(accountsRec.sale.pessoaId), organizationId);
+      const customerMetalAccount = await this.metalAccountRepository.findByPersonId(
+        new UniqueEntityID(accountsRec.sale.pessoaId).toString(),
+        metalCredit.metalType,
+        organizationId,
+      );
 
       if (!customerMetalAccount) {
         throw new NotFoundException(`Conta de metal do cliente com ID ${accountsRec.sale.pessoaId} não encontrada.`);
@@ -176,7 +181,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
         metalAccountId: customerMetalAccount.id,
         type: MetalAccountEntryType.DEBIT,
         grams: gramsToApply,
-        date: new Date(),
+        date: paymentDate,
         sourceId: new UniqueEntityID(accountsRec.saleId),
         description: `Débito referente ao pagamento da Venda #${accountsRec.sale?.orderNumber} com crédito de metal`,
         organizationId: new UniqueEntityID(organizationId),
@@ -188,7 +193,9 @@ export class PayAccountsRecWithMetalCreditUseCase {
       // 5. Create Financial Transaction (always happens)
       const settings = await this.settingsService.findOne(userId);
       if (!settings?.props.metalStockAccountId) {
-        throw new BadRequestException("Nenhuma conta de estoque de metal padrão foi configurada.");
+        throw new BadRequestException(
+          'Conta de estoque de metal não configurada. Por favor, vá para as configurações e defina a conta de estoque de metal padrão para continuar.',
+        );
       }
       await tx.transacao.create({
         data: {
@@ -200,7 +207,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
           goldAmount: gramsToApply.toNumber(),
           goldPrice: finalBuyPrice.toNumber(),
           moeda: 'BRL',
-          dataHora: new Date(),
+          dataHora: paymentDate,
           accountRecId: accountsRec.id,
         },
       });
@@ -211,7 +218,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
       if (saleInstallment) {
         await tx.saleInstallment.update({
           where: { id: saleInstallment.id },
-          data: { status: isFullyPaid ? 'PAID' : 'PARTIALLY_PAID', paidAt: isFullyPaid ? new Date() : null },
+          data: { status: isFullyPaid ? 'PAID' : 'PARTIALLY_PAID', paidAt: isFullyPaid ? paymentDate : null },
         });
         this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] SaleInstallment updated.`);
       }

@@ -30,10 +30,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TipoMetal } from "@/types/tipo-metal";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const createRecoveryOrderSchema = z.object({
   metalType: z.nativeEnum(TipoMetal, { required_error: "Selecione um tipo de metal." }),
   chemicalAnalysisIds: z.array(z.string().uuid()).min(1, "Selecione ao menos uma análise química."),
+  dataInicio: z.date().optional(),
 });
 
 type CreateRecoveryOrderFormData = z.infer<typeof createRecoveryOrderSchema>;
@@ -59,11 +61,16 @@ export function CreateRecoveryOrderModal({
     defaultValues: {
       chemicalAnalysisIds: [],
       metalType: TipoMetal.AU,
+      dataInicio: new Date(),
     },
   });
 
   const selectedMetalType = form.watch('metalType');
-
+  
+  useEffect(() => {
+    form.setValue('dataInicio', new Date());
+  }, [isOpen, form]);
+  
   useEffect(() => {
     const fetchAvailableAnalyses = async () => {
       setIsLoadingAnalyses(true);
@@ -95,7 +102,10 @@ export function CreateRecoveryOrderModal({
   const onSubmit = async (data: CreateRecoveryOrderFormData) => {
     setIsSubmitting(true);
     try {
-      await createRecoveryOrder(data);
+      await createRecoveryOrder({
+        ...data,
+        dataInicio: data.dataInicio?.toISOString(), // Convert Date to ISO string for backend
+      });
       toast.success("Ordem de recuperação criada com sucesso!");
       onSuccess();
       onOpenChange(false);
@@ -136,6 +146,24 @@ export function CreateRecoveryOrderModal({
                       <SelectItem value={TipoMetal.RH}>Ródio (RH)</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="dataInicio"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data de Início</FormLabel>
+                  <FormControl>
+                    <DatePicker
+                      date={field.value}
+                      setDate={field.onChange}
+                      placeholder="Selecione a data de início"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

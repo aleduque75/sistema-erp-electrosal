@@ -140,7 +140,9 @@ export class PayAccountsRecWithMetalUseCase {
       // 7. Create Financial Transaction for the APPLIED amount
       const settings = await this.settingsService.findOne(userId);
       if (!settings?.props.metalStockAccountId) {
-        throw new BadRequestException("Nenhuma conta de estoque de metal padrão foi configurada.");
+        throw new BadRequestException(
+          'Conta de estoque de metal não configurada. Por favor, vá para as configurações e defina a conta de estoque de metal padrão para continuar.',
+        );
       }
       await tx.transacao.create({
         data: {

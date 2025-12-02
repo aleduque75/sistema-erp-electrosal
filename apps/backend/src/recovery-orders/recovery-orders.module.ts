@@ -11,6 +11,7 @@ import { ProcessRecoveryFinalizationUseCase } from './use-cases/process-recovery
 import { AddRawMaterialToRecoveryOrderUseCase } from './use-cases/add-raw-material.use-case';
 import { AssociateImageToRecoveryOrderUseCase } from './use-cases/associate-image-to-recovery-order.use-case';
 import { CancelRecoveryOrderUseCase } from './use-cases/cancel-recovery-order.use-case'; // Import the new use case
+import { GerarPdfRecoveryOrderUseCase } from './use-cases/gerar-pdf-recovery-order.use-case';
 import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
 import { QuotationsModule } from '../quotations/quotations.module';
 import { ContasContabeisModule } from '../contas-contabeis/contas-contabeis.module';
@@ -40,6 +41,7 @@ import { PrismaPureMetalLotRepository } from './repositories/prisma-pure-metal-l
     AddRawMaterialToRecoveryOrderUseCase,
     CancelRecoveryOrderUseCase, // Add the new use case
     AssociateImageToRecoveryOrderUseCase,
+    GerarPdfRecoveryOrderUseCase,
   ],
   exports: ['IRecoveryOrderRepository'], // Export it
 })

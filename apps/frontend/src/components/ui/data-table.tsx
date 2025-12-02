@@ -10,6 +10,7 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
+  Row,
 } from "@tanstack/react-table";
 
 import {
@@ -29,6 +30,8 @@ interface DataTableProps<TData, TValue> {
   filterColumnId?: string;
   filterPlaceholder?: string;
   isLoading?: boolean;
+  renderSubComponent?: (props: { row: Row<TData> }) => React.ReactElement; // NOVO
+  getRowCanExpand?: (row: Row<TData>) => boolean; // NOVO
 }
 
 export function DataTable<TData, TValue>({
@@ -37,6 +40,8 @@ export function DataTable<TData, TValue>({
   filterColumnId,
   filterPlaceholder,
   isLoading = false,
+  renderSubComponent, // NOVO
+  getRowCanExpand, // NOVO
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
@@ -48,6 +53,7 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    getRowCanExpand, // NOVO
     state: {
       sorting,
     },
@@ -107,19 +113,27 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                <React.Fragment key={row.id}>
+                  <TableRow
+                    data-state={row.getIsSelected() && "selected"}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {row.getIsExpanded() && renderSubComponent && ( // NOVO
+                    <TableRow>
+                      <TableCell colSpan={row.getVisibleCells().length}>
+                        {renderSubComponent({ row })}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))
             ) : (
               <TableRow>

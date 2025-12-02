@@ -20,6 +20,7 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     const domainRecoveryOrder = RecoveryOrder.reconstitute(
       {
         organizationId: props.organizationId,
+        orderNumber: props.orderNumber,
         metalType: props.metalType,
         chemicalAnalysisIds: props.chemicalAnalysisIds,
         status: props.status as RecoveryOrderStatus,
@@ -109,7 +110,10 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       select: {
         id: true,
         numeroAnalise: true,
+        metalType: true,
         volumeOuPesoEntrada: true,
+        resultadoAnaliseValor: true,
+        auEstimadoBrutoGramas: true,
         auLiquidoParaClienteGramas: true,
         cliente: {
           select: {
@@ -128,7 +132,10 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       id: analise.id,
       numeroAnalise: analise.numeroAnalise,
       clienteName: analise.cliente?.name || 'N/A',
+      metalType: analise.metalType,
       volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+      resultadoAnaliseValor: analise.resultadoAnaliseValor,
+      auEstimadoBrutoGramas: analise.auEstimadoBrutoGramas,
       auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
       metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
     }));
@@ -164,7 +171,10 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       select: {
         id: true,
         numeroAnalise: true,
+        metalType: true,
         volumeOuPesoEntrada: true,
+        resultadoAnaliseValor: true,
+        auEstimadoBrutoGramas: true,
         auLiquidoParaClienteGramas: true,
         cliente: {
           select: {
@@ -183,7 +193,10 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       id: analise.id,
       numeroAnalise: analise.numeroAnalise,
       clienteName: analise.cliente?.name || 'N/A',
+      metalType: analise.metalType,
       volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+      resultadoAnaliseValor: analise.resultadoAnaliseValor,
+      auEstimadoBrutoGramas: analise.auEstimadoBrutoGramas,
       auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
       metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
     }));
@@ -205,6 +218,9 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         whereClause.dataInicio = {};
       }
       (whereClause.dataInicio as Prisma.DateTimeFilter).lte = new Date(filters.endDate);
+    }
+    if (filters?.orderNumber) {
+      whereClause.orderNumber = filters.orderNumber;
     }
 
     const dbRecoveryOrders = await this.prisma.recoveryOrder.findMany({
@@ -232,7 +248,10 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         select: {
           id: true,
           numeroAnalise: true,
+          metalType: true,
           volumeOuPesoEntrada: true,
+          resultadoAnaliseValor: true,
+          auEstimadoBrutoGramas: true,
           auLiquidoParaClienteGramas: true,
           cliente: {
             select: {
@@ -251,7 +270,10 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         id: analise.id,
         numeroAnalise: analise.numeroAnalise,
         clienteName: analise.cliente?.name || 'N/A',
+        metalType: analise.metalType,
         volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+        resultadoAnaliseValor: analise.resultadoAnaliseValor,
+        auEstimadoBrutoGramas: analise.auEstimadoBrutoGramas,
         auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
         metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
       }));

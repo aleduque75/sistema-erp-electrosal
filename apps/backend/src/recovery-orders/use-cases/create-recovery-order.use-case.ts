@@ -20,6 +20,9 @@ export interface CreateRecoveryOrderCommand {
   organizationId: string;
   chemicalAnalysisIds: string[];
   metalType: TipoMetal;
+  dataInicio?: string;
+  dataFim?: string;
+  descricaoProcesso?: string;
 }
 
 @Injectable()
@@ -33,7 +36,14 @@ export class CreateRecoveryOrderUseCase {
   ) {}
 
   async execute(command: CreateRecoveryOrderCommand): Promise<RecoveryOrder> {
-    const { organizationId, chemicalAnalysisIds, metalType } = command;
+    const {
+      organizationId,
+      chemicalAnalysisIds,
+      metalType,
+      dataInicio,
+      dataFim,
+      descricaoProcesso,
+    } = command;
 
     const orderNumber = await this.generateNextNumberUseCase.execute(
       organizationId,
@@ -103,7 +113,9 @@ export class CreateRecoveryOrderUseCase {
       orderNumber,
       metalType,
       chemicalAnalysisIds,
-      dataInicio: new Date(),
+      dataInicio: dataInicio ? new Date(dataInicio) : new Date(),
+      dataFim: dataFim ? new Date(dataFim) : undefined,
+      descricaoProcesso,
       totalBrutoEstimadoGramas,
     });
 

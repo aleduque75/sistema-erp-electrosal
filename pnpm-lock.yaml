@@ -130,8 +130,8 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2
       nanoid:
-        specifier: ^5.1.5
-        version: 5.1.6
+        specifier: ^3.3.7
+        version: 3.3.7
       ofx-js:
         specifier: ^0.2.0
         version: 0.2.0
@@ -217,6 +217,9 @@ importers:
       '@types/multer':
         specifier: ^2.0.0
         version: 2.0.0
+      '@types/nanoid':
+        specifier: 3.0.0
+        version: 3.0.0
       '@types/node':
         specifier: ^22.10.7
         version: 22.18.13
@@ -492,8 +495,8 @@ importers:
         specifier: ^0.14.2
         version: 0.14.2
       nanoid:
-        specifier: ^5.1.5
-        version: 5.1.6
+        specifier: ^3.3.7
+        version: 3.3.7
       uuid:
         specifier: ^9.0.0
         version: 9.0.1
@@ -3146,6 +3149,10 @@ packages:
 
   '@types/multer@2.0.0':
     resolution: {integrity: sha512-C3Z9v9Evij2yST3RSBktxP9STm6OdMc5uR1xF1SGr98uv8dUlAL2hqwrZ3GVB3uyMyiegnscEK6PGtYvNrjTjw==}
+
+  '@types/nanoid@3.0.0':
+    resolution: {integrity: sha512-UXitWSmXCwhDmAKe7D3hNQtQaHeHt5L8LO1CB8GF8jlYVzOv5cBWDNqiJ+oPEWrWei3i3dkZtHY/bUtd0R/uOQ==}
+    deprecated: This is a stub types definition. nanoid provides its own type definitions, so you do not need this installed.
 
   '@types/node@22.18.13':
     resolution: {integrity: sha512-Bo45YKIjnmFtv6I1TuC8AaHBbqXtIo+Om5fE4QiU1Tj8QR/qt+8O3BAtOimG5IFmwaWiPmB3Mv3jtYzBA4Us2A==}
@@ -6199,9 +6206,9 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@5.1.6:
-    resolution: {integrity: sha512-c7+7RQ+dMB5dPwwCp4ee1/iV/q2P6aK1mTZcfr1BTuVlyW9hJYiMPybJCcnBlQtuSmTIWNeazm/zqNoZSSElBg==}
-    engines: {node: ^18 || >=20}
+  nanoid@3.3.7:
+    resolution: {integrity: sha512-eSRppjcPIatRIMC1U6UngP8XFcz8MQWGQdt1MTBQ7NaAmvXDfvNxbvWV3x2y6CdEUciCSsDHDQZbhYaB8QEo2g==}
+    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
   napi-build-utils@2.0.0:
@@ -10819,6 +10826,10 @@ snapshots:
     dependencies:
       '@types/express': 5.0.5
 
+  '@types/nanoid@3.0.0':
+    dependencies:
+      nanoid: 3.3.11
+
   '@types/node@22.18.13':
     dependencies:
       undici-types: 6.21.0
@@ -14680,7 +14691,7 @@ snapshots:
 
   nanoid@3.3.11: {}
 
-  nanoid@5.1.6: {}
+  nanoid@3.3.7: {}
 
   napi-build-utils@2.0.0: {}
 

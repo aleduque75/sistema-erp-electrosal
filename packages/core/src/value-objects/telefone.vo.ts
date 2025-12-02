@@ -1,4 +1,10 @@
-import { InvalidArgumentError } from "../errors/invalid-argument.error";
+class InvalidArgumentError extends Error {
+  constructor(message?: string) {
+    super(message);
+    this.name = "InvalidArgumentError";
+    Object.setPrototypeOf(this, InvalidArgumentError.prototype);
+  }
+}
 
 export class TelefoneVO {
   private readonly _numero: string; // Armazena apenas dígitos

@@ -10,7 +10,10 @@ export interface AnaliseQuimicaResumida {
   id: string;
   numeroAnalise: string;
   clienteName: string;
+  metalType: string;
   volumeOuPesoEntrada: number;
+  resultadoAnaliseValor: number | null;
+  auEstimadoBrutoGramas: number | null;
   auLiquidoParaClienteGramas: number | null;
   metalCreditGrams?: number | null;
 }
@@ -138,5 +141,14 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
     const { totalBrutoEstimadoGramas, organizationId, chemicalAnalysisIds, analisesEnvolvidas, rawMaterialsUsed, orderNumber, ...updateDto } = dto as any;
     Object.assign(this.props, updateDto);
     this.props.dataAtualizacao = new Date();
+  }
+
+  public toObject(): RecoveryOrderProps & { id: string } {
+    return {
+      id: this.id.toString(),
+      ...this.props,
+      analisesEnvolvidas: this._analisesEnvolvidas,
+      rawMaterialsUsed: this._rawMaterialsUsed,
+    };
   }
 }

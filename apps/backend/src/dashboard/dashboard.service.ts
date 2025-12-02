@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { addMonths, startOfMonth, endOfMonth, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 @Injectable()
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   async getDashboardSummary(organizationId: string) {
-    const [products, accountsPay, accountsRec, totalSales, inventoryLots] = await Promise.all([
+    const [products, accountsPay, accountsRec, salesSummary, inventoryLots] = await Promise.all([
       this.prisma.product.findMany({
         where: { organizationId },
         select: { id: true, price: true },
@@ -21,8 +22,8 @@ export class DashboardService {
         _sum: { amount: true },
       }),
       this.prisma.sale.aggregate({
-        where: { organizationId },
-        _sum: { totalAmount: true },
+        where: { organizationId, status: { not: 'CANCELADO' } },
+        _sum: { totalAmount: true, goldValue: true },
       }),
       this.prisma.inventoryLot.findMany({
         where: { organizationId, remainingQuantity: { gt: 0 } },
@@ -39,7 +40,8 @@ export class DashboardService {
       totalAccountsPay: accountsPay._sum.amount?.toNumber() || 0,
       totalAccountsRec: accountsRec._sum.amount?.toNumber() || 0,
       totalStockValue: totalStockValue,
-      totalSales: totalSales._sum.totalAmount?.toNumber() || 0,
+      totalSalesBRL: salesSummary._sum.totalAmount?.toNumber() || 0,
+      totalSalesAu: salesSummary._sum.goldValue?.toNumber() || 0,
     };
   }
 
@@ -135,5 +137,163 @@ export class DashboardService {
     const netBalance = (totalDebits._sum.valor?.toNumber() || 0) - (totalCredits._sum.valor?.toNumber() || 0);
 
     return { totalAmount: netBalance };
+  }
+
+  async getFinancialSummaryByPeriod(organizationId: string) {
+    const sales = await this.prisma.sale.findMany({
+      where: {
+        organizationId,
+        status: { not: 'CANCELADO' },
+        goldValue: { gt: 0 },
+      },
+      select: {
+        createdAt: true,
+        goldValue: true,
+        adjustment: {
+          select: {
+            netDiscrepancyGrams: true,
+          },
+        },
+      },
+    });
+
+    const expenses = await this.prisma.transacao.findMany({
+      where: {
+        organizationId,
+        tipo: 'DEBITO',
+        goldAmount: { gt: 0 },
+        contaContabil: {
+          tipo: 'DESPESA',
+        },
+      },
+      select: {
+        dataHora: true,
+        goldAmount: true,
+      },
+    });
+
+    const getMonth = (date: Date) => format(date, 'yyyy-MM');
+    const getQuarter = (date: Date) => `T${Math.floor(date.getMonth() / 3) + 1} ${date.getFullYear()}`;
+    const getSemester = (date: Date) => `S${Math.floor(date.getMonth() / 6) + 1} ${date.getFullYear()}`;
+
+    const aggregate = (
+      data: any[],
+      dateSelector: (d: any) => Date,
+      valueSelectors: { [key: string]: (d: any) => number },
+      periodFn: (d: Date) => string
+    ) => {
+      return data.reduce((acc, item) => {
+        const period = periodFn(dateSelector(item));
+        if (!acc[period]) {
+          acc[period] = {};
+        }
+        for (const key in valueSelectors) {
+          const value = valueSelectors[key](item);
+          acc[period][key] = (acc[period][key] || 0) + value;
+        }
+        return acc;
+      }, {} as Record<string, { [key: string]: number }>);
+    };
+
+    const processPeriod = (periodFn: (d: Date) => string) => {
+      const salesData = aggregate(
+        sales,
+        s => s.createdAt,
+        {
+          sales: s => s.goldValue?.toNumber() || 0,
+          profit: s => s.adjustment?.netDiscrepancyGrams?.toNumber() || 0,
+        },
+        periodFn
+      );
+      const expenseData = aggregate(
+        expenses,
+        e => e.dataHora,
+        { expenses: e => e.goldAmount?.toNumber() || 0 },
+        periodFn
+      );
+
+      const allPeriods = [...Object.keys(salesData), ...Object.keys(expenseData)];
+      const uniquePeriods = [...new Set(allPeriods)];
+
+      return uniquePeriods
+        .map(period => {
+          const totalSalesGold = salesData[period]?.sales || 0;
+          const totalProfitGold = salesData[period]?.profit || 0;
+          const totalExpensesGold = expenseData[period]?.expenses || 0;
+          
+          return {
+            period,
+            totalSalesGold,
+            totalExpensesGold,
+            totalProfitGold: totalProfitGold,
+          }
+        })
+        .sort((a, b) => a.period.localeCompare(b.period));
+    };
+
+    return {
+      monthly: processPeriod(getMonth).map(p => ({ ...p, period: format(new Date(p.period.replace(/-/g, '/')), 'MMM/yy', { locale: ptBR }) })),
+      quarterly: processPeriod(getQuarter),
+      semiannual: processPeriod(getSemester),
+    };
+  }
+
+  async getTransactionsByPeriod(organizationId: string, startDate: string, endDate: string) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const [salesResults, expenses] = await Promise.all([
+      this.prisma.sale.findMany({
+        where: {
+          organizationId,
+          status: { not: 'CANCELADO' },
+          createdAt: {
+            gte: start,
+            lte: end,
+          },
+        },
+        select: {
+          orderNumber: true,
+          createdAt: true,
+          goldValue: true,
+          adjustment: {
+            select: {
+              netDiscrepancyGrams: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      this.prisma.transacao.findMany({
+        where: {
+          organizationId,
+          tipo: 'DEBITO',
+          dataHora: {
+            gte: start,
+            lte: end,
+          },
+          contaContabil: {
+            tipo: 'DESPESA',
+          },
+        },
+        select: {
+          descricao: true,
+          dataHora: true,
+          goldAmount: true,
+        },
+        orderBy: {
+          dataHora: 'desc',
+        },
+      }),
+    ]);
+
+    const sales = salesResults.map(sale => {
+      const profitGold = sale.adjustment?.netDiscrepancyGrams?.toNumber() || 0;
+      return { ...sale, profitGold };
+    });
+
+    return { sales, expenses };
   }
 }

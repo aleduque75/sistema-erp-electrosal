@@ -262,5 +262,11 @@ export const menuConfig: NavItem[] = [
                       icon: ArrowDownToLine,
                       description: "Relatório de contas a pagar por fornecedor e período.",
                     },
+                    { // NOVO ITEM
+                      title: "Balancete de Verificação",
+                      href: "/relatorios/balancete",
+                      icon: ListChecks, // Usando ListChecks, pode ser alterado
+                      description: "Visualize o balancete de verificação por período.",
+                    },
                   ],
                 },          ];

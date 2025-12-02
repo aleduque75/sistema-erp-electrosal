@@ -11,14 +11,29 @@ import { UsersModule } from '../users/users.module';
 import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
 import { PrismaMetalCreditRepository } from '../metal-credits/repositories/prisma-metal-credit.repository';
 
+import { PayAccountsRecWithMetalCreditMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-credit-multiple.use-case';
+import { PayAccountsRecWithMetalMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-multiple.use-case';
+
 @Module({
-  imports: [PrismaModule, SettingsModule, QuotationsModule, SalesModule, UsersModule, MetalAccountsModule],
+  imports: [
+    PrismaModule,
+    SettingsModule,
+    QuotationsModule,
+    SalesModule,
+    UsersModule,
+    MetalAccountsModule,
+  ],
   controllers: [AccountsRecController],
   providers: [
     AccountsRecService,
     PayAccountsRecWithMetalCreditUseCase,
     PayAccountsRecWithMetalUseCase,
-    { provide: 'IMetalCreditRepository', useClass: PrismaMetalCreditRepository },
+    PayAccountsRecWithMetalCreditMultipleUseCase,
+    PayAccountsRecWithMetalMultipleUseCase,
+    {
+      provide: 'IMetalCreditRepository',
+      useClass: PrismaMetalCreditRepository,
+    },
   ],
 })
 export class AccountsRecModule {}

@@ -17,4 +17,12 @@ export class CreateRecoveryOrderDto {
   @IsOptional()
   @IsString()
   observacoes?: string;
+
+  @IsOptional()
+  @IsString()
+  dataInicio?: string;
+
+  @IsOptional()
+  @IsString()
+  dataFim?: string;
 }

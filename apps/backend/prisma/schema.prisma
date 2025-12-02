@@ -226,7 +226,7 @@ model InventoryLot {
   receivedDate        DateTime             @default(now())
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
-  stockMovements      StockMovement[] // Adicionado para rastrear movimentações
+  stockMovements      StockMovement[]
   reaction            chemical_reactions?  @relation("ReactionToBatch")
   organization        Organization         @relation(fields: [organizationId], references: [id])
   product             Product              @relation(fields: [productId], references: [id])
@@ -238,10 +238,10 @@ model InventoryLot {
 model StockMovement {
   id             String        @id @default(uuid())
   productId      String
-  inventoryLotId String? // Adicionado para rastrear o lote
+  inventoryLotId String?
   type           String
   quantity       Float
-  sourceDocument String? // Adicionado para rastrear a origem
+  sourceDocument String?
   createdAt      DateTime      @default(now())
   organizationId String
   organization   Organization  @relation(fields: [organizationId], references: [id])
@@ -359,7 +359,7 @@ model AccountPay {
   contaContabilId   String?
   organizationId    String
   transacaoId       String?        @unique
-  purchaseOrderId   String?        // Adicionado para vincular ao pedido de compra
+  purchaseOrderId   String?
   fornecedorId      String?
   contaContabil     ContaContabil? @relation(fields: [contaContabilId], references: [id])
   organization      Organization   @relation(fields: [organizationId], references: [id])
@@ -371,28 +371,28 @@ model AccountPay {
 }
 
 model AccountRec {
-  id              String            @id @default(uuid())
-  saleId          String?
-  description     String
-  amount          Decimal           @db.Decimal(10, 2)
-  dueDate         DateTime
-  received        Boolean           @default(false)
-  receivedAt      DateTime?
-  amountPaid      Decimal           @db.Decimal(10, 2) @default(0)
-  goldAmount      Decimal?          @db.Decimal(12, 4)
-  goldAmountPaid  Decimal?          @db.Decimal(12, 4) @default(0)
-  doNotUpdateSaleStatus Boolean       @default(false) // NOVO CAMPO
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  contaCorrenteId String?
-  organizationId  String
-  transacaoId_old String?           @unique @map("transacaoId")
-  externalId      String?           @unique
-  contaCorrente   ContaCorrente?    @relation(fields: [contaCorrenteId], references: [id])
-  organization    Organization      @relation(fields: [organizationId], references: [id])
-  sale            Sale?             @relation(fields: [saleId], references: [id])
-  saleInstallments SaleInstallment[]
-  transacoes      Transacao[]
+  id                    String            @id @default(uuid())
+  saleId                String?
+  description           String
+  amount                Decimal           @db.Decimal(10, 2)
+  dueDate               DateTime
+  received              Boolean           @default(false)
+  receivedAt            DateTime?
+  amountPaid            Decimal           @db.Decimal(10, 2) @default(0)
+  goldAmount            Decimal?          @db.Decimal(12, 4)
+  goldAmountPaid        Decimal?          @db.Decimal(12, 4) @default(0)
+  doNotUpdateSaleStatus Boolean           @default(false)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  contaCorrenteId       String?
+  organizationId        String
+  transacaoId_old       String?           @unique @map("transacaoId")
+  externalId            String?           @unique
+  contaCorrente         ContaCorrente?    @relation(fields: [contaCorrenteId], references: [id])
+  organization          Organization      @relation(fields: [organizationId], references: [id])
+  sale                  Sale?             @relation(fields: [saleId], references: [id])
+  saleInstallments      SaleInstallment[]
+  transacoes            Transacao[]
 }
 
 model MetalReceivable {
@@ -477,30 +477,30 @@ model ContaCorrente {
 }
 
 model Transacao {
-  id              String              @id @default(uuid())
-  tipo            TipoTransacaoPrisma
-  valor           Decimal             @db.Decimal(10, 2)
-  moeda           String
-  descricao       String?
-  dataHora        DateTime            @default(now())
-  contaContabilId String
-  contaCorrenteId String?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  fitId           String?
-  organizationId  String
-  goldAmount      Decimal?            @db.Decimal(10, 4)
-  goldPrice       Decimal?            @db.Decimal(10, 2)
-  accountRecId    String?
-  fornecedorId    String?
-  AccountPay      AccountPay?
-  contaContabil   ContaContabil       @relation(fields: [contaContabilId], references: [id])
-  contaCorrente   ContaCorrente?      @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction)
-  organization    Organization        @relation(fields: [organizationId], references: [id])
-  status          TransacaoStatus     @default(ATIVA)
-  accountRec      AccountRec?         @relation(fields: [accountRecId], references: [id])
-  fornecedor      Fornecedor?         @relation(fields: [fornecedorId], references: [pessoaId])
-  medias          Media[] @relation("TransacaoToMedia")
+  id                  String              @id @default(uuid())
+  tipo                TipoTransacaoPrisma
+  valor               Decimal             @db.Decimal(10, 2)
+  moeda               String
+  descricao           String?
+  dataHora            DateTime            @default(now())
+  contaContabilId     String
+  contaCorrenteId     String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  fitId               String?
+  organizationId      String
+  goldAmount          Decimal?            @db.Decimal(10, 4)
+  goldPrice           Decimal?            @db.Decimal(10, 2)
+  accountRecId        String?
+  fornecedorId        String?
+  AccountPay          AccountPay?
+  contaContabil       ContaContabil       @relation(fields: [contaContabilId], references: [id])
+  contaCorrente       ContaCorrente?      @relation(fields: [contaCorrenteId], references: [id], onDelete: NoAction)
+  organization        Organization        @relation(fields: [organizationId], references: [id])
+  status              TransacaoStatus     @default(ATIVA)
+  accountRec          AccountRec?         @relation(fields: [accountRecId], references: [id])
+  fornecedor          Fornecedor?         @relation(fields: [fornecedorId], references: [pessoaId])
+  medias              Media[]             @relation("TransacaoToMedia")
   linkedTransactionId String?             @unique
   linkedTransaction   Transacao?          @relation("Transfer", fields: [linkedTransactionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   transfer            Transacao?          @relation("Transfer")
@@ -608,31 +608,27 @@ model Section {
 }
 
 model Media {
-  id               String        @id @default(uuid())
-  filename         String        @unique
-  mimetype         String
-  size             Int
-  path             String        @unique
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  organizationId   String?
-  height           Int?
-  width            Int?
-  landingPageLogos LandingPage[]
-  recoveryOrderId String?
-  recoveryOrder   RecoveryOrder? @relation(fields: [recoveryOrderId], references: [id])
-  analiseQuimicaId String?
-  analiseQuimica   AnaliseQuimica? @relation(fields: [analiseQuimicaId], references: [id])
+  id                 String              @id @default(uuid())
+  filename           String              @unique
+  mimetype           String
+  size               Int
+  path               String              @unique
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  organizationId     String?
+  height             Int?
+  width              Int?
+  landingPageLogos   LandingPage[]
+  recoveryOrderId    String?
+  recoveryOrder      RecoveryOrder?      @relation(fields: [recoveryOrderId], references: [id])
+  analiseQuimicaId   String?
+  analiseQuimica     AnaliseQuimica?     @relation(fields: [analiseQuimicaId], references: [id])
   chemicalReactionId String?
   chemicalReaction   chemical_reactions? @relation(fields: [chemicalReactionId], references: [id])
-  organization     Organization? @relation(fields: [organizationId], references: [id])
-  transacaoId      String?
-  transacao        Transacao? @relation("TransacaoToMedia", fields: [transacaoId], references: [id])
+  organization       Organization?       @relation(fields: [organizationId], references: [id])
+  transacaoId        String?
+  transacao          Transacao?          @relation("TransacaoToMedia", fields: [transacaoId], references: [id])
 }
-
-// ...
-
-
 
 model CreditCardFee {
   id             String       @id @default(uuid())
@@ -709,20 +705,20 @@ model AnaliseQuimica {
 }
 
 model MetalCredit {
-  id                 String         @id @default(uuid())
+  id                 String            @id @default(uuid())
   organizationId     String
   clientId           String
-  chemicalAnalysisId String         @unique
-  metalType          TipoMetal      @default(AU)
-  grams              Decimal        @db.Decimal(10, 4)
-  date               DateTime       @default(now())
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  status             MetalCreditStatus @default(PENDING) // New field
-  settledGrams       Decimal?       @db.Decimal(10, 4) @default(0) // New field
-  chemicalAnalysis   AnaliseQuimica @relation(fields: [chemicalAnalysisId], references: [id])
-  client             Pessoa         @relation(fields: [clientId], references: [id])
-  organization       Organization   @relation(fields: [organizationId], references: [id])
+  chemicalAnalysisId String            @unique
+  metalType          TipoMetal         @default(AU)
+  grams              Decimal           @db.Decimal(10, 4)
+  date               DateTime          @default(now())
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  status             MetalCreditStatus @default(PENDING)
+  settledGrams       Decimal?          @db.Decimal(10, 4) @default(0)
+  chemicalAnalysis   AnaliseQuimica    @relation(fields: [chemicalAnalysisId], references: [id])
+  client             Pessoa            @relation(fields: [clientId], references: [id])
+  organization       Organization      @relation(fields: [organizationId], references: [id])
 
   @@map("metal_credits")
 }
@@ -773,9 +769,10 @@ model RecoveryOrder {
   chemicalAnalysisIds          String[]
   dataInicio                   DateTime                  @default(now())
   dataFim                      DateTime?
+  descricaoProcesso            String?
   observacoes                  String?
-  dataCriacao                  DateTime                  @default(now())
-  dataAtualizacao              DateTime                  @updatedAt
+  dataCriacao                  DateTime                  @default(now()) @map("createdAt")
+  dataAtualizacao              DateTime                  @updatedAt @map("updatedAt")
   status                       RecoveryOrderStatusPrisma @default(PENDENTE)
   auPuroRecuperadoGramas       Float?
   descricao                    String?
@@ -794,17 +791,16 @@ model RecoveryOrder {
 }
 
 model RawMaterialUsed {
-  id                  String        @id @default(uuid())
-  organizationId      String
-  rawMaterialId       String
-  quantity            Float
-  cost                Decimal       @db.Decimal(10, 2)
-  goldEquivalentCost  Decimal?      @db.Decimal(10, 4)
-  recoveryOrderId     String?
-  chemicalReactionId  String?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-
+  id                 String              @id @default(uuid())
+  organizationId     String
+  rawMaterialId      String
+  quantity           Float
+  cost               Decimal             @db.Decimal(10, 2)
+  goldEquivalentCost Decimal?            @db.Decimal(10, 4)
+  recoveryOrderId    String?
+  chemicalReactionId String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
   organization       Organization        @relation(fields: [organizationId], references: [id])
   rawMaterial        RawMaterial         @relation(fields: [rawMaterialId], references: [id])
   recoveryOrder      RecoveryOrder?      @relation(fields: [recoveryOrderId], references: [id])
@@ -845,16 +841,16 @@ model MetalAccountEntry {
 }
 
 model Quotation {
-  id             String       @id @default(uuid())
+  id            String       @id @default(uuid())
   organizationId String
-  metal          TipoMetal
-  date           DateTime     @map("quotation_date") @db.Date
-  buyPrice       Decimal      @db.Decimal(10, 2)
-  sellPrice      Decimal      @db.Decimal(10, 2)
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
-  tipoPagamento  String?
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  metal         TipoMetal
+  date          DateTime     @map("quotation_date") @db.Date
+  buyPrice      Decimal      @db.Decimal(10, 2)
+  sellPrice     Decimal      @db.Decimal(10, 2)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  tipoPagamento String?
+  organization  Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, metal, date, tipoPagamento])
   @@map("quotations")
@@ -950,9 +946,8 @@ model ChemicalReactionLot {
   chemicalReactionId String
   pureMetalLotId     String
   gramsToUse         Float
-
-  chemicalReaction chemical_reactions @relation(fields: [chemicalReactionId], references: [id])
-  pureMetalLot     pure_metal_lots    @relation(fields: [pureMetalLotId], references: [id])
+  chemicalReaction   chemical_reactions @relation(fields: [chemicalReactionId], references: [id])
+  pureMetalLot       pure_metal_lots    @relation(fields: [pureMetalLotId], references: [id])
 
   @@id([chemicalReactionId, pureMetalLotId])
   @@map("chemical_reaction_lots")
@@ -1001,12 +996,12 @@ model CrrCounter {
 }
 
 model EntityCounter {
-  id              String   @id @default(uuid())
-  organizationId  String
-  entityType      EntityType
-  lastNumber      Int
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String     @id @default(uuid())
+  organizationId String
+  entityType     EntityType
+  lastNumber     Int
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   @@unique([organizationId, entityType])
   @@map("entity_counters")
@@ -1016,30 +1011,24 @@ enum EntityType {
   RECOVERY_ORDER
   CHEMICAL_REACTION
   PURE_METAL_LOT
-  // Add other entity types as needed
 }
 
 model SaleAdjustment {
   id                     String       @id @default(uuid())
   saleId                 String       @unique
   organizationId         String
-
-  // Campos antigos (focados em Ouro) - tornando opcionais
   paymentReceivedBRL     Decimal      @db.Decimal(14, 2)
-  paymentQuotation       Decimal?     @db.Decimal(12, 2) // Pode não haver uma cotação de ouro
+  paymentQuotation       Decimal?     @db.Decimal(12, 2)
   paymentEquivalentGrams Decimal?     @db.Decimal(12, 4)
   saleExpectedGrams      Decimal?     @db.Decimal(12, 4)
   grossDiscrepancyGrams  Decimal?     @db.Decimal(12, 4)
-  costsInBRL             Decimal      @db.Decimal(14, 2) // Mantido por enquanto
+  costsInBRL             Decimal      @db.Decimal(14, 2)
   costsInGrams           Decimal?     @db.Decimal(12, 4)
   netDiscrepancyGrams    Decimal?     @db.Decimal(12, 4)
-
-  // Novos campos (focados em BRL)
   totalCostBRL           Decimal?     @db.Decimal(14, 2)
   grossProfitBRL         Decimal?     @db.Decimal(14, 2)
   otherCostsBRL          Decimal?     @db.Decimal(14, 2)
   netProfitBRL           Decimal?     @db.Decimal(14, 2)
-
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
   organization           Organization @relation(fields: [organizationId], references: [id])
@@ -1090,7 +1079,7 @@ enum ContaCorrenteType {
   BANCO
   FORNECEDOR_METAL
   EMPRESTIMO
-  CLIENTE // Adicionado
+  CLIENTE
 }
 
 enum StatusAnaliseQuimicaPrisma {
@@ -1190,7 +1179,7 @@ enum StockMovementType {
   ADJUSTMENT
 }
 
-enum MetalCreditStatus { // New enum
+enum MetalCreditStatus {
   PENDING
   PARTIALLY_PAID
   PAID

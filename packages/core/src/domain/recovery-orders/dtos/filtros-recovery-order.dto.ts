@@ -4,4 +4,5 @@ export interface FiltrosRecoveryOrder {
   metalType?: TipoMetal;
   startDate?: string;
   endDate?: string;
+  orderNumber?: string;
 }

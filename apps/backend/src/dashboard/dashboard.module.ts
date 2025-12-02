@@ -1,12 +1,12 @@
-// apps/backend/src/dashboard/dashboard.module.ts
 import { Module } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { DashboardController } from './dashboard.controller';
-import { PrismaModule } from '../prisma/prisma.module'; // <--- IMPORTE O PRISMAMODULE AQUI!
+import { PrismaModule } from '../prisma/prisma.module';
+import { GerarPdfResumoFinanceiroUseCase } from './use-cases/gerar-pdf-resumo-financeiro.use-case';
 
 @Module({
-  imports: [PrismaModule], // <--- Adicione o PrismaModule aqui!
+  imports: [PrismaModule],
   controllers: [DashboardController],
-  providers: [DashboardService],
+  providers: [DashboardService, GerarPdfResumoFinanceiroUseCase],
 })
 export class DashboardModule {}

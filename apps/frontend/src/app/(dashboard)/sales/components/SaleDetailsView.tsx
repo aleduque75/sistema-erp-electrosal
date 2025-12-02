@@ -194,7 +194,7 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
                     <Button size="sm" onClick={() => openLotSelector(item)}>Vincular Lotes</Button>
                   </TableCell>
                 </TableRow>
-              ))}}
+              ))}
             </TableBody>
           </Table>
         </CardContent>

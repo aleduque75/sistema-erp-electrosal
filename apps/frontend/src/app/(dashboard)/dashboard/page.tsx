@@ -8,8 +8,8 @@ import { toast } from "sonner";
 import { KpiCards } from "@/components/kpi-cards";
 import { CashFlowChart } from "@/components/cash-flow-chart";
 import { RecentSales } from "@/components/recent-sales";
-import { CreditCardForecastChart } from "./credit-card-forecast-chart";
 import { ThirdPartyLoansCard } from "./third-party-loans-card";
+import { TotalSalesChart } from "@/components/dashboard/total-sales-chart";
 import { QuotationChart } from "@/components/quotation-chart";
 
 export default function DashboardPage() {
@@ -50,7 +50,7 @@ export default function DashboardPage() {
       <h1 className="text-3xl font-bold">Dashboard</h1>
 
       {/* Grid principal que organiza os elementos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {summaryData && <KpiCards data={summaryData} />}
         <ThirdPartyLoansCard />
       </div>
@@ -64,11 +64,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
-        <div className="lg:col-span-7">
-          <CreditCardForecastChart />
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+        <div className="lg:col-span-1">
+          <TotalSalesChart />
         </div>
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-1">
           <QuotationChart />
         </div>
       </div>

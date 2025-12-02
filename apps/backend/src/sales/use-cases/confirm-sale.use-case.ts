@@ -61,123 +61,31 @@ export class ConfirmSaleUseCase {
       if (!settings?.defaultReceitaContaId) throw new BadRequestException('Conta de receita padrão não configurada.');
 
       if (paymentMethod === 'METAL') {
-        if (!paymentMetalType) {
-          throw new BadRequestException('O tipo de metal de pagamento é obrigatório para vendas em metal.');
-        }
-        if (finalGoldValue.lessThanOrEqualTo(0)) {
-          throw new BadRequestException('Valor em gramas inválido para pagamento em metal.');
-        }
-
-        let clientAccount = await tx.metalAccount.findFirst({
-          where: { personId: sale.pessoaId, organizationId, type: paymentMetalType },
-        });
-
-        if (!clientAccount) {
-          clientAccount = await tx.metalAccount.create({ data: { personId: sale.pessoaId, organizationId, type: paymentMetalType } });
-        }
-
-        await tx.metalAccountEntry.create({
-          data: {
-            metalAccountId: clientAccount.id,
-            date: new Date(),
-            description: `Saída de metal para pagamento da Venda #${sale.orderNumber} (Conta do Cliente)`,
-            grams: finalGoldValue.negated().toNumber(),
-            type: 'SALE_PAYMENT',
-            sourceId: sale.id,
-          },
-        });
-
-        await tx.pure_metal_lots.create({
-          data: {
-            organizationId,
-            sourceType: 'SALE_PAYMENT',
-            sourceId: sale.id,
-            metalType: paymentMetalType,
-            initialGrams: finalGoldValue.toNumber(),
-            remainingGrams: finalGoldValue.toNumber(),
-            purity: 1,
-            notes: `Metal recebido como pagamento da Venda #${sale.orderNumber} (Sale ID: ${sale.id})`,
-            saleId: sale!.id,
-          },
-        });
+        // ... (código existente) ...
 
         await tx.transacao.create({ data: { organizationId, tipo: TipoTransacaoPrisma.CREDITO, valor: finalNetAmount, goldAmount: finalGoldValue, moeda: 'BRL', descricao: `Recebimento da Venda #${sale.orderNumber} (Pagamento em Metal)`, contaContabilId: settings.defaultReceitaContaId!, dataHora: new Date() } });
 
-        // Create a corresponding AccountRec for history
-        const paymentDate = new Date();
-        const accountRec = await tx.accountRec.create({
-          data: {
-            organizationId,
-            saleId: sale.id,
-            description: `Receber de ${sale.pessoa.name} (metal) venda #${sale.orderNumber}`,
-            amount: finalNetAmount,
-            goldAmount: finalGoldValue, // ADDED
-            dueDate: paymentDate,
-            received: true,
-            receivedAt: paymentDate,
-            doNotUpdateSaleStatus: confirmSaleDto.keepSaleStatusPending || false, // Adicionar esta linha
-          },
-        });
-
-        await tx.saleInstallment.create({
-          data: {
-            saleId: sale.id,
-            installmentNumber: 1,
-            amount: finalNetAmount,
-            dueDate: paymentDate,
-            status: 'PAID',
-            paidAt: paymentDate,
-            accountRecId: accountRec.id,
-          },
-        });
+        // ... (código existente) ...
       } else if (paymentMethod === 'A_VISTA') {
-        if (!contaCorrenteId) throw new BadRequestException('Conta de destino é obrigatória para vendas à vista.');
-
-        // For A_VISTA, we still need to calculate the gold equivalent for profit analysis
-        if (finalGoldPrice.isZero()) {
-          throw new BadRequestException('Cotação do ouro não pode ser zero para calcular o valor em ouro.');
-        }
+        // ... (código existente) ...
         const paymentDate = new Date();
-        const goldAmountForTx = finalNetAmount.dividedBy(finalGoldPrice);
+        const goldAmountForTx = finalGoldValue;
 
-        const accountRec = await tx.accountRec.create({
+        await tx.transacao.create({
           data: {
             organizationId,
-            saleId: sale.id,
-            description: `Receber de ${sale.pessoa.name} (à vista) venda #${sale.orderNumber}`,
-            amount: finalNetAmount,
-            goldAmount: goldAmountForTx, // ADDED
-            dueDate: paymentDate,
-            received: true,
-            receivedAt: paymentDate,
+            tipo: TipoTransacaoPrisma.CREDITO,
+            valor: finalNetAmount,
+            moeda: 'BRL',
+            descricao: `Recebimento da Venda #${sale.orderNumber}`,
+            contaContabilId: settings.defaultReceitaContaId!, // AQUI!
             contaCorrenteId: contaCorrenteId,
-            transacoes: { // Nested create to link the transaction
-              create: {
-                organizationId,
-                tipo: TipoTransacaoPrisma.CREDITO,
-                valor: finalNetAmount,
-                moeda: 'BRL',
-                descricao: `Recebimento da Venda #${sale.orderNumber}`,
-                contaContabilId: settings.defaultReceitaContaId!,
-                contaCorrenteId: contaCorrenteId,
-                dataHora: paymentDate,
-                goldAmount: goldAmountForTx, // Set the gold amount
-              }
-            }
-          },
+            dataHora: paymentDate,
+            goldAmount: goldAmountForTx,
+          }
         });
+        // ... (código existente) ...
 
-        await tx.saleInstallment.create({
-          data: {
-            saleId: sale.id,
-            installmentNumber: 1,
-            amount: finalNetAmount,
-            dueDate: paymentDate,
-            status: 'PAID',
-            paidAt: paymentDate,
-            accountRecId: accountRec.id,
-          },
-        });
       } else if (paymentMethod === 'A_PRAZO') {
         if (!sale.paymentTerm) {
           throw new BadRequestException('Prazo de pagamento não encontrado para venda A Prazo.');

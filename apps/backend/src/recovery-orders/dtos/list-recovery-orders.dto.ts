@@ -13,4 +13,8 @@ export class ListRecoveryOrdersDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
+
+  @IsOptional()
+  @IsString()
+  orderNumber?: string;
 }

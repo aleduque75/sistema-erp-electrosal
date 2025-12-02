@@ -1,7 +1,21 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { RecoveryOrder } from "@/types/recovery-order";
+import { RecoveryOrder, Media } from "@/types/recovery-order";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { getMediaForRecoveryOrder } from "@/services/mediaApi";
+import { ImageUpload } from "@/components/shared/ImageUpload";
+import { ImageGallery } from "@/components/shared/ImageGallery";
+import { Separator } from "@/components/ui/separator";
 
 interface ViewRecoveryOrderModalProps {
   isOpen: boolean;
@@ -21,16 +35,54 @@ export function ViewRecoveryOrderModal({
   onOpenChange,
   recoveryOrder,
 }: ViewRecoveryOrderModalProps) {
+  const [media, setMedia] = useState<Media[]>([]);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && recoveryOrder?.id) {
+      const fetchMedia = async () => {
+        setIsLoadingMedia(true);
+        try {
+          const fetchedMedia = await getMediaForRecoveryOrder(recoveryOrder.id);
+          setMedia(fetchedMedia);
+        } catch (error) {
+          toast.error("Erro ao carregar mídias da ordem de recuperação.");
+          console.error("Erro ao carregar mídias:", error);
+        } finally {
+          setIsLoadingMedia(false);
+        }
+      };
+      fetchMedia();
+    }
+  }, [isOpen, recoveryOrder?.id]);
+
+  const handleMediaUpdate = () => {
+    if (recoveryOrder?.id) {
+      const fetchMedia = async () => {
+        setIsLoadingMedia(true);
+        try {
+          const fetchedMedia = await getMediaForRecoveryOrder(recoveryOrder.id);
+          setMedia(fetchedMedia);
+        } catch (error) {
+          toast.error("Erro ao recarregar mídias.");
+        } finally {
+          setIsLoadingMedia(false);
+        }
+      };
+      fetchMedia();
+    }
+  };
+
   if (!recoveryOrder) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Detalhes da Ordem de Recuperação</DialogTitle>
-          <DialogDescription>ID: {recoveryOrder.id}</DialogDescription>
+          <DialogDescription>Ordem Nº: {recoveryOrder.orderNumber}</DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-4">
+        <div className="py-4 space-y-4 max-h-[80vh] overflow-y-auto">
           <div className="space-y-2">
             <h4 className="font-semibold">Informações Gerais</h4>
             <DetailItem label="Status" value={recoveryOrder.status} />
@@ -49,10 +101,29 @@ export function ViewRecoveryOrderModal({
 
           <div className="space-y-2">
             <h4 className="font-semibold">Análises Químicas Envolvidas</h4>
-            <div className="flex flex-wrap gap-2 pt-2">
-              {recoveryOrder.chemicalAnalysisIds.map(id => (
-                <Badge key={id} variant="secondary">{id}</Badge>
-              ))}
+            <div className="border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nº Análise</TableHead>
+                    <TableHead>Metal</TableHead>
+                    <TableHead>Entrada</TableHead>
+                    <TableHead>Resultado</TableHead>
+                    <TableHead>Au Bruto (g)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recoveryOrder.analisesEnvolvidas?.map(analise => (
+                    <TableRow key={analise.id}>
+                      <TableCell className="font-medium">{analise.numeroAnalise}</TableCell>
+                      <TableCell>{analise.metalType}</TableCell>
+                      <TableCell>{analise.volumeOuPesoEntrada.toFixed(2)}</TableCell>
+                      <TableCell>{analise.resultadoAnaliseValor?.toFixed(2) ?? 'N/A'}</TableCell>
+                      <TableCell>{analise.auEstimadoBrutoGramas?.toFixed(4) ?? 'N/A'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
 
@@ -62,6 +133,23 @@ export function ViewRecoveryOrderModal({
               <DetailItem label="ID da Análise de Resíduo" value={recoveryOrder.residueAnalysisId} />
             </div>
           )}
+
+          <Separator />
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Imagens</h3>
+            {recoveryOrder.id ? (
+              <ImageUpload entity={{ type: 'recoveryOrder', id: recoveryOrder.id }} onUploadSuccess={handleMediaUpdate} />
+            ) : (
+              <p className="text-sm text-muted-foreground">ID da ordem não disponível para upload de imagens.</p>
+            )}
+            {isLoadingMedia ? (
+              <p>Carregando imagens...</p>
+            ) : media.length > 0 ? (
+              <ImageGallery media={media} onDeleteSuccess={handleMediaUpdate} />
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhuma imagem associada a esta ordem.</p>
+            )}
+          </div>
 
         </div>
       </DialogContent>

@@ -23,6 +23,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PayAccountsRecWithMetalCreditUseCase } from './use-cases/pay-accounts-rec-with-metal-credit.use-case';
 import { PayAccountsRecWithMetalDto } from './dtos/pay-accounts-rec-with-metal.dto';
 import { PayAccountsRecWithMetalUseCase } from './use-cases/pay-accounts-rec-with-metal.use-case';
+import { PayAccountsRecWithMetalCreditMultipleDto } from './dtos/pay-accounts-rec-with-metal-credit-multiple.dto';
+import { PayAccountsRecWithMetalCreditMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-credit-multiple.use-case';
+import { PayAccountsRecWithMetalMultipleDto } from './dtos/pay-accounts-rec-with-metal-multiple.dto';
+import { PayAccountsRecWithMetalMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-multiple.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('accounts-rec')
@@ -31,6 +35,8 @@ export class AccountsRecController {
     private readonly accountsRecService: AccountsRecService,
     private readonly payAccountsRecWithMetalCreditUseCase: PayAccountsRecWithMetalCreditUseCase,
     private readonly payAccountsRecWithMetalUseCase: PayAccountsRecWithMetalUseCase,
+    private readonly payAccountsRecWithMetalCreditMultipleUseCase: PayAccountsRecWithMetalCreditMultipleUseCase,
+    private readonly payAccountsRecWithMetalMultipleUseCase: PayAccountsRecWithMetalMultipleUseCase,
   ) {}
 
   @Post()
@@ -99,6 +105,36 @@ export class AccountsRecController {
     @Body() dto: PayAccountsRecWithMetalDto,
   ) {
     return this.payAccountsRecWithMetalUseCase.execute(
+      organizationId,
+      userId,
+      accountsRecId,
+      dto,
+    );
+  }
+
+  @Patch(':id/pay-with-metal-credit-multiple')
+  payWithMetalCreditMultiple(
+    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') accountsRecId: string,
+    @Body() dto: PayAccountsRecWithMetalCreditMultipleDto,
+  ) {
+    return this.payAccountsRecWithMetalCreditMultipleUseCase.execute(
+      organizationId,
+      userId,
+      accountsRecId,
+      dto,
+    );
+  }
+
+  @Patch(':id/pay-with-metal-multiple')
+  payWithMetalMultiple(
+    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') accountsRecId: string,
+    @Body() dto: PayAccountsRecWithMetalMultipleDto,
+  ) {
+    return this.payAccountsRecWithMetalMultipleUseCase.execute(
       organizationId,
       userId,
       accountsRecId,

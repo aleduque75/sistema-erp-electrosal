@@ -1,4 +1,4 @@
-import { IsUUID, IsNotEmpty, IsNumber, Min, IsOptional, ValidateIf } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsNumber, Min, IsOptional, ValidateIf, IsDateString } from 'class-validator';
 
 export class PayAccountsRecWithMetalCreditDto {
   @IsUUID()
@@ -20,4 +20,8 @@ export class PayAccountsRecWithMetalCreditDto {
   @Min(0.01)
   @ValidateIf(o => !o.quotationId)
   customBuyPrice?: number;
+
+  @IsOptional()
+  @IsDateString()
+  receivedAt?: string;
 }

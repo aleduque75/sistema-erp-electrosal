@@ -1,324 +1,159 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Play, FlaskConical, CheckCircle, XCircle, ThumbsDown, RotateCw } from "lucide-react";
-import { RecoveryOrder } from "@/types/recovery-order";
-import { format } from 'date-fns';
-import { RecoveryOrderStatus } from '@/types/recovery-order';
-import { RecoveryOrderStatusBadge } from "@/components/ui/recovery-order-status-badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { toast } from "sonner";
-
-// Componente de Legenda
-const StatusLegend = () => (
-  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4 bg-muted rounded-md border mb-4">
-    <p className="font-semibold text-sm">Legenda:</p>
-    <div className="flex items-center gap-2">
-      <RecoveryOrderStatusBadge status={RecoveryOrderStatus.PENDENTE} />
-      <span className="text-xs text-muted-foreground">Pendente</span>
-    </div>
-    <div className="flex items-center gap-2">
-      <RecoveryOrderStatusBadge status={RecoveryOrderStatus.EM_ANDAMENTO} />
-      <span className="text-xs text-muted-foreground">Em Andamento</span>
-    </div>
-    <div className="flex items-center gap-2">
-      <RecoveryOrderStatusBadge status={RecoveryOrderStatus.AGUARDANDO_TEOR} />
-      <span className="text-xs text-muted-foreground">Aguard. Teor</span>
-    </div>
-    <div className="flex items-center gap-2">
-      <RecoveryOrderStatusBadge status={RecoveryOrderStatus.FINALIZADA} />
-      <span className="text-xs text-muted-foreground">Finalizada</span>
-    </div>
-    <div className="flex items-center gap-2">
-      <RecoveryOrderStatusBadge status={RecoveryOrderStatus.CANCELADA} />
-      <span className="text-xs text-muted-foreground">Cancelada</span>
-    </div>
-  </div>
-);
-import {
-  startRecoveryOrder,
-  updateRecoveryOrderPurity,
-  getRecoveryOrderById,
-  // finalizeRecoveryOrder, // Removed as per new workflow
-} from "@/services/recoveryOrdersApi";
-import { UpdateRecoveryOrderPurityModal } from "./UpdateRecoveryOrderPurityModal";
-import { ProcessRecoveryFinalizationModal } from "./ProcessRecoveryFinalizationModal";
-import { RecoveryOrderDetailsModal } from "./RecoveryOrderDetailsModal";
+import React, { useState, useMemo } from 'react';
+import { DataTable } from '@/components/ui/data-table';
+import { getColumns } from './columns';
+import { RecoveryOrderDto } from '@/types/recovery-order';
+import { ViewRecoveryOrderModal } from './ViewRecoveryOrderModal';
+import { LaunchPurityModal } from './LaunchPurityModal';
+import { LaunchResultModal } from './LaunchResultModal';
+import { toast } from 'sonner';
+import api from '@/lib/api';
+import { startRecoveryOrder } from '@/services/recoveryOrdersApi';
 
 interface RecoveryOrdersTableProps {
-  recoveryOrders: RecoveryOrder[];
+  recoveryOrders: RecoveryOrderDto[];
   isLoading: boolean;
   onRecoveryOrderUpdated: () => void;
-  onCancelRecoveryOrder: (recoveryOrderId: string) => void; // New prop
+  onCancelRecoveryOrder: (id: string) => void;
 }
 
 export function RecoveryOrdersTable({
   recoveryOrders,
   isLoading,
   onRecoveryOrderUpdated,
-  onCancelRecoveryOrder, // Destructure new prop
+  onCancelRecoveryOrder,
 }: RecoveryOrdersTableProps) {
-  const [purityModalOpen, setPurityModalOpen] = useState(false);
-  const [finalizationModalOpen, setFinalizationModalOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<RecoveryOrder | null>(null);
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<RecoveryOrderDto | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<string | null>(null);
 
-  // Efeito para atualizar selectedOrder quando recoveryOrders muda
-  useEffect(() => {
-    if (detailsModalOpen && selectedOrder && recoveryOrders.length > 0) {
-      const updatedOrder = recoveryOrders.find(order => order.id === selectedOrder.id);
-      if (updatedOrder) {
-        setSelectedOrder(updatedOrder);
-      }
+  const [recoveryOrderToLaunchPurity, setRecoveryOrderToLaunchPurity] = useState<RecoveryOrderDto | null>(null);
+  const [isLaunchPurityModalOpen, setIsLaunchPurityModalOpen] = useState(false);
+
+  const [recoveryOrderToLaunchResult, setRecoveryOrderToLaunchResult] = useState<RecoveryOrderDto | null>(null);
+  const [isLaunchResultModalOpen, setIsLaunchResultModalOpen] = useState(false);
+
+  const handleViewDetails = (id: string) => {
+    const order = recoveryOrders.find(o => o.id === id);
+    if (order) {
+      setSelectedOrder(order);
+      setIsViewModalOpen(true);
     }
-  }, [recoveryOrders, selectedOrder, detailsModalOpen]);
+  };
 
-  const handleStartRecoveryOrder = async (recoveryOrderId: string) => {
+  const handleEdit = (id: string) => {
+    // TODO: Implement edit functionality
+    toast.info(`Edit action called for order ID: ${id}. Not implemented yet.`);
+    console.log("Edit order with ID:", id);
+  };
+
+  const handleDownloadPdf = async (orderId: string) => {
+    setIsDownloadingPdf(orderId);
     try {
-      await startRecoveryOrder(recoveryOrderId);
+      const response = await api.get(`/recovery-orders/${orderId}/pdf`, {
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `recovery_order_${orderId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      
+      if (link.parentNode) {
+        link.parentNode.removeChild(link);
+      }
+      window.URL.revokeObjectURL(url);
+      toast.success("Download do PDF iniciado.");
+    } catch (error) {
+      console.error("Falha ao baixar o PDF:", error);
+      toast.error("Falha ao baixar o PDF. Tente novamente.");
+    } finally {
+      setIsDownloadingPdf(null);
+    }
+  };
+
+  const handleStartRecoveryOrder = async (id: string) => {
+    try {
+      await startRecoveryOrder(id);
       toast.success("Ordem de recuperação iniciada com sucesso!");
       onRecoveryOrderUpdated();
-    } catch (error: any) {
-      toast.error("Erro ao iniciar ordem de recuperação", { description: error.message });
-    }
-  };
-
-  const handlePurityUpdateSuccess = () => {
-    setPurityModalOpen(false);
-    setSelectedOrder(null);
-    onRecoveryOrderUpdated();
-  };
-
-  const handleFinalizationSuccess = () => {
-    setFinalizationModalOpen(false);
-    setSelectedOrder(null);
-    onRecoveryOrderUpdated();
-  };
-
-  const handleOpenPurityModal = (order: RecoveryOrder) => {
-    setSelectedOrder(order);
-    setPurityModalOpen(true);
-  };
-
-  const handleOpenFinalizationModal = (order: RecoveryOrder) => {
-    setSelectedOrder(order);
-    setFinalizationModalOpen(true);
-  };
-
-
-  const handleOpenDetailsModal = async (order: RecoveryOrder) => {
-    try {
-      const fetchedOrder = await getRecoveryOrderById(order.id);
-      setSelectedOrder(fetchedOrder);
-      setDetailsModalOpen(true);
     } catch (error) {
-      toast.error("Erro ao carregar detalhes da ordem de recuperação.");
-      console.error("Erro ao buscar ordem de recuperação por ID:", error);
+      toast.error("Falha ao iniciar ordem de recuperação.");
+      console.error("Error starting recovery order:", error);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[120px]">ID da Ordem</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Análises Químicas</TableHead>
-              <TableHead>Qtd. Total (g)</TableHead>
-              <TableHead>Data Início</TableHead>
-              <TableHead>Data Fim</TableHead>
-              <TableHead className="w-[50px] text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {[...Array(5)].map((_, i) => (
-              <TableRow key={i}>
-                <TableCell>...</TableCell>
-                <TableCell>...</TableCell>
-                <TableCell>...</TableCell>
-                <TableCell>...</TableCell>
-                <TableCell>...</TableCell>
-                <TableCell>...</TableCell>
-                <TableCell>...</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    );
-  }
+  const handleLaunchResult = (id: string) => {
+    const order = recoveryOrders.find(o => o.id === id);
+    if (order) {
+      setRecoveryOrderToLaunchResult(order);
+      setIsLaunchResultModalOpen(true);
+    }
+  };
 
-  if (recoveryOrders.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-8 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-          <FlaskConical className="h-10 w-10 text-primary" />
-        </div>
-        <h2 className="mt-6 text-xl font-semibold">Nenhuma ordem de recuperação encontrada</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Quando novas ordens de recuperação forem criadas, elas aparecerão aqui.
-        </p>
-      </div>
-    );
-  }
+  const handleLaunchPurity = (id: string) => {
+    const order = recoveryOrders.find(o => o.id === id);
+    if (order) {
+      setRecoveryOrderToLaunchPurity(order);
+      setIsLaunchPurityModalOpen(true);
+    }
+  };
+
+  const handleModalSuccess = () => {
+    onRecoveryOrderUpdated();
+    setIsLaunchPurityModalOpen(false);
+    setIsLaunchResultModalOpen(false);
+  };
+
+  const columns = useMemo(
+    () => getColumns(
+      handleViewDetails, 
+      handleEdit, 
+      onCancelRecoveryOrder,
+      handleDownloadPdf,
+      (id: string) => isDownloadingPdf === id,
+      handleStartRecoveryOrder,
+      handleLaunchResult,
+      handleLaunchPurity,
+    ),
+    [onCancelRecoveryOrder, isDownloadingPdf]
+  );
 
   return (
     <>
-      <StatusLegend />
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[120px]">ID da Ordem</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Análises Químicas</TableHead>
-              <TableHead>Qtd. Total (g)</TableHead>
-              <TableHead>Data Início</TableHead>
-              <TableHead>Data Fim</TableHead>
-              <TableHead className="w-[50px] text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {recoveryOrders.map((order) => (
-              <TableRow key={order.id}>
-                <TableCell className="font-medium">{order.id}</TableCell>
-                <TableCell>
-                  <RecoveryOrderStatusBadge status={order.status} />
-                </TableCell>
-                <TableCell>
-                  {order.analisesEnvolvidas && order.analisesEnvolvidas.length > 0 ? (
-                    <div className="flex flex-col space-y-1">
-                      {order.analisesEnvolvidas.map((analise, index) => (
-                        <TooltipProvider key={analise.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-xs font-medium cursor-help">
-                                {analise.numeroAnalise.substring(0, 6)}... ({analise.volumeOuPesoEntrada.toFixed(2)}g)
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Análise: {analise.numeroAnalise}</p>
-                              <p>Cliente: {analise.clienteName}</p>
-                              <p>Qtd: {analise.volumeOuPesoEntrada.toFixed(2)}g</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))}
-                    </div>
-                  ) : (
-                    <span>{(order.chemicalAnalysisIds ?? []).length} análises</span>
-                  )}
-                </TableCell>
-                <TableCell className="font-semibold">{(order.totalBrutoEstimadoGramas || 0).toFixed(2)}g</TableCell>
-                <TableCell>{format(new Date(order.dataInicio), 'dd/MM/yyyy')}</TableCell>
-                <TableCell>{order.dataFim ? format(new Date(order.dataFim), 'dd/MM/yyyy') : 'N/A'}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Abrir menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => handleOpenDetailsModal(order)}>
-                        <MoreHorizontal className="mr-2 h-4 w-4" />
-                        Ver Detalhes
-                      </DropdownMenuItem>
-
-                      {order.status === RecoveryOrderStatus.PENDENTE && (
-                        <DropdownMenuItem
-                          onClick={() => handleStartRecoveryOrder(order.id)}
-                        >
-                          <Play className="mr-2 h-4 w-4" />
-                          Iniciar Recuperação
-                        </DropdownMenuItem>
-                      )}
-                      {order.status === RecoveryOrderStatus.EM_ANDAMENTO && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={() => handleOpenPurityModal(order)}
-                          >
-                            <FlaskConical className="mr-2 h-4 w-4" />
-                            Lançar Resultado
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {order.status === RecoveryOrderStatus.AGUARDANDO_TEOR && (
-                        <DropdownMenuItem
-                          onClick={() => handleOpenFinalizationModal(order)}
-                        >
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Lançar Teor Final
-                        </DropdownMenuItem>
-                      )}
-                      {order.status === RecoveryOrderStatus.FINALIZADA && (
-                        <DropdownMenuItem disabled>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Finalizada
-                        </DropdownMenuItem>
-                      )}
-                      {order.status === RecoveryOrderStatus.CANCELADA && (
-                        <DropdownMenuItem disabled>
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Cancelada
-                        </DropdownMenuItem>
-                      )}
-                      {(order.status === RecoveryOrderStatus.PENDENTE ||
-                        order.status === RecoveryOrderStatus.EM_ANDAMENTO) && (
-                        <DropdownMenuItem
-                          onClick={() => onCancelRecoveryOrder(order.id)}
-                        >
-                          <RotateCw className="mr-2 h-4 w-4" />
-                          Cancelar Ordem
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <UpdateRecoveryOrderPurityModal
-        isOpen={purityModalOpen}
-        onOpenChange={setPurityModalOpen}
-        recoveryOrder={selectedOrder}
-        onSuccess={handlePurityUpdateSuccess}
+      <DataTable
+        columns={columns}
+        data={recoveryOrders}
+        isLoading={isLoading}
+        filterColumnId="orderNumber"
+        filterPlaceholder="Filtrar por número da ordem..."
       />
-      <ProcessRecoveryFinalizationModal
-        isOpen={finalizationModalOpen}
-        onOpenChange={setFinalizationModalOpen}
-        recoveryOrder={selectedOrder}
-        onSuccess={handleFinalizationSuccess}
-      />
-
-      <RecoveryOrderDetailsModal
-        isOpen={detailsModalOpen}
-        onOpenChange={setDetailsModalOpen}
-        recoveryOrder={selectedOrder}
-        onUpdate={onRecoveryOrderUpdated}
-      />
+      {selectedOrder && (
+        <ViewRecoveryOrderModal
+          isOpen={isViewModalOpen}
+          onOpenChange={setIsViewModalOpen}
+          recoveryOrder={selectedOrder}
+        />
+      )}
+      {recoveryOrderToLaunchResult && (
+        <LaunchResultModal
+          isOpen={isLaunchResultModalOpen}
+          onOpenChange={setIsLaunchResultModalOpen}
+          recoveryOrder={recoveryOrderToLaunchResult}
+          onSuccess={handleModalSuccess}
+        />
+      )}
+      {recoveryOrderToLaunchPurity && (
+        <LaunchPurityModal
+          isOpen={isLaunchPurityModalOpen}
+          onOpenChange={setIsLaunchPurityModalOpen}
+          recoveryOrder={recoveryOrderToLaunchPurity}
+          onSuccess={handleModalSuccess}
+        />
+      )}
     </>
   );
 }

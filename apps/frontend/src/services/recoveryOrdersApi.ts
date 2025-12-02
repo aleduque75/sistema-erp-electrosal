@@ -2,13 +2,13 @@ import apiClient from '@/lib/api';
 import type { CreateRecoveryOrderDto, UpdateRecoveryOrderPurityDto, FinalizeRecoveryOrderDto } from "@/types/recovery-order.dtos";
 import { RecoveryOrder } from '@/types/recovery-order';
 
-export const getRecoveryOrders = async (filters?: { startDate?: string, endDate?: string }): Promise<RecoveryOrder[]> => {
+export const getRecoveryOrders = async (filters?: { dataInicio?: string, dataFim?: string }): Promise<RecoveryOrder[]> => {
   const params = new URLSearchParams();
-  if (filters?.startDate) {
-    params.append('startDate', filters.startDate);
+  if (filters?.dataInicio) {
+    params.append('dataInicio', filters.dataInicio);
   }
-  if (filters?.endDate) {
-    params.append('endDate', filters.endDate);
+  if (filters?.dataFim) {
+    params.append('dataFim', filters.dataFim);
   }
   const response = await apiClient.get(`/recovery-orders?${params.toString()}`);
   return response.data;

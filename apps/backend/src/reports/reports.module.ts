@@ -5,6 +5,9 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { GetAccountsPayableReportUseCase } from './use-cases/get-accounts-payable-report.use-case';
 import { GerarPdfContasAPagarUseCase } from './use-cases/gerar-pdf-contas-a-pagar.use-case';
 
+import { GenerateTrialBalanceUseCase } from './use-cases/generate-trial-balance.use-case'; // Importar
+import { GenerateTrialBalancePdfUseCase } from './use-cases/generate-trial-balance-pdf.use-case'; // Importar NOVO
+
 @Module({
   controllers: [ReportsController],
   providers: [
@@ -12,6 +15,8 @@ import { GerarPdfContasAPagarUseCase } from './use-cases/gerar-pdf-contas-a-paga
     PrismaService,
     GetAccountsPayableReportUseCase,
     GerarPdfContasAPagarUseCase,
+    GenerateTrialBalanceUseCase, // Adicionar
+    GenerateTrialBalancePdfUseCase, // Adicionar NOVO
   ],
 })
 export class ReportsModule {}
