@@ -64,8 +64,9 @@ export function LotSelectionModal({
   const fetchAvailableLots = async (productId: string) => {
     setIsLoading(true);
     try {
-      const response = await api.get(`/inventory-lots/product/${productId}`);
-      const lots: InventoryLot[] = response.data;
+      const response = await api.get(`/products/${productId}`);
+      const productData: Product = response.data;
+      const lots: InventoryLot[] = productData.inventoryLots || [];
       // Ordenar por FIFO (First-In, First-Out)
       lots.sort((a, b) => new Date(a.receivedDate).getTime() - new Date(b.receivedDate).getTime());
       setAvailableLots(lots);
