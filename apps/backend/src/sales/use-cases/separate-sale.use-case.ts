@@ -73,7 +73,7 @@ export class SeparateSaleUseCase {
                 quantity: -lotQuantityToDecrement, // Negative for stock out
                 type: 'SALE_SEPARATED',
                 sourceDocument: `Venda #${saleWithItems.orderNumber}`,
-                createdAt: separationDate || saleWithItems.updatedAt,
+                createdAt: separationDate || saleWithItems.createdAt,
               }
             });
           }

@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { CreateSaleDto } from '../dtos/sales.dto';
+import { Injectable, NotFoundException, BadRequestException, Logger, ConflictException } from '@nestjs/common';
+import { CreateSaleDto, ConfirmSaleDto } from '../dtos/sales.dto';
+import { ConfirmSaleUseCase } from './confirm-sale.use-case';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, TipoMetal, SaleInstallmentStatus, StockMovementType } from '@prisma/client';
 import { SettingsService } from '../../settings/settings.service';
 import { ProductMapper } from '../../products/mappers/product.mapper';
 import { QuotationsService } from '../../quotations/quotations.service';
+import { SalesService } from '../sales.service';
 import Decimal from 'decimal.js';
 
 @Injectable()
@@ -15,6 +17,8 @@ export class CreateSaleUseCase {
     private prisma: PrismaService,
     private settingsService: SettingsService,
     private quotationsService: QuotationsService,
+    private salesService: SalesService,
+    private confirmSaleUseCase: ConfirmSaleUseCase,
   ) {}
 
   async execute(organizationId: string, userId: string, createSaleDto: CreateSaleDto) {
@@ -28,13 +32,17 @@ export class CreateSaleUseCase {
       feeAmount,
       goldQuoteValue,
       freightAmount,
+      createdAt,
+      orderNumber,
     } = createSaleDto;
 
     if ((paymentMethod === 'A_VISTA' || paymentMethod === 'METAL') && paymentTermId) {
       throw new BadRequestException('O prazo de pagamento não deve ser informado para vendas à vista ou em metal.');
     }
 
-    const goldQuote = await this.getGoldQuote(goldQuoteValue, organizationId);
+    const saleDate = createdAt ? new Date(createdAt) : new Date();
+
+    const goldQuote = await this.getGoldQuote(goldQuoteValue, organizationId, saleDate);
 
     const { productsInDb, inventoryLotsMap } = await this.fetchProductsAndLots(items, organizationId);
 
@@ -104,13 +112,22 @@ export class CreateSaleUseCase {
 
     const { netAmount, goldPrice, goldValue } = this.calculateFinalValues(totalAmount, feeAmount, freightAmount, goldQuote);
 
-    const nextOrderNumber = await this.getNextOrderNumber(organizationId);
+    let finalOrderNumber: number;
+    if (orderNumber) {
+      const exists = await this.salesService.checkOrderNumberExists(organizationId, orderNumber);
+      if (exists) {
+        throw new ConflictException(`Já existe uma venda com o número de pedido ${orderNumber}.`);
+      }
+      finalOrderNumber = orderNumber;
+    } else {
+      finalOrderNumber = await this.salesService.getNextOrderNumber(organizationId);
+    }
 
     const sale = await this.prisma.sale.create({
       data: {
         organizationId,
         pessoaId,
-        orderNumber: nextOrderNumber,
+        orderNumber: finalOrderNumber,
         totalAmount,
         totalCost,
         feeAmount: new Decimal(feeAmount || 0),
@@ -123,6 +140,7 @@ export class CreateSaleUseCase {
         commissionAmount: totalCommissionAmount,
         commissionDetails: commissionDetails,
         saleItems: { create: saleItemsToCreate },
+        createdAt: saleDate,
       },
       include: {
         saleItems: {
@@ -137,18 +155,31 @@ export class CreateSaleUseCase {
 
     if (paymentTermId) {
       await this.createInstallments(paymentTermId, netAmount, sale.id, sale.createdAt);
+    } else if (paymentMethod === 'A_VISTA' || paymentMethod === 'METAL') {
+      const confirmSaleDto: ConfirmSaleDto = {
+        paymentMethod: paymentMethod,
+        contaCorrenteId: paymentMethod === 'A_VISTA' ? createSaleDto.contaCorrenteId : undefined,
+        paymentMetalType: paymentMethod === 'METAL' ? createSaleDto.paymentMetalType : undefined,
+        keepSaleStatusPending: false, // For A_VISTA and METAL, it's immediately finalized
+        updatedGoldPrice: goldQuoteValue,
+        updatedNetAmount: netAmount.toNumber(),
+      };
+      await this.confirmSaleUseCase.execute(organizationId, userId, sale.id, confirmSaleDto);
     }
 
     this.logger.log(`Venda com ID: ${sale.id} criada com sucesso.`);
     return sale;
   }
 
-  private async getGoldQuote(goldQuoteValue: number | undefined, organizationId: string) {
+  private async getGoldQuote(goldQuoteValue: number | undefined, organizationId: string, date: Date) {
     if (goldQuoteValue) {
       return { valorVenda: new Decimal(goldQuoteValue) };
     }
-    const latestGoldQuote = await this.quotationsService.findLatest(TipoMetal.AU, organizationId, new Date());
-    if (!latestGoldQuote) throw new BadRequestException('Nenhuma cotação de ouro encontrada para hoje.');
+    const latestGoldQuote = await this.quotationsService.findLatest(TipoMetal.AU, organizationId, date);
+    if (!latestGoldQuote) {
+      this.logger.warn(`Nenhuma cotação de ouro encontrada para a data ${date.toISOString()}. Usando valor 0.`);
+      return { valorVenda: new Decimal(0) };
+    }
     return { valorVenda: latestGoldQuote.sellPrice };
   }
 
@@ -205,16 +236,13 @@ export class CreateSaleUseCase {
     const finalFreightAmount = new Decimal(freightAmount || 0);
     const netAmount = totalAmount.plus(finalFeeAmount).plus(finalFreightAmount);
     const goldPrice = goldQuote.valorVenda;
+    
+    if (goldPrice.isZero()) {
+      return { netAmount, goldPrice, goldValue: new Decimal(0) };
+    }
+
     const goldValue = netAmount.dividedBy(goldPrice);
     return { netAmount, goldPrice, goldValue };
-  }
-
-  private async getNextOrderNumber(organizationId: string) {
-    const lastSale = await this.prisma.sale.findFirst({
-      where: { organizationId },
-      orderBy: { orderNumber: 'desc' },
-    });
-    return (lastSale?.orderNumber || 31700) + 1;
   }
 
   private async updateInventoryAndCreateStockMovements(inventoryLotUpdates: { id: string; quantity: number }[], sale: any) {

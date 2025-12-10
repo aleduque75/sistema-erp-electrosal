@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested, IsEnum } from 'class-validator';
+import { IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested, IsEnum, IsDateString, IsPositive } from 'class-validator';
 import { TipoMetal } from '@prisma/client';
 
 class SaleItemLotDto {
@@ -38,6 +38,10 @@ export class CreateSaleDto {
   @IsNumber() @IsOptional() @Min(0) goldQuoteValue?: number; // Adicionado para importação
   @IsString() @IsOptional() externalId?: string; // Adicionado para importação
   @IsNumber() @IsOptional() @Min(0) freightAmount?: number; // Adicionado para custos de frete
+  @IsEnum(TipoMetal) @IsOptional() paymentMetalType?: TipoMetal;
+  
+  @IsDateString() @IsOptional() createdAt?: string;
+  @IsInt() @IsPositive() @IsOptional() orderNumber?: number;
 }
 
 export class UpdateSaleDto extends PartialType(CreateSaleDto) {}
@@ -74,6 +78,13 @@ export class ConfirmSaleDto {
 
   @IsOptional() // Adicionado para permitir que a venda não seja finalizada imediatamente
   keepSaleStatusPending?: boolean;
+}
+
+export class BulkConfirmSalesDto {
+  @IsArray()
+  @IsUUID('all', { each: true })
+  @IsNotEmpty({ each: true })
+  saleIds: string[];
 }
 
 export class ReceiveInstallmentPaymentDto {
