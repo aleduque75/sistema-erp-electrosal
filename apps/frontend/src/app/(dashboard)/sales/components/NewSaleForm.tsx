@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { PlusCircle, Trash2, PackageSearch } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LotSelectionModal } from "@/components/sales/LotSelectionModal";
@@ -45,6 +46,7 @@ const formSchema = z.object({
   paymentConditionId: z.string().min(1, "Selecione a condição de pagamento."),
   numberOfInstallments: z.coerce.number().int().min(1).optional(),
   contaCorrenteId: z.string().nullable().optional(),
+  orderNumber: z.coerce.number().int().positive().optional(),
 });
 
 export function NewSaleForm({ onSave }: any) {
@@ -61,12 +63,16 @@ export function NewSaleForm({ onSave }: any) {
   const [isLotModalOpen, setIsLotModalOpen] = useState(false);
   const [itemToSelectLots, setItemToSelectLots] = useState<{ product: Product, itemIndex: number } | null>(null);
   const [freightAmount, setFreightAmount] = useState(0);
+  const [saleDate, setSaleDate] = useState<Date | undefined>(new Date());
 
   const {
     control,
     handleSubmit,
     watch,
     formState: { errors },
+    setValue,
+    setError,
+    clearErrors,
   } = useForm<any>({
     resolver: zodResolver(formSchema),
     defaultValues: { clientId: "", paymentConditionId: "", numberOfInstallments: 1, contaCorrenteId: null },
@@ -102,8 +108,14 @@ export function NewSaleForm({ onSave }: any) {
   }, [selectedPaymentCondition]);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchInitialData() {
       try {
+        // Fetch next order number
+        const nextOrderNumberRes = await api.get('/sales/next-order-number');
+        if (nextOrderNumberRes.data.nextOrderNumber) {
+          setValue('orderNumber', nextOrderNumberRes.data.nextOrderNumber);
+        }
+
         const [clientsRes, productsRes, contasRes, feesRes, orgSettingsRes, paymentTermsRes, quoteRes] = await Promise.all([
           api.get("/pessoas?role=CLIENT"),
           api.get("/products"),
@@ -111,7 +123,7 @@ export function NewSaleForm({ onSave }: any) {
           api.get("/credit-card-fees"),
           api.get("/settings/organization"),
           api.get("/payment-terms"),
-          api.get("/quotations/latest?metal=AU"),
+          api.get(`/quotations/latest?metal=AU&date=${saleDate?.toISOString()}`),
         ]);
         setClients(clientsRes.data.map((c: any) => ({ id: c.id, name: c.name })));
         setProducts(productsRes.data);
@@ -121,14 +133,17 @@ export function NewSaleForm({ onSave }: any) {
         setPaymentTerms(paymentTermsRes.data);
         if (quoteRes.data?.sellPrice) {
           setSaleGoldQuote(quoteRes.data.sellPrice);
-          toast.info(`Cotação do Ouro carregada: ${formatCurrency(quoteRes.data?.sellPrice)}`);
+          toast.info(`Cotação do Ouro para ${saleDate?.toLocaleDateString()} carregada: ${formatCurrency(quoteRes.data?.sellPrice)}`);
+        } else {
+          setSaleGoldQuote(0);
+          toast.warning(`Não foi encontrada cotação do ouro para a data ${saleDate?.toLocaleDateString()}. O valor será 0.`);
         }
       } catch (error) {
         toast.error("Falha ao carregar dados para a venda.");
       }
     }
-    fetchData();
-  }, []);
+    fetchInitialData();
+  }, [saleDate, setValue]);
 
   useEffect(() => {
     if (paymentConditionId === "CREDIT_CARD" && numberOfInstallments) {
@@ -210,6 +225,25 @@ export function NewSaleForm({ onSave }: any) {
     [totalAmount, feeAmount, absorbCreditCardFee, freightAmount]
   );
 
+  const handleCheckOrderNumber = async (event: React.FocusEvent<HTMLInputElement>) => {
+    const orderNumber = event.target.value;
+    if (!orderNumber) {
+      clearErrors("orderNumber");
+      return;
+    }
+    try {
+      const response = await api.get(`/sales/check-order-number/${orderNumber}`);
+      if (response.data.exists) {
+        setError("orderNumber", { type: "manual", message: "Este número de pedido já está em uso." });
+      } else {
+        clearErrors("orderNumber");
+      }
+    } catch (error) {
+      // Don't set an error if the check fails, but you might want to log it
+      console.error("Falha ao verificar o número do pedido:", error);
+    }
+  };
+
   const onFinalizeSale = async (formData: any) => {
     if (items.length === 0) return toast.error("Adicione pelo menos um item à venda.");
     if (items.some(item => !item.productId)) return toast.error("Todos os itens devem ter um produto selecionado.");
@@ -234,22 +268,27 @@ export function NewSaleForm({ onSave }: any) {
       }
     }
 
-    const payload = {
+    const payload: any = {
       pessoaId: formData.clientId,
       items: items.map(({ productId, quantity, price, lots }) => ({
         productId,
         quantity,
-        price,
+price,
         lots,
       })),
       feeAmount: totalAmount * (feePercentage / 100),
       freightAmount: freightAmount,
       paymentMethod,
-      paymentTermId,
       goldQuoteValue: saleGoldQuote,
       numberOfInstallments: formData.numberOfInstallments,
       contaCorrenteId: formData.contaCorrenteId,
+      createdAt: saleDate?.toISOString(),
+      orderNumber: formData.orderNumber,
     };
+
+    if (paymentMethod === 'A_PRAZO' && paymentTermId) {
+      payload.paymentTermId = paymentTermId;
+    }
 
     try {
       await api.post("/sales", payload);
@@ -284,6 +323,28 @@ export function NewSaleForm({ onSave }: any) {
               <CardTitle className="text-lg">1. Dados da Venda</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label>Data da Venda</Label>
+                  <DatePicker date={saleDate} setDate={setSaleDate} />
+                </div>
+                <Controller
+                  name="orderNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="space-y-1">
+                      <Label>Nº Pedido (Opcional)</Label>
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        placeholder="Automático se vazio" 
+                        onBlur={handleCheckOrderNumber}
+                      />
+                       <p className="text-sm text-destructive">{typeof errors.orderNumber?.message === "string" ? errors.orderNumber.message : ""}</p>
+                    </div>
+                  )}
+                />
+              </div>
               <Controller
                 name="clientId"
                 control={control}
