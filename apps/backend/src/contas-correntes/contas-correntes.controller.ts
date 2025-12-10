@@ -35,9 +35,9 @@ export class ContasCorrentesController {
   @Get()
   findAll(
     @CurrentUser('orgId') organizationId: string,
-    @Query('type') type?: ContaCorrenteType, // Adicionado
+    @Query('types') types?: ContaCorrenteType[],
   ) {
-    return this.service.findAll(organizationId, type);
+    return this.service.findAll(organizationId, types);
   }
 
   @Get(':id/extrato')

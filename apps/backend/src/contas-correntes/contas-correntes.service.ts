@@ -27,10 +27,14 @@ export class ContasCorrentesService {
     });
   }
 
-  async findAll(organizationId: string, type?: ContaCorrenteType): Promise<ContaCorrente[]> {
+  async findAll(organizationId: string, types?: ContaCorrenteType | ContaCorrenteType[]): Promise<ContaCorrente[]> {
     const where: Prisma.ContaCorrenteWhereInput = { organizationId, deletedAt: null };
-    if (type) {
-      where.type = type;
+    if (types) {
+      if (Array.isArray(types)) {
+        where.type = { in: types };
+      } else {
+        where.type = types;
+      }
     }
     return this.prisma.contaCorrente.findMany({
       where,

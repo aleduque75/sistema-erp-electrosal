@@ -119,7 +119,7 @@ export function NewSaleForm({ onSave }: any) {
         const [clientsRes, productsRes, contasRes, feesRes, orgSettingsRes, paymentTermsRes, quoteRes] = await Promise.all([
           api.get("/pessoas?role=CLIENT"),
           api.get("/products"),
-          api.get("/contas-correntes"),
+          api.get("/contas-correntes", { params: { types: ['BANCO', 'FORNECEDOR_METAL'] } }),
           api.get("/credit-card-fees"),
           api.get("/settings/organization"),
           api.get("/payment-terms"),
