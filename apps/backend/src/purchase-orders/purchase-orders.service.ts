@@ -121,7 +121,12 @@ export class PurchaseOrdersService {
 
       if (items !== undefined) { // Check if items array was provided in the DTO
         // If items were provided, recalculate total based on the new items list
-        finalTotalAmount = items.reduce((sum, item) => sum.plus(new Decimal(item.quantity).times(item.price)), new Decimal(0));
+        finalTotalAmount = items.reduce((sum, item) => {
+          if (item.quantity === undefined || item.price === undefined) {
+            throw new BadRequestException('Item na lista de atualização está incompleto. Faltando quantidade ou preço.');
+          }
+          return sum.plus(new Decimal(item.quantity).times(item.price))
+        }, new Decimal(0));
       }
 
       await tx.purchaseOrder.update({
@@ -196,6 +201,9 @@ export class PurchaseOrdersService {
             });
           } else {
             // Criar novo item
+            if (item.quantity === undefined || item.price === undefined) {
+              throw new BadRequestException('Novo item do pedido deve ter quantidade e preço.');
+            }
             await tx.purchaseOrderItem.create({
               data: {
                 purchaseOrderId: id,

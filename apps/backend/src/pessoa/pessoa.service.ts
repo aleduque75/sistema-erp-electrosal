@@ -97,7 +97,11 @@ export class PessoaService {
       }
       if (roles?.includes('FORNECEDOR')) {
         await tx.fornecedor.create({
-          data: { pessoaId: newPessoa.id, organizationId },
+          data: { 
+            pessoaId: newPessoa.id, 
+            organizationId,
+            defaultContaContabilId: data.defaultContaContabilId 
+          },
         });
       }
       if (roles?.includes('FUNCIONARIO')) {
@@ -125,7 +129,7 @@ export class PessoaService {
     id: string,
     data: UpdatePessoaDto,
   ): Promise<PessoaWithRoles> {
-    const { roles, ...pessoaData } = data;
+    const { roles, defaultContaContabilId, ...pessoaData } = data;
 
     return this.prisma.$transaction(async (tx) => {
       const existingPessoa = await tx.pessoa.findUnique({
@@ -153,7 +157,7 @@ export class PessoaService {
 
         // Papel de Fornecedor
         if (roles.includes('FORNECEDOR') && !existingPessoa.fornecedor) {
-          await tx.fornecedor.create({ data: { pessoaId: id, organizationId } });
+          await tx.fornecedor.create({ data: { pessoaId: id, organizationId, defaultContaContabilId } });
         } else if (!roles.includes('FORNECEDOR') && existingPessoa.fornecedor) {
           await tx.fornecedor.delete({ where: { pessoaId: id } });
         }
@@ -166,6 +170,14 @@ export class PessoaService {
         } else if (!roles.includes('FUNCIONARIO') && existingPessoa.funcionario) {
           await tx.funcionario.delete({ where: { pessoaId: id } });
         }
+      }
+      
+      // Atualiza o defaultContaContabilId se o fornecedor já existir e o campo for passado
+      if (existingPessoa.fornecedor && defaultContaContabilId !== undefined) {
+        await tx.fornecedor.update({
+          where: { pessoaId: id },
+          data: { defaultContaContabilId },
+        });
       }
 
       return tx.pessoa.findUniqueOrThrow({

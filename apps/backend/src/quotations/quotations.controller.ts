@@ -42,8 +42,10 @@ export class QuotationsController {
   findLatest(
     @CurrentUser('orgId') organizationId: string,
     @Query('metal') metal: TipoMetal,
+    @Query('date') date?: string,
   ) {
-    return this.quotationsService.findLatest(metal, organizationId);
+    const searchDate = date ? new Date(date) : new Date();
+    return this.quotationsService.findLatest(metal, organizationId, searchDate);
   }
 
   @Get(':id')

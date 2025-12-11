@@ -25,7 +25,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"; // ADDED
+} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 // Interface atualizada
 interface Pessoa {
@@ -42,7 +43,7 @@ interface Pessoa {
   cidade?: string | null;
   uf?: string | null;
   client: object | null;
-  fornecedor: object | null;
+  fornecedor: { defaultContaContabilId?: string | null } | null;
   funcionario: object | null;
 }
 
@@ -53,7 +54,7 @@ interface PessoaFormProps {
 
 // Schema de validação com papéis
 const formSchema = z.object({
-  type: z.enum(["FISICA", "JURIDICA"], { message: "O tipo de pessoa é obrigatório." }), // ADDED
+  type: z.enum(["FISICA", "JURIDICA"], { message: "O tipo de pessoa é obrigatório." }),
   name: z.string().min(2, "O nome é obrigatório."),
   email: z.string().email("Formato de email inválido.").optional().nullable(),
   cpf: z.string().optional().nullable(),
@@ -68,6 +69,7 @@ const formSchema = z.object({
   roles: z.array(z.string()).refine((value) => value.some((item) => item), {
     message: "Você deve selecionar pelo menos um papel.",
   }),
+  defaultContaContabilId: z.string().optional().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -80,10 +82,11 @@ const rolesDisponiveis = [
 
 export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
   const [isCepLoading, setIsCepLoading] = useState(false);
+  const [despesaAccounts, setDespesaAccounts] = useState<{value: string, label: string}[]>([]);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      type: "FISICA", // ADDED default type
+      type: "FISICA",
       name: "",
       email: initialData?.email ?? undefined,
       cpf: "",
@@ -97,10 +100,22 @@ export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
       uf: "",
       roles: ["CLIENT"], // Default to client
       ...initialData,
+      defaultContaContabilId: initialData?.fornecedor?.defaultContaContabilId,
     },
   });
 
-  const { reset, setValue } = form;
+  const { reset, setValue, watch } = form;
+  const roles = watch("roles");
+
+  useEffect(() => {
+    api.get('/contas-contabeis?tipo=DESPESA').then(res => {
+      const options = res.data.map((acc: any) => ({
+        value: acc.id,
+        label: `${acc.codigo} - ${acc.nome}`
+      }));
+      setDespesaAccounts(options);
+    });
+  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -112,6 +127,7 @@ export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
       reset({
         ...initialData,
         roles: initialRoles.length > 0 ? initialRoles : ["CLIENT"],
+        defaultContaContabilId: initialData.fornecedor?.defaultContaContabilId,
       });
     }
   }, [initialData, reset]);
@@ -283,6 +299,29 @@ export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
             </FormItem>
           )}
         />
+
+        {roles.includes("FORNECEDOR") && (
+          <FormField
+            name="defaultContaContabilId"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Conta Contábil Padrão (Fornecedor)</FormLabel>
+                <FormControl>
+                  <Combobox
+                    options={despesaAccounts}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Selecione uma conta de despesa"
+                    searchPlaceholder="Buscar conta..."
+                    emptyText="Nenhuma conta encontrada."
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* --- ENDEREÇO --- */}
         <div className="border-t pt-4 mt-4">

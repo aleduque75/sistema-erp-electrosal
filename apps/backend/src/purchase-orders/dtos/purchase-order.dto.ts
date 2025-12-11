@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsNumber, IsArray, ValidateNested, IsOptional, IsEnum } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType, OmitType } from '@nestjs/mapped-types';
 import { PurchaseOrderStatus } from '@prisma/client';
 
 export class CreatePurchaseOrderItemDto {
@@ -21,7 +21,11 @@ export class CreatePurchaseOrderItemDto {
   price: number;
 }
 
-export class UpdatePurchaseOrderItemDto extends PartialType(CreatePurchaseOrderItemDto) {}
+export class UpdatePurchaseOrderItemDto extends PartialType(CreatePurchaseOrderItemDto) {
+  @IsString()
+  @IsOptional()
+  id?: string;
+}
 
 export class CreatePurchaseOrderDto {
   @IsString()
@@ -54,4 +58,10 @@ export class CreatePurchaseOrderDto {
   items: CreatePurchaseOrderItemDto[];
 }
 
-export class UpdatePurchaseOrderDto extends PartialType(CreatePurchaseOrderDto) {}
+export class UpdatePurchaseOrderDto extends OmitType(PartialType(CreatePurchaseOrderDto), ['items'] as const) {
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => UpdatePurchaseOrderItemDto)
+  items?: UpdatePurchaseOrderItemDto[];
+}

@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   InternalServerErrorException,
+  Logger, // <--- Add this import
 } from '@nestjs/common';
 import {
   IAnaliseQuimicaRepository,
@@ -22,16 +23,15 @@ export interface GerarPdfAnaliseCommand {
 
 @Injectable()
 export class GerarPdfAnaliseUseCase {
+  private readonly logger = new Logger(GerarPdfAnaliseUseCase.name);
+
   constructor(
     @Inject('IAnaliseQuimicaRepository')
     private readonly analiseRepository: IAnaliseQuimicaRepository,
     @Inject('IPessoaRepository')
     private readonly pessoaRepository: IPessoaRepository,
   ) {
-    // Garante que os helpers do Handlebars sejam registrados apenas uma vez
-    if (!Handlebars.helpers.formatarNumero) {
-      this.registerHandlebarsHelpers();
-    }
+    this.registerHandlebarsHelpers();
   }
 
   private registerHandlebarsHelpers() {
@@ -102,18 +102,20 @@ export class GerarPdfAnaliseUseCase {
       );
     }
 
-    // Caminho para o diretório 'src' a partir da raiz do projeto
-    const srcDir = path.join(process.cwd(), 'src');
+    // Caminho para o diretório de assets (dist ou src)
+    const baseDir = process.env.NODE_ENV === 'production'
+      ? path.join(process.cwd(), 'dist')
+      : path.join(process.cwd(), 'src');
 
     const templatePath = path.join(
-      srcDir,
+      baseDir,
       'templates',
       'analise-quimica-pdf.template.html',
     );
     const htmlTemplateString = await fs.readFile(templatePath, 'utf-8');
 
     const logoPath = path.join(
-      srcDir,
+      baseDir,
       'assets',
       'images',
       'logoAtual.png',
@@ -153,7 +155,7 @@ export class GerarPdfAnaliseUseCase {
 
       return pdfBuffer;
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
+      this.logger.error('Erro ao gerar PDF:', error);
       throw new InternalServerErrorException('Falha ao gerar o PDF da análise.');
     } finally {
       if (browser) {

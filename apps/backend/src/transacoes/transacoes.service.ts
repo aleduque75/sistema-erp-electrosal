@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Transacao } from '@prisma/client';
+import { Prisma, Transacao } from '@prisma/client';
 import { CreateTransferDto } from './dtos/create-transfer.dto';
 import { CreateTransacaoDto } from './dtos/create-transacao.dto';
 import { UpdateTransacaoDto } from './dtos/update-transacao.dto';
@@ -350,6 +350,36 @@ export class TransacoesService {
       },
       include: {
         medias: true,
+      },
+      orderBy: {
+        dataHora: 'desc',
+      },
+    });
+  }
+
+  async findAll(organizationId: string, startDate?: string, endDate?: string): Promise<Transacao[]> {
+    const where: Prisma.TransacaoWhereInput = {
+      organizationId,
+    };
+
+    const dataHoraFilter: Prisma.DateTimeFilter = {};
+
+    if (startDate) {
+      dataHoraFilter.gte = new Date(startDate);
+    }
+    if (endDate) {
+      dataHoraFilter.lte = new Date(endDate);
+    }
+
+    if(startDate || endDate) {
+      where.dataHora = dataHoraFilter;
+    }
+
+    return this.prisma.transacao.findMany({
+      where,
+      include: {
+        contaContabil: true,
+        contaCorrente: true,
       },
       orderBy: {
         dataHora: 'desc',

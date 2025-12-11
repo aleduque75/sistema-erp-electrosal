@@ -14,6 +14,10 @@ import { PrismaMetalCreditRepository } from '../metal-credits/repositories/prism
 import { PayAccountsRecWithMetalCreditMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-credit-multiple.use-case';
 import { PayAccountsRecWithMetalMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-multiple.use-case';
 
+import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
+
+import { SettingsService } from '../settings/settings.service';
+
 @Module({
   imports: [
     PrismaModule,
@@ -30,6 +34,8 @@ import { PayAccountsRecWithMetalMultipleUseCase } from './use-cases/pay-accounts
     PayAccountsRecWithMetalUseCase,
     PayAccountsRecWithMetalCreditMultipleUseCase,
     PayAccountsRecWithMetalMultipleUseCase,
+    HybridReceiveUseCase,
+    SettingsService,
     {
       provide: 'IMetalCreditRepository',
       useClass: PrismaMetalCreditRepository,

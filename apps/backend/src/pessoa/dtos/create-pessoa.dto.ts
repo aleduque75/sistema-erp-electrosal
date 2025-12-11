@@ -55,6 +55,10 @@ export class CreatePessoaDto {
   @IsString({ each: true })
   @IsOptional()
   roles?: string[];
+
+  @IsString()
+  @IsOptional()
+  defaultContaContabilId?: string;
 }
 
 export class UpdatePessoaDto extends PartialType(CreatePessoaDto) {}

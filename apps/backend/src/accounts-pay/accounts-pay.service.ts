@@ -8,17 +8,20 @@ import {
   CreateAccountPayDto,
   UpdateAccountPayDto,
   PayAccountDto,
+  PayWithMetalDto,
 } from './dtos/account-pay.dto';
 import { AccountPay, Prisma, TipoTransacaoPrisma } from '@prisma/client';
 import { addMonths } from 'date-fns';
 import { Decimal } from '@prisma/client/runtime/library';
-import { SettingsService } from '../settings/settings.service'; // Added
+import { SettingsService } from '../settings/settings.service';
+import { PureMetalLotsService } from '../pure-metal-lots/pure-metal-lots.service';
 
 @Injectable()
 export class AccountsPayService {
   constructor(
     private prisma: PrismaService,
-    private settingsService: SettingsService, // Injected
+    private settingsService: SettingsService,
+    private pureMetalLotsService: PureMetalLotsService,
   ) {}
 
   async bulkCreateFromTransactions(
@@ -220,14 +223,18 @@ export class AccountsPayService {
 
   async pay(
     organizationId: string,
-    userId: string, // Added userId
+    userId: string,
     id: string,
     data: PayAccountDto,
   ): Promise<AccountPay> {
     const [accountToPay, settings] = await Promise.all([
       this.findOne(organizationId, id),
-      this.settingsService.findOne(userId), // Used SettingsService
+      this.settingsService.findOne(userId),
     ]);
+
+    if (accountToPay.paid) {
+      throw new BadRequestException('Esta conta já foi paga.');
+    }
 
     if (!settings?.defaultCaixaContaId) {
       throw new BadRequestException(
@@ -235,9 +242,73 @@ export class AccountsPayService {
       );
     }
 
+    const paidAmount = data.paidAmount ? new Decimal(data.paidAmount) : new Decimal(accountToPay.amount);
+    if (paidAmount.greaterThan(accountToPay.amount)) {
+      throw new BadRequestException('O valor pago não pode ser maior que o valor da conta.');
+    }
+
+    const isPartialPayment = paidAmount.lessThan(accountToPay.amount);
+
     return this.prisma.$transaction(async (tx) => {
+      // Logic for partial payment with new bill generation
+      if (isPartialPayment && data.generateNewBillForRemaining) {
+        const remainingAmount = new Decimal(accountToPay.amount).minus(paidAmount);
+        
+        const goldAmount = data.quotation && data.quotation > 0
+            ? paidAmount.div(data.quotation)
+            : undefined;
+
+        // 1. Create transaction for the paid part
+        const newTransaction = await tx.transacao.create({
+          data: {
+            organizationId,
+            contaCorrenteId: data.contaCorrenteId,
+            contaContabilId: accountToPay.contaContabilId || settings.defaultCaixaContaId,
+            tipo: TipoTransacaoPrisma.DEBITO,
+            descricao: `Pagamento parcial de: ${accountToPay.description}`,
+            valor: paidAmount,
+            moeda: 'BRL',
+            dataHora: data.paidAt || new Date(),
+            goldAmount: goldAmount,
+            goldPrice: data.quotation,
+          },
+        });
+
+        // 2. Update original bill to be paid with the partial amount
+        const paidAccount = await tx.accountPay.update({
+          where: { id },
+          data: {
+            paid: true,
+            paidAt: data.paidAt || new Date(),
+            transacaoId: newTransaction.id,
+            amount: paidAmount,
+            description: `(Pago parcialmente) ${accountToPay.description}`,
+          },
+        });
+
+        // 3. Create a new bill for the remaining amount
+        await tx.accountPay.create({
+          data: {
+            organizationId,
+            description: `Restante de: ${accountToPay.description}`,
+            amount: remainingAmount,
+            dueDate: accountToPay.dueDate,
+            contaContabilId: accountToPay.contaContabilId,
+            fornecedorId: accountToPay.fornecedorId,
+            isInstallment: accountToPay.isInstallment,
+            installmentNumber: accountToPay.installmentNumber,
+            totalInstallments: accountToPay.totalInstallments,
+            originalAccountId: accountToPay.id,
+            purchaseOrderId: accountToPay.purchaseOrderId,
+          },
+        });
+
+        return paidAccount;
+      }
+      
+      // --- Original logic for full payment ---
       const goldAmount = data.quotation && data.quotation > 0
-        ? new Decimal(accountToPay.amount).div(data.quotation)
+        ? paidAmount.div(data.quotation)
         : undefined;
 
       const newTransaction = await tx.transacao.create({
@@ -247,13 +318,24 @@ export class AccountsPayService {
           contaContabilId: settings.defaultCaixaContaId!,
           tipo: TipoTransacaoPrisma.DEBITO,
           descricao: `Pagamento de: ${accountToPay.description}`,
-          valor: accountToPay.amount,
+          valor: paidAmount,
           moeda: 'BRL',
           dataHora: data.paidAt || new Date(),
           goldAmount: goldAmount,
           goldPrice: data.quotation,
         },
       });
+      
+      // If it's a partial payment without generating a new bill, just update the amount
+      if (isPartialPayment && !data.generateNewBillForRemaining) {
+        return tx.accountPay.update({
+            where: { id },
+            data: {
+                amount: new Decimal(accountToPay.amount).minus(paidAmount),
+                 // paid remains false
+            },
+        });
+      }
 
       return tx.accountPay.update({
         where: { id },
@@ -265,6 +347,157 @@ export class AccountsPayService {
       });
     });
   }
+
+  async payWithMetal(organizationId: string, userId: string, id: string, data: PayWithMetalDto): Promise<AccountPay> {
+    const [accountToPay, pureMetalLot, settings] = await Promise.all([
+        this.findOne(organizationId, id),
+        this.pureMetalLotsService.findOne(organizationId, data.pureMetalLotId),
+        this.settingsService.findOne(userId),
+    ]);
+
+    if (accountToPay.paid) {
+        throw new BadRequestException('Esta conta já foi paga.');
+    }
+    if (!pureMetalLot) {
+        throw new NotFoundException('Lote de metal puro não encontrado.');
+    }
+    if (pureMetalLot.remainingGrams < data.gramsToPay) {
+        throw new BadRequestException('Saldo insuficiente no lote de metal puro.');
+    }
+    if (!settings?.defaultCaixaContaId) {
+      throw new BadRequestException(
+        "Nenhuma conta 'Caixa' padrão configurada.",
+      );
+    }
+    
+    const paidInBRL = new Decimal(data.gramsToPay).times(data.quotation);
+    if (paidInBRL.greaterThan(new Decimal(accountToPay.amount).plus(0.01))) { // Allow for small rounding differences
+        throw new BadRequestException('O valor pago em metal não pode ser maior que o valor da conta.');
+    }
+
+    const isPartialPayment = paidInBRL.lessThan(accountToPay.amount);
+    const paidAt = data.paidAt || new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+        // Create pure metal lot movement
+        await this.pureMetalLotsService.createPureMetalLotMovement(
+            organizationId,
+            data.pureMetalLotId,
+            {
+                type: 'EXIT',
+                grams: data.gramsToPay,
+                notes: `Pagamento da conta a pagar: ${accountToPay.description}`
+            },
+            tx
+        );
+
+        let goldEquivalentGrams: Decimal;
+        let auQuotation: Decimal;
+
+        if (pureMetalLot.metalType !== 'AU') {
+            const auQuotationRecord = await tx.quotation.findFirst({
+                where: {
+                    organizationId,
+                    metal: 'AU',
+                    date: {
+                        equals: new Date(paidAt.toISOString().split('T')[0] + 'T00:00:00.000Z'),
+                    }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            if (!auQuotationRecord) {
+                throw new BadRequestException(`Cotação do Ouro (AU) não encontrada para a data do pagamento.`);
+            }
+            auQuotation = auQuotationRecord.buyPrice;
+            goldEquivalentGrams = paidInBRL.div(auQuotation);
+        } else {
+            goldEquivalentGrams = new Decimal(data.gramsToPay);
+            auQuotation = new Decimal(data.quotation);
+        }
+        
+        // Logic for partial payment with new bill generation
+        if (isPartialPayment && data.generateNewBillForRemaining) {
+            const remainingAmount = new Decimal(accountToPay.amount).minus(paidInBRL);
+
+            // Create transaction for the paid part
+            const newTransaction = await tx.transacao.create({
+              data: {
+                organizationId,
+                contaContabilId: accountToPay.contaContabilId || settings.defaultCaixaContaId,
+                tipo: TipoTransacaoPrisma.DEBITO,
+                descricao: `Pagamento parcial com ${pureMetalLot.metalType} de: ${accountToPay.description}`,
+                valor: paidInBRL,
+                moeda: 'BRL',
+                dataHora: paidAt,
+                goldAmount: goldEquivalentGrams,
+                goldPrice: auQuotation,
+              },
+            });
+
+            // Update original bill to be paid with the partial amount
+            const paidAccount = await tx.accountPay.update({
+              where: { id },
+              data: {
+                paid: true,
+                paidAt: paidAt,
+                transacaoId: newTransaction.id,
+                amount: paidInBRL,
+                description: `(Pago parcialmente com ${pureMetalLot.metalType}) ${accountToPay.description}`,
+              },
+            });
+
+            // Create a new bill for the remaining amount
+            await tx.accountPay.create({
+              data: {
+                organizationId,
+                description: `Restante de: ${accountToPay.description}`,
+                amount: remainingAmount,
+                dueDate: accountToPay.dueDate,
+                contaContabilId: accountToPay.contaContabilId,
+                fornecedorId: accountToPay.fornecedorId,
+                purchaseOrderId: accountToPay.purchaseOrderId,
+                originalAccountId: accountToPay.id,
+              },
+            });
+
+            return paidAccount;
+        }
+
+        // --- Logic for full payment or partial without new bill ---
+        const newTransaction = await tx.transacao.create({
+            data: {
+              organizationId,
+              contaContabilId: settings.defaultCaixaContaId!,
+              tipo: TipoTransacaoPrisma.DEBITO,
+              descricao: `Pagamento com ${pureMetalLot.metalType} de: ${accountToPay.description}`,
+              valor: paidInBRL,
+              moeda: 'BRL',
+              dataHora: paidAt,
+              goldAmount: goldEquivalentGrams,
+              goldPrice: auQuotation,
+            },
+        });
+
+        if (isPartialPayment && !data.generateNewBillForRemaining) {
+            return tx.accountPay.update({
+                where: { id },
+                data: {
+                    amount: new Decimal(accountToPay.amount).minus(paidInBRL),
+                },
+            });
+        }
+
+        return tx.accountPay.update({
+            where: { id },
+            data: {
+              paid: true,
+              paidAt: paidAt,
+              transacaoId: newTransaction.id,
+            },
+        });
+    });
+}
 
   async remove(organizationId: string, id: string): Promise<AccountPay> {
     await this.findOne(organizationId, id);

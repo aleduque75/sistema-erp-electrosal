@@ -94,8 +94,8 @@ export default function PurchaseOrdersPage() {
     fetchPurchaseOrders();
   }, [fetchPurchaseOrders]);
 
-  useEffect(() => {
-    api.get("/pessoa?type=JURIDICA&isSupplier=true").then((res) => {
+useEffect(() => {
+    api.get("/pessoas?role=FORNECEDOR").then((res) => {
       setSuppliers(res.data.map((p: any) => ({ id: p.id, name: p.name })));
     });
   }, []);

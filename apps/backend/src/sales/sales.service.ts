@@ -4,7 +4,6 @@ import { CreateSaleDto, UpdateSaleDto } from './dtos/sales.dto';
 import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma, SaleStatus, Transacao } from '@prisma/client'; // Keep Sale for now, will refactor later
 import { addMonths, addDays } from 'date-fns';
 import { Decimal } from '@prisma/client/runtime/library';
-import { CreateSaleUseCase } from './use-cases/create-sale.use-case'; // Added
 import { StockMovement, SaleItem } from '@sistema-erp-electrosal/core'; // Added SaleItem
 import { StockMovementMapper } from '../products/mappers/stock-movement.mapper'; // Added
 import { SaleItemMapper } from './mappers/sale-item.mapper'; // Added
@@ -16,17 +15,8 @@ export class SalesService {
 
   constructor(
     private prisma: PrismaService,
-    private createSaleUseCase: CreateSaleUseCase, // Injected
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
   ) {}
-
-  async create(
-    organizationId: string,
-    userId: string, // Added userId
-    createSaleDto: CreateSaleDto,
-  ): Promise<Sale> {
-    return this.createSaleUseCase.execute(organizationId, userId, createSaleDto);
-  }
 
   // Recebe organizationId
   async findAll(
@@ -102,7 +92,7 @@ export class SalesService {
           ...item,
           price: item.price.toNumber(),
           product: item.product
-            ? { id: item.product.id, name: item.product.name }
+            ? { id: item.product.id, name: item.product.name, goldValue: item.product.goldValue }
             : null,
           // A lógica para exibir os lotes precisará ser ajustada no frontend
           // Aqui, apenas garantimos que os dados sejam passados
@@ -114,6 +104,25 @@ export class SalesService {
     console.log('[DEBUG sales.service.ts findAll] returning:', JSON.stringify(result, null, 2));
 
     return result;
+  }
+
+  async getNextOrderNumber(organizationId: string): Promise<number> {
+    const lastSale = await this.prisma.sale.findFirst({
+      where: { organizationId },
+      orderBy: { orderNumber: 'desc' },
+    });
+    // TODO: A base para o número do pedido (31700) deve vir de uma configuração
+    return (lastSale?.orderNumber || 31700) + 1;
+  }
+
+  async checkOrderNumberExists(organizationId: string, orderNumber: number): Promise<boolean> {
+    const sale = await this.prisma.sale.findFirst({
+      where: {
+        organizationId,
+        orderNumber,
+      },
+    });
+    return !!sale;
   }
 
   // Recebe organizationId

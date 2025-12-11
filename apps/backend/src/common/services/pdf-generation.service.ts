@@ -7,7 +7,7 @@ import * as path from 'path';
 @Injectable()
 export class PdfGenerationService {
   async generatePdf(templateName: string, data: any): Promise<Buffer> {
-    const templatePath = path.resolve(__dirname, '..", '..", 'templates', `${templateName}.hbs`);
+    const templatePath = path.resolve(__dirname, '..', '..', 'templates', `${templateName}.hbs`);
     const templateHtml = fs.readFileSync(templatePath, 'utf8');
     const template = handlebars.compile(templateHtml);
     const html = template(data);

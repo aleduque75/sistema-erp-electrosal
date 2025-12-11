@@ -63,6 +63,15 @@ export class PayAccountDto {
 
   @IsNumber()
   @IsOptional()
+  @Min(0.01)
+  paidAmount?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  generateNewBillForRemaining?: boolean;
+
+  @IsNumber()
+  @IsOptional()
   quotation?: number;
 }
 
@@ -72,3 +81,5 @@ export class SplitAccountPayDto {
   @IsNotEmpty()
   numberOfInstallments: number;
 }
+
+export * from './pay-with-metal.dto';

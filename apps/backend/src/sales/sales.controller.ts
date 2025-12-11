@@ -13,13 +13,14 @@ import { SalesService } from './sales.service';
 import { SaleStatus, Role } from '@prisma/client'; // Keep Sale for now, will refactor later
 import { LinkLotsToSaleItemDto } from './dtos/link-lots-to-sale-item.dto';
 import { LinkLotsToSaleItemUseCase } from './use-cases/link-lots-to-sale-item.use-case';
-import { CreateSaleDto, UpdateSaleDto, ConfirmSaleDto, ReceiveInstallmentPaymentDto } from './dtos/sales.dto';
+import { CreateSaleDto, UpdateSaleDto, ConfirmSaleDto, ReceiveInstallmentPaymentDto, BulkConfirmSalesDto } from './dtos/sales.dto';
 import { EditSaleDto } from './dtos/edit-sale.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case';
 import { EditSaleUseCase } from './use-cases/edit-sale.use-case';
 import { ConfirmSaleUseCase } from './use-cases/confirm-sale.use-case';
+import { BulkConfirmSalesUseCase } from './use-cases/bulk-confirm-sales.use-case';
 import { CancelSaleUseCase } from './use-cases/cancel-sale.use-case';
 import { FinalizeSaleUseCase } from './use-cases/finalize-sale.use-case';
 import { RevertSaleUseCase } from './use-cases/revert-sale.use-case';
@@ -42,6 +43,7 @@ export class SalesController {
     private readonly createSaleUseCase: CreateSaleUseCase,
     private readonly editSaleUseCase: EditSaleUseCase,
     private readonly confirmSaleUseCase: ConfirmSaleUseCase,
+    private readonly bulkConfirmSalesUseCase: BulkConfirmSalesUseCase,
     private readonly cancelSaleUseCase: CancelSaleUseCase,
     private readonly finalizeSaleUseCase: FinalizeSaleUseCase,
     private readonly linkLotsToSaleItemUseCase: LinkLotsToSaleItemUseCase,
@@ -57,6 +59,15 @@ export class SalesController {
   @Post('backfill-installments')
   async backfillInstallments(@CurrentUser('organizationId') organizationId: string) {
     return this.backfillInstallmentsUseCase.execute(organizationId);
+  }
+
+  @Post('bulk-confirm')
+  async bulkConfirm(
+    @CurrentUser('organizationId') organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Body() bulkConfirmSalesDto: BulkConfirmSalesDto,
+  ) {
+    return this.bulkConfirmSalesUseCase.execute(organizationId, userId, bulkConfirmSalesDto);
   }
 
   @Post()
@@ -129,6 +140,21 @@ export class SalesController {
       endDate,
       clientId,
     });
+  }
+
+  @Get('next-order-number')
+  async getNextOrderNumber(@CurrentUser('organizationId') organizationId: string) {
+    const nextNumber = await this.salesService.getNextOrderNumber(organizationId);
+    return { nextOrderNumber: nextNumber };
+  }
+
+  @Get('check-order-number/:orderNumber')
+  async checkOrderNumber(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('orderNumber') orderNumber: string,
+  ) {
+    const exists = await this.salesService.checkOrderNumberExists(organizationId, parseInt(orderNumber, 10));
+    return { exists };
   }
 
   @Get(':id')

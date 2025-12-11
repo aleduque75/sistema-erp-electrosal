@@ -26,8 +26,8 @@ export interface ComboboxOption {
 
 interface ComboboxProps {
     options: ComboboxOption[];
-    value?: string;
-    onChange: (value: string) => void;
+    value?: string | null;
+    onChange: (value: string | null) => void;
     placeholder?: string;
     searchPlaceholder?: string;
     emptyText?: string;
@@ -71,7 +71,7 @@ export function Combobox({
                 <CommandItem
                   key={option.value}
                   onSelect={() => {
-                    onChange(option.value === value ? "" : option.value)
+                    onChange(option.value === value ? null : option.value)
                     setOpen(false)
                   }}
                 >

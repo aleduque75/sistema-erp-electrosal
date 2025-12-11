@@ -27,6 +27,8 @@ import { PayAccountsRecWithMetalCreditMultipleDto } from './dtos/pay-accounts-re
 import { PayAccountsRecWithMetalCreditMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-credit-multiple.use-case';
 import { PayAccountsRecWithMetalMultipleDto } from './dtos/pay-accounts-rec-with-metal-multiple.dto';
 import { PayAccountsRecWithMetalMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-multiple.use-case';
+import { HybridReceiveDto } from './dtos/hybrid-receive.dto';
+import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('accounts-rec')
@@ -37,6 +39,7 @@ export class AccountsRecController {
     private readonly payAccountsRecWithMetalUseCase: PayAccountsRecWithMetalUseCase,
     private readonly payAccountsRecWithMetalCreditMultipleUseCase: PayAccountsRecWithMetalCreditMultipleUseCase,
     private readonly payAccountsRecWithMetalMultipleUseCase: PayAccountsRecWithMetalMultipleUseCase,
+    private readonly hybridReceiveUseCase: HybridReceiveUseCase,
   ) {}
 
   @Post()
@@ -70,6 +73,21 @@ export class AccountsRecController {
     @Body() updateDto: UpdateAccountRecDto,
   ) {
     return this.accountsRecService.update(organizationId, id, updateDto);
+  }
+
+  @Post(':id/hybrid-receive')
+  hybridReceive(
+    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') accountsRecId: string,
+    @Body() dto: HybridReceiveDto,
+  ) {
+    return this.hybridReceiveUseCase.execute(
+      organizationId,
+      userId,
+      accountsRecId,
+      dto,
+    );
   }
 
   @Patch(':id/receive')

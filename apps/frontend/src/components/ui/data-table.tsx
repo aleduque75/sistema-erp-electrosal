@@ -32,6 +32,8 @@ interface DataTableProps<TData, TValue> {
   isLoading?: boolean;
   renderSubComponent?: (props: { row: Row<TData> }) => React.ReactElement; // NOVO
   getRowCanExpand?: (row: Row<TData>) => boolean; // NOVO
+  rowSelection?: object;
+  onRowSelectionChange?: (updater: any) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -42,6 +44,8 @@ export function DataTable<TData, TValue>({
   isLoading = false,
   renderSubComponent, // NOVO
   getRowCanExpand, // NOVO
+  rowSelection,
+  onRowSelectionChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
@@ -54,8 +58,11 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     getRowCanExpand, // NOVO
+    onRowSelectionChange: onRowSelectionChange,
+    enableRowSelection: true,
     state: {
       sorting,
+      rowSelection: rowSelection ?? {},
     },
     initialState: {
       pagination: {

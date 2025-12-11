@@ -7,6 +7,7 @@ import { SettingsModule } from '../settings/settings.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case';
 import { ConfirmSaleUseCase } from './use-cases/confirm-sale.use-case';
+import { BulkConfirmSalesUseCase } from './use-cases/bulk-confirm-sales.use-case';
 import { CancelSaleUseCase } from './use-cases/cancel-sale.use-case';
 import { FinalizeSaleUseCase } from './use-cases/finalize-sale.use-case';
 import { LinkLotsToSaleItemUseCase } from './use-cases/link-lots-to-sale-item.use-case';
@@ -41,6 +42,7 @@ import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositorie
     SalesService,
     CreateSaleUseCase,
     ConfirmSaleUseCase,
+    BulkConfirmSalesUseCase,
     CancelSaleUseCase,
     FinalizeSaleUseCase,
     RevertSaleUseCase,

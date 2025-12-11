@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { TransacoesService } from './transacoes.service';
 import { CreateTransacaoDto } from './dtos/create-transacao.dto';
@@ -65,10 +66,12 @@ export class TransacoesController {
   }
 
   @Get()
-  findAll(@CurrentUser('orgId') organizationId: string) {
-    // This needs to be implemented in the service
-    // return this.transacoesService.findAll(organizationId);
-    return []; // Placeholder
+  findAll(
+    @CurrentUser('orgId') organizationId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    ) {
+    return this.transacoesService.findAll(organizationId, startDate, endDate);
   }
 
   @Get(':id')

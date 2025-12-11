@@ -31,6 +31,7 @@ interface ContaCorrente {
 }
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+const formatGrams = (value: number | null | undefined) => `${(Number(value) || 0).toFixed(4)}g`;
 
 export function ConfirmSaleModal({
   sale,
@@ -42,7 +43,7 @@ export function ConfirmSaleModal({
   const [accounts, setAccounts] = useState<ContaCorrente[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | undefined>(undefined);
   const [selectedMetalType, setSelectedMetalType] = useState<TipoMetal | undefined>(undefined);
-  const [keepSaleStatusPending, setKeepSaleStatusPending] = useState(false); // NOVO ESTADO
+  const [keepSaleStatusPending, setKeepSaleStatusPending] = useState(false);
 
   useEffect(() => {
     if (open && sale?.paymentMethod === 'A_VISTA') {
@@ -52,11 +53,10 @@ export function ConfirmSaleModal({
         toast.error('Falha ao buscar contas correntes.');
       });
     }
-    // Reset selections when modal closes or sale changes
     if (!open) {
       setSelectedAccountId(undefined);
       setSelectedMetalType(undefined);
-      setKeepSaleStatusPending(false); // RESETAR NOVO ESTADO
+      setKeepSaleStatusPending(false);
     }
   }, [open, sale]);
 
@@ -69,7 +69,7 @@ export function ConfirmSaleModal({
         paymentMethod: string; 
         contaCorrenteId?: string; 
         paymentMetalType?: TipoMetal;
-        keepSaleStatusPending?: boolean; // ADICIONAR AO TIPO DO PAYLOAD
+        keepSaleStatusPending?: boolean;
       } = {
         paymentMethod: sale.paymentMethod,
       };
@@ -88,7 +88,7 @@ export function ConfirmSaleModal({
           return;
         }
         payload.paymentMetalType = selectedMetalType;
-        payload.keepSaleStatusPending = keepSaleStatusPending; // ADICIONAR AO PAYLOAD
+        payload.keepSaleStatusPending = keepSaleStatusPending;
       }
 
       await api.post(`/sales/${sale.id}/confirm`, payload);
@@ -103,6 +103,11 @@ export function ConfirmSaleModal({
 
   if (!sale) return null;
 
+  const pesoOuroItens = sale.saleItems?.reduce((acc, item) => {
+    const productGoldValue = item.product?.goldValue || 0;
+    return acc + (item.quantity * productGoldValue);
+  }, 0) || 0;
+
   const isVista = sale.paymentMethod === 'A_VISTA';
   const isMetal = sale.paymentMethod === 'METAL';
   const isConfirmButtonDisabled = 
@@ -112,7 +117,7 @@ export function ConfirmSaleModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Confirmar Venda #{sale.orderNumber}</DialogTitle>
           <DialogDescription>
@@ -123,8 +128,41 @@ export function ConfirmSaleModal({
         <div className="space-y-4">
           <div className="space-y-2 rounded-lg border p-4">
               <p><span className="font-semibold">Cliente:</span> {sale.pessoa.name}</p>
-              <p><span className="font-semibold">Valor Final:</span> {formatCurrency(sale.netAmount)}</p>
               <p><span className="font-semibold">Método de Pagamento:</span> {sale.paymentMethod?.replace('_', ' ') || 'N/A'}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4 rounded-lg border p-4">
+            <h4 className="col-span-2 text-lg font-semibold text-center">Resumo do Pedido</h4>
+            
+            <div className="text-sm">
+              <p className="font-semibold">Peso Ouro (Itens):</p>
+              <p className="font-mono">{formatGrams(pesoOuroItens)}</p>
+            </div>
+            
+            <div className="text-sm">
+              <p className="font-semibold">Custo M.O. (g):</p>
+              <p className="font-mono">{formatGrams(sale.adjustment?.costsInGrams)}</p>
+            </div>
+
+            <div className="text-sm font-bold">
+              <p>Total Ouro (g):</p>
+              <p className="font-mono">{formatGrams(sale.adjustment?.saleExpectedGrams)}</p>
+            </div>
+
+            <div className="text-sm text-green-600">
+              <p className="font-semibold">Lucro (g):</p>
+              <p className="font-mono font-bold">{formatGrams(sale.adjustment?.netDiscrepancyGrams)}</p>
+            </div>
+
+            <div className="text-sm">
+              <p className="font-semibold">Cotação do Dia:</p>
+              <p>{formatCurrency(sale.goldPrice || 0)}</p>
+            </div>
+
+            <div className="text-sm font-bold">
+              <p>Valor Final (BRL):</p>
+              <p>{formatCurrency(sale.netAmount)}</p>
+            </div>
           </div>
 
           {isVista && (

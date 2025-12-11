@@ -56,6 +56,7 @@ interface PaymentTerm {
 }
 
 interface PurchaseOrderItem {
+  id?: string;
   productId?: string;
   rawMaterialId?: string;
   quantity: number;
@@ -83,9 +84,10 @@ interface PurchaseOrderFormProps {
 
 // Schema de validação para um item
 const itemSchema = z.object({
+  id: z.string().optional(),
   itemType: z.enum(["PRODUCT", "RAW_MATERIAL"]),
-  productId: z.string().optional(),
-  rawMaterialId: z.string().optional(),
+  productId: z.preprocess(val => val === null ? undefined : val, z.string().optional()),
+  rawMaterialId: z.preprocess(val => val === null ? undefined : val, z.string().optional()),
   quantity: z.preprocess(
     (val) => Number(val),
     z.number().int().min(1, "Quantidade deve ser no mínimo 1.")
@@ -212,6 +214,12 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
     });
   };
 
+  const onInvalid = (errors: any) => {
+    console.error("Validation Errors:", errors);
+    const errorMessages = JSON.stringify(errors, null, 2);
+    toast.error(<div><p>Por favor, corrija os erros no formulário.</p><pre className="mt-2 w-full rounded-md bg-slate-950 p-4 text-slate-50">{errorMessages}</pre></div>);
+  };
+
   const onSubmit = async (data: FormValues) => {
     try {
       const payload = {
@@ -219,6 +227,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
         orderDate: new Date(data.orderDate).toISOString(),
         expectedDeliveryDate: data.expectedDeliveryDate ? new Date(data.expectedDeliveryDate).toISOString() : null,
         items: items.map(item => ({
+          id: item.id,
           productId: item.productId,
           rawMaterialId: item.rawMaterialId,
           quantity: item.quantity,
@@ -241,7 +250,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
         {/* Campos principais do Pedido de Compra */}
         <FormField
           control={form.control}
@@ -286,8 +295,8 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
               <FormLabel>Prazo de Pagamento</FormLabel>
               <Combobox
                 options={paymentTerms.map(term => ({ value: term.id, label: term.name }))}
-                value={field.value ?? ''}
-                onChange={(value) => field.onChange(value === 'null' ? null : value)}
+                value={field.value}
+                onChange={field.onChange}
                 placeholder="Selecione um prazo de pagamento"
                 searchPlaceholder="Buscar prazo..."
                 emptyText="Nenhum prazo encontrado."

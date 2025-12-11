@@ -17,6 +17,7 @@ import {
   UpdateAccountPayDto,
   PayAccountDto,
   SplitAccountPayDto,
+  PayWithMetalDto,
 } from './dtos/account-pay.dto';
 import { BulkCreateFromTransactionsDto } from './dtos/bulk-create-from-transactions.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -85,11 +86,21 @@ export class AccountsPayController {
   @Post(':id/pay')
   pay(
     @CurrentUser('orgId') organizationId: string,
-    @CurrentUser('sub') userId: string, // Added userId
+    @CurrentUser('id') userId: string, // Changed from 'sub' to 'id'
     @Param('id') id: string,
     @Body() payDto: PayAccountDto,
   ) {
     return this.accountsPayService.pay(organizationId, userId, id, payDto); // Pass userId
+  }
+
+  @Post(':id/pay-with-metal')
+  payWithMetal(
+    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() payWithMetalDto: PayWithMetalDto,
+  ) {
+    return this.accountsPayService.payWithMetal(organizationId, userId, id, payWithMetalDto);
   }
 
   @Post(':id/split')

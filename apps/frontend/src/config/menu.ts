@@ -207,6 +207,12 @@ export const menuConfig: NavItem[] = [
         icon: ArrowRightLeft,
         description: "Visualize todos os lançamentos financeiros.",
       },
+      {
+        title: "Edição em Massa",
+        href: "/transacoes/bulk-edit",
+        icon: Settings,
+        description: "Edite a categoria de várias transações de uma vez.",
+      },
       { 
         title: "Contas de Metais",
         href: "/contas-metais",

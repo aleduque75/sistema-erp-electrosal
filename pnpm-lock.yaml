@@ -296,8 +296,8 @@ importers:
   apps/frontend:
     dependencies:
       '@hookform/resolvers':
-        specifier: ^3.9.0
-        version: 3.10.0(react-hook-form@7.65.0(react@18.3.1))
+        specifier: ^5.2.2
+        version: 5.2.2(react-hook-form@7.68.0(react@18.3.1))
       '@radix-ui/react-accordion':
         specifier: ^1.2.0
         version: 1.2.12(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -416,8 +416,8 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
       react-hook-form:
-        specifier: ^7.52.1
-        version: 7.65.0(react@18.3.1)
+        specifier: ^7.68.0
+        version: 7.68.0(react@18.3.1)
       react-imask:
         specifier: ^7.6.1
         version: 7.6.1(react@18.3.1)
@@ -446,8 +446,8 @@ importers:
         specifier: ^0.9.1
         version: 0.9.9(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.1.13
+        version: 4.1.13
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4.1.11
@@ -1427,10 +1427,10 @@ packages:
     resolution: {integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==}
     engines: {node: '>=18.0.0'}
 
-  '@hookform/resolvers@3.10.0':
-    resolution: {integrity: sha512-79Dv+3mDF7i+2ajj7SkypSKHhl1cbln1OGavqrsF7p6mbUv11xpqpacPsGDCTRvCSjEEIez2ef1NveSVL3b0Ag==}
+  '@hookform/resolvers@5.2.2':
+    resolution: {integrity: sha512-A/IxlMLShx3KjV/HeTcTfaMxdwy690+L/ZADoeaTltLx+CVuzkeVIPuybK3jrRfw7YZnmdKsVVHAlEPIAEUNlA==}
     peerDependencies:
-      react-hook-form: ^7.0.0
+      react-hook-form: ^7.55.0
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -6750,8 +6750,8 @@ packages:
     peerDependencies:
       react: ^18.3.1
 
-  react-hook-form@7.65.0:
-    resolution: {integrity: sha512-xtOzDz063WcXvGWaHgLNrNzlsdFgtUWcb32E6WFaGTd7kPZG3EeDusjdZfUsPwKCKVXy1ZlntifaHZ4l8pAsmw==}
+  react-hook-form@7.68.0:
+    resolution: {integrity: sha512-oNN3fjrZ/Xo40SWlHf1yCjlMK417JxoSJVUXQjGdvdRCU07NTFei1i1f8ApUAts+IVh14e4EdakeLEA+BEAs/Q==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -7965,6 +7965,9 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.1.13:
+    resolution: {integrity: sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==}
+
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
@@ -9015,9 +9018,10 @@ snapshots:
 
   '@google/generative-ai@0.24.1': {}
 
-  '@hookform/resolvers@3.10.0(react-hook-form@7.65.0(react@18.3.1))':
+  '@hookform/resolvers@5.2.2(react-hook-form@7.68.0(react@18.3.1))':
     dependencies:
-      react-hook-form: 7.65.0(react@18.3.1)
+      '@standard-schema/utils': 0.3.0
+      react-hook-form: 7.68.0(react@18.3.1)
 
   '@humanfs/core@0.19.1': {}
 
@@ -15269,7 +15273,7 @@ snapshots:
       react: 18.3.1
       scheduler: 0.23.2
 
-  react-hook-form@7.65.0(react@18.3.1):
+  react-hook-form@7.68.0(react@18.3.1):
     dependencies:
       react: 18.3.1
 
@@ -16763,5 +16767,7 @@ snapshots:
   zod@3.23.8: {}
 
   zod@3.25.76: {}
+
+  zod@4.1.13: {}
 
   zwitch@2.0.4: {}

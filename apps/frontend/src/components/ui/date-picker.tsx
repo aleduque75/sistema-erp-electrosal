@@ -59,7 +59,7 @@ export function DatePicker({
   }
 
   return (
-    <div className="relative w-[280px]">
+    <div className="relative">
       <Input
         type="text"
         value={inputValue}

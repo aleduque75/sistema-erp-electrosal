@@ -1,5 +1,3 @@
-// Caminho: apps/frontend/src/lib/types.ts
-
 export enum TipoContaContabilPrisma {
   ATIVO = "ATIVO",
   PASSIVO = "PASSIVO",
@@ -8,5 +6,23 @@ export enum TipoContaContabilPrisma {
   DESPESA = "DESPESA",
 }
 
-// Você pode adicionar outras interfaces e tipos compartilhados
-// entre diferentes partes do seu frontend aqui no futuro.
+export interface ContaContabil {
+  id: string;
+  nome: string;
+  codigo: string;
+}
+
+export interface ContaCorrente {
+  id: string;
+  nome: string;
+}
+
+export interface Transacao {
+  id: string;
+  descricao: string | null;
+  valor: number;
+  tipo: 'CREDITO' | 'DEBITO';
+  dataHora: string;
+  contaContabil: ContaContabil | null;
+  contaCorrente: ContaCorrente | null;
+}

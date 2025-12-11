@@ -114,6 +114,46 @@ export class ImportSalesUseCase {
     const oldSaleItems: OldSaleItemData[] = JSON.parse(fs.readFileSync(saleItemsFilePath, 'utf8'));
     const oldFinanceiro: OldFinanceiroData[] = JSON.parse(fs.readFileSync(financeiroFilePath, 'utf8')); // Carregar financeiro.json
 
+    // Find or create the legacy lot
+    const reactionProduct = await this.prisma.product.findFirst({
+        where: {
+            organizationId: organizationId,
+            name: {
+                contains: '68',
+            },
+            productGroup: {
+                isReactionProductGroup: true,
+            },
+        },
+    });
+
+    if (!reactionProduct) {
+        throw new Error('Reaction product (like Sal 68%) not found for associating with the legacy lot.');
+    }
+
+    let legacyLot = await this.prisma.inventoryLot.findUnique({
+        where: {
+            batchNumber: 'LOTE-LEGADO-VENDAS',
+        },
+    });
+
+    if (!legacyLot) {
+        legacyLot = await this.prisma.inventoryLot.create({
+            data: {
+                organizationId: organizationId,
+                productId: reactionProduct.id,
+                batchNumber: 'LOTE-LEGADO-VENDAS',
+                costPrice: new Decimal(0),
+                quantity: 999999,
+                remainingQuantity: 999999,
+                sourceType: 'MIGRATION',
+                sourceId: 'SCRIPT-IMPORT-SALES',
+                notes: 'Virtual lot to associate with sale items imported from the old system.',
+            },
+        });
+    }
+
+
     console.log(`[DEBUG ARQUIVO] financeiro.json lido e parseado. Total de itens: ${oldFinanceiro.length}`);
 
     const cotacoesMap = new Map<string, number>();
@@ -199,6 +239,7 @@ export class ImportSalesUseCase {
             quantity: mappedItem.quantity,
             price: mappedItem.price.toNumber(),
             externalId: mappedItem.externalId, // Acessar de mappedItem.externalId
+            lots: [{ inventoryLotId: legacyLot.id, quantity: mappedItem.quantity }],
           })),
           paymentMethod: 'IMPORTADO', // Pode ser mapeado de oldSale se houver um campo
           numberOfInstallments: 1, // Assumindo 1 parcela para vendas antigas

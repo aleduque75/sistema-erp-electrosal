@@ -5,6 +5,7 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": true,
-    "webpackConfigPath": "webpack-hmr.config.js"
+    "webpackConfigPath": "webpack-hmr.config.js",
+    "assets": ["templates/**/*", "assets/**/*"]
   }
 }

@@ -29,82 +29,34 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { NewSaleForm } from './components/NewSaleForm';
 import { SaleDetailsModal } from './sale-details-modal';
 import { EditSaleModal } from './components/EditSaleModal';
 import { ConfirmSaleModal } from './components/ConfirmSaleModal';
 import { ReceivePaymentForm } from '../accounts-rec/components/receive-payment-form';
 
+// ... (existing interfaces)
 
-// Temporary updated Sale type
-export interface SaleInstallment {
-  id: string;
-  installmentNumber: number;
-  amount: number;
-  dueDate: string;
-  status: 'PENDING' | 'PAID' | 'OVERDUE';
-  paidAt?: string;
-}
-
-export interface PaymentTerm {
-  id: string;
-  name: string;
-  installmentsDays: number[];
-}
-
-export interface Sale {
-  id: string;
-  orderNumber: string;
-  pessoa: { name: string };
-  totalAmount: number;
-  feeAmount: number;
-  netAmount: number;
-  goldPrice: number;
-  goldValue: number;
-  paymentMethod: string;
-  createdAt: string;
-  status: 'PENDENTE' | 'CONFIRMADO' | 'A_SEPARAR' | 'SEPARADO' | 'FINALIZADO' | 'CANCELADO';
-  lucro?: number;
-  paymentAccountName?: string;
-  adjustment?: {
-    netDiscrepancyGrams: number;
-    paymentReceivedBRL: number;
-  };
-  accountsRec: {
-    id: string;
-    amount: number;
-    description: string;
-    received: boolean;
-  }[];
-  saleItems: {
-    id: string;
-    productId: string;
-    quantity: number;
-    price: number;
-    product: { name: string };
-    inventoryLotId?: string;
-  }[];
-  installments: SaleInstallment[]; // Added installments
-  paymentTerm?: PaymentTerm; // Added paymentTerm
-}
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-    value || 0
-  );
-const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-
-const statusConfig: { [key in Sale['status']]: { label: string; className: string } } = {
-  PENDENTE: { label: 'Pendente', className: 'text-yellow-600 bg-yellow-100' },
-  CONFIRMADO: { label: 'Confirmado', className: 'text-blue-600 bg-blue-100' },
-  A_SEPARAR: { label: 'A Separar', className: 'text-orange-600 bg-orange-100' },
-  SEPARADO: { label: 'Separado', className: 'text-purple-600 bg-purple-100' },
-  FINALIZADO: { label: 'Finalizado', className: 'text-green-600 bg-green-100' },
-  CANCELADO: { label: 'Cancelado', className: 'text-red-600 bg-red-100' },
-};
+// ... (existing component code)
 
 export default function SalesPage() {
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+      value || 0
+    );
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+
+  const statusConfig: { [key in Sale['status']]: { label: string; className: string } } = {
+    PENDENTE: { label: 'Pendente', className: 'text-yellow-600 bg-yellow-100' },
+    CONFIRMADO: { label: 'Confirmado', className: 'text-blue-600 bg-blue-100' },
+    A_SEPARAR: { label: 'A Separar', className: 'text-orange-600 bg-orange-100' },
+    SEPARADO: { label: 'Separado', className: 'text-purple-600 bg-purple-100' },
+    FINALIZADO: { label: 'Finalizado', className: 'text-green-600 bg-green-100' },
+    CANCELADO: { label: 'Cancelado', className: 'text-red-600 bg-red-600' },
+  };
+
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
@@ -112,6 +64,7 @@ export default function SalesPage() {
   const [saleToEdit, setSaleToEdit] = useState<Sale | null>(null);
   const [saleToConfirm, setSaleToConfirm] = useState<Sale | null>(null);
   const [accountToReceive, setAccountToReceive] = useState<Sale['accountsRec'][0] | null>(null);
+  const [rowSelection, setRowSelection] = useState({});
 
   // Filter states
   const [clients, setClients] = useState<{ value: string; label: string }[]>([]);
@@ -242,7 +195,59 @@ export default function SalesPage() {
     }
   };
 
+  const handleBulkConfirm = async () => {
+    const selectedIndices = Object.keys(rowSelection).map(Number);
+    const selectedSales = sales.filter((_, index) => selectedIndices.includes(index));
+    const selectedSaleIds = selectedSales.map(sale => sale.id);
+
+    if (selectedSaleIds.length === 0) {
+      toast.info('Nenhuma venda selecionada.');
+      return;
+    }
+
+    if (!confirm(`Tem certeza que deseja confirmar ${selectedSaleIds.length} venda(s)?`)) return;
+
+    try {
+      const response = await api.post('/sales/bulk-confirm', { saleIds: selectedSaleIds });
+      toast.success(`${response.data.filter(r => r.status === 'success').length} venda(s) confirmada(s) com sucesso.`);
+      
+      const errors = response.data.filter(r => r.status === 'error');
+      if (errors.length > 0) {
+        errors.forEach(err => {
+          // It's better to find the orderNumber to show in the toast
+          const sale = sales.find(s => s.id === err.saleId);
+          const orderNumber = sale ? sale.orderNumber : err.saleId;
+          toast.error(`Falha ao confirmar venda #${orderNumber}: ${err.message}`);
+        });
+      }
+      
+      fetchSales();
+      setRowSelection({});
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Falha ao confirmar vendas em lote.');
+    }
+  };
+
   const columns: ColumnDef<Sale>[] = [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     { accessorKey: 'orderNumber', header: 'Nº Pedido' },
     {
       accessorKey: 'status',
@@ -457,10 +462,19 @@ export default function SalesPage() {
 
       <Card>
         <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-4">
+            {Object.keys(rowSelection).length > 0 && (
+              <Button onClick={handleBulkConfirm}>
+                Confirmar {Object.keys(rowSelection).length} Venda(s)
+              </Button>
+            )}
+          </div>
           <DataTable
             columns={columns}
             data={sales}
             filterColumnId="orderNumber"
+            rowSelection={rowSelection}
+            onRowSelectionChange={setRowSelection}
           />
         </CardContent>
       </Card>

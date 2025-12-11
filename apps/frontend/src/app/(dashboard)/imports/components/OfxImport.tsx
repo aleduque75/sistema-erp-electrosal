@@ -57,6 +57,7 @@ interface PreviewTransaction {
   description: string;
   postedAt: string;
   status: "new" | "duplicate";
+  suggestedContaContabilId?: string;
 }
 interface SelectionState {
   selected: boolean;
@@ -155,9 +156,9 @@ export function OfxImport() {
       const defaultDespesaId = userProfile?.settings?.defaultDespesaContaId;
 
       const initialSelections = newPreviewData.reduce((acc: Record<string, SelectionState>, t: PreviewTransaction) => {
-        let suggestedContaId: string | undefined = undefined;
+        let suggestedContaId: string | undefined = t.suggestedContaContabilId;
 
-        if (t.status === "new") {
+        if (t.status === "new" && !suggestedContaId) {
           const searchDescription = t.description.toLowerCase();
           const accountsToSearch = t.type === 'CREDIT' ? contasDeEntrada : contasDeSaida;
           const defaultId = t.type === 'CREDIT' ? defaultReceitaId : defaultDespesaId;
@@ -251,8 +252,7 @@ export function OfxImport() {
       previewData.forEach((t) => {
         if (
           t.description === originalDescription &&
-          t.fitId !== fitId &&
-          !newSelections[t.fitId]?.contaContabilId
+          t.fitId !== fitId
         ) {
           newSelections[t.fitId] = {
             ...newSelections[t.fitId],

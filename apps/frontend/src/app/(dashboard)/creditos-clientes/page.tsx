@@ -67,21 +67,19 @@ export default function CreditosClientesPage() {
       accessorKey: "metalType", 
       header: "Tipo de Metal",
       cell: ({ row }) => {
-        console.log("[DEBUG] Frontend metalType:", row.original.props.metalType);
-        return row.original.props.metalType;
+        return row.original.metalType;
       },
     },
     {
       accessorKey: "grams",
       header: "Saldo (g)",
-      cell: ({ row }) => formatGrams(Number(row.original.props.grams)),
+      cell: ({ row }) => formatGrams(Number(row.original.grams)),
     },
     {
       accessorKey: "date",
       header: "Data do Crédito",
       cell: ({ row }) => {
-        console.log("[DEBUG] Frontend date:", row.original.props.date);
-        return formatDate(row.original.props.date as unknown as string);
+        return formatDate(row.original.date as unknown as string);
       },
     },
     {

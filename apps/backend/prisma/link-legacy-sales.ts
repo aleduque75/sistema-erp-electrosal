@@ -90,15 +90,16 @@ async function main() {
     for (const sale of pendingLegacySales) {
       console.log(`Processando venda ID: ${sale.id} (External ID: ${sale.externalId})`);
 
-      // Atualizar todos os itens da venda para apontar para o lote legado
-      await tx.saleItem.updateMany({
-        where: {
-          saleId: sale.id,
-        },
-        data: {
-          inventoryLotId: legacyLot.id,
-        },
-      });
+      // Para cada item da venda, criar uma entrada em SaleItemLot
+      for (const item of sale.saleItems) {
+        await tx.saleItemLot.create({
+          data: {
+            saleItemId: item.id,
+            inventoryLotId: legacyLot.id,
+            quantity: item.quantity,
+          },
+        });
+      }
 
       // Atualizar o status da venda para FINALIZADO
       await tx.sale.update({

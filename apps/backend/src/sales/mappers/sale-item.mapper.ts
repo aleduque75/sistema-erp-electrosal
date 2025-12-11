@@ -3,7 +3,7 @@ import { SaleItem as PrismaSaleItem, Prisma } from '@prisma/client';
 import { ProductMapper } from '../../products/mappers/product.mapper';
 
 type PrismaSaleItemWithDetails = Prisma.SaleItemGetPayload<{
-  include: { product: true; inventoryLot: true };
+  include: { product: true; saleItemLots: true };
 }>;
 
 export class SaleItemMapper {
@@ -17,8 +17,6 @@ export class SaleItemMapper {
         quantity: raw.quantity,
         price: raw.price.toNumber(),
         product: product,
-        inventoryLotId: raw.inventoryLotId,
-        inventoryLot: raw.inventoryLot, // Pass the full inventoryLot object
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
       },

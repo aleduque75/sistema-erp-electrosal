@@ -135,7 +135,13 @@ export class MetalCreditsService {
       }
 
       metalCreditsWithUsage.push({
-        ...metalCredit,
+        id: metalCredit.id.toString(),
+        clientId: metalCredit.clientId,
+        chemicalAnalysisId: metalCredit.chemicalAnalysisId,
+        metalType: metalCredit.metalType,
+        grams: metalCredit.grams,
+        date: metalCredit.date,
+        organizationId: metalCredit.organizationId,
         clientName,
         usageEntries,
       });
@@ -265,7 +271,13 @@ export class MetalCreditsService {
       }
 
       metalCreditsWithUsage.push({
-        ...metalCredit,
+        id: metalCredit.id.toString(),
+        clientId: metalCredit.clientId,
+        chemicalAnalysisId: metalCredit.chemicalAnalysisId,
+        metalType: metalCredit.metalType,
+        grams: metalCredit.grams,
+        date: metalCredit.date,
+        organizationId: metalCredit.organizationId,
         clientName,
         usageEntries,
       });
