@@ -1,4 +1,3 @@
-
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as fs from 'fs';
@@ -59,7 +58,6 @@ export class ImportEmpresasUseCase {
           type = PessoaType.JURIDICA; // Default to JURIDICA if no cpfCnpj
         }
 
-        console.log(`[DEBUG IMPORT-EMPRESAS] Processing: ${oldEmpresa.nome} (External ID: ${oldEmpresa['unique id']})`);
 
         let newPessoa;
         try {
@@ -87,23 +85,19 @@ export class ImportEmpresasUseCase {
           };
 
           if (existingPessoa) {
-            console.log(`[DEBUG IMPORT-EMPRESAS] Updating existing pessoa with ID: ${existingPessoa.id}`);
             newPessoa = await this.prisma.pessoa.update({
               where: { id: existingPessoa.id },
               data,
             });
             results.push({ name: oldEmpresa.nome, status: 'updated', newPessoaId: newPessoa.id });
           } else {
-            console.log(`[DEBUG IMPORT-EMPRESAS] Creating new pessoa.`);
             newPessoa = await this.prisma.pessoa.create({
               data,
             });
             results.push({ name: oldEmpresa.nome, status: 'created', newPessoaId: newPessoa.id });
           }
         } catch (error: any) {
-          console.error(`[ERROR IMPORT-EMPRESAS] Failed to upsert ${oldEmpresa.nome}:`, error);
           if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
-            console.warn(`[WARN IMPORT-EMPRESAS] Duplicate email for ${oldEmpresa.nome}. Retrying with null email.`);
             try {
               const data = {
                 organizationId,
@@ -126,7 +120,6 @@ export class ImportEmpresasUseCase {
               newPessoa = await this.prisma.pessoa.create({ data });
               results.push({ name: oldEmpresa.nome, status: 'created_with_null_email', newPessoaId: newPessoa.id });
             } catch (retryError) {
-              console.error(`[ERROR IMPORT-EMPRESAS] Failed to create ${oldEmpresa.nome} even with null email:`, retryError);
               results.push({ name: oldEmpresa.nome, status: 'failed', reason: retryError.message });
             }
           } else {
@@ -163,7 +156,6 @@ export class ImportEmpresasUseCase {
         // Adicione lógica para Funcionário se houver uma tag correspondente
         // Exemplo: if (tags.includes('Funcionário')) { ... }
       } catch (error) {
-        console.error(`Erro ao importar empresa ${oldEmpresa.nome}:`, error.message);
         results.push({ name: oldEmpresa.nome, status: 'failed', reason: error.message });
       }
     }

@@ -366,7 +366,8 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
               entity={{ type: 'transacao', id: initialData.id }}
               onMediaUploadSuccess={(media) => {
                 setUploadedMedia((prev) => [...prev, media]);
-                form.setValue('mediaIds', [...(form.getValues('mediaIds') || []), media.id]);
+                const currentMediaIds = form.getValues('mediaIds') || [];
+                form.setValue('mediaIds', [...currentMediaIds, media.id], { shouldDirty: true, shouldTouch: true, shouldValidate: true });
               }}
             />
           )}

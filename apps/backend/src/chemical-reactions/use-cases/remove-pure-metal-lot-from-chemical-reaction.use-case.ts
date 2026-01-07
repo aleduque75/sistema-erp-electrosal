@@ -44,8 +44,6 @@ export class RemovePureMetalLotFromChemicalReactionUseCase {
     const auUsedGrams = lots.reduce((total, lot) => total + (lot ? lot.props.initialGrams : 0), 0);
     chemicalReaction.props.inputGoldGrams = auUsedGrams;
 
-    console.log("Reaction before save (remove):", chemicalReaction);
-
     await this.chemicalReactionRepository.save(chemicalReaction);
   }
 }

@@ -15,7 +15,9 @@ import { MediaService } from './media.service';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { MediaResponseDto } from './dtos/media.response.dto';
+import { AuthGuard } from '@nestjs/passport';
 
+@UseGuards(AuthGuard('jwt'))
 @Controller('media')
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}

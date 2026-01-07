@@ -27,9 +27,6 @@ export class AdjustSaleUseCase {
       // - Update sale record with profit/loss
       // - Create metal transaction for the difference
 
-      console.log('Adjustment logic to be implemented for sale:', sale);
-      console.log('With adjustments:', adjustSaleDto);
-
     });
   }
 }

@@ -35,7 +35,6 @@ async function preprocessSales() {
       const clienteExternalId = empresaExternalIdMap.get(clienteName);
 
       if (!clienteExternalId) {
-        console.warn(`ExternalId para o cliente "${clienteName}" não encontrado. Venda ${sale['unique id']} será importada sem externalId de cliente.`);
         // Ou você pode optar por lançar um erro ou pular a venda
       }
 
@@ -46,10 +45,7 @@ async function preprocessSales() {
     });
 
     await fs.writeFile(outputFilePath, JSON.stringify(processedSales, null, 2), 'utf8');
-    console.log(`Arquivo pré-processado salvo em: ${outputFilePath}`);
-    console.log(`Total de vendas processadas: ${processedSales.length}`);
   } catch (error) {
-    console.error('Erro ao pré-processar vendas:', error);
   }
 }
 

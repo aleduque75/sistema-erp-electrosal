@@ -5,14 +5,26 @@ import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
+import Link from "next/link";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { MetalCredit } from "@sistema-erp-electrosal/core";
 import { MetalCreditWithUsageDto } from "@/types/metal-credit-with-usage.dto";
 import { Button } from "@/components/ui/button";
-import { EyeIcon } from "lucide-react";
 import { MetalCreditDetailsModal } from "@/components/metal-credits/MetalCreditDetailsModal";
+import { PayWithCashModal } from "@/components/metal-credits/PayWithCashModal";
+import { EditMetalCreditModal } from "@/components/metal-credits/EditMetalCreditModal";
 
 const formatGrams = (value?: number) => {
   return new Intl.NumberFormat("pt-BR", {
@@ -30,14 +42,15 @@ export default function CreditosClientesPage() {
   const { user, loading } = useAuth();
   const [credits, setCredits] = useState<MetalCreditWithUsageDto[]>([]);
   const [isFetching, setIsFetching] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [isPayWithCashModalOpen, setPayWithCashModalOpen] = useState(false);
+  const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedCredit, setSelectedCredit] = useState<MetalCreditWithUsageDto | null>(null);
 
   const fetchData = async () => {
     setIsFetching(true);
     try {
       const creditsResponse = await api.get<MetalCreditWithUsageDto[]>("/metal-credits");
-      console.log("[DEBUG] Raw credits data from backend:", creditsResponse.data);
       setCredits(creditsResponse.data);
     } catch (err) {
       toast.error("Falha ao carregar dados.");
@@ -52,7 +65,17 @@ export default function CreditosClientesPage() {
 
   const handleViewDetails = (credit: MetalCreditWithUsageDto) => {
     setSelectedCredit(credit);
-    setIsModalOpen(true);
+    setDetailsModalOpen(true);
+  };
+
+  const handlePayWithCash = (credit: MetalCreditWithUsageDto) => {
+    setSelectedCredit(credit);
+    setPayWithCashModalOpen(true);
+  };
+
+  const handleEdit = (credit: MetalCreditWithUsageDto) => {
+    setSelectedCredit(credit);
+    setEditModalOpen(true);
   };
 
   const columns: ColumnDef<MetalCreditWithUsageDto>[] = [
@@ -64,7 +87,7 @@ export default function CreditosClientesPage() {
       },
     },
     {
-      accessorKey: "metalType", 
+      accessorKey: "metalType",
       header: "Tipo de Metal",
       cell: ({ row }) => {
         return row.original.metalType;
@@ -86,13 +109,33 @@ export default function CreditosClientesPage() {
       id: "actions",
       header: "Ações",
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleViewDetails(row.original)}
-        >
-          <EyeIcon className="h-4 w-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Abrir menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleViewDetails(row.original)}>
+              Visualizar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Pagar</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem asChild>
+                  <Link href="/metal-payments/pay-client">Pagar com Metal</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handlePayWithCash(row.original)}>
+                  Pagar com Dinheiro
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
@@ -124,8 +167,20 @@ export default function CreditosClientesPage() {
       </Card>
 
       <MetalCreditDetailsModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isDetailsModalOpen}
+        onClose={() => setDetailsModalOpen(false)}
+        credit={selectedCredit}
+      />
+
+      <PayWithCashModal
+        isOpen={isPayWithCashModalOpen}
+        onClose={() => setPayWithCashModalOpen(false)}
+        credit={selectedCredit}
+      />
+
+      <EditMetalCreditModal
+        isOpen={isEditModalOpen}
+        onClose={() => setEditModalOpen(false)}
         credit={selectedCredit}
       />
     </>

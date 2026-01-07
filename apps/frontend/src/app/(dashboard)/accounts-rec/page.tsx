@@ -235,11 +235,13 @@ export default function AccountsRecPage() {
 
         {/* Modal para Registrar Recebimento */}
         <Dialog open={!!accountToReceive} onOpenChange={(isOpen) => !isOpen && setAccountToReceive(null)}>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Registrar Recebimento</DialogTitle>
                 </DialogHeader>
-                {accountToReceive && <ReceivePaymentForm accountRec={accountToReceive} onSave={handleSavePayment} />}
+                <div className="overflow-y-auto flex-1 pr-2">
+                    {accountToReceive && <ReceivePaymentForm accountRec={accountToReceive} onSave={handleSavePayment} />}
+                </div>
             </DialogContent>
         </Dialog>
 

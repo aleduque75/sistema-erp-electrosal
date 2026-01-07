@@ -102,6 +102,7 @@ export class CreateSaleUseCase {
         quantity: item.quantity,
         price: itemPrice,
         costPriceAtSale: itemTotalCost.dividedBy(itemQuantity),
+        laborPercentage: item.laborPercentage,
         saleItemLots: {
           createMany: {
             data: saleItemLotsToCreate,

@@ -44,12 +44,35 @@ export class ContasCorrentesController {
   getExtrato(
     @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
-    @Query('startDate') startDateString: string,
-    @Query('endDate') endDateString: string,
+    @Query('startDate') startDateString?: string,
+    @Query('endDate') endDateString?: string,
   ) {
-    const startDate = new Date(startDateString);
-    const endDate = new Date(endDateString);
+    let startDate: Date;
+    let endDate: Date;
+
+    if (startDateString) {
+      startDate = new Date(startDateString);
+    } else {
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    if (endDateString) {
+      endDate = new Date(endDateString);
+    } else {
+      endDate = new Date();
+    }
+    
     endDate.setHours(23, 59, 59, 999); // Ajusta para o final do dia
+
+    // Validação para evitar 'Invalid Date'
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+    }
+
     return this.service.getExtrato(organizationId, id, startDate, endDate);
   }
 

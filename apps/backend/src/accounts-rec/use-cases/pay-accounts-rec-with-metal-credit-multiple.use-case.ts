@@ -160,7 +160,7 @@ export class PayAccountsRecWithMetalCreditMultipleUseCase {
         const debitEntry = MetalAccountEntry.create({
           metalAccountId: customerMetalAccount.id,
           type: MetalAccountEntryType.DEBIT,
-          grams: gramsToApply,
+          grams: gramsToApply.negated().toDecimalPlaces(4).toNumber(), // CORRIGIDO: Agora é negativo
           date: paymentDate,
           sourceId: new UniqueEntityID(accountsRec.saleId!),
           description: `Pagamento da Venda #${accountsRec.sale?.orderNumber} com crédito`,
@@ -201,9 +201,11 @@ export class PayAccountsRecWithMetalCreditMultipleUseCase {
 
       const isFullyPaid = isGoldBased
         ? newGoldAmountPaid.greaterThanOrEqualTo(
-            new Decimal(accountsRec.goldAmount!),
-          )
-        : newAmountPaid.greaterThanOrEqualTo(new Decimal(accountsRec.amount));
+            new Decimal(accountsRec.goldAmount!).minus(0.0001),
+          ) // Tolerância
+        : newAmountPaid.greaterThanOrEqualTo(
+            new Decimal(accountsRec.amount).minus(0.01),
+          ); // Tolerância
 
       await tx.accountRec.update({
         where: { id: accountsRecId },

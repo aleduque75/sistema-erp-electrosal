@@ -3,7 +3,6 @@ import { Media, MediaProps, UniqueEntityID } from '@sistema-erp-electrosal/core'
 
 export class MediaMapper {
   public static toDomain(prismaMedia: PrismaMedia): Media {
-    console.log("Mapeando prismaMedia com path:", prismaMedia.path); // Adicionar este log
     const props: MediaProps = {
       filename: prismaMedia.filename,
       mimetype: prismaMedia.mimetype,

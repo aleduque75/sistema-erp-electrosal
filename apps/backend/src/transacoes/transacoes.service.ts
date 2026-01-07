@@ -19,9 +19,6 @@ export class TransacoesService {
     dto: GenericBulkUpdateTransacaoDto,
     organizationId: string,
   ): Promise<{ count: number }> {
-    console.log('--- TransacoesService.bulkUpdate ---');
-    console.log('Received DTO:', dto);
-
     const { transactionIds, contaContabilId, fornecedorId } = dto;
 
     const dataToUpdate: { contaContabilId?: string; fornecedorId?: string | null } = {};
@@ -35,10 +32,7 @@ export class TransacoesService {
       dataToUpdate.fornecedorId = null;
     }
 
-    console.log('Constructed dataToUpdate:', dataToUpdate);
-
     if (Object.keys(dataToUpdate).length === 0) {
-      console.log('Nothing to update, returning count 0.');
       return { count: 0 }; // Nothing to update
     }
 
@@ -52,7 +46,6 @@ export class TransacoesService {
       data: dataToUpdate,
     });
 
-    console.log('prisma.transacao.updateMany result:', result);
     return result;
   }
 
@@ -196,9 +189,6 @@ export class TransacoesService {
     organizationId: string,
     tx?: any,
   ): Promise<Transacao> {
-    console.log('--- TransacoesService.create ---');
-    console.log('Received data:', data);
-
     return this.prisma.$transaction(async (prisma) => {
       const { valor, goldAmount, mediaIds, fornecedorId, tipo, ...restData } = data;
 
@@ -213,10 +203,8 @@ export class TransacoesService {
           moeda: 'BRL',
         },
       });
-      console.log('Created Transacao:', newTransacao.id);
 
       if (tipo === 'DEBITO' && fornecedorId) {
-        console.log('Condition met: Creating AccountPay...');
         const newAccountPay = await prisma.accountPay.create({
           data: {
             organizationId,
@@ -230,10 +218,6 @@ export class TransacoesService {
             transacaoId: newTransacao.id,
           },
         });
-        console.log('Created AccountPay:', newAccountPay.id);
-      } else {
-        console.log('Condition NOT met: Skipping AccountPay creation.');
-        console.log(`Tipo: ${tipo}, FornecedorID: ${fornecedorId}`);
       }
 
       if (mediaIds && mediaIds.length > 0) {

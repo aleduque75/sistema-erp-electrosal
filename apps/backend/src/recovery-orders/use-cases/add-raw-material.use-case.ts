@@ -58,7 +58,6 @@ export class AddRawMaterialToRecoveryOrderUseCase {
 
       const cost = new Decimal(rawMaterial.cost).times(dto.quantity);
       const goldEquivalentCost = cost.dividedBy(quotation.buyPrice);
-      console.log('Calculated goldEquivalentCost:', goldEquivalentCost.toNumber());
 
       await tx.rawMaterialUsed.create({
         data: {

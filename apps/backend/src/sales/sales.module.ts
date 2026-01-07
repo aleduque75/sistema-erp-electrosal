@@ -20,6 +20,7 @@ import { CalculateSaleAdjustmentUseCase } from './use-cases/calculate-sale-adjus
 import { BackfillSaleGoldValueUseCase } from './use-cases/backfill-sale-gold-value.use-case';
 import { QuotationsModule } from '../quotations/quotations.module';
 import { BackfillInstallmentsUseCase } from './use-cases/backfill-installments.use-case';
+import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
 
 import { ProcessClientMetalPaymentToSupplierUseCase } from './use-cases/process-client-metal-payment-to-supplier.use-case'; // New Use Case
 import { ReceiveInstallmentPaymentUseCase } from './use-cases/receive-installment-payment.use-case';
@@ -30,45 +31,31 @@ import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositorie
 @Module({
   imports: [
     PrismaModule,
-    PessoaModule,
-    ProductsModule,
     SettingsModule,
+    ProductsModule,
+    PessoaModule,
     QuotationsModule,
-
+    MetalAccountsModule,
   ],
   controllers: [SalesController],
-  exports: [SalesService, CalculateSaleAdjustmentUseCase, BackfillSaleGoldValueUseCase, BackfillInstallmentsUseCase], // Adicionado exports
   providers: [
     SalesService,
     CreateSaleUseCase,
+    EditSaleUseCase,
     ConfirmSaleUseCase,
-    BulkConfirmSalesUseCase,
     CancelSaleUseCase,
     FinalizeSaleUseCase,
-    RevertSaleUseCase,
+    BulkConfirmSalesUseCase,
     LinkLotsToSaleItemUseCase,
-    EditSaleUseCase,
-    ReleaseToPcpUseCase,
-    ReleaseForPaymentUseCase,
+    RevertSaleUseCase,
     SeparateSaleUseCase,
-    CalculateSaleAdjustmentUseCase,
+    ReleaseToPcpUseCase,
     BackfillSaleGoldValueUseCase,
-    BackfillInstallmentsUseCase, // Add new use case
-    
-    ProcessClientMetalPaymentToSupplierUseCase, // New Use Case
+    BackfillInstallmentsUseCase,
+    CalculateSaleAdjustmentUseCase,
     ReceiveInstallmentPaymentUseCase,
-    {
-      provide: 'IMetalAccountRepository',
-      useClass: PrismaMetalAccountRepository,
-    },
-    {
-      provide: 'IMetalAccountEntryRepository',
-      useClass: PrismaMetalAccountEntryRepository,
-    },
+    ProcessClientMetalPaymentToSupplierUseCase,
   ],
+  exports: [SalesService, CreateSaleUseCase, ConfirmSaleUseCase, CalculateSaleAdjustmentUseCase],
 })
-export class SalesModule implements OnModuleInit {
-  onModuleInit() {
-    console.log('[DEBUG MODULE] SalesModule inicializado.');
-  }
-}
+export class SalesModule {}

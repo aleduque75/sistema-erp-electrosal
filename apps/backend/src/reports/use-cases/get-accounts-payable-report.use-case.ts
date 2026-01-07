@@ -8,8 +8,6 @@ export class GetAccountsPayableReportUseCase {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(query: GetAccountsPayableReportQueryDto) {
-    console.log('--- GetAccountsPayableReportUseCase.execute ---');
-    console.log('Received query filters:', query);
     const { supplierId, startDate, endDate } = query;
 
     const where: Prisma.AccountPayWhereInput = {};
@@ -30,7 +28,6 @@ export class GetAccountsPayableReportUseCase {
         where.dueDate.lte = new Date(endDate);
       }
     }
-    console.log('Constructed where clause:', JSON.stringify(where, null, 2));
 
     const accountsPayable = await this.prisma.accountPay.findMany({
       where,
@@ -56,7 +53,6 @@ export class GetAccountsPayableReportUseCase {
       },
     });
 
-    console.log(`Found ${accountsPayable.length} AccountPay records.`);
 
     let runningBalance = 0;
     let totalBilled = 0;

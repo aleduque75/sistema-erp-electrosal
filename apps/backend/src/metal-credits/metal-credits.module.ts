@@ -3,9 +3,15 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaMetalCreditRepository } from './repositories/prisma-metal-credit.repository';
 import { MetalCreditsController } from './metal-credits.controller';
 import { MetalCreditsService } from './metal-credits.service';
+import { PayMetalCreditWithCashUseCase } from './use-cases/pay-metal-credit-with-cash.use-case';
+import { PayWithClientCreditUseCase } from './use-cases/pay-with-client-credit.use-case';
+import { TransacoesModule } from '../transacoes/transacoes.module';
+import { QuotationsModule } from '../quotations/quotations.module';
+import { SettingsModule } from '../settings/settings.module';
+import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, TransacoesModule, QuotationsModule, SettingsModule, MetalAccountsModule],
   controllers: [MetalCreditsController],
   providers: [
     {
@@ -13,7 +19,9 @@ import { MetalCreditsService } from './metal-credits.service';
       useClass: PrismaMetalCreditRepository,
     },
     MetalCreditsService,
+    PayMetalCreditWithCashUseCase,
+    PayWithClientCreditUseCase,
   ],
-  exports: ['IMetalCreditRepository'],
+  exports: ['IMetalCreditRepository', MetalCreditsService],
 })
 export class MetalCreditsModule {}

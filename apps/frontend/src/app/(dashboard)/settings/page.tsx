@@ -28,8 +28,9 @@ interface UserSettings {
   defaultCaixaContaId?: string | null;
   defaultReceitaContaId?: string | null;
   defaultDespesaContaId?: string | null;
-  metalStockAccountId?: string | null; // Novo campo
-  productionCostAccountId?: string | null; // Novo campo
+  metalStockAccountId?: string | null;
+  productionCostAccountId?: string | null;
+  metalCreditPayableAccountId?: string | null;
 }
 interface ContaContabil {
   id: string;
@@ -43,8 +44,9 @@ const settingsFormSchema = z.object({
   defaultCaixaContaId: z.string().nullable().optional(),
   defaultReceitaContaId: z.string().nullable().optional(),
   defaultDespesaContaId: z.string().nullable().optional(),
-  metalStockAccountId: z.string().nullable().optional(), // Novo campo
-  productionCostAccountId: z.string().nullable().optional(), // Novo campo
+  metalStockAccountId: z.string().nullable().optional(),
+  productionCostAccountId: z.string().nullable().optional(),
+  metalCreditPayableAccountId: z.string().nullable().optional(),
 });
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
 
@@ -90,6 +92,7 @@ export default function SettingsPage() {
         defaultDespesaContaId: settings.defaultDespesaContaId,
         metalStockAccountId: settings.metalStockAccountId,
         productionCostAccountId: settings.productionCostAccountId,
+        metalCreditPayableAccountId: settings.metalCreditPayableAccountId,
       });
     }
   }, [settings, form]);
@@ -150,6 +153,14 @@ export default function SettingsPage() {
   const productionCostOptions: ComboboxOption[] =
     allAccounts
       ?.filter((acc) => acc.tipo === "DESPESA" || acc.tipo === "RECEITA") // Custo de produção pode ser despesa ou receita (contrapartida)
+      .map((acc) => ({
+        value: acc.id,
+        label: `${acc.codigo} - ${acc.nome}`,
+      })) || [];
+
+  const metalCreditPayableOptions: ComboboxOption[] =
+    allAccounts
+      ?.filter((acc) => acc.tipo === "PASSIVO") // Dívida com cliente por metal é um passivo
       .map((acc) => ({
         value: acc.id,
         label: `${acc.codigo} - ${acc.nome}`,
@@ -263,6 +274,24 @@ export default function SettingsPage() {
                 />
                 <p className="text-sm text-muted-foreground">
                   Conta contábil para a contrapartida do valor do metal recuperado.
+                </p>
+              </div>
+            )}
+          />
+          <Controller
+            name="metalCreditPayableAccountId"
+            control={form.control}
+            render={({ field }) => (
+              <div className="space-y-2">
+                <Label>Conta de Crédito de Metal a Pagar</Label>
+                <Combobox
+                  value={field.value ?? undefined}
+                  onChange={field.onChange}
+                  options={metalCreditPayableOptions}
+                  placeholder="Selecione a conta de crédito de metal a pagar..."
+                />
+                <p className="text-sm text-muted-foreground">
+                  Conta para registrar a dívida com o cliente ao pagar um crédito de metal com dinheiro.
                 </p>
               </div>
             )}

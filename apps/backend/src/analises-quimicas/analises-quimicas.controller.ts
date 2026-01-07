@@ -10,12 +10,14 @@ import {
 	Patch,
 	Res,
 	Req,
+	HttpCode,
+	HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator'; // Import CurrentUser
 
-import { RegistrarNovaAnaliseDto, LancarResultadoAnaliseDto, AnaliseQuimicaResponseDto } from '@sistema-erp-electrosal/core';
+import { RegistrarNovaAnaliseDto, LancarResultadoAnaliseDto, AnaliseQuimicaResponseDto, UpdateAnaliseQuimicaDto } from '@sistema-erp-electrosal/core';
 
 // Use Cases e Commands
 import { RegistrarNovaAnaliseUseCase } from './use-cases/registrar-nova-analise.use-case';
@@ -28,6 +30,7 @@ import { GerarPdfAnaliseUseCase } from './use-cases/gerar-pdf-analise.use-case';
 import { AprovarAnaliseUseCase } from './use-cases/aprovar-analise.use-case';
 import { ReprovarAnaliseUseCase } from './use-cases/reprovar-analise.use-case';
 import { RefazerAnaliseUseCase } from './use-cases/refazer-analise.use-case';
+import { UpdateAnaliseQuimicaUseCase } from './use-cases/update-analise-quimica.use-case';
 import { AnaliseQuimicaWithClientNameDto } from './dtos/analise-quimica-with-client-name.dto'; // Import the new DTO
 import { RevertAnaliseQuimicaToPendingApprovalUseCase } from './use-cases/revert-analise-quimica-to-pending-approval.use-case'; // Import the new use case
 
@@ -46,6 +49,7 @@ export class AnalisesQuimicasController {
 			private readonly reprovarAnaliseUseCase: ReprovarAnaliseUseCase,
 			private readonly refazerAnaliseUseCase: RefazerAnaliseUseCase,
 			private readonly revertAnaliseQuimicaToPendingApprovalUseCase: RevertAnaliseQuimicaToPendingApprovalUseCase, // Inject the new use case
+			private readonly updateAnaliseQuimicaUseCase: UpdateAnaliseQuimicaUseCase,
 		) {}
 
 		@Post()
@@ -77,6 +81,17 @@ export class AnalisesQuimicasController {
 		const analise = await this.buscarAnalisePorIdUseCase.execute(id, organizationId);
 		return analise; // Return directly as use case already returns DTO
 	}
+
+	@Patch(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+	async update(
+        @Param('id', new ParseUUIDPipe()) id: string,
+        @Body() dto: UpdateAnaliseQuimicaDto,
+        @CurrentUser('orgId') organizationId: string,
+    ) {
+        const command = { id, dto, organizationId };
+        await this.updateAnaliseQuimicaUseCase.execute(command);
+    }
 
 	@Get(':id/pdf')
 	async gerarPdf(

@@ -24,7 +24,7 @@ export { TipoMetal } from './domain/enums/tipo-metal.enum';
 export { StatusAnaliseQuimica } from './domain/enums/status-analise-quimica.enum';
 export * from './domain/analises-quimicas/analise-quimica.entity';
 export * from './domain/analises-quimicas/dtos/analise-quimica.response.dto';
-export * from './domain/analises-quimicas/dtos/atualizar-analise.dto'
+export * from './domain/analises-quimicas/dtos/update-analise-quimica.dto';
 export * from './domain/analises-quimicas/dtos/criar-analise-quimica.dto';
 export * from './domain/analises-quimicas/dtos/lancar-resultado-analise.dto';
 export * from './domain/analises-quimicas/dtos/listar-analises.query.dto';

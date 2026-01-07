@@ -1,4 +1,3 @@
-
 import { PrismaClient } from '@prisma/client';
 
 async function main() {
@@ -10,13 +9,10 @@ async function main() {
       },
     });
     if (product) {
-      console.log('Produto encontrado:');
       console.table([product]);
     } else {
-      console.log('Produto "El Sal 68%" não encontrado.');
     }
   } catch (error) {
-    console.error('Erro ao buscar produto:', error);
   } finally {
     await prisma.$disconnect();
   }

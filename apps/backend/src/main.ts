@@ -16,12 +16,12 @@ config();
   return this.toString();
 };
 
-import { LogLevel } from '@nestjs/common'; // ADDED
+import { LogLevel } from '@nestjs/common'; 
 
 async function bootstrap() {
   process.env.TZ = 'UTC'; // Garante que o Node.js use UTC
   const app = await NestFactory.create(AppModule, {
-    logger: ['log', 'error', 'warn', 'debug'] as LogLevel[], // ADDED to enable debug logs
+    logger: ['log', 'error', 'warn', 'debug'] as LogLevel[], 
   });
 
   app.setGlobalPrefix('api');

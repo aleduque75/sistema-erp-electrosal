@@ -105,12 +105,14 @@ export class JsonImportsService {
     return parseFloat(value.replace(',', '.'));
   }
 
-  private parseDate(value: string): Date {
+  private parseDate(value: string): Date | null {
+    if (!value) return null; 
+
     const date = new Date(value);
     if (!isNaN(date.getTime())) {
       return date;
     }
-    return new Date();
+    return null;
   }
 
   async deleteAllSales() {
@@ -383,6 +385,10 @@ export class JsonImportsService {
         const data = this.parseDate(
           financa.dataPagamento || financa.dataVencimento,
         );
+
+        if (!data) {
+          continue;
+        }
         const dateString = data.toISOString().split('T')[0]; // Formato YYYY-MM-DD
         const cotacao = this.parseDecimal(financa.cotacao);
 
@@ -544,6 +550,15 @@ export class JsonImportsService {
           }
           
           const saleDate = this.parseDate(pedido.data);
+
+          if (!saleDate) {
+            this.logger.warn(
+              `Data do pedido "${pedido.data}" inválida para o pedido ${orderNumber}. Pulando.`,
+            );
+            skippedCount++;
+            continue;
+          }
+
           const dateString = saleDate.toISOString().split('T')[0];
           const pedidoCotacao = this.parseDecimal(pedido.cotacao);
           const goldPrice =
@@ -630,7 +645,10 @@ export class JsonImportsService {
                     `Receber de ${pessoa.name} (Duplicata) venda #${orderNumber}`,
                   amount: duplicataBRLValue.toDecimalPlaces(2),
                   goldAmount: duplicataGoldAmount.toDecimalPlaces(4),
-                  dueDate: this.parseDate(duplicata.dataVencimento),
+                  dueDate:
+                    this.parseDate(duplicata.dataVencimento) || saleDate,
+                  createdAt:
+                    this.parseDate(duplicata.dataVencimento) || saleDate,
                   received: isReceived,
                   receivedAt:
                     isReceived
@@ -652,6 +670,14 @@ export class JsonImportsService {
                 );
                 if (financasForDuplicata && financasForDuplicata.length > 0) {
                   for (const financa of financasForDuplicata) {
+                    const dataPagamento = this.parseDate(financa.dataPagamento);
+                    if (!dataPagamento) {
+                      this.logger.warn(
+                        `Data de pagamento inválida para a financa da duplicata ${duplicata.pedidoDuplicata}. Pulando criação de transação.`,
+                      );
+                      continue;
+                    }
+
                     const contaCorrenteName = String(financa.contaCorrente || '')
                       .trim()
                       .toLowerCase();
@@ -668,7 +694,7 @@ export class JsonImportsService {
                         descricao:
                           financa.descricao ||
                           `Pagamento para pedido ${orderNumber}`,
-                        dataHora: this.parseDate(financa.dataPagamento),
+                        dataHora: dataPagamento,
                         contaContabilId: receitaConta.id,
                         contaCorrenteId: contaCorrenteId,
                         accountRecId: newAccountRec.id,
@@ -732,6 +758,13 @@ export class JsonImportsService {
 
         // Pula se já foi tratado como pagamento de venda
         if (financasByDuplicataMap.has(duplicataNumber)) {
+          continue;
+        }
+
+        if (!dataTransacao) {
+          this.logger.warn(
+            `Data de transação inválida para o registro financeiro ${financaId}. Pulando.`,
+          );
           continue;
         }
 
@@ -799,12 +832,15 @@ export class JsonImportsService {
               continue;
             }
 
+            const dueDate =
+              this.parseDate(financa.dataVencimento) || dataTransacao;
+
             const newAccountPay = await this.prisma.accountPay.create({
               data: {
                 organizationId: organizationId,
                 description: financa.descricao || 'Despesa importada',
                 amount: new Decimal(valorPago),
-                dueDate: this.parseDate(financa.dataVencimento),
+                dueDate: dueDate,
                 paid: financa.baixaPagamento === 'sim',
                 paidAt:
                   financa.baixaPagamento === 'sim'

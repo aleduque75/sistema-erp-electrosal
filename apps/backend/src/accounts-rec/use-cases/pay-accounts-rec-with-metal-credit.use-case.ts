@@ -100,7 +100,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
         const accountsRecGoldAmount = new Decimal(accountsRec.goldAmount!).toDecimalPlaces(4);
         const newGoldAmountPaidGold = newGoldAmountPaid.toDecimalPlaces(4);
 
-        isFullyPaid = newGoldAmountPaidGold.greaterThanOrEqualTo(accountsRecGoldAmount);
+        isFullyPaid = newGoldAmountPaidGold.greaterThanOrEqualTo(accountsRecGoldAmount.minus(0.0001)); // Tolerância para comparação
 
         amountToApplyInBRL = gramsToApply.times(finalBuyPrice);
         this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] amountToApplyInBRL (gold-based): ${amountToApplyInBRL}, isFullyPaid: ${isFullyPaid}`);
@@ -109,8 +109,8 @@ export class PayAccountsRecWithMetalCreditUseCase {
         await tx.accountRec.update({
           where: { id: accountsRecId },
           data: {
-            goldAmountPaid: newGoldAmountPaid.toDecimalPlaces(4),
-            amountPaid: new Decimal(accountsRec.amountPaid).plus(amountToApplyInBRL).toDecimalPlaces(2),
+            goldAmountPaid: newGoldAmountPaid.toDecimalPlaces(4).toNumber(),
+            amountPaid: new Decimal(accountsRec.amountPaid).plus(amountToApplyInBRL).toDecimalPlaces(2).toNumber(),
             received: isFullyPaid,
             receivedAt: isFullyPaid ? paymentDate : null,
           },
@@ -143,14 +143,14 @@ export class PayAccountsRecWithMetalCreditUseCase {
         const accountsRecAmountBRL = new Decimal(accountsRec.amount).toDecimalPlaces(2);
         const newAmountPaidBRL = newAmountPaid.toDecimalPlaces(2);
 
-        isFullyPaid = newAmountPaidBRL.greaterThanOrEqualTo(accountsRecAmountBRL);
+        isFullyPaid = newAmountPaidBRL.greaterThanOrEqualTo(accountsRecAmountBRL.minus(0.01)); // Tolerância para comparação
         this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] newAmountPaid: ${newAmountPaid}, isFullyPaid: ${isFullyPaid}`);
 
         // Update AccountRec BRL fields
         await tx.accountRec.update({
           where: { id: accountsRecId },
           data: {
-            amountPaid: newAmountPaid.toDecimalPlaces(2),
+            amountPaid: newAmountPaid.toDecimalPlaces(2).toNumber(),
             received: isFullyPaid,
             receivedAt: isFullyPaid ? paymentDate : null,
           },
@@ -180,7 +180,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
       const debitEntry = MetalAccountEntry.create({
         metalAccountId: customerMetalAccount.id,
         type: MetalAccountEntryType.DEBIT,
-        grams: gramsToApply,
+        grams: gramsToApply.negated().toDecimalPlaces(4).toNumber(), // CORRIGIDO: Agora é negativo
         date: paymentDate,
         sourceId: new UniqueEntityID(accountsRec.saleId),
         description: `Débito referente ao pagamento da Venda #${accountsRec.sale?.orderNumber} com crédito de metal`,
@@ -241,4 +241,3 @@ export class PayAccountsRecWithMetalCreditUseCase {
     });
   }
 }
-  

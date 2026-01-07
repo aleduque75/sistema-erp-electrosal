@@ -47,8 +47,9 @@ export interface Sale {
     productId: string;
     quantity: number;
     price: number;
-    product: { name: string };
+    product: { name: string; goldValue?: number };
     inventoryLotId?: string;
+    laborPercentage?: number;
   }[];
   installments?: SaleInstallment[];
   paymentTerm?: PaymentTerm;

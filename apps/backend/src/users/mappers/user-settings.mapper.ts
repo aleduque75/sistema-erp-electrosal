@@ -9,10 +9,9 @@ export class UserSettingsMapper {
         defaultReceitaContaId: raw.defaultReceitaContaId ?? undefined,
         defaultCaixaContaId: raw.defaultCaixaContaId ?? undefined,
         defaultDespesaContaId: raw.defaultDespesaContaId ?? undefined,
-        metalStockAccountId: raw.metalStockAccountId ?? undefined, // ADDED
-        productionCostAccountId: raw.productionCostAccountId ?? undefined, // ADDED
-        // createdAt and updatedAt are not in Prisma model for UserSettings,
-        // but are in our DDD entity. We can omit them or add default values if needed.
+        metalStockAccountId: raw.metalStockAccountId ?? undefined,
+        productionCostAccountId: raw.productionCostAccountId ?? undefined,
+        metalCreditPayableAccountId: raw.metalCreditPayableAccountId ?? undefined,
       },
       raw.id ? UniqueEntityID.create(raw.id) : undefined,
     );
@@ -25,8 +24,9 @@ export class UserSettingsMapper {
       defaultReceitaContaId: userSettings.defaultReceitaContaId ?? null,
       defaultCaixaContaId: userSettings.defaultCaixaContaId ?? null,
       defaultDespesaContaId: userSettings.defaultDespesaContaId ?? null,
-      metalStockAccountId: userSettings.metalStockAccountId ?? null, // ADDED
-      productionCostAccountId: userSettings.productionCostAccountId ?? null, // ADDED
+      metalStockAccountId: userSettings.metalStockAccountId ?? null,
+      productionCostAccountId: userSettings.productionCostAccountId ?? null,
+      metalCreditPayableAccountId: userSettings.metalCreditPayableAccountId ?? null,
     } as PrismaUserSettings; // Cast to PrismaUserSettings to satisfy type checking
   }
 }

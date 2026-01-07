@@ -11,6 +11,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { TipoMetal } from '@prisma/client';
 
 class FinancialPaymentDto {
   @IsUUID()
@@ -46,6 +47,20 @@ class MetalPaymentDto {
   purity: number;
 }
 
+export class TransferToOtherMetalCreditDto {
+  @IsString()
+  @IsNotEmpty()
+  metalCreditId: string; // O metalCreditId do *outro* cliente
+
+  @IsNumber()
+  @Min(0.000001)
+  grams: number; // A quantidade de gramas a ser transferida
+
+  @IsNumber()
+  @Min(0.01)
+  quotation: number; // A cotação usada para converter os gramas para BRL na transferência
+}
+
 export class HybridReceiveDto {
   @IsDateString()
   receivedAt: string;
@@ -78,4 +93,10 @@ export class HybridReceiveDto {
   @ValidateNested({ each: true })
   @Type(() => MetalPaymentDto)
   metalPayments?: MetalPaymentDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TransferToOtherMetalCreditDto)
+  transferToOtherMetalCredits?: TransferToOtherMetalCreditDto[]; // NOVO CAMPO
 }

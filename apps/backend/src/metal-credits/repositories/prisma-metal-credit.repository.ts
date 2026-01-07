@@ -65,11 +65,23 @@ export class PrismaMetalCreditRepository implements IMetalCreditRepository {
     return this.mapToDomain(dbMetalCredit);
   }
 
+  async update(
+    id: string,
+    data: Partial<MetalCredit>,
+    organizationId: string,
+  ): Promise<MetalCredit> {
+    const dbMetalCredit = await this.prisma.metalCredit.update({
+      where: { id, organizationId },
+      data,
+    });
+
+    return this.mapToDomain(dbMetalCredit);
+  }
+
   async findByClientId(
     clientId: string,
     organizationId: string,
   ): Promise<MetalCredit[]> {
-    console.log(`[DEBUG] findByClientId - clientId: ${clientId}, organizationId: ${organizationId}`);
     const dbMetalCredits = await this.prisma.metalCredit.findMany({
       where: {
         clientId,

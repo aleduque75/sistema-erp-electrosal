@@ -78,7 +78,6 @@ export class SalesController {
     @CurrentUser('id') userId: string,
     @Body() createSaleDto: CreateSaleDto,
   ) {
-    console.log('POST /api/sales endpoint hit!'); // Debug log
     const sale = await this.createSaleUseCase.execute(organizationId, userId, createSaleDto);
     return sale; // Returning raw sale object as SalePresenter is not found
   }

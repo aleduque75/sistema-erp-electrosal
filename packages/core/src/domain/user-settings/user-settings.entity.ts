@@ -7,8 +7,9 @@ export interface UserSettingsProps {
   defaultCaixaContaId?: string;
   defaultDespesaContaId?: string;
   defaultContasAPagarContaId?: string;
-  metalStockAccountId?: string; // ADDED
-  productionCostAccountId?: string; // ADDED
+  metalStockAccountId?: string;
+  productionCostAccountId?: string;
+  metalCreditPayableAccountId?: string;
   createdAt?: Date; // Not in schema, but good practice
   updatedAt?: Date; // Not in schema, but good practice
 }
@@ -56,6 +57,10 @@ export class UserSettings extends Entity<UserSettingsProps> {
 
   get productionCostAccountId(): string | undefined {
     return this.props.productionCostAccountId;
+  }
+
+  get metalCreditPayableAccountId(): string | undefined {
+    return this.props.metalCreditPayableAccountId;
   }
 
   get createdAt(): Date {

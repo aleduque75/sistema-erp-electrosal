@@ -21,4 +21,8 @@ export class UpdateSettingDto {
   @IsUUID()
   @IsOptional()
   productionCostAccountId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  metalCreditPayableAccountId?: string;
 }

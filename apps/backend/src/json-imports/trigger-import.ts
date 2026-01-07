@@ -1,4 +1,3 @@
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { ImportSalesUseCase } from './import-sales.use-case';
@@ -16,27 +15,20 @@ async function bootstrap() {
   const jsonDirectory = '/home/aleduque/Documentos/cursos/sistema-erp-electrosal/json-imports';
 
   try {
-    console.log('Iniciando importação de empresas...');
     const empresasResults = await importEmpresasUseCase.execute(organizationId, jsonDirectory);
-    console.log('Importação de empresas concluída:');
     console.table(empresasResults.filter(r => r.status === 'failed'));
     console.table(empresasResults.filter(r => r.status === 'created'));
     console.table(empresasResults.filter(r => r.status === 'updated'));
 
-    console.log('Iniciando importação de produtos...');
     const productsResults = await importProductsUseCase.execute(organizationId, jsonDirectory);
-    console.log('Importação de produtos concluída:');
     console.table(productsResults.filter(r => r.status === 'failed'));
     console.table(productsResults.filter(r => r.status === 'success'));
 
-    console.log('Iniciando importação de vendas...');
     const salesResults = await importSalesUseCase.execute(organizationId, userId, jsonDirectory);
-    console.log('Importação de vendas concluída:');
     console.table(salesResults.filter(r => r.status === 'failed'));
     console.table(salesResults.filter(r => r.status === 'success'));
 
   } catch (error) {
-    console.error('Erro durante a importação:', error);
   } finally {
     await app.close();
   }

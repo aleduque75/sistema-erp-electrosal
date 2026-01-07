@@ -103,12 +103,10 @@ export class ImportSalesUseCase {
     const salesFilePath = path.join(jsonDirectory, 'pedidos_com_externalId_cliente.json');
     const saleItemsFilePath = path.join(jsonDirectory, 'pedidoItens.json');
     const financeiroFilePath = path.join(jsonDirectory, 'financeiro.json'); // Adicionado
-    console.log(`[DEBUG ARQUIVO] Caminho do financeiro.json: ${financeiroFilePath}`);
 
     if (!fs.existsSync(salesFilePath) || !fs.existsSync(saleItemsFilePath) || !fs.existsSync(financeiroFilePath)) {
       throw new BadRequestException('Arquivos pedidos.json, pedidoItens.json ou financeiro.json não encontrados no diretório especificado.');
     }
-    console.log(`[DEBUG ARQUIVO] financeiro.json existe.`);
 
     const oldSales: OldSaleData[] = JSON.parse(fs.readFileSync(salesFilePath, 'utf8'));
     const oldSaleItems: OldSaleItemData[] = JSON.parse(fs.readFileSync(saleItemsFilePath, 'utf8'));
@@ -154,7 +152,6 @@ export class ImportSalesUseCase {
     }
 
 
-    console.log(`[DEBUG ARQUIVO] financeiro.json lido e parseado. Total de itens: ${oldFinanceiro.length}`);
 
     const cotacoesMap = new Map<string, number>();
     oldFinanceiro.forEach(item => {
@@ -162,17 +159,14 @@ export class ImportSalesUseCase {
       if (pedidoNumero && item.cotacao) {
         const cotacaoValue = this.parseNumber(item.cotacao);
         cotacoesMap.set(pedidoNumero, cotacaoValue);
-        console.log(`[DEBUG COTAÇÃO] Mapeando pedido ${pedidoNumero} com cotação ${cotacaoValue}`);
       }
     });
-    console.log(`[DEBUG COTAÇÃO] cotacoesMap finalizado. Tamanho: ${cotacoesMap.size}. Primeiras 5 entradas:`, Array.from(cotacoesMap.entries()).slice(0, 5));
 
     const results: { saleNumber: string; status: string; reason?: string; newSaleId?: string }[] = [];
 
     for (const oldSale of oldSales) {
       try {
         const clienteExternalId = oldSale.clienteExternalId?.trim();
-        console.log(`[DEBUG VENDA] Processando venda ${oldSale.numero}. Cliente: ${oldSale.cliente}, ExternalId Cliente: ${clienteExternalId}`);
         // 1. Buscar o cliente pelo externalId.
         const pessoa = await this.prisma.pessoa.findFirst({
           where: {
@@ -181,10 +175,8 @@ export class ImportSalesUseCase {
           },
         });
 
-        console.log('[DEBUG IMPORT-SALES] pessoa:', pessoa); // Add this line
 
         if (!pessoa) {
-          console.warn(`Cliente com externalId "${clienteExternalId}" (nome: "${oldSale.cliente}") não encontrado. Pulando venda ${oldSale.numero}.`);
           results.push({ saleNumber: oldSale.numero, status: 'skipped', reason: 'Cliente não encontrado' });
           continue;
         }
@@ -209,10 +201,8 @@ export class ImportSalesUseCase {
               let itemQuantity: number;
               if (oldItem.produto.trim().toLowerCase().includes('sal 68%')) {
                 itemQuantity = this.parseNumber(oldItem.quantidadeSal || oldItem.quantidade || '1');
-                console.log(`[DEBUG IMPORT] Produto: ${oldItem.produto}, (Explicit Sal 68% - includes) quantidadeSal: ${oldItem.quantidadeSal}, itemQuantity: ${itemQuantity}`);
               } else {
                 itemQuantity = this.parseNumber(oldItem.quantidadeAu || oldItem.quantidade || '1');
-                console.log(`[DEBUG IMPORT] Produto: ${oldItem.produto}, (Other Product) quantidadeAu: ${oldItem.quantidadeAu}, itemQuantity: ${itemQuantity}`);
               }
 
               const price = new Decimal(this.parseNumber(oldItem.valorTotalReal)).dividedBy(itemQuantity);
@@ -227,7 +217,6 @@ export class ImportSalesUseCase {
         );
 
         if (itemsForSale.length === 0) {
-          console.warn(`Nenhum item encontrado para a venda ${oldSale.numero}. Pulando.`);
           results.push({ saleNumber: oldSale.numero, status: 'skipped', reason: 'Nenhum item encontrado' });
           continue;
         }
@@ -252,21 +241,16 @@ export class ImportSalesUseCase {
 
         if (oldSale.cotacao && this.parseNumber(oldSale.cotacao) > 0) {
           saleGoldQuote = this.parseNumber(oldSale.cotacao);
-          console.log(`[DEBUG Cotação] Venda ${oldSale.numero}: Cotação encontrada diretamente em oldSale.cotacao: ${saleGoldQuote}`);
         } else {
           saleGoldQuote = cotacoesMap.get(oldSale.numero);
-          console.log(`[DEBUG COTAÇÃO] Venda ${oldSale.numero}: Cotação encontrada no map: ${saleGoldQuote}`);
         }
 
         if (saleGoldQuote) {
           createSaleDto.goldQuoteValue = saleGoldQuote; // Adicionar ao DTO se encontrada
-          console.log(`[DEBUG Cotação] Venda ${oldSale.numero}: goldQuoteValue adicionado ao DTO: ${createSaleDto.goldQuoteValue}`);
         } else if (oldSale.valorTotal && oldSale.valorTotalAu && this.parseNumber(oldSale.valorTotalAu) > 0) {
           const calculatedQuote = new Decimal(this.parseNumber(oldSale.valorTotal)).dividedBy(this.parseNumber(oldSale.valorTotalAu)).toFixed(2);
           createSaleDto.goldQuoteValue = parseFloat(calculatedQuote);
-          console.log(`[DEBUG Cotação] Venda ${oldSale.numero}: Cotação calculada a partir de valorTotal/valorTotalAu: ${createSaleDto.goldQuoteValue}`);
         } else {
-          console.warn(`[DEBUG Cotação] Venda ${oldSale.numero}: Nenhuma cotação encontrada ou calculável para este pedido.`);
         }
 
         // 3. Chamar o CreateSaleUseCase para criar a venda
@@ -281,7 +265,6 @@ export class ImportSalesUseCase {
 
         results.push({ saleNumber: oldSale.numero, status: 'success', newSaleId: createdSale.id });
       } catch (error) {
-        console.error(`Erro ao importar venda ${oldSale.numero}:`, error.message);
         results.push({ saleNumber: oldSale.numero, status: 'failed', reason: error.message });
       }
     }

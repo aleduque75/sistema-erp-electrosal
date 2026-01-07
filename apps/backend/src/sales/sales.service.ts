@@ -101,8 +101,6 @@ export class SalesService {
       };
     });
 
-    console.log('[DEBUG sales.service.ts findAll] returning:', JSON.stringify(result, null, 2));
-
     return result;
   }
 
@@ -186,8 +184,6 @@ export class SalesService {
         saleItemLots: (item as any).saleItemLots,
       })),
     };
-
-    console.log('[DEBUG sales.service.ts findOne] returning:', JSON.stringify(result, null, 2));
 
     return result;
   }

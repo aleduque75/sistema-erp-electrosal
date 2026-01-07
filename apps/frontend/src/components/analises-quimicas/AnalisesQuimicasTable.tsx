@@ -25,9 +25,11 @@ import {
   XCircle,
   ThumbsDown,
   RotateCw,
+  Pencil,
 } from "lucide-react";
 import { LancarResultadoModal } from "./LancarResultadoModal";
 import { VisualizarAnaliseModal } from "./VisualizarAnaliseModal";
+import { EditarAnaliseModal } from "./EditarAnaliseModal";
 import { AnaliseQuimica } from "../../types/analise-quimica";
 import { StatusAnaliseQuimica } from "@sistema-erp-electrosal/core";
 // Importação como valor
@@ -58,10 +60,17 @@ export function AnalisesQuimicasTable({
     useState<AnaliseQuimica | null>(null);
   const [analiseParaVisualizar, setAnaliseParaVisualizar] =
     useState<AnaliseQuimica | null>(null);
+  const [analiseParaEditar, setAnaliseParaEditar] =
+    useState<AnaliseQuimica | null>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<string | null>(null); // Armazena o ID da análise sendo baixada
 
   const handleLancarResultadoSuccess = () => {
     setAnaliseParaLancar(null);
+    onAnaliseUpdated();
+  };
+
+  const handleEditarSuccess = () => {
+    setAnaliseParaEditar(null);
     onAnaliseUpdated();
   };
 
@@ -230,6 +239,14 @@ export function AnalisesQuimicasTable({
                       >
                         Ver Detalhes
                       </DropdownMenuItem>
+                      {(analise.status === "RECEBIDO" || analise.status === "EM_ANALISE") && (
+                        <DropdownMenuItem
+                          onClick={() => setAnaliseParaEditar(analise)}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Editar Análise
+                        </DropdownMenuItem>
+                      )}
                       {analise.status === "EM_ANALISE" && (
                         <>
                           <DropdownMenuItem
@@ -310,6 +327,13 @@ export function AnalisesQuimicasTable({
         isOpen={!!analiseParaVisualizar}
         onOpenChange={(open) => !open && setAnaliseParaVisualizar(null)}
         analise={analiseParaVisualizar}
+      />
+
+      <EditarAnaliseModal
+        isOpen={!!analiseParaEditar}
+        onOpenChange={(open) => !open && setAnaliseParaEditar(null)}
+        analise={analiseParaEditar}
+        onSuccess={handleEditarSuccess}
       />
     </>
   );

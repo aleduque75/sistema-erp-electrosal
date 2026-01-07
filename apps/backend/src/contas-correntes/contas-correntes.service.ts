@@ -141,8 +141,6 @@ export class ContasCorrentesService {
     // 4. Não precisamos mais buscar a contrapartida separadamente, já está incluída
     const transacoesComContrapartida = transacoesNoPeriodo;
 
-    console.log('transacoesComContrapartida', transacoesComContrapartida); // Adicionar console.log
-
     // 5. Calcula os Saldos Finais (BRL e Gold)
     const saldosFinais = transacoesNoPeriodo.reduce(
       (acc, transacao) => {

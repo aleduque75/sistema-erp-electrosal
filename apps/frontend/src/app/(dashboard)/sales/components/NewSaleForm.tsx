@@ -28,6 +28,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { PlusCircle, Trash2, PackageSearch } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LotSelectionModal } from "@/components/sales/LotSelectionModal";
+import { AddItemModal } from "./AddItemModal";
 import { Product } from "@/types/product";
 import { SaleItem, SaleItemLot } from "@/types/sale";
 import { InventoryLot } from "@/types/inventory-lot";
@@ -55,13 +56,16 @@ export function NewSaleForm({ onSave }: any) {
   const [contasCorrentes, setContasCorrentes] = useState<ContaCorrente[]>([]);
   const [fees, setFees] = useState<Fee[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
-  const [items, setItems] = useState<SaleItem[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feePercentage, setFeePercentage] = useState(0);
   const [absorbCreditCardFee, setAbsorbCreditCardFee] = useState(false);
   const [saleGoldQuote, setSaleGoldQuote] = useState(0);
+  const [saleSilverQuote, setSaleSilverQuote] = useState(0);
+  const [laborCostTable, setLaborCostTable] = useState([]);
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isLotModalOpen, setIsLotModalOpen] = useState(false);
-  const [itemToSelectLots, setItemToSelectLots] = useState<{ product: Product, itemIndex: number } | null>(null);
+  const [itemToSelectLots, setItemToSelectLots] = useState<{ product: any, itemIndex: number } | null>(null);
   const [freightAmount, setFreightAmount] = useState(0);
   const [saleDate, setSaleDate] = useState<Date | undefined>(new Date());
 
@@ -116,7 +120,7 @@ export function NewSaleForm({ onSave }: any) {
           setValue('orderNumber', nextOrderNumberRes.data.nextOrderNumber);
         }
 
-        const [clientsRes, productsRes, contasRes, feesRes, orgSettingsRes, paymentTermsRes, quoteRes] = await Promise.all([
+        const [clientsRes, productsRes, contasRes, feesRes, orgSettingsRes, paymentTermsRes, goldQuoteRes, silverQuoteRes, laborTableRes] = await Promise.all([
           api.get("/pessoas?role=CLIENT"),
           api.get("/products"),
           api.get("/contas-correntes", { params: { types: ['BANCO', 'FORNECEDOR_METAL'] } }),
@@ -124,6 +128,8 @@ export function NewSaleForm({ onSave }: any) {
           api.get("/settings/organization"),
           api.get("/payment-terms"),
           api.get(`/quotations/latest?metal=AU&date=${saleDate?.toISOString()}`),
+          api.get(`/quotations/latest?metal=AG&date=${saleDate?.toISOString()}`),
+          api.get("/labor-cost-table-entries"),
         ]);
         setClients(clientsRes.data.map((c: any) => ({ id: c.id, name: c.name })));
         setProducts(productsRes.data);
@@ -131,12 +137,24 @@ export function NewSaleForm({ onSave }: any) {
         setFees(feesRes.data);
         setAbsorbCreditCardFee(orgSettingsRes.data.absorbCreditCardFee);
         setPaymentTerms(paymentTermsRes.data);
-        if (quoteRes.data?.sellPrice) {
-          setSaleGoldQuote(quoteRes.data.sellPrice);
-          toast.info(`Cotação do Ouro para ${saleDate?.toLocaleDateString()} carregada: ${formatCurrency(quoteRes.data?.sellPrice)}`);
+        setLaborCostTable(laborTableRes.data);
+
+        if (goldQuoteRes.data?.sellPrice) {
+          setSaleGoldQuote(goldQuoteRes.data.sellPrice);
         } else {
           setSaleGoldQuote(0);
-          toast.warning(`Não foi encontrada cotação do ouro para a data ${saleDate?.toLocaleDateString()}. O valor será 0.`);
+        }
+
+        if (silverQuoteRes.data?.sellPrice) {
+          setSaleSilverQuote(silverQuoteRes.data.sellPrice);
+        } else {
+          setSaleSilverQuote(0);
+        }
+
+        if (goldQuoteRes.data?.sellPrice || silverQuoteRes.data?.sellPrice) {
+          toast.info(`Cotações para ${saleDate?.toLocaleDateString()} carregadas.`);
+        } else {
+          toast.warning(`Não foram encontradas cotações para a data ${saleDate?.toLocaleDateString()}.`);
         }
       } catch (error) {
         toast.error("Falha ao carregar dados para a venda.");
@@ -157,32 +175,20 @@ export function NewSaleForm({ onSave }: any) {
   }, [paymentConditionId, numberOfInstallments, fees]);
 
   const handleAddNewItem = () => {
-    const newItem: SaleItem = {
-      productId: '',
-      name: 'Novo Item',
-      quantity: 1,
-      price: 0,
-      lots: [],
+    setIsAddItemModalOpen(true);
+  };
+
+  const handleAddItem = (newItemData: any) => {
+    const newItem = {
+      ...newItemData,
+      lots: newItemData.inventoryLotId ? [{ inventoryLotId: newItemData.inventoryLotId, quantity: newItemData.quantity }] : [],
     };
     setItems(currentItems => [...currentItems, newItem]);
   };
 
-  const handleUpdateItem = (index: number, field: keyof SaleItem, value: any) => {
+  const handleUpdateItem = (index: number, field: keyof any, value: any) => {
     const updatedItems = [...items];
-    if (field === 'productId') {
-      const product = products.find(p => p.id === value);
-      if (product) {
-        updatedItems[index] = {
-          ...updatedItems[index],
-          productId: product.id,
-          name: product.name,
-          price: product.price,
-          lots: [], // Reset lots when product changes
-        };
-      }
-    } else {
-      updatedItems[index] = { ...updatedItems[index], [field]: value };
-    }
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
     setItems(updatedItems);
   };
 
@@ -207,13 +213,14 @@ export function NewSaleForm({ onSave }: any) {
     
     const updatedItems = [...items];
     updatedItems[itemIndex].lots = selectedLots;
+    // Opcionalmente, recalcular o preço se for um produto de conversão e a quantidade total mudou
     setItems(updatedItems);
     
     setItemToSelectLots(null);
   };
 
   const totalAmount = useMemo(
-    () => items.reduce((total, item) => total + item.price * item.quantity, 0),
+    () => items.reduce((total, item) => total + Number(item.price) * Number(item.quantity), 0),
     [items]
   );
   const feeAmount = useMemo(
@@ -268,18 +275,36 @@ export function NewSaleForm({ onSave }: any) {
       }
     }
 
+    // Determinar qual cotação enviar (preferência Ouro, senão Prata)
+    const hasGoldItems = items.some(item => {
+      const product = products.find(p => p.id === item.productId);
+      return product?.name.toLowerCase().includes('el sal') || product?.productGroup?.name.toLowerCase().includes('auro');
+    });
+    const hasSilverItems = items.some(item => {
+      const product = products.find(p => p.id === item.productId);
+      return product?.name.toLowerCase().includes('ag') || product?.name.toLowerCase().includes('prata');
+    });
+
+    let effectiveQuote = saleGoldQuote;
+    if (hasSilverItems && !hasGoldItems) {
+      effectiveQuote = saleSilverQuote;
+    }
+
     const payload: any = {
       pessoaId: formData.clientId,
-      items: items.map(({ productId, quantity, price, lots }) => ({
+      items: items.map(({ productId, quantity, price, lots, laborPercentage, entryUnit, entryQuantity }) => ({
         productId,
-        quantity,
-price,
+        quantity: Number(quantity.toFixed(4)),
+        price: Number(price.toFixed(2)),
         lots,
+        laborPercentage,
+        entryUnit,
+        entryQuantity,
       })),
       feeAmount: totalAmount * (feePercentage / 100),
       freightAmount: freightAmount,
       paymentMethod,
-      goldQuoteValue: saleGoldQuote,
+      goldQuoteValue: effectiveQuote,
       numberOfInstallments: formData.numberOfInstallments,
       contaCorrenteId: formData.contaCorrenteId,
       createdAt: saleDate?.toISOString(),
@@ -306,6 +331,16 @@ price,
       onSubmit={handleSubmit(onFinalizeSale)}
       className="flex flex-col h-full bg-background p-1 rounded-lg"
     >
+      <AddItemModal
+        open={isAddItemModalOpen}
+        onOpenChange={setIsAddItemModalOpen}
+        products={products}
+        items={items}
+        onAddItem={handleAddItem}
+        saleGoldQuote={saleGoldQuote}
+        saleSilverQuote={saleSilverQuote}
+        laborCostTable={laborCostTable}
+      />
       {itemToSelectLots && (
         <LotSelectionModal
           isOpen={isLotModalOpen}
@@ -381,14 +416,25 @@ price,
                   </div>
                 )}
               />
-              <div className="space-y-1">
-                <Label>Cotação do Ouro (Venda)</Label>
-                <Input
-                  type="number"
-                  value={saleGoldQuote}
-                  onChange={(e) => setSaleGoldQuote(Number(e.target.value))}
-                  step="0.01"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label>Ouro (R$)</Label>
+                  <Input
+                    type="number"
+                    value={saleGoldQuote}
+                    onChange={(e) => setSaleGoldQuote(Number(e.target.value))}
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Prata (R$)</Label>
+                  <Input
+                    type="number"
+                    value={saleSilverQuote}
+                    onChange={(e) => setSaleSilverQuote(Number(e.target.value))}
+                    step="0.01"
+                  />
+                </div>
               </div>
               <div className="space-y-1">
                 <Label>Frete (R$)</Label>
@@ -476,12 +522,12 @@ price,
                       items.map((item, index) => (
                         <TableRow key={index}>
                           <TableCell>
-                            <Combobox
-                              options={products.map(p => ({ value: p.id, label: p.name }))}
-                              value={item.productId}
-                              onChange={(value) => handleUpdateItem(index, 'productId', value)}
-                              placeholder="Selecione um produto"
-                            />
+                            <span className="font-medium">{item.name}</span>
+                            {item.laborPercentage !== undefined && (
+                              <div className="text-xs text-muted-foreground">
+                                Mão de obra: {item.laborPercentage}%
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Input

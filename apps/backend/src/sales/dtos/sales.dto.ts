@@ -14,6 +14,9 @@ class SaleItemDto {
   @Min(0.0001)
   quantity: number;
   @IsNumber() @Min(0) price: number;
+  @IsNumber() @IsOptional() laborPercentage?: number;
+  @IsString() @IsOptional() entryUnit?: string;
+  @IsNumber() @IsOptional() entryQuantity?: number;
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => SaleItemLotDto)

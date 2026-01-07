@@ -28,8 +28,6 @@ export class AccountsPayService {
     organizationId: string,
     transactionIds: string[],
   ): Promise<{ count: number }> {
-    console.log('Received transactionIds:', transactionIds);
-
     let createdCount = 0;
     await this.prisma.$transaction(async (tx) => {
       for (const transacaoId of transactionIds) {
@@ -61,15 +59,12 @@ export class AccountsPayService {
               },
             });
             createdCount++; // Contar como "atualizado" para o feedback do frontend
-            console.log(`  -> UPDATED AccountPay ${existingAccountPay.id} with fornecedorId ${transacao.fornecedorId}`);
           } else {
-            console.log(`  -> SKIPPING ${transacaoId}: AccountPay already exists and does not need fornecedorId update.`);
           }
           continue; // Continuar para a próxima transação
         }
 
         // Se não existe, criar um novo AccountPay
-        console.log(`  -> CREATING AccountPay for transacaoId: ${transacaoId}...`);
         await tx.accountPay.create({
           data: {
             organizationId,
@@ -84,10 +79,8 @@ export class AccountsPayService {
           },
         });
         createdCount++;
-        console.log(`  -> SUCCESS: AccountPay created for transacaoId: ${transacaoId}.`);
       }
     });
-    console.log(`Finished bulkCreateFromTransactions. Total created: ${createdCount}`);
     return { count: createdCount };
   }
 
@@ -228,8 +221,8 @@ export class AccountsPayService {
     data: PayAccountDto,
   ): Promise<AccountPay> {
     const [accountToPay, settings] = await Promise.all([
-      this.findOne(organizationId, id),
-      this.settingsService.findOne(userId),
+        this.findOne(organizationId, id),
+        this.settingsService.findOne(userId),
     ]);
 
     if (accountToPay.paid) {
@@ -243,7 +236,7 @@ export class AccountsPayService {
     }
 
     const paidAmount = data.paidAmount ? new Decimal(data.paidAmount) : new Decimal(accountToPay.amount);
-    if (paidAmount.greaterThan(accountToPay.amount)) {
+    if (paidAmount.greaterThan(new Decimal(accountToPay.amount).plus(0.01))) { // Allow for small rounding differences
       throw new BadRequestException('O valor pago não pode ser maior que o valor da conta.');
     }
 

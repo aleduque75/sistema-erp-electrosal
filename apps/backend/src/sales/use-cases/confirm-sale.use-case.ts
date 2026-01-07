@@ -17,7 +17,6 @@ export class ConfirmSaleUseCase {
 
   async execute(organizationId: string, userId: string, saleId: string, confirmSaleDto: ConfirmSaleDto) {
     const confirmedSale = await this.prisma.$transaction(async (tx) => {
-      console.log(`[ConfirmSaleUseCase] Searching for Sale - ID: ${saleId}, OrgID: ${organizationId}`);
       const sale = await tx.sale.findFirst({
         where: { 
           id: saleId, 
@@ -30,13 +29,17 @@ export class ConfirmSaleUseCase {
           paymentTerm: true, // Incluir o prazo de pagamento
         },
       });
-      console.log(`[ConfirmSaleUseCase] Sale found: ${sale ? sale.id : 'None'}`);
 
       if (!sale) {
         throw new NotFoundException(`Venda com status PENDENTE, A_SEPARAR ou SEPARADO com ID ${saleId} não encontrada.`);
       }
 
       const { paymentMethod, contaCorrenteId, updatedGoldPrice, paymentMetalType } = confirmSaleDto;
+
+      // Buscar se já existe um AccountRec para esta venda (comum em vendas importadas)
+      const existingAccountRec = await tx.accountRec.findFirst({
+        where: { saleId: saleId },
+      });
 
       let finalNetAmount = new Decimal(sale.netAmount || 0);
 
@@ -63,21 +66,25 @@ export class ConfirmSaleUseCase {
         if (!contaCorrenteId) {
           throw new BadRequestException('Conta corrente para pagamento à vista não especificada.');
         }
-        const accountRec = await tx.accountRec.create({
-            data: {
-                organizationId,
-                saleId: sale.id,
-                description: `Recebimento da Venda #${sale.orderNumber}`,
-                amount: finalNetAmount,
-                goldAmount: finalGoldValue,
-                dueDate: sale.createdAt,
-                received: true,
-                receivedAt: sale.createdAt,
-                amountPaid: finalNetAmount,
-                goldAmountPaid: finalGoldValue,
-                contaCorrenteId: contaCorrenteId,
-            },
-        });
+
+        const accountRecData = {
+          organizationId,
+          saleId: sale.id,
+          description: `Recebimento da Venda #${sale.orderNumber}`,
+          amount: finalNetAmount,
+          goldAmount: finalGoldValue,
+          dueDate: sale.createdAt,
+          received: true,
+          receivedAt: sale.createdAt,
+          amountPaid: finalNetAmount,
+          goldAmountPaid: finalGoldValue,
+          contaCorrenteId: contaCorrenteId,
+        };
+
+        const accountRec = existingAccountRec 
+          ? await tx.accountRec.update({ where: { id: existingAccountRec.id }, data: accountRecData })
+          : await tx.accountRec.create({ data: accountRecData });
+
         await tx.transacao.create({
           data: {
             organizationId,
@@ -100,6 +107,24 @@ export class ConfirmSaleUseCase {
         if (finalGoldValue.isZero()) {
             throw new BadRequestException('A quantidade de ouro para pagamento em metal não pode ser zero.');
         }
+
+        const accountRecData = {
+          organizationId,
+          saleId: sale.id,
+          description: `Recebimento da Venda #${sale.orderNumber} (Pagamento em Metal: ${metalType})`,
+          amount: finalNetAmount,
+          goldAmount: finalGoldValue,
+          dueDate: sale.createdAt,
+          received: true,
+          receivedAt: sale.createdAt,
+          amountPaid: finalNetAmount,
+          goldAmountPaid: finalGoldValue,
+        };
+
+        const accountRec = existingAccountRec 
+          ? await tx.accountRec.update({ where: { id: existingAccountRec.id }, data: accountRecData })
+          : await tx.accountRec.create({ data: accountRecData });
+
         await tx.pure_metal_lots.create({
             data: {
               organizationId,
@@ -126,6 +151,7 @@ export class ConfirmSaleUseCase {
               descricao: `Recebimento da Venda #${sale.orderNumber} (Pagamento em Metal)`,
               contaContabilId: settings.defaultReceitaContaId!,
               dataHora: sale.createdAt,
+              accountRecId: accountRec.id,
             },
           });
       }
@@ -141,8 +167,9 @@ export class ConfirmSaleUseCase {
         throw new Error('Sale adjustment not found after calculation.');
       }
       
-      const finalAmountForAccountRec = saleWithAdjustment.adjustment.paymentReceivedBRL;
-      const finalGoldAmountForAccountRec = saleWithAdjustment.adjustment.paymentEquivalentGrams;
+      // For pending payments, we use the sale net amount, not the received amount from adjustment
+      const amountToReceive = finalNetAmount;
+      const goldAmountToReceive = finalGoldValue;
 
       if (paymentMethod === 'A_PRAZO') {
         if (!saleWithAdjustment.paymentTerm) {
@@ -155,32 +182,64 @@ export class ConfirmSaleUseCase {
         const lastDueDate = new Date(saleWithAdjustment.createdAt);
         const maxDays = Math.max(...saleWithAdjustment.paymentTerm.installmentsDays);
         lastDueDate.setDate(lastDueDate.getDate() + maxDays);
-        const accountRec = await tx.accountRec.create({
-          data: {
-            organizationId,
-            saleId: saleWithAdjustment.id,
-            description: `Receber de ${saleWithAdjustment.pessoa.name} (a prazo) venda #${saleWithAdjustment.orderNumber}`,
-            amount: finalAmountForAccountRec,
-            goldAmount: finalGoldAmountForAccountRec,
-            dueDate: lastDueDate,
-            received: false,
-          },
-        });
+
+        const accountRecData = {
+          organizationId,
+          saleId: saleWithAdjustment.id,
+          description: `Receber de ${saleWithAdjustment.pessoa.name} (a prazo) venda #${saleWithAdjustment.orderNumber}`,
+          amount: amountToReceive,
+          goldAmount: goldAmountToReceive,
+          dueDate: lastDueDate,
+          received: false,
+        };
+
+        const accountRec = existingAccountRec 
+          ? await tx.accountRec.update({ where: { id: existingAccountRec.id }, data: accountRecData })
+          : await tx.accountRec.create({ data: accountRecData });
+
         await tx.saleInstallment.updateMany({
           where: { saleId: saleWithAdjustment.id },
           data: { accountRecId: accountRec.id },
         });
       } else if (paymentMethod === 'CREDIT_CARD') {
-        await tx.accountRec.create({
-          data: {
-            organizationId,
-            saleId: saleWithAdjustment.id,
-            description: `Receber de ${saleWithAdjustment.pessoa.name} venda #${saleWithAdjustment.orderNumber}`,
-            amount: finalAmountForAccountRec,
-            goldAmount: finalGoldAmountForAccountRec,
-            dueDate: addDays(saleWithAdjustment.createdAt, 30),
-          },
-        });
+        const accountRecData = {
+          organizationId,
+          saleId: saleWithAdjustment.id,
+          description: `Receber de ${saleWithAdjustment.pessoa.name} venda #${saleWithAdjustment.orderNumber}`,
+          amount: amountToReceive,
+          goldAmount: goldAmountToReceive,
+          dueDate: addDays(saleWithAdjustment.createdAt, 30),
+          received: false,
+        };
+
+        await (existingAccountRec 
+          ? tx.accountRec.update({ where: { id: existingAccountRec.id }, data: accountRecData })
+          : tx.accountRec.create({ data: accountRecData }));
+          
+      } else if (paymentMethod !== 'A_VISTA' && paymentMethod !== 'METAL') {
+        // Fallback para IMPORTADO ou método não especificado
+        if (!existingAccountRec) {
+          await tx.accountRec.create({
+            data: {
+              organizationId,
+              saleId: saleWithAdjustment.id,
+              description: `Receber de ${saleWithAdjustment.pessoa.name} venda #${saleWithAdjustment.orderNumber}`,
+              amount: amountToReceive,
+              goldAmount: goldAmountToReceive,
+              dueDate: saleWithAdjustment.createdAt,
+              received: false,
+            },
+          });
+        } else {
+          // Se já existe, garante que os valores estão atualizados
+          await tx.accountRec.update({
+            where: { id: existingAccountRec.id },
+            data: {
+              amount: amountToReceive,
+              goldAmount: goldAmountToReceive,
+            }
+          });
+        }
       }
       
       // UPDATE SALE STATUS AND FINAL VALUES at the end

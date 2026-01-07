@@ -19,7 +19,19 @@ export class UpdateContaCorrenteDto {
   @Min(0)
   limite?: number;
 
+  @IsNumber()
+  @IsOptional()
+  initialBalanceBRL?: number;
+
+  @IsNumber()
+  @IsOptional()
+  initialBalanceGold?: number;
+
   @IsEnum(ContaCorrenteType)
   @IsOptional()
   type?: ContaCorrenteType;
+
+  @IsString()
+  @IsOptional()
+  contaContabilId?: string;
 }

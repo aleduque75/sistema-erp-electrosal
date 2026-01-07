@@ -15,7 +15,7 @@ import { BuscarAnaliseQuimicaPorIdUseCase } from './use-cases/buscar-analise-qui
 import { LancarResultadoAnaliseUseCase } from './use-cases/lancar-resultado-analise.use-case';
 import { AprovarRecuperacaoAnaliseUseCase } from './use-cases/aprovar-recuperacao-analise.use-case';
 import { GerarPdfAnaliseUseCase } from './use-cases/gerar-pdf-analise.use-case';
-import { AtualizarAnaliseUseCase } from './use-cases/atualizar-analise.use-case';
+import { UpdateAnaliseQuimicaUseCase } from './use-cases/update-analise-quimica.use-case';
 
 import { MetalCreditsModule } from '../metal-credits/metal-credits.module';
 import { AprovarAnaliseUseCase } from './use-cases/aprovar-analise.use-case';
@@ -40,7 +40,7 @@ import { RevertAnaliseQuimicaToPendingApprovalUseCase } from './use-cases/revert
     LancarResultadoAnaliseUseCase,
     AprovarRecuperacaoAnaliseUseCase,
     GerarPdfAnaliseUseCase,
-    AtualizarAnaliseUseCase,
+    UpdateAnaliseQuimicaUseCase,
     AprovarAnaliseUseCase,
     ReprovarAnaliseUseCase,
     RefazerAnaliseUseCase,

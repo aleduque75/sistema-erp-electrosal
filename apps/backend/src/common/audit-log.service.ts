@@ -70,11 +70,7 @@ export class AuditLogService implements OnModuleInit {
         this.logFilePath,
         JSON.stringify(logs, null, 2),
       );
-      console.log(`[AUDIT LOG] Deletion logged: ${description}`);
     } catch (error) {
-      console.error(
-        `[AUDIT LOG ERROR] Failed to write log entry: ${error.message}`,
-      );
     }
   }
 }

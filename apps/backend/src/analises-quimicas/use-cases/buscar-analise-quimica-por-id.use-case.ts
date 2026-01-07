@@ -4,12 +4,14 @@ import {
   AnaliseQuimica,
 } from '@sistema-erp-electrosal/core';
 import { AnaliseQuimicaWithClientNameDto } from '../dtos/analise-quimica-with-client-name.dto';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class BuscarAnaliseQuimicaPorIdUseCase {
   constructor(
     @Inject('IAnaliseQuimicaRepository')
     private readonly repo: IAnaliseQuimicaRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(id: string, organizationId: string): Promise<AnaliseQuimicaWithClientNameDto> {
@@ -19,6 +21,18 @@ export class BuscarAnaliseQuimicaPorIdUseCase {
         `Análise Química com ID ${id} não encontrada.`,
       );
     }
-    return analise;
+
+    let clientName: string | undefined;
+    if (analise.clienteId) {
+      const client = await this.prisma.pessoa.findUnique({
+        where: { id: analise.clienteId },
+      });
+      clientName = client?.name;
+    }
+
+    return {
+      ...analise.toObject(),
+      clientName,
+    };
   }
 }

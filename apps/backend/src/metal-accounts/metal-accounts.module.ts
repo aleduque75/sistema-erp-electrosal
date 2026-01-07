@@ -34,6 +34,7 @@ import { QuotationsModule } from '../quotations/quotations.module'; // Adicionad
     { provide: 'IMetalAccountRepository', useClass: PrismaMetalAccountRepository },
     { provide: 'IMetalAccountEntryRepository', useClass: PrismaMetalAccountEntryRepository },
     // Exportamos os Use Cases/Services que podem ser injetados diretamente
+    CreateMetalAccountUseCase,
     CreateMetalAccountEntryUseCase,
     FindAllMetalAccountsUseCase,
     FindAllMetalAccountEntriesUseCase,

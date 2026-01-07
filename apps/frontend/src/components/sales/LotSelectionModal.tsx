@@ -27,6 +27,7 @@ import { InventoryLot } from '@/types/inventory-lot';
 import { SaleItemLot } from '@/types/sale';
 import { format } from 'date-fns';
 import Decimal from 'decimal.js';
+import { Plus } from 'lucide-react';
 
 interface LotSelectionModalProps {
   isOpen: boolean;
@@ -86,6 +87,20 @@ export function LotSelectionModal({
       newSelectedLots.delete(lotId);
     }
     setSelectedLots(newSelectedLots);
+  };
+
+  const handleAutoFill = (lotId: string, available: number) => {
+    const currentTotal = getTotalSelectedQuantity();
+    const currentForThisLot = selectedLots.get(lotId) || 0;
+    const remainingNeeded = new Decimal(quantityRequired).minus(currentTotal).plus(currentForThisLot);
+    
+    if (remainingNeeded.lte(0) && currentForThisLot === 0) {
+      toast.info('A quantidade necessária já foi atingida.');
+      return;
+    }
+
+    const amountToFill = Decimal.min(remainingNeeded, available).toNumber();
+    handleQuantityChange(lotId, amountToFill);
   };
 
   const getTotalSelectedQuantity = () => {
@@ -151,6 +166,7 @@ export function LotSelectionModal({
                     <TableHead className="text-right">Custo</TableHead>
                     <TableHead className="text-right">Qtd. Disponível</TableHead>
                     <TableHead className="w-[150px] text-right">Qtd. a Usar</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -174,6 +190,17 @@ export function LotSelectionModal({
                             min={0}
                             className="text-right"
                           />
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleAutoFill(lot.id, remainingAfterSelection.toNumber())}
+                            title="Preencher automaticamente"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );

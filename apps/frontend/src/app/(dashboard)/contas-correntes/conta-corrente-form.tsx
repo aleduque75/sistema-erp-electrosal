@@ -1,10 +1,9 @@
-// apps/frontend/src/app/(dashboard)/contas-correntes/conta-corrente-form.tsx
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,13 +17,15 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ContaCorrenteType } from "@sistema-erp-electrosal/core";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
+import { ContaContabil, ContaCorrenteType } from "@prisma/client";
 
 // 1. DEFINIÇÃO DO ARRAY DE VALORES LITERAIS (Para o Zod)
 const CONTA_CORRENTE_TYPES = [
   'BANCO',
   'FORNECEDOR_METAL',
   'EMPRESTIMO',
+  'CLIENTE',
 ] as const;
 
 // DEFINIÇÃO DO SCHEMA CORRIGIDA
@@ -34,6 +35,7 @@ const baseSchema = z.object({
   agencia: z.string().optional(),
   limite: z.coerce.number().min(0).default(0).optional(),
   type: z.enum(CONTA_CORRENTE_TYPES).default('BANCO'),
+  contaContabilId: z.string().optional(),
 });
 
 const createSchema = baseSchema.extend({
@@ -56,12 +58,20 @@ interface ContaCorrenteFormProps {
     saldoInicial: number;
     limite?: number | null;
     type?: (typeof ContaCorrenteType)[keyof typeof ContaCorrenteType] | null; 
+    contaContabilId?: string | null;
   } | null;
   onSave: () => void;
 }
 
 export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
-  
+  const { data: contasContabeis, isLoading: isLoadingContasContabeis } = useQuery<ContaContabil[]>({
+    queryKey: ["contasContabeis"],
+    queryFn: async () => {
+      const response = await api.get("/contas-contabeis");
+      return response.data;
+    },
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(conta ? editSchema : createSchema),
     defaultValues: {
@@ -71,6 +81,7 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
       saldoInicial: conta?.saldoInicial ?? 0, 
       limite: conta?.limite ?? 0, 
       type: (conta?.type ?? 'BANCO') as (typeof ContaCorrenteType)[keyof typeof ContaCorrenteType],
+      contaContabilId: conta?.contaContabilId ?? "",
     },
   });
 
@@ -89,6 +100,12 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
       toast.error(err.response?.data?.message || "Ocorreu um erro ao salvar a conta.");
     }
   };
+
+  const contaContabilOptions: ComboboxOption[] =
+    contasContabeis?.map((conta) => ({
+      value: conta.id,
+      label: `${conta.codigo} - ${conta.nome}`,
+    })) || [];
 
   return (
     <Form {...form}>
@@ -154,8 +171,28 @@ export function ContaCorrenteForm({ conta, onSave }: ContaCorrenteFormProps) {
                   <SelectItem value="BANCO">Banco</SelectItem>
                   <SelectItem value="FORNECEDOR_METAL">Fornecedor de Metal</SelectItem>
                   <SelectItem value="EMPRESTIMO">Empréstimo</SelectItem>
+                  <SelectItem value="CLIENTE">Cliente</SelectItem>
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          name="contaContabilId"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Conta Contábil</FormLabel>
+              <FormControl>
+                <Combobox
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={contaContabilOptions}
+                  placeholder="Selecione a conta contábil..."
+                  loading={isLoadingContasContabeis}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

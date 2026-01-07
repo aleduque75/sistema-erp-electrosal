@@ -1,7 +1,16 @@
-import { IsString, IsOptional, IsDate, IsNumber, Min } from 'class-validator';
+import { IsString, IsDate, IsNumber, Min, IsOptional, IsUUID, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TipoMetal } from '../../enums/tipo-metal.enum';
 
-export class AtualizarAnaliseDto {
+export class UpdateAnaliseQuimicaDto {
+  @IsOptional()
+  @IsUUID()
+  clienteId?: string;
+
+  @IsOptional()
+  @IsEnum(TipoMetal)
+  metalType?: TipoMetal;
+
   @IsOptional()
   @IsDate()
   @Type(() => Date)
@@ -13,7 +22,7 @@ export class AtualizarAnaliseDto {
 
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(0.001)
   volumeOuPesoEntrada?: number;
 
   @IsOptional()

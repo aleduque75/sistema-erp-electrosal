@@ -12,16 +12,12 @@ export class ClientImportsService {
 
   async previewGoogleCsv(organizationId: string, fileBuffer: Buffer) {
     try {
-      console.log('Iniciando previewGoogleCsv...');
       const csvContent = fileBuffer.toString('utf-8');
-      console.log('CSV Content (first 500 chars):', csvContent.substring(0, 500));
 
       const parsed = Papa.parse(csvContent, {
         header: true,
         skipEmptyLines: true,
       });
-      console.log('PapaParse errors:', parsed.errors);
-      console.log('Parsed data length:', parsed.data.length);
 
       const allContacts = parsed.data as any[];
 
@@ -121,14 +117,11 @@ export class ClientImportsService {
 
       return previewList;
     } catch (error) {
-      console.error('Erro ao processar arquivo CSV:', error);
       throw new BadRequestException('Arquivo CSV inválido ou mal formatado.');
     }
   }
 
   async importGoogleCsv(organizationId: string, clients: PessoaLoteDto[]) {
-    console.log('importGoogleCsv - organizationId recebido:', organizationId);
-    console.log('importGoogleCsv - primeiro cliente recebido:', clients[0]);
     const createdPessoas: Prisma.PessoaGetPayload<{}>[] = []; // Changed to PessoaGetPayload
 
     for (const clientData of clients) {

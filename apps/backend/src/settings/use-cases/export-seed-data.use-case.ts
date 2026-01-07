@@ -9,8 +9,6 @@ export class ExportSeedDataUseCase {
 
   async execute(): Promise<{ message: string; filePath: string }> {
     try {
-      console.log('[ExportSeedDataUseCase] Iniciando exportação dos dados de seed...');
-
       const contasCorrentes = await this.prisma.contaCorrente.findMany();
       const contasContabeis = await this.prisma.contaContabil.findMany();
       const transacoes = await this.prisma.transacao.findMany();
@@ -26,10 +24,8 @@ export class ExportSeedDataUseCase {
       const outputPath = path.join(process.cwd(), '..' , '..' , 'json-imports', 'seed_data.json');
       fs.writeFileSync(outputPath, JSON.stringify(seedData, null, 2));
 
-      console.log(`[ExportSeedDataUseCase] Dados de seed exportados com sucesso para: ${outputPath}`);
       return { message: 'Dados de seed exportados com sucesso!', filePath: outputPath };
     } catch (error) {
-      console.error('[ExportSeedDataUseCase] Erro ao exportar dados de seed:', error);
       throw new Error('Falha ao exportar dados de seed.');
     }
   }

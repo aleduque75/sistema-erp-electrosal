@@ -4,7 +4,6 @@ import { UniqueEntityID } from '@sistema-erp-electrosal/core';
 
 export class ProductGroupMapper {
   static toDomain(raw: PrismaProductGroup): ProductGroup {
-    console.log('[DEBUG PRODUCT_GROUP_MAPPER] raw object:', raw);
     const props = {
       organizationId: raw.organizationId,
       name: raw.name,
@@ -14,9 +13,7 @@ export class ProductGroupMapper {
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
     };
-    console.log('[DEBUG PRODUCT_GROUP_MAPPER] props for ProductGroup.create:', props);
     const id = UniqueEntityID.create(raw.id);
-    console.log('[DEBUG PRODUCT_GROUP_MAPPER] id for ProductGroup.create:', id);
     const productGroup = ProductGroup.create(
       props,
       id,

@@ -28,6 +28,8 @@ interface InventoryLot {
   remainingQuantity: number;
   sourceType: string;
   batchNumber?: string;
+  costPrice: number;
+  receivedDate: string;
 }
 interface Product {
   id: string;
@@ -35,6 +37,11 @@ interface Product {
   price: number;
   stock: number;
   inventoryLots: InventoryLot[];
+  productGroup?: {
+    id: string;
+    name: string;
+    isReactionProductGroup: boolean;
+  };
 }
 interface SaleItem {
   productId: string;
@@ -50,13 +57,26 @@ interface AddItemModalProps {
   onOpenChange: (open: boolean) => void;
   products: Product[];
   items: SaleItem[];
-  onAddItem: (item: { productId: string; name: string; quantity: number; price: number; inventoryLotId?: string; batchNumber?: string; }) => void;
+  onAddItem: (item: {
+    productId: string;
+    name: string;
+    quantity: number;
+    price: number;
+    inventoryLotId?: string;
+    batchNumber?: string;
+    laborPercentage?: number;
+    entryUnit?: string;
+    entryQuantity?: number;
+  }) => void;
   saleGoldQuote: number;
+  saleSilverQuote: number;
   laborCostTable: any[];
 }
 
-const GOLD_SALT_PRODUCT_NAME = 'El Sal 68%';
-const GOLD_SALT_CONVERSION_RATE = 1.47;
+const CONVERSION_PRODUCTS = [
+  { name: 'El Sal 68%', metal: 'AU', factor: 0.68, laborDefault: 5, unitName: 'Sal' },
+  { name: 'Cianeto de Prata 54%', metal: 'AG', factor: 0.54, laborDefault: 0, unitName: 'Cianeto' },
+];
 
 export function AddItemModal({
   open,
@@ -65,13 +85,14 @@ export function AddItemModal({
   items,
   onAddItem,
   saleGoldQuote,
+  saleSilverQuote,
   laborCostTable,
 }: AddItemModalProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedLot, setSelectedLot] = useState<string | null>(null);
   const [itemPrice, setItemPrice] = useState<number>(0);
   const [laborPercentInput, setLaborPercentInput] = useState<number | string>(0);
-  const [entryUnit, setEntryUnit] = useState('sal');
+  const [entryUnit, setEntryUnit] = useState('product');
   const [entryQuantity, setEntryQuantity] = useState<number | string>(1);
 
   // Reset state when modal opens/closes
@@ -80,69 +101,65 @@ export function AddItemModal({
       setSelectedProduct(null);
       setSelectedLot(null);
       setEntryQuantity(1);
-      setEntryUnit('sal');
+      setEntryUnit('product');
       setItemPrice(0);
       setLaborPercentInput(0);
     }
   }, [open]);
 
-  const isGoldSaltProduct = useMemo(
-    () => selectedProduct?.name.includes(GOLD_SALT_PRODUCT_NAME),
+  const specialConfig = useMemo(
+    () => CONVERSION_PRODUCTS.find(cp => selectedProduct?.name.includes(cp.name)),
     [selectedProduct]
   );
 
-  const goldAmount = useMemo(() => {
-    if (!isGoldSaltProduct) return 0;
+  const metalAmount = useMemo(() => {
+    if (!specialConfig) return 0;
     const quant = typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity;
     if (isNaN(quant)) return 0;
-    return entryUnit === 'au' ? quant : quant / GOLD_SALT_CONVERSION_RATE;
-  }, [entryQuantity, entryUnit, isGoldSaltProduct]);
+    // Se a unidade for o metal (AU/AG), retorna a quantidade digitada
+    if (entryUnit === 'metal') return quant;
+    // Se a unidade for o produto final (Sal/Cianeto), converte para metal
+    return quant * specialConfig.factor;
+  }, [entryQuantity, entryUnit, specialConfig]);
 
-  const laborGramsCharged = useMemo(() => {
-    if (!isGoldSaltProduct || goldAmount <= 0) return 0;
-    const entry = laborCostTable.find(
-      (e) => goldAmount >= e.minGrams && (e.maxGrams === null || goldAmount <= e.maxGrams)
-    );
-    return entry ? entry.goldGramsCharged : 0;
-  }, [goldAmount, isGoldSaltProduct, laborCostTable]);
-
-
-
-  const totalGoldAmount = useMemo(() => {
+  const totalMetalAmount = useMemo(() => {
     const laborPercent = typeof laborPercentInput === 'string' ? parseFloat(laborPercentInput) : (laborPercentInput || 0);
-    const laborGrams = goldAmount * (laborPercent / 100);
-    return goldAmount + laborGrams;
-  }, [goldAmount, laborPercentInput]);
+    const laborGrams = metalAmount * (laborPercent / 100);
+    return metalAmount + laborGrams;
+  }, [metalAmount, laborPercentInput]);
 
   const finalQuantity = useMemo(() => {
     const quant = typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity;
     if (isNaN(quant)) return 0;
-    if (isGoldSaltProduct) {
-      return entryUnit === 'au' ? quant * GOLD_SALT_CONVERSION_RATE : quant;
+    if (specialConfig) {
+      // Se a unidade for o metal, converte para a quantidade do produto final
+      if (entryUnit === 'metal') return quant / specialConfig.factor;
+      return quant;
     }
     return quant;
-  }, [entryQuantity, entryUnit, isGoldSaltProduct]);
+  }, [entryQuantity, entryUnit, specialConfig]);
 
   const calculatedItemPrice = useMemo(() => {
     if (!selectedProduct) return 0;
-    if (isGoldSaltProduct) {
-      if (!saleGoldQuote || saleGoldQuote <= 0) return 0;
-      if (goldAmount <= 0) return 0;
-      const totalBRL = totalGoldAmount * saleGoldQuote;
+    if (specialConfig) {
+      const quote = specialConfig.metal === 'AU' ? saleGoldQuote : saleSilverQuote;
+      if (!quote || quote <= 0) return 0;
+      if (metalAmount <= 0) return 0;
+      const totalBRL = totalMetalAmount * quote;
       if (finalQuantity === 0) return 0;
       return totalBRL / finalQuantity;
     } else {
       return Number(selectedProduct.price);
     }
-  }, [selectedProduct, isGoldSaltProduct, saleGoldQuote, goldAmount, laborPercentInput, finalQuantity, totalGoldAmount]);
+  }, [selectedProduct, specialConfig, saleGoldQuote, saleSilverQuote, metalAmount, totalMetalAmount, finalQuantity]);
 
   useEffect(() => {
-    if (selectedProduct && !isGoldSaltProduct) {
+    if (selectedProduct && !specialConfig) {
       setItemPrice(Number(selectedProduct.price));
     } else {
       setItemPrice(calculatedItemPrice);
     }
-  }, [selectedProduct, isGoldSaltProduct, calculatedItemPrice]);
+  }, [selectedProduct, specialConfig, calculatedItemPrice]);
 
 
   const handleConfirmAddItem = () => {
@@ -166,7 +183,7 @@ export function AddItemModal({
       ? (lot?.remainingQuantity || 0) - usedQuantity
       : (selectedProduct.stock || 0) - usedQuantity;
 
-    if (finalQuantity > stockAvailable) {
+    if (finalQuantity > stockAvailable + 0.0001) {
       toast.error(`Estoque insuficiente no lote. Disponível: ${stockAvailable.toFixed(4)}`);
       return;
     }
@@ -178,6 +195,9 @@ export function AddItemModal({
       price: itemPrice,
       inventoryLotId: selectedLot || undefined,
       batchNumber: lot?.batchNumber,
+      laborPercentage: specialConfig ? (typeof laborPercentInput === 'string' ? parseFloat(laborPercentInput) : laborPercentInput) : undefined,
+      entryUnit: specialConfig ? entryUnit : undefined,
+      entryQuantity: specialConfig ? (typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity) : undefined,
     });
 
     onOpenChange(false); // Close modal on success
@@ -203,17 +223,22 @@ export function AddItemModal({
                 setSelectedProduct(product);
                 setEntryQuantity(1);
                 setSelectedLot(null);
-                if (product?.name.includes(GOLD_SALT_PRODUCT_NAME)) {
-                  setEntryUnit('au');
+                if (product?.name.includes('El Sal 68%')) {
+                  setEntryUnit('metal');
+                  setLaborPercentInput(5);
+                } else if (product?.name.includes('Cianeto de Prata 54%')) {
+                  setEntryUnit('metal');
+                  setLaborPercentInput(5);
                 } else {
-                  setEntryUnit('sal');
+                  setEntryUnit('product');
+                  setLaborPercentInput(0);
                 }
               }}
               placeholder="Pesquise..."
             />
           </div>
 
-          {isGoldSaltProduct ? (
+          {specialConfig ? (
             <>
               <div className="sm:col-span-3">
                 <Label>Qtd. Lançada</Label>
@@ -221,8 +246,8 @@ export function AddItemModal({
                   type="number"
                   value={entryQuantity}
                   onChange={(e) => setEntryQuantity(e.target.value)}
-                  min="0.01"
-                  step="0.01"
+                  min="0.0001"
+                  step="0.0001"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -230,8 +255,8 @@ export function AddItemModal({
                 <Select onValueChange={setEntryUnit} value={entryUnit}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sal">g Sal</SelectItem>
-                    <SelectItem value="au">g Au</SelectItem>
+                    <SelectItem value="product">g {specialConfig.unitName}</SelectItem>
+                    <SelectItem value="metal">g {specialConfig.metal}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -245,11 +270,11 @@ export function AddItemModal({
                 />
               </div>
               <div className="sm:col-span-2">
-                <Label>Total Ouro (g)</Label>
-                <Input type="number" value={totalGoldAmount.toFixed(4)} readOnly disabled className="font-bold" />
+                <Label>Total {specialConfig.metal} (g)</Label>
+                <Input type="number" value={totalMetalAmount.toFixed(4)} readOnly disabled className="font-bold" />
               </div>
               <div className="sm:col-span-3">
-                <Label>Qtd. Final (Sal)</Label>
+                <Label>Qtd. Final ({specialConfig.unitName})</Label>
                 <Input type="number" value={finalQuantity.toFixed(4)} readOnly disabled />
               </div>
             </>
@@ -261,7 +286,7 @@ export function AddItemModal({
               </div>
               <div className="sm:col-span-6">
                 <Label>Qtd.</Label>
-                <Input type="number" value={entryQuantity} onChange={(e) => setEntryQuantity(e.target.value)} min="1" />
+                <Input type="number" value={entryQuantity} onChange={(e) => setEntryQuantity(e.target.value)} min="0.0001" step="0.0001" />
               </div>
             </>
           )}
