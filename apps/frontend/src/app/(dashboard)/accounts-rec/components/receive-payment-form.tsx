@@ -28,7 +28,11 @@ interface AccountRec {
   clientId?: string;
   goldAmount?: number;
   goldAmountPaid?: number;
-  sale?: { pessoa?: { name: string }; createdAt?: string; };
+  sale?: { 
+    pessoa?: { name: string }; 
+    createdAt?: string; 
+    observation?: string | null;
+  };
   saleInstallments?: SaleInstallment[];
   saleId?: string;
 }
@@ -284,6 +288,12 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
           </div>
         </div>
         
+        {accountRec.sale?.observation && (
+          <div className="space-y-1 rounded-md border border-yellow-200 bg-yellow-50 p-4">
+            <h4 className="font-medium text-sm text-yellow-800">Observações do Pedido</h4>
+            <p className="text-xs text-yellow-700 whitespace-pre-wrap">{accountRec.sale.observation}</p>
+          </div>
+        )}
 
 
         {accountRec.saleInstallments && accountRec.saleInstallments.length > 0 && (

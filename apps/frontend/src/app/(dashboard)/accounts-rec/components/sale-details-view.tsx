@@ -74,6 +74,7 @@ interface Sale {
   feeAmount: number;
   goldValue: number | null;
   netAmount: number;
+  observation?: string | null;
 }
 
 interface SaleDetailsViewProps {
@@ -149,6 +150,17 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
           </Table>
         </CardContent>
       </Card>
+
+      {sale.observation && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Observações</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap">{sale.observation}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {allReceivedTransactions.length > 0 && (
         <Card>
