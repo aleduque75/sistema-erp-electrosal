@@ -9,4 +9,5 @@ export interface MetalCreditWithClientNameDto {
   date: Date;
   organizationId: string;
   clientName: string;
+  status: string;
 }

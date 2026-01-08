@@ -53,12 +53,14 @@ export class AprovarAnaliseUseCase {
 
     this.logger.debug(`[APROVAR_ANALISE] Criando MetalCredit para analise ${analise.id.toString()} com metalType: ${analise.metalType}`);
 
+    const creditDate = analise.dataAnaliseConcluida || analise.dataEntrada || new Date();
+
     const metalCredit = MetalCredit.create({
       clientId: analise.clienteId,
       chemicalAnalysisId: analise.id.toString(),
       metalType: analise.metalType, // FIX: Use dynamic metalType from analysis
       grams: analise.auLiquidoParaClienteGramas || 0,
-      date: new Date(),
+      date: creditDate,
       organizationId: organizationId,
     });
 
@@ -90,7 +92,7 @@ export class AprovarAnaliseUseCase {
     await this.prisma.metalAccountEntry.create({
       data: {
         metalAccountId: metalAccount.id,
-        date: new Date(),
+        date: creditDate,
         description: `Crédito de metal referente à Análise Química ${analise.numeroAnalise}`,
         grams: analise.auLiquidoParaClienteGramas || 0,
         type: 'CREDIT',

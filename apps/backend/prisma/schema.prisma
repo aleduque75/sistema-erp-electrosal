@@ -784,6 +784,7 @@ model PurchaseOrderItem {
   product         Product?      @relation(fields: [productId], references: [id])
   rawMaterial     RawMaterial?  @relation(fields: [rawMaterialId], references: [id])
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  unit            String?       @default("GRAMS")
 
   @@map("purchase_order_items")
 }

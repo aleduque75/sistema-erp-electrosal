@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PureMetalLot } from '@/types/pure-metal-lot';
 import { getPureMetalLots, createPureMetalLot, updatePureMetalLot, deletePureMetalLot } from './pure-metal-lot.api';
-import { Button } from '@/components/ui/button'; // Assumindo shadcn/ui
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -12,19 +12,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'; // Assumindo shadcn/ui
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'; // Assumindo shadcn/ui
-import { Input } from '@/components/ui/input'; // Assumindo shadcn/ui
-import { Label } from '@/components/ui/label'; // Assumindo shadcn/ui
-import { useForm } from 'react-hook-form'; // Assumindo react-hook-form
-import { z } from 'zod'; // Assumindo zod
-import { zodResolver } from '@hookform/resolvers/zod'; // Assumindo zodResolver
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Form,
   FormControl,
@@ -32,8 +32,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'; // Assumindo shadcn/ui
-import { useRouter } from 'next/navigation'; // Para navegação
+} from '@/components/ui/form';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,8 +42,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
-import { MovementsDialog } from './components/movements-dialog'; // Importar MovementsDialog
+import { MoreHorizontal, Eye } from 'lucide-react';
+import { PureMetalLotDetailsDialog } from './components/pure-metal-lot-details-dialog';
 
 import {
   Select,
@@ -76,8 +76,8 @@ export default function PureMetalLotsPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLot, setEditingLot] = useState<PureMetalLot | null>(null);
-  const [isMovementsModalOpen, setIsMovementsModalOpen] = useState(false);
-  const [selectedLotIdForMovements, setSelectedLotIdForMovements] = useState<string | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedLotForDetails, setSelectedLotForDetails] = useState<PureMetalLot | null>(null);
   const [hideZeroedLots, setHideZeroedLots] = useState(true);
   const [metalTypeFilter, setMetalTypeFilter] = useState<string | 'all'>('all');
   const router = useRouter();
@@ -160,9 +160,9 @@ export default function PureMetalLotsPage() {
     }
   };
 
-  const handleViewMovements = (lotId: string) => {
-    setSelectedLotIdForMovements(lotId);
-    setIsMovementsModalOpen(true);
+  const handleViewDetails = (lot: PureMetalLot) => {
+    setSelectedLotForDetails(lot);
+    setIsDetailsModalOpen(true);
   };
 
   if (loading) return <div>Carregando...</div>;
@@ -343,15 +343,16 @@ export default function PureMetalLotsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleViewDetails(lot)}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        Visualizar
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleEdit(lot)}>
                         Editar
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDelete(lot.id)}>
                         Deletar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleViewMovements(lot.id)}>
-                        Ver Extrato
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -362,11 +363,10 @@ export default function PureMetalLotsPage() {
         </Table>
       </div>
 
-      <MovementsDialog
-        lotId={selectedLotIdForMovements}
-        lotNumber={pureMetalLots.find(lot => lot.id === selectedLotIdForMovements)?.lotNumber}
-        isOpen={isMovementsModalOpen}
-        onOpenChange={setIsMovementsModalOpen}
+      <PureMetalLotDetailsDialog
+        lot={selectedLotForDetails}
+        isOpen={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
       />
     </div>
   );

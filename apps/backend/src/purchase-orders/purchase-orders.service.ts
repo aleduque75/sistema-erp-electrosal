@@ -69,6 +69,7 @@ export class PurchaseOrdersService {
                 rawMaterialId: item.rawMaterialId,
                 quantity: item.quantity,
                 price: item.price,
+                unit: item.unit,
               })),
             },
           },
@@ -197,6 +198,7 @@ export class PurchaseOrdersService {
                 rawMaterialId: item.rawMaterialId,
                 quantity: item.quantity,
                 price: item.price,
+                unit: item.unit,
               },
             });
           } else {
@@ -211,6 +213,7 @@ export class PurchaseOrdersService {
                 rawMaterialId: item.rawMaterialId,
                 quantity: item.quantity,
                 price: item.price,
+                unit: item.unit,
               },
             });
           }
@@ -263,14 +266,25 @@ export class PurchaseOrdersService {
     return this.prisma.$transaction(async (tx) => {
       // 1. Create inventory lots and stock movements
       for (const item of order.items) {
+        let quantityToStock = item.quantity;
+        
+        // Handle unit conversion (KG -> G)
+        if (item.unit === 'KILOGRAMS') {
+          if (item.product && item.product.stockUnit === 'GRAMS') {
+            quantityToStock = item.quantity * 1000;
+          } else if (item.rawMaterial && item.rawMaterial.unit === 'GRAMS') {
+            quantityToStock = item.quantity * 1000;
+          }
+        }
+
         if (item.productId) {
           const createdLot = await tx.inventoryLot.create({
             data: {
               organizationId: organizationId,
               productId: item.productId,
               costPrice: item.price, // Cost price from purchase order item
-              quantity: item.quantity,
-              remainingQuantity: item.quantity,
+              quantity: quantityToStock,
+              remainingQuantity: quantityToStock,
               sourceType: 'PURCHASE_ORDER',
               sourceId: order.id,
               receivedDate: receptionDate, // Use provided date
@@ -282,14 +296,14 @@ export class PurchaseOrdersService {
               organizationId,
               productId: item.productId,
               inventoryLotId: createdLot.id,
-              quantity: item.quantity, // Positive for incoming stock
+              quantity: quantityToStock, // Positive for incoming stock
               type: 'COMPRA',
               sourceDocument: `Pedido de Compra #${order.orderNumber}`,
             }
           });
 
           // 2. Update product stock (this might be deprecated in the future in favor of calculated stock from lots)
-          this.logger.log(`Atualizando estoque do produto ${item.productId}. Quantidade: ${item.quantity}`);
+          this.logger.log(`Atualizando estoque do produto ${item.productId}. Quantidade: ${quantityToStock}`);
           const productBeforeUpdate = await tx.product.findUnique({ where: { id: item.productId } });
           this.logger.log(`Estoque antes: ${productBeforeUpdate?.stock}`);
 
@@ -297,7 +311,7 @@ export class PurchaseOrdersService {
             where: { id: item.productId },
             data: {
               stock: {
-                increment: item.quantity,
+                increment: quantityToStock,
               },
             },
           });
@@ -309,7 +323,7 @@ export class PurchaseOrdersService {
             where: { id: item.rawMaterialId },
             data: {
               stock: {
-                increment: item.quantity,
+                increment: quantityToStock,
               },
               cost: item.price, // Update raw material cost with the purchase price
             },

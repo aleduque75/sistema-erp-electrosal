@@ -5,6 +5,8 @@ import { AnaliseQuimicaWithClientNameDto } from "@/types/analise-quimica-with-cl
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
+import { Printer } from "lucide-react";
+import { Badge } from "../ui/badge";
 
 interface MetalCreditDetailsModalProps {
   isOpen: boolean;
@@ -27,6 +29,7 @@ const formatDate = (dateString?: string) => {
 export function MetalCreditDetailsModal({ isOpen, onClose, credit }: MetalCreditDetailsModalProps) {
   const [chemicalAnalysisDetails, setChemicalAnalysisDetails] = useState<AnaliseQuimicaWithClientNameDto | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     if (isOpen && credit?.chemicalAnalysisId) {
@@ -48,139 +51,155 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit }: MetalCredit
     }
   }, [isOpen, credit?.chemicalAnalysisId]);
 
+  const handlePrintPdf = async () => {
+    if (!credit) return;
+    setIsPrinting(true);
+    try {
+      const response = await api.get(`/metal-credits/${credit.id}/pdf`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `extrato-credito-${credit.id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      toast.error("Falha ao gerar o PDF.");
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   if (!credit) {
     return null;
   }
 
+  const statusMap: Record<string, { label: string; color: string }> = {
+    PENDING: { label: "Pendente", color: "bg-yellow-100 text-yellow-800" },
+    PARTIALLY_PAID: { label: "Pago Parcialmente", color: "bg-blue-100 text-blue-800" },
+    PAID: { label: "Pago", color: "bg-green-100 text-green-800" },
+    CANCELED: { label: "Cancelado", color: "bg-red-100 text-red-800" },
+  };
+
+  const statusInfo = statusMap[credit.status] || { label: credit.status, color: "bg-gray-100 text-gray-800" };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Crédito de Metal</DialogTitle>
             <DialogDescription>
               Informações detalhadas sobre o crédito de metal do cliente e sua origem e uso.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <h4 className="text-lg font-semibold">Informações do Crédito</h4>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <p className="text-sm font-medium leading-none">Cliente:</p>
-              <p className="col-span-3 text-sm">{credit.clientName}</p>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <p className="text-sm font-medium leading-none">Tipo de Metal:</p>
-              <p className="col-span-3 text-sm">{credit.metalType}</p>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <p className="text-sm font-medium leading-none">Grama:</p>
-              <p className="col-span-3 text-sm">{formatGrams(Number(credit.grams))}</p>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <p className="text-sm font-medium leading-none">Data do Crédito:</p>
-              <p className="col-span-3 text-sm">{formatDate(credit.date as unknown as string)}</p>
-            </div>
+          <div className="grid gap-6 py-4">
+            <section>
+              <h4 className="text-lg font-semibold border-b pb-2 mb-4">Informações do Crédito</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Cliente</p>
+                  <p className="text-sm">{credit.clientName}</p>
+                </div>
+                <div className="space-y-1 text-right">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Status</p>
+                  <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Tipo de Metal</p>
+                  <p className="text-sm font-bold">{credit.metalType}</p>
+                </div>
+                <div className="space-y-1 text-right">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Data do Crédito</p>
+                  <p className="text-sm">{formatDate(credit.date as unknown as string)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Grama Original</p>
+                  <p className="text-sm">{formatGrams(Number(credit.grams) + (credit.usageEntries?.reduce((acc, curr) => acc + Math.abs(curr.grams), 0) || 0))}</p>
+                </div>
+                <div className="space-y-1 text-right">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Saldo Restante</p>
+                  <p className="text-sm font-bold text-primary">{formatGrams(Number(credit.grams))}</p>
+                </div>
+              </div>
+            </section>
 
             {isLoadingAnalysis ? (
               <p className="text-center p-4">Carregando detalhes da Análise Química...</p>
-            ) : chemicalAnalysisDetails ? (
-              <>
-                <h4 className="text-lg font-semibold mt-4">Origem (Análise Química)</h4>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <p className="text-sm font-medium leading-none">Número da Análise:</p>
-                  <p className="col-span-3 text-sm">{chemicalAnalysisDetails.numeroAnalise}</p>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <p className="text-sm font-medium leading-none">Material:</p>
-                  <p className="col-span-3 text-sm">{chemicalAnalysisDetails.descricaoMaterial}</p>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <p className="text-sm font-medium leading-none">Volume/Peso Entrada:</p>
-                  <p className="col-span-3 text-sm">{chemicalAnalysisDetails.volumeOuPesoEntrada} {chemicalAnalysisDetails.unidadeEntrada}</p>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <p className="text-sm font-medium leading-none">Status:</p>
-                  <p className="col-span-3 text-sm">{chemicalAnalysisDetails.status}</p>
-                </div>
-              </>
-            ) : (
-              <p className="text-center p-4 text-muted-foreground">Nenhum detalhe de Análise Química encontrado.</p>
-            )}
-
-            {credit.usageEntries && credit.usageEntries.length > 0 && (
-              <>
-                <h4 className="text-lg font-semibold mt-4">Uso do Crédito</h4>
-                {credit.usageEntries.map((entry, index) => (
-                  <div key={index} className="border-t pt-4 mt-4 first:border-t-0 first:pt-0 first:mt-0">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <p className="text-sm font-medium leading-none">Data do Uso:</p>
-                      <p className="col-span-3 text-sm">{formatDate(entry.date.toString())}</p>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <p className="text-sm font-medium leading-none">Descrição:</p>
-                      <p className="col-span-3 text-sm">{entry.description}</p>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <p className="text-sm font-medium leading-none">Grama Utilizada:</p>
-                      <p className="col-span-3 text-sm">{formatGrams(entry.grams)}</p>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <p className="text-sm font-medium leading-none">Tipo de Uso:</p>
-                      <p className="col-span-3 text-sm">{entry.type}</p>
-                    </div>
-
-                    {entry.sale && (
-                      <div className="pl-4 border-l ml-2 mt-2">
-                        <p className="text-sm font-medium leading-none">Venda Relacionada:</p>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <p className="text-sm font-medium leading-none">Número do Pedido:</p>
-                          <p className="col-span-3 text-sm">{entry.sale.orderNumber}</p>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <p className="text-sm font-medium leading-none">Data da Venda:</p>
-                          <p className="col-span-3 text-sm">{formatDate(entry.sale.saleDate.toString())}</p>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <p className="text-sm font-medium leading-none">Valor Total da Venda (R$):</p>
-                          <p className="col-span-3 text-sm">{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(entry.sale.totalAmount)}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {entry.paymentDate && ( // Only show payment details if paymentDate exists
-                      <div className="pl-4 border-l ml-2 mt-2">
-                        <p className="text-sm font-medium leading-none">Detalhes do Pagamento:</p>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <p className="text-sm font-medium leading-none">Data do Pagamento:</p>
-                          <p className="col-span-3 text-sm">{formatDate(entry.paymentDate.toString())}</p>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <p className="text-sm font-medium leading-none">Valor Pago (R$):</p>
-                          <p className="col-span-3 text-sm">{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(entry.paymentValueBRL || 0)}</p>
-                        </div>
-                        {entry.paymentQuotation && ( // Conditionally show quotation
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <p className="text-sm font-medium leading-none">Cotação do Pagamento (R$/g):</p>
-                            <p className="col-span-3 text-sm">{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(entry.paymentQuotation)}</p>
-                          </div>
-                        )}
-                        {entry.paymentSourceAccountName && ( // Conditionally show source account
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <p className="text-sm font-medium leading-none">Conta de Origem:</p>
-                            <p className="col-span-3 text-sm">{entry.paymentSourceAccountName}</p>
-                          </div>
-                        )}
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <p className="text-sm font-medium leading-none">Status do Pagamento:</p>
-                          <p className="col-span-3 text-sm">{entry.isPaid ? "Pago" : "Pendente"}</p>
-                        </div>
-                      </div>
-                    )}
+            ) : chemicalAnalysisDetails && (
+              <section>
+                <h4 className="text-lg font-semibold border-b pb-2 mb-4">Origem (Análise Química)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">Número da Análise</p>
+                    <p className="text-sm">{chemicalAnalysisDetails.numeroAnalise}</p>
                   </div>
-                ))}
-              </>
+                  <div className="space-y-1 text-right">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">Data Entrada</p>
+                    <p className="text-sm">{formatDate(chemicalAnalysisDetails.dataEntrada.toString())}</p>
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">Material</p>
+                    <p className="text-sm">{chemicalAnalysisDetails.descricaoMaterial}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">Peso Entrada</p>
+                    <p className="text-sm">{chemicalAnalysisDetails.volumeOuPesoEntrada} {chemicalAnalysisDetails.unidadeEntrada}</p>
+                  </div>
+                </div>
+              </section>
             )}
+
+            <section>
+              <h4 className="text-lg font-semibold border-b pb-2 mb-4">Histórico de Movimentações (Uso do Crédito)</h4>
+              {credit.usageEntries && credit.usageEntries.length > 0 ? (
+                <div className="space-y-4">
+                  {credit.usageEntries.map((entry, index) => (
+                    <div key={index} className="bg-muted/30 p-4 rounded-lg border border-muted">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="text-sm font-bold">{entry.description}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(entry.date.toString())}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-red-600">-{formatGrams(Math.abs(entry.grams))}</p>
+                          <Badge variant="outline" className="text-[10px] py-0">{entry.type}</Badge>
+                        </div>
+                      </div>
+
+                      {entry.sale && (
+                        <div className="mt-2 pt-2 border-t border-muted-foreground/10 text-xs grid grid-cols-2 gap-1">
+                          <p><span className="font-medium">Venda:</span> #{entry.sale.orderNumber}</p>
+                          <p className="text-right"><span className="font-medium">Valor:</span> {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(entry.sale.totalAmount)}</p>
+                        </div>
+                      )}
+
+                      {entry.paymentDate && (
+                        <div className="mt-2 pt-2 border-t border-muted-foreground/10 text-xs grid grid-cols-2 gap-1">
+                          <p><span className="font-medium">Pago em:</span> {formatDate(entry.paymentDate.toString())}</p>
+                          <p className="text-right"><span className="font-medium">Valor BRL:</span> {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(entry.paymentValueBRL || 0)}</p>
+                          {entry.paymentQuotation && (
+                            <p className="col-span-2"><span className="font-medium">Cotação:</span> {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(entry.paymentQuotation)}/g</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4 bg-muted/20 rounded">Nenhuma movimentação de saída registrada para este cliente neste metal.</p>
+              )}
+            </section>
           </div>
+          <DialogFooter className="flex justify-between items-center sm:justify-between">
+            <Button variant="outline" onClick={handlePrintPdf} disabled={isPrinting}>
+              <Printer className="mr-2 h-4 w-4" />
+              {isPrinting ? "Gerando..." : "Imprimir Extrato (PDF)"}
+            </Button>
+            <Button onClick={onClose}>Fechar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

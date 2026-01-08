@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Post, Body, Patch } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Post, Body, Patch, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { MetalCreditsService } from './metal-credits.service';
@@ -9,6 +9,8 @@ import { PayMetalCreditWithCashDto } from './dtos/pay-metal-credit-with-cash.dto
 import { PayWithClientCreditDto } from './dtos/pay-with-client-credit.dto';
 import { UpdateMetalCreditDto } from './dtos/update-metal-credit.dto';
 import { User } from '@prisma/client';
+import { GerarPdfMetalCreditUseCase } from './use-cases/gerar-pdf-metal-credit.use-case';
+import { Response } from 'express';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('metal-credits')
@@ -17,7 +19,28 @@ export class MetalCreditsController {
     private readonly metalCreditsService: MetalCreditsService,
     private readonly payMetalCreditWithCashUseCase: PayMetalCreditWithCashUseCase,
     private readonly payWithClientCreditUseCase: PayWithClientCreditUseCase,
+    private readonly gerarPdfMetalCreditUseCase: GerarPdfMetalCreditUseCase,
   ) {}
+
+  @Get(':id/pdf')
+  async generatePdf(
+    @Param('id') id: string,
+    @CurrentUser('orgId') organizationId: string,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.gerarPdfMetalCreditUseCase.execute({
+      metalCreditId: id,
+      organizationId,
+    });
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=credito-metal-${id}.pdf`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.send(pdfBuffer);
+  }
 
   @Patch(':id')
   async update(

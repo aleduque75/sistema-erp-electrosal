@@ -5,7 +5,7 @@ import { PureMetalLotsService } from '../pure-metal-lots/pure-metal-lots.service
 import { TransacoesService } from '../transacoes/transacoes.service';
 import { QuotationsService } from '../quotations/quotations.service';
 import { SettingsService } from '../settings/settings.service';
-import { TipoTransacaoPrisma, TipoMetal } from '@prisma/client';
+import { TipoTransacaoPrisma, TipoMetal, MetalCreditStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
@@ -33,7 +33,7 @@ export class MetalPaymentsService {
       }
 
       // 2. Registrar a saída do metal do lote
-      await this.pureMetalLotsService.createPureMetalLotMovement(
+      const movement = await this.pureMetalLotsService.createPureMetalLotMovement(
         organizationId,
         pureMetalLotId,
         {
@@ -84,6 +84,78 @@ export class MetalPaymentsService {
         organizationId,
         tx,
       );
+
+      // 5. Abater dos créditos de metal do cliente (FIFO)
+      let remainingGramsToDeduct = new Decimal(grams);
+      const openCredits = await tx.metalCredit.findMany({
+        where: {
+          clientId,
+          organizationId,
+          metalType: pureMetalLot.metalType,
+          status: { in: [MetalCreditStatus.PENDING, MetalCreditStatus.PARTIALLY_PAID] },
+        },
+        orderBy: { date: 'asc' },
+      });
+
+      for (const credit of openCredits) {
+        if (remainingGramsToDeduct.lessThanOrEqualTo(0)) break;
+
+        const creditGrams = new Decimal(credit.grams);
+        let deduction = new Decimal(0);
+
+        if (remainingGramsToDeduct.greaterThanOrEqualTo(creditGrams)) {
+          deduction = creditGrams;
+        } else {
+          deduction = remainingGramsToDeduct;
+        }
+
+        const newGrams = creditGrams.minus(deduction);
+        const newSettledGrams = new Decimal(credit.settledGrams || 0).plus(deduction);
+        const newStatus = newGrams.lessThanOrEqualTo(0.0001) ? MetalCreditStatus.PAID : MetalCreditStatus.PARTIALLY_PAID;
+
+        await tx.metalCredit.update({
+          where: { id: credit.id },
+          data: {
+            grams: newGrams.toNumber(),
+            settledGrams: newSettledGrams.toNumber(),
+            status: newStatus,
+          },
+        });
+
+        remainingGramsToDeduct = remainingGramsToDeduct.minus(deduction);
+      }
+
+      // 6. Atualizar Conta Metal (MetalAccount) e criar entrada (MetalAccountEntry)
+      let metalAccount = await tx.metalAccount.findUnique({
+        where: {
+          organizationId_personId_type: {
+            organizationId,
+            personId: clientId,
+            type: pureMetalLot.metalType,
+          },
+        },
+      });
+
+      if (!metalAccount) {
+        metalAccount = await tx.metalAccount.create({
+          data: {
+            organizationId,
+            personId: clientId,
+            type: pureMetalLot.metalType,
+          }
+        });
+      }
+
+      await tx.metalAccountEntry.create({
+        data: {
+          metalAccountId: metalAccount.id,
+          date: transactionDate,
+          description: `Pagamento em metal ao cliente (Lote: ${pureMetalLot.lotNumber || 'N/A'})`,
+          grams: new Decimal(grams).negated().toNumber(),
+          type: 'DEBIT',
+          sourceId: movement.id, // Linking to the lot movement
+        }
+      });
 
       return { message: 'Pagamento em metal ao cliente registrado com sucesso.' };
     });

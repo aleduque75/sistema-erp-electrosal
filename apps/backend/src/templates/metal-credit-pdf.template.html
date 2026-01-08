@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Extrato de Crédito de Metal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .logo {
+            max-width: 150px;
+        }
+        .info {
+            text-align: right;
+        }
+        .content {
+            padding: 20px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #2c3e50;
+        }
+        .details-section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            color: #34495e;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-pending { background-color: #ffeeba; color: #856404; }
+        .badge-paid { background-color: #d4edda; color: #155724; }
+        .badge-partial { background-color: #cce5ff; color: #004085; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="%%LOGO_PLACEHOLDER%%" alt="Logo" class="logo">
+        <div class="info">
+            <p><strong>Electrosal Metais Preciosos</strong></p>
+            <p>Data de Emissão: {{formatarData dataEmissaoPdf}}</p>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="title">Extrato Detalhado de Crédito de Metal</div>
+
+        <div class="details-section">
+            <div class="section-title">Dados do Crédito</div>
+            <table>
+                <tr>
+                    <th>Cliente</th>
+                    <td>{{clientName}}</td>
+                    <th>Tipo de Metal</th>
+                    <td>{{metalType}}</td>
+                </tr>
+                <tr>
+                    <th>Data de Origem</th>
+                    <td>{{formatarData date}}</td>
+                    <th>Status</th>
+                    <td>{{status}}</td>
+                </tr>
+                <tr>
+                    <th>Grama Original</th>
+                    <td>{{formatarNumero gramsOriginal 4}} g</td>
+                    <th>Saldo Atual</th>
+                    <td>{{formatarNumero grams 4}} g</td>
+                </tr>
+            </table>
+        </div>
+
+        {{#if chemicalAnalysis}}
+        <div class="details-section">
+            <div class="section-title">Origem: Análise Química Nº {{chemicalAnalysis.numeroAnalise}}</div>
+            <table>
+                <tr>
+                    <th>Material</th>
+                    <td>{{chemicalAnalysis.descricaoMaterial}}</td>
+                    <th>Data Entrada</th>
+                    <td>{{formatarData chemicalAnalysis.dataEntrada}}</td>
+                </tr>
+                <tr>
+                    <th>Peso Entrada</th>
+                    <td>{{chemicalAnalysis.volumeOuPesoEntrada}} {{chemicalAnalysis.unidadeEntrada}}</td>
+                    <th>Teor</th>
+                    <td>{{formatarNumero chemicalAnalysis.resultadoAnaliseValor 2}} g/kg</td>
+                </tr>
+            </table>
+        </div>
+        {{/if}}
+
+        <div class="details-section">
+            <div class="section-title">Histórico de Movimentações (Uso/Pagamentos)</div>
+            {{#if usageEntries.length}}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th class="text-right">Quantidade</th>
+                        <th>Tipo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each usageEntries}}
+                    <tr>
+                        <td>{{formatarData date}}</td>
+                        <td>{{description}}</td>
+                        <td class="text-right">{{formatarNumero grams 4}} g</td>
+                        <td>{{type}}</td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+            {{else}}
+            <p>Nenhuma movimentação registrada para este crédito.</p>
+            {{/if}}
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Este documento é um extrato informativo gerado pelo sistema ERP Electrosal.</p>
+    </div>
+</body>
+</html>

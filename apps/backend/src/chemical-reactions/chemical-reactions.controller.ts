@@ -1,4 +1,5 @@
-import { Controller, Post, Body, UseGuards, Req, Get, Patch, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, Patch, Param, Delete, Put, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateChemicalReactionUseCase } from './use-cases/create-chemical-reaction.use-case';
 import { CompleteProductionStepUseCase } from './use-cases/complete-production-step.use-case';
@@ -13,6 +14,7 @@ import { AddPureMetalLotToChemicalReactionUseCase } from './use-cases/add-pure-m
 import { RemovePureMetalLotFromChemicalReactionUseCase } from './use-cases/remove-pure-metal-lot-from-chemical-reaction.use-case';
 import { UpdateChemicalReactionUseCase } from './use-cases/update-chemical-reaction.use-case';
 import { UpdateChemicalReactionLotsUseCase } from './use-cases/update-chemical-reaction-lots.use-case';
+import { GenerateChemicalReactionPdfUseCase } from './use-cases/generate-chemical-reaction-pdf.use-case';
 import { UpdateChemicalReactionDto } from './dtos/update-chemical-reaction.dto';
 import { UpdateChemicalReactionLotsDto } from './dtos/update-chemical-reaction-lots.dto';
 
@@ -29,6 +31,7 @@ export class ChemicalReactionsController {
     private readonly removePureMetalLotFromChemicalReactionUseCase: RemovePureMetalLotFromChemicalReactionUseCase,
     private readonly updateChemicalReactionUseCase: UpdateChemicalReactionUseCase,
     private readonly updateChemicalReactionLotsUseCase: UpdateChemicalReactionLotsUseCase,
+    private readonly generateChemicalReactionPdfUseCase: GenerateChemicalReactionPdfUseCase,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -37,6 +40,26 @@ export class ChemicalReactionsController {
     const organizationId = req.user?.orgId;
     const command = { organizationId, dto };
     return this.createUseCase.execute(command);
+  }
+
+  @Get(':id/pdf')
+  async generatePdf(
+    @Param('id') id: string,
+    @Req() req,
+    @Res() res: Response,
+  ) {
+    const organizationId = req.user?.orgId;
+    const command = { reactionId: id, organizationId };
+    
+    const pdfBuffer = await this.generateChemicalReactionPdfUseCase.execute(command);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="reacao-quimica-${id}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
   }
 
   @Patch(':id')

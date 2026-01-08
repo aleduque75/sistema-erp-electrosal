@@ -44,6 +44,8 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
       .finally(() => setIsLoading(false));
   }, [reactionId]);
 
+  const metalSymbol = reactionDetails?.metalType || 'Au';
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -59,29 +61,29 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
   const outputBasketLeftoverGrams = form.watch('outputBasketLeftoverGrams');
   const outputDistillateLeftoverGrams = form.watch('outputDistillateLeftoverGrams');
 
-  const goldInProduct = useMemo(() => {
-    const goldValue = reactionDetails?.outputProduct?.goldValue || 0;
-    const gp = Number(outputProductGrams);
-    return isNaN(gp) ? 0 : gp * goldValue;
+  const metalInProduct = useMemo(() => {
+    const metalContent = reactionDetails?.outputProduct?.goldValue || 0;
+    const quantity = Number(outputProductGrams);
+    return isNaN(quantity) ? 0 : quantity * metalContent;
   }, [outputProductGrams, reactionDetails]);
 
-  // Efeito para avisar sobre teor de ouro zerado (Causa do bug de input)
+  // Efeito para avisar sobre teor de metal zerado
   useEffect(() => {
-    const goldValue = reactionDetails?.outputProduct?.goldValue || 0;
-    if (reactionDetails && goldValue === 0 && Number(outputProductGrams) > 0) {
-      toast.warning("Teor de ouro do produto é 0%", { description: "O cálculo de ouro no produto final está zerado. Verifique o cadastro do produto." });
+    const metalContent = reactionDetails?.outputProduct?.goldValue || 0;
+    if (reactionDetails && metalContent === 0 && Number(outputProductGrams) > 0) {
+      toast.warning(`Teor de ${metalSymbol} do produto é 0%`, { description: `O cálculo de ${metalSymbol} no produto final está zerado. Verifique o cadastro do produto.` });
     }
-  }, [outputProductGrams, reactionDetails]);
+  }, [outputProductGrams, reactionDetails, metalSymbol]);
 
 
 
-  const totalOutputGold = useMemo(() => {
-    return goldInProduct + (Number(outputBasketLeftoverGrams) || 0) + (Number(outputDistillateLeftoverGrams) || 0);
-  }, [goldInProduct, outputBasketLeftoverGrams, outputDistillateLeftoverGrams]);
+  const totalOutputMetal = useMemo(() => {
+    return metalInProduct + (Number(outputBasketLeftoverGrams) || 0) + (Number(outputDistillateLeftoverGrams) || 0);
+  }, [metalInProduct, outputBasketLeftoverGrams, outputDistillateLeftoverGrams]);
 
   const balance = useMemo(() => {
-    return auUsedGrams - totalOutputGold;
-  }, [auUsedGrams, totalOutputGold]);
+    return auUsedGrams - totalOutputMetal;
+  }, [auUsedGrams, totalOutputMetal]);
 
   const isBalanceZero = useMemo(() => Math.abs(balance) < 0.001, [balance]);
 
@@ -109,7 +111,7 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
         
         <FormField name="outputBasketLeftoverGrams" control={form.control} render={({ field }) => (
           <FormItem>
-            <FormLabel>Sobra de Cesto (g Au)</FormLabel>
+            <FormLabel>Sobra de Cesto (g {metalSymbol})</FormLabel>
             <FormControl><Input type="number" step="0.01" placeholder="100.0" {...field} /></FormControl>
             <FormMessage />
           </FormItem>
@@ -117,7 +119,7 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
 
         <FormField name="outputDistillateLeftoverGrams" control={form.control} render={({ field }) => (
           <FormItem>
-            <FormLabel>Sobra de Destilado (g Au)</FormLabel>
+            <FormLabel>Sobra de Destilado (g {metalSymbol})</FormLabel>
             <FormControl><Input type="number" step="0.01" placeholder="59.08" {...field} /></FormControl>
             <FormMessage />
           </FormItem>
@@ -130,23 +132,23 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
         ) : (
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label>Ouro Utilizado (Entrada):</Label>
+              <Label>Metal Utilizado ({metalSymbol} Entrada):</Label>
               <Badge variant="secondary" className="text-lg p-2">
-                {Number(auUsedGrams).toFixed(4)} g Au
+                {Number(auUsedGrams).toFixed(4)} g {metalSymbol}
               </Badge>
             </div>
             <div className="flex justify-between items-center">
-              <Label>Ouro na Saída (Produto + Sobras):</Label>
+              <Label>Metal na Saída (Produto + Sobras):</Label>
               <Badge variant="secondary" className="text-lg p-2">
-                {totalOutputGold.toFixed(4)} g Au
+                {totalOutputMetal.toFixed(4)} g {metalSymbol}
               </Badge>
             </div>
             <Separator />
             <div className="flex justify-between items-center font-bold text-xl">
-              <Label>Saldo de Ouro:</Label>
+              <Label>Saldo de Metal:</Label>
               <div className="flex items-center gap-2">
                 <Badge variant={isBalanceZero ? "default" : "destructive"} className="text-lg p-2">
-                  {balance.toFixed(4)} g Au
+                  {balance.toFixed(4)} g {metalSymbol}
                 </Badge>
                 {isBalanceZero && (
                   <CheckCircle2 className="h-6 w-6 text-green-500" />

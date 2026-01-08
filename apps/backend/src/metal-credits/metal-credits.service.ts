@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IMetalCreditRepository, MetalCredit } from '@sistema-erp-electrosal/core';
 import { MetalCreditWithUsageDto, MetalAccountEntryDto, SaleUsageDto } from './dtos/metal-credit-with-usage.dto';
 import { PrismaService } from '../prisma/prisma.service'; // Import PrismaService
+import { UpdateMetalCreditDto } from './dtos/update-metal-credit.dto';
 
 @Injectable()
 export class MetalCreditsService {
@@ -26,10 +27,29 @@ export class MetalCreditsService {
 
   async update(
     id: string,
-    data: Partial<MetalCredit>,
+    data: UpdateMetalCreditDto,
     organizationId: string,
   ): Promise<MetalCredit> {
-    return this.metalCreditRepository.update(id, data, organizationId);
+    const updateData: any = { ...data };
+    if (updateData.date && typeof updateData.date === 'string') {
+      updateData.date = new Date(updateData.date);
+    }
+
+    const updatedCredit = await this.metalCreditRepository.update(id, updateData, organizationId);
+
+    if (updateData.date) {
+      await this.prisma.metalAccountEntry.updateMany({
+        where: {
+          sourceId: id,
+          type: 'CREDIT',
+        },
+        data: {
+          date: updateData.date,
+        },
+      });
+    }
+
+    return updatedCredit;
   }
 
   private async mapMetalCreditsToDto(metalCredits: MetalCredit[], organizationId: string): Promise<MetalCreditWithUsageDto[]> {
@@ -156,6 +176,15 @@ export class MetalCreditsService {
                 isPaid = true; // Cash payments are always considered paid
               }
             }
+          } else if (dbEntry.type === 'DEBIT' && dbEntry.sourceId) {
+            // Fetch lot info from pureMetalLotMovement
+            const movement = await this.prisma.pureMetalLotMovement.findUnique({
+              where: { id: dbEntry.sourceId },
+              include: { pureMetalLot: true },
+            });
+            if (movement?.pureMetalLot) {
+              paymentSourceAccountName = `Lote: ${movement.pureMetalLot.lotNumber || movement.pureMetalLot.id}`;
+            }
           }
 
           usageEntries.push({
@@ -184,6 +213,7 @@ export class MetalCreditsService {
         date: metalCredit.date,
         organizationId: metalCredit.organizationId,
         clientName,
+        status: metalCredit.status,
         usageEntries,
       });
     }

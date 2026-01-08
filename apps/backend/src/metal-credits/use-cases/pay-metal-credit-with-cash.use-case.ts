@@ -1,13 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TransacoesService } from '../../transacoes/transacoes.service';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { SettingsService } from '../../settings/settings.service';
-import { TipoTransacaoPrisma, MetalCredit, TipoMetal, MetalCreditStatus } from '@prisma/client';
+import { TipoTransacaoPrisma, TipoMetal, MetalCreditStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { PayMetalCreditWithCashDto } from '../dtos/pay-metal-credit-with-cash.dto';
-import { CreateMetalAccountEntryUseCase } from '../../metal-accounts/use-cases/create-metal-account-entry.use-case';
-import { CreateMetalAccountUseCase } from '../../metal-accounts/use-cases/create-metal-account.use-case';
+import { IMetalAccountRepository, MetalAccount } from '@sistema-erp-electrosal/core';
 
 @Injectable()
 export class PayMetalCreditWithCashUseCase {
@@ -16,8 +15,8 @@ export class PayMetalCreditWithCashUseCase {
     private readonly transacoesService: TransacoesService,
     private readonly quotationsService: QuotationsService,
     private readonly settingsService: SettingsService,
-    private readonly createMetalAccountEntryUseCase: CreateMetalAccountEntryUseCase,
-    private readonly createMetalAccountUseCase: CreateMetalAccountUseCase,
+    @Inject('IMetalAccountRepository')
+    private readonly metalAccountRepository: IMetalAccountRepository,
   ) {}
 
   async execute(organizationId: string, userId: string, dto: PayMetalCreditWithCashDto) {
@@ -148,28 +147,29 @@ export class PayMetalCreditWithCashUseCase {
       if (existingMetalAccount) {
         metalAccountId = existingMetalAccount.id;
       } else {
-        const newMetalAccount = await this.createMetalAccountUseCase.execute({
+        // Use repo with tx to ensure transaction context
+        const metalAccount = MetalAccount.create({
           organizationId,
-          dto: {
-            personId: metalCredit.clientId,
-            type: metalCredit.metalType,
-          },
+          personId: metalCredit.clientId,
+          type: metalCredit.metalType,
         });
-        metalAccountId = newMetalAccount.id.toString();
+        // The repository creates and returns void, we need to know the ID which is generated in domain or db
+        // In this project, IDs are usually UUIDs generated in domain or DB. 
+        // MetalAccount.create generates an ID if not provided.
+        await this.metalAccountRepository.create(metalAccount, tx);
+        metalAccountId = metalAccount.id.toString();
       }
 
-      const entryDto = {
-        metalAccountId: metalAccountId,
-        date: transactionDate.toISOString(),
-        description: `Pagamento em dinheiro do crédito de metal`,
-        grams: gramsToSettle.negated().toNumber(),
-        type: 'CASH_PAYMENT',
-        sourceId: debitTransaction.id,
-      };
-
-      await this.createMetalAccountEntryUseCase.execute({
-        organizationId,
-        dto: entryDto,
+      // Create entry directly using tx to ensure it's in the transaction
+      await tx.metalAccountEntry.create({
+        data: {
+          metalAccountId: metalAccountId,
+          date: transactionDate,
+          description: `Pagamento em dinheiro do crédito de metal`,
+          grams: gramsToSettle.negated().toNumber(),
+          type: 'CASH_PAYMENT',
+          sourceId: debitTransaction.id,
+        },
       });
 
       return updatedMetalCredit;

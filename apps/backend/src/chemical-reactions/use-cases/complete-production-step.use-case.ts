@@ -73,12 +73,12 @@ export class CompleteProductionStepUseCase {
         batchNumber = await this.getNextBatchNumber(organizationId, tx);
       }
 
-      // Get gold quote for costing
-      const goldQuote = await this.quotationsService.findLatest(TipoMetal.AU, organizationId);
-      if (!goldQuote) {
-        throw new BadRequestException('Nenhuma cotação de ouro encontrada para calcular o custo.');
+      // Get metal quote for costing
+      const metalQuote = await this.quotationsService.findLatest(reaction.metalType, organizationId);
+      if (!metalQuote) {
+        throw new BadRequestException(`Nenhuma cotação de ${reaction.metalType} encontrada para calcular o custo.`);
       }
-      const totalCost = totalGoldGrams.times(goldQuote.buyPrice);
+      const totalCost = totalGoldGrams.times(metalQuote.buyPrice);
       const costPricePerGramOfProduct = goldInOutputProduct.gt(0) ? totalCost.dividedBy(outputProductGrams) : new Decimal(0);
 
       // Determine the quantity to save based on the product's stock unit
@@ -133,7 +133,7 @@ export class CompleteProductionStepUseCase {
             organizationId,
             sourceType: 'REACTION_LEFTOVER',
             sourceId: reaction.id,
-            metalType: TipoMetal.AU,
+            metalType: reaction.metalType,
             initialGrams: goldInBasketLeftover.toNumber(),
             remainingGrams: goldInBasketLeftover.toNumber(),
             purity: 1, // Assuming 100% purity for leftovers
@@ -147,7 +147,7 @@ export class CompleteProductionStepUseCase {
             organizationId,
             sourceType: 'REACTION_LEFTOVER',
             sourceId: reaction.id,
-            metalType: TipoMetal.AU,
+            metalType: reaction.metalType,
             initialGrams: outputDistillateLeftoverGrams,
             remainingGrams: outputDistillateLeftoverGrams,
             purity: 1, // Assuming 100% purity for leftovers

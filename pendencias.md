@@ -1,2 +1,1 @@
-ao fazer um pedido de compra e confirmar recebimeno , mesmo colocando a data do recebimento no StockMovement ele coloca a data de hoje, isso acontece tambem, ao finalizar uma reação ele colocar a data de hoje tambem
-
+o processo de finalizar a reasção e dar a entrada no produto foi em gramas, mas no pedido de compras esta sendo em kg, como faço para ajustar o pedido de compra acho melhor ser por gramas mesmo, só que foram feitas vendas e separei lote e tudo , como arrumar isso 

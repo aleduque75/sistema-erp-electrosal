@@ -19,6 +19,7 @@ export interface ChemicalReactionDetails {
     status: 'STARTED' | 'PROCESSING' | 'PENDING_PURITY' | 'PENDING_PURITY_ADJUSTMENT' | 'COMPLETED' | 'CANCELED' | string;
     auUsedGrams: number;
     outputProductGrams: number; // CAMPO QUE ESTAVA FALTANDO
+    metalType: string;
     
     productionBatch?: {
         batchNumber: string;
@@ -36,7 +37,7 @@ export interface ChemicalReactionDetails {
 }
 
 
-const formatGrams = (grams: number) => new Intl.NumberFormat('pt-BR', { style: 'unit', unit: 'gram', minimumFractionDigits: 2 }).format(grams);
+const formatGrams = (grams: number) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(grams) + " g";
 const formatDate = (date: string | null) => date ? new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
 
 const statusVariantMap: { [key in ChemicalReactionDetails['status']]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
@@ -84,7 +85,10 @@ export function ReactionDetailsModal({ reaction, isOpen, onClose }: ReactionDeta
 
         <DialogHeader>
 
-          <DialogTitle>Detalhes da Reação</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Detalhes da Reação
+            <Badge variant="outline">{currentReaction.metalType}</Badge>
+          </DialogTitle>
 
         </DialogHeader>
 
@@ -110,7 +114,7 @@ export function ReactionDetailsModal({ reaction, isOpen, onClose }: ReactionDeta
 
             <div className="grid gap-2">
 
-              <p><strong>Ouro Utilizado:</strong> {formatGrams(totalGramsToUse)}</p>
+              <p><strong>{currentReaction.metalType} Utilizado:</strong> {formatGrams(totalGramsToUse)}</p>
 
               {currentReaction.lots && currentReaction.lots.length > 0 ? (
 
@@ -156,11 +160,11 @@ export function ReactionDetailsModal({ reaction, isOpen, onClose }: ReactionDeta
 
             <div className="grid gap-2">
 
-              <p><strong>Lote Gerado:</strong> {currentReaction.productionBatch?.batchNumber}</p>
+              <p><strong>Lote Gerado:</strong> {currentReaction.productionBatch?.batchNumber || '-'}</p>
 
-              <p><strong>Produto:</strong> {currentReaction.productionBatch?.product.name}</p>
+              <p><strong>Produto:</strong> {currentReaction.productionBatch?.product.name || '-'}</p>
 
-              <p><strong>Quantidade Produzida:</strong> {formatGrams(currentReaction.outputProductGrams)}</p>
+              <p><strong>Quantidade Produzida:</strong> {new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(currentReaction.outputProductGrams)} g</p>
 
             </div>
 

@@ -28,6 +28,13 @@ export const deletePureMetalLot = async (id: string): Promise<void> => {
   await api.delete(`/pure-metal-lots/${id}`);
 };
 
+export const downloadPureMetalLotPdf = async (id: string): Promise<Blob> => {
+  const response = await api.get(`/pure-metal-lots/${id}/pdf`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
 // Funções para PureMetalLotMovement
 export const getPureMetalLotMovements = async (pureMetalLotId: string): Promise<PureMetalLotMovement[]> => {
   const response = await api.get('/pure-metal-lot-movements', { params: { pureMetalLotId } });

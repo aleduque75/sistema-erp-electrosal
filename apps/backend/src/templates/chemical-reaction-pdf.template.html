@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Reação Química #{{reactionNumber}}</title>
+    <style>
+        body { font-family: 'Helvetica', 'Arial', sans-serif; color: #333; line-height: 1.4; font-size: 12px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+        .logo { max-height: 60px; }
+        .company-info { text-align: right; font-size: 10px; color: #666; }
+        h1 { color: #2c3e50; font-size: 20px; margin: 0; }
+        h2 { color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .info-item { margin-bottom: 8px; }
+        .label { font-weight: bold; color: #555; display: block; font-size: 10px; text-transform: uppercase; }
+        .value { font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+        th { background-color: #f8f9fa; text-align: left; padding: 8px; border-bottom: 2px solid #ddd; font-weight: bold; color: #555; }
+        td { padding: 8px; border-bottom: 1px solid #eee; }
+        .text-right { text-align: right; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; }
+        .status-STARTED { background-color: #3498db; }
+        .status-COMPLETED { background-color: #27ae60; }
+        .status-CANCELED { background-color: #e74c3c; }
+        .status-PENDING_PURITY { background-color: #f39c12; }
+        .footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+        .total-row td { font-weight: bold; background-color: #fdfdfd; border-top: 2px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{{logoUrl}}" alt="Logo" class="logo">
+        <div class="company-info">
+            <strong>ELECTROSAL</strong><br>
+            Relatório de Produção<br>
+            Emissão: {{currentDate}}
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <h1>Reação Química #{{reactionNumber}}</h1>
+            <span class="badge status-{{status}}">{{statusTranslated}}</span>
+        </div>
+        <div style="text-align: right;">
+            <span class="label">Data de Início</span>
+            <span class="value">{{formatDate reactionDate}}</span>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="label">Tipo de Metal</span>
+            <span class="value">{{metalType}}</span>
+        </div>
+        <div class="info-item">
+            <span class="label">Produto de Saída (Pretendido/Gerado)</span>
+            <span class="value">{{productName}}</span>
+        </div>
+        {{#if batchNumber}}
+        <div class="info-item" style="background-color: #e8f4fd; padding: 10px; border: 1px solid #bde0fe; border-radius: 4px;">
+            <span class="label" style="font-size: 11px; color: #2980b9;">Lote Gerado</span>
+            <span class="value" style="font-size: 16px; font-weight: bold; color: #2980b9;">#{{batchNumber}}</span>
+        </div>
+        {{/if}}
+        {{#if notes}}
+        <div class="info-item" style="grid-column: 1 / -1;">
+            <span class="label">Observações</span>
+            <span class="value">{{notes}}</span>
+        </div>
+        {{/if}}
+    </div>
+
+    <h2>Matéria-Prima (Entrada)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Lote de Origem</th>
+                <th>Descrição</th>
+                <th class="text-right">Quantidade Utilizada</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each sourceLots}}
+            <tr>
+                <td>{{lotNumber}}</td>
+                <td>{{description}}</td>
+                <td class="text-right">{{formatNumber gramsToUse 4}} g</td>
+            </tr>
+            {{/each}}
+            {{#if rawMaterials}}
+                {{#each rawMaterials}}
+                <tr>
+                    <td>-</td>
+                    <td>{{name}} (Matéria-prima de estoque)</td>
+                    <td class="text-right">{{formatNumber quantity 4}} g</td>
+                </tr>
+                {{/each}}
+            {{/if}}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="2">Total Entrada (Metal Puro)</td>
+                <td class="text-right">{{formatNumber inputGoldGrams 4}} g</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <h2>Resultado da Produção (Saída)</h2>
+    {{#if isCompleted}}
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Descrição</th>
+                <th class="text-right">Quantidade</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Produto Final</td>
+                <td>{{productName}}</td>
+                <td class="text-right">{{formatNumber outputProductGrams 4}} g</td>
+            </tr>
+            <tr>
+                <td>Ouro Recuperado (no Produto)</td>
+                <td>Calculado pelo teor</td>
+                <td class="text-right">{{formatNumber outputGoldGrams 4}} g</td>
+            </tr>
+            {{#if outputBasketLeftoverGrams}}
+            <tr>
+                <td>Sobra de Cesto</td>
+                <td>Retorno ao estoque de metal puro</td>
+                <td class="text-right">{{formatNumber outputBasketLeftoverGrams 4}} g</td>
+            </tr>
+            {{/if}}
+            {{#if outputDistillateLeftoverGrams}}
+            <tr>
+                <td>Sobra de Destilado</td>
+                <td>Retorno ao estoque de metal puro</td>
+                <td class="text-right">{{formatNumber outputDistillateLeftoverGrams 4}} g</td>
+            </tr>
+            {{/if}}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="2">Balanço de Massa (Metal Puro)</td>
+                <td class="text-right">{{formatNumber totalOutputMetal 4}} g</td>
+            </tr>
+        </tfoot>
+    </table>
+    
+    <div class="info-grid" style="margin-top: 20px; background-color: #f8f9fa; padding: 15px; border-radius: 5px;">
+        <div class="info-item">
+            <span class="label">Quebra / Diferença</span>
+            <span class="value" style="color: {{balanceColor}}">{{formatNumber balance 4}} g</span>
+        </div>
+        <div class="info-item">
+            <span class="label">Eficiência</span>
+            <span class="value">{{efficiency}}%</span>
+        </div>
+    </div>
+    {{else}}
+    <p style="color: #666; font-style: italic; padding: 20px; text-align: center; background: #f9f9f9;">
+        Processo de produção ainda não finalizado. Os resultados estarão disponíveis após a conclusão.
+    </p>
+    {{/if}}
+
+    <div class="footer">
+        Relatório gerado automaticamente pelo Sistema ERP Electrosal
+    </div>
+</body>
+</html>

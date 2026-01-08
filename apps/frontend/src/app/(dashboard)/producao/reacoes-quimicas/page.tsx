@@ -5,8 +5,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { MoreHorizontal, PlusCircle, Eye } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Eye, Printer, X } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
+import { DateRange } from "react-day-picker";
+import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -14,21 +16,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DataTable } from "@/components/ui/data-table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ReactionDetailsModal } from "./components/reaction-details-modal";
 import { PureMetalLotSelectionModal } from "./components/PureMetalLotSelectionModal";
 import { ProductionStepClientBlock } from "./[id]/components/production-step-client-block";
 import { AdjustPurityClientBlock } from "./[id]/components/adjust-purity-client-block";
-
-// NOTA: ChemicalReactionDetails deve ser exportada do seu service file.
-// Para fins de unificação e garantia de que o `selectedReaction` é do tipo correto:
 import { ChemicalReactionDetails } from "@/types/chemical-reaction";
-
-
-import { useRouter } from "next/navigation";
-
-// O tipo de dados que a tabela espera agora é a interface COMPLETA que o modal exige.
-// Isso resolve o erro de tipagem no `selectedReaction`.
-// Removido o alias Reaction, use ChemicalReactionDetails diretamente
+import { TipoMetal } from "@/types/tipo-metal";
 
 const statusVariantMap: { [key in ChemicalReactionDetails['status']]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
   STARTED: 'secondary',
@@ -39,13 +34,27 @@ const statusVariantMap: { [key in ChemicalReactionDetails['status']]: 'default' 
   CANCELED: 'destructive',
 };
 
+const statusLabelMap: Record<string, string> = {
+  STARTED: 'Iniciada',
+  PROCESSING: 'Em Processamento',
+  PENDING_PURITY: 'Aguardando Pureza',
+  PENDING_PURITY_ADJUSTMENT: 'Aguardando Ajuste',
+  COMPLETED: 'Finalizada',
+  CANCELED: 'Cancelada',
+};
+
 export default function ChemicalReactionsPage() {
-  const router = useRouter();
   const [reactions, setReactions] = useState<ChemicalReactionDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedReaction, setSelectedReaction] = useState<ChemicalReactionDetails | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLotSelectionModalOpen, setIsLotSelectionModalOpen] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [metalTypeFilter, setMetalTypeFilter] = useState<string>("ALL");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const fetchReactions = async () => {
     setIsLoading(true);
@@ -77,13 +86,56 @@ export default function ChemicalReactionsPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedReaction(null);
-    fetchReactions(); // Refresh the list after closing the modal
+    fetchReactions();
   };
 
   const handleOpenLotSelectionModal = (reaction: ChemicalReactionDetails) => {
     setSelectedReaction(reaction);
     setIsLotSelectionModalOpen(true);
   };
+
+  const handlePrintPdf = async (reactionId: string) => {
+    setIsPrinting(true);
+    try {
+      const response = await api.get(`/chemical-reactions/${reactionId}/pdf`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `reacao-quimica-${reactionId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("PDF gerado com sucesso.");
+    } catch (error) {
+      toast.error("Falha ao gerar o PDF.");
+      console.error(error);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setStatusFilter("ALL");
+    setMetalTypeFilter("ALL");
+    setDateRange(undefined);
+  };
+
+  const filteredReactions = reactions.filter((reaction) => {
+    const matchesStatus = statusFilter === "ALL" || reaction.status === statusFilter;
+    const matchesMetalType = metalTypeFilter === "ALL" || reaction.metalType === metalTypeFilter;
+    
+    let matchesDate = true;
+    if (dateRange?.from) {
+      const reactionDate = new Date(reaction.reactionDate);
+      const start = startOfDay(dateRange.from);
+      const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+      matchesDate = isWithinInterval(reactionDate, { start, end });
+    }
+
+    return matchesStatus && matchesMetalType && matchesDate;
+  });
 
   const columns: ColumnDef<ChemicalReactionDetails>[] = [
     {
@@ -98,25 +150,34 @@ export default function ChemicalReactionsPage() {
       header: 'Status',
       cell: ({ row }) => {
         const status = row.getValue('status') as ChemicalReactionDetails['status'];
-        const displayStatus = status ? status.replace('_', ' ') : 'Desconhecido';
+        const displayStatus = status ? (statusLabelMap[status] || status.replace('_', ' ')) : 'Desconhecido';
         const variant = status && statusVariantMap[status] ? statusVariantMap[status] : 'outline';
         return <Badge variant={variant}>{displayStatus}</Badge>;
       },
     },
     {
+      accessorKey: 'metalType',
+      header: 'Metal',
+      cell: ({ row }) => {
+        const metal = row.original.metalType;
+        return <Badge variant="outline">{metal}</Badge>;
+      },
+    },
+    {
       accessorKey: 'auUsedGrams',
-      header: () => <div className="text-right">Ouro Utilizado</div>,
+      header: () => <div className="text-right">Metal Utilizado</div>,
       cell: ({ row }) => {
         const amount = parseFloat(row.getValue('auUsedGrams') as string);
-        const formatted = new Intl.NumberFormat('pt-BR', { style: 'unit', unit: 'gram' }).format(amount);
-        return <div className="text-right font-medium">{formatted}</div>;
+        const metal = row.original.metalType;
+        const formatted = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(amount);
+        return <div className="text-right font-medium">{formatted} g {metal}</div>;
       },
     },
     {
       accessorKey: 'productionBatch',
       header: 'Lote Gerado',
       cell: ({ row }) => {
-        const batch = row.original.productionBatch; // Acessa diretamente o objeto
+        const batch = row.original.productionBatch;
         return <div>{batch?.batchNumber || '-'}</div>;
       },
     },
@@ -142,6 +203,10 @@ export default function ChemicalReactionsPage() {
               <DropdownMenuItem onClick={() => handleOpenDetails(reaction.id)}>
                 <Eye className="mr-2 h-4 w-4" />
                 Ver Detalhes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handlePrintPdf(reaction.id)} disabled={isPrinting}>
+                <Printer className="mr-2 h-4 w-4" />
+                Imprimir Relatório
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {reaction.status === 'STARTED' && (
@@ -178,12 +243,55 @@ export default function ChemicalReactionsPage() {
           <CardHeader>
             <CardTitle>Lista de Reações</CardTitle>
             <CardDescription>Acompanhe todas as reações químicas em andamento e finalizadas.</CardDescription>
+            <div className="flex flex-wrap gap-4 mt-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium">Período</label>
+                <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+              </div>
+              <div className="flex flex-col gap-1.5 min-w-[150px]">
+                <label className="text-xs font-medium">Tipo de Metal</label>
+                <Select value={metalTypeFilter} onValueChange={setMetalTypeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Metal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Todos</SelectItem>
+                    <SelectItem value={TipoMetal.AU}>Ouro (AU)</SelectItem>
+                    <SelectItem value={TipoMetal.AG}>Prata (AG)</SelectItem>
+                    <SelectItem value={TipoMetal.RH}>Ródio (RH)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5 min-w-[180px]">
+                <label className="text-xs font-medium">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Todos</SelectItem>
+                    {Object.entries(statusLabelMap).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                {(metalTypeFilter !== "ALL" || statusFilter !== "ALL" || dateRange) && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="h-10">
+                    <X className="mr-2 h-4 w-4" />
+                    Limpar Filtros
+                  </Button>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <DataTable 
               columns={columns} 
-              data={reactions} 
-              filterColumnId="productionBatch"
+              data={filteredReactions} 
+              filterColumnId="reactionNumber"
+              filterPlaceholder="Pesquisar por número..."
               isLoading={isLoading}
             />
           </CardContent>

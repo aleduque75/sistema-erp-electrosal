@@ -21,6 +21,7 @@ interface PurchaseOrder {
     rawMaterial?: { name: string };
     quantity: number;
     price: number;
+    unit?: string;
   }[];
   orderDate: string;
 }
@@ -34,6 +35,11 @@ const formatCurrency = (value: number) =>
     style: "currency",
     currency: "BRL",
   }).format(value || 0);
+
+const formatUnit = (unit?: string) => {
+  if (unit === 'KILOGRAMS') return 'kg';
+  return 'g';
+};
 
 export function PurchaseOrderDetailsView({ order }: PurchaseOrderDetailsViewProps) {
 
@@ -50,10 +56,11 @@ export function PurchaseOrderDetailsView({ order }: PurchaseOrderDetailsViewProp
 
     autoTable(doc, {
       startY: 72,
-      head: [['Produto', 'Quantidade', 'Preço Unitário', 'Total']],
+      head: [['Produto', 'Quantidade', 'Unidade', 'Preço Unitário', 'Total']],
       body: order.items.map(item => [
         item.product?.name || item.rawMaterial?.name,
         item.quantity,
+        formatUnit(item.unit),
         formatCurrency(item.price),
         formatCurrency(item.quantity * item.price),
       ]),
@@ -101,6 +108,7 @@ export function PurchaseOrderDetailsView({ order }: PurchaseOrderDetailsViewProp
               <TableRow>
                 <TableHead>Produto</TableHead>
                 <TableHead className="text-right">Quantidade</TableHead>
+                <TableHead className="text-center">Unidade</TableHead>
                 <TableHead className="text-right">Preço Unitário</TableHead>
                 <TableHead className="text-right">Total</TableHead>
               </TableRow>
@@ -110,6 +118,7 @@ export function PurchaseOrderDetailsView({ order }: PurchaseOrderDetailsViewProp
                 <TableRow key={index}>
                   <TableCell>{item.product?.name || item.rawMaterial?.name}</TableCell>
                   <TableCell className="text-right">{item.quantity}</TableCell>
+                  <TableCell className="text-center">{formatUnit(item.unit)}</TableCell>
                   <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
                   <TableCell className="text-right">{formatCurrency(item.quantity * item.price)}</TableCell>
                 </TableRow>

@@ -61,6 +61,7 @@ interface PurchaseOrderItem {
   rawMaterialId?: string;
   quantity: number;
   price: number;
+  unit?: string;
   // Campos opcionais para exibição no frontend
   productName?: string;
   rawMaterialName?: string;
@@ -90,12 +91,13 @@ const itemSchema = z.object({
   rawMaterialId: z.preprocess(val => val === null ? undefined : val, z.string().optional()),
   quantity: z.preprocess(
     (val) => Number(val),
-    z.number().int().min(1, "Quantidade deve ser no mínimo 1.")
+    z.number().min(0.0001, "Quantidade deve ser maior que zero.")
   ),
   price: z.preprocess(
     (val) => Number(val),
     z.number().min(0.01, "Preço deve ser maior que zero.")
   ),
+  unit: z.string().default("GRAMS"),
 }).refine(data => {
   if (data.itemType === 'PRODUCT') return !!data.productId;
   if (data.itemType === 'RAW_MATERIAL') return !!data.rawMaterialId;
@@ -231,7 +233,8 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
           productId: item.productId,
           rawMaterialId: item.rawMaterialId,
           quantity: item.quantity,
-          price: item.price
+          price: item.price,
+          unit: item.unit || "GRAMS"
         }))
       };
 
@@ -365,6 +368,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
               <TableRow>
                 <TableHead>Item</TableHead>
                 <TableHead>Quantidade</TableHead>
+                <TableHead>Unidade</TableHead>
                 <TableHead>Preço Unitário</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead className="w-[100px]">Ações</TableHead>
@@ -373,7 +377,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
             <TableBody>
               {items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     Nenhum item adicionado.
                   </TableCell>
                 </TableRow>
@@ -382,6 +386,7 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
                   <TableRow key={index}>
                     <TableCell>{item.productName || item.rawMaterialName}</TableCell>
                     <TableCell>{item.quantity}</TableCell>
+                    <TableCell>{item.unit === "KILOGRAMS" ? "Quilo (kg)" : "Grama (g)"}</TableCell>
                     <TableCell>{Number(item.price).toFixed(2)}</TableCell>
                     <TableCell>{(item.quantity * Number(item.price)).toFixed(2)}</TableCell>
                     <TableCell>
@@ -472,7 +477,8 @@ function ItemForm({ products, rawMaterials, isLoading, onSave, onCancel, initial
     defaultValues: initialData ? {
       ...initialData,
       itemType: initialData.productId ? "PRODUCT" : "RAW_MATERIAL",
-    } : { itemType: "PRODUCT", quantity: 1, price: 0 },
+      unit: initialData.unit || "GRAMS",
+    } : { itemType: "PRODUCT", quantity: 1, price: 0, unit: "GRAMS" },
   });
 
   const itemType = form.watch("itemType");
@@ -576,19 +582,44 @@ function ItemForm({ products, rawMaterials, isLoading, onSave, onCancel, initial
           />
         )}
 
-        <FormField
-          control={form.control}
-          name="quantity"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Quantidade</FormLabel>
-              <FormControl>
-                <Input type="number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quantidade</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.0001" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="unit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Unidade</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a unidade" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="GRAMS">Grama (g)</SelectItem>
+                    <SelectItem value="KILOGRAMS">Quilo (kg)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <FormField
           control={form.control}
           name="price"

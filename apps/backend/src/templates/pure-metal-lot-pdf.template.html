@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Extrato de Lote de Metal Puro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .logo {
+            max-width: 150px;
+            max-height: 80px;
+        }
+        .title {
+            text-align: right;
+        }
+        .title h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #444;
+        }
+        .title p {
+            margin: 5px 0 0;
+            color: #777;
+        }
+        .info-section {
+            margin-bottom: 20px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .info-table th, .info-table td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .info-table th {
+            background-color: #f9f9f9;
+            font-weight: bold;
+            width: 30%;
+        }
+        .movements-section {
+            margin-top: 30px;
+        }
+        .movements-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .movements-table th, .movements-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .movements-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="%%LOGO_PLACEHOLDER%%" alt="Logo" class="logo">
+        <div class="title">
+            <h1>Extrato de Lote de Metal Puro</h1>
+            <p>Gerado em: {{formatarData dataEmissaoPdf}}</p>
+        </div>
+    </div>
+
+    <div class="info-section">
+        <h3>Detalhes do Lote</h3>
+        <table class="info-table">
+            <tr>
+                <th>Número do Lote:</th>
+                <td>{{lotNumber}}</td>
+            </tr>
+            <tr>
+                <th>Data de Entrada:</th>
+                <td>{{formatarData entryDate}}</td>
+            </tr>
+            <tr>
+                <th>Tipo de Metal:</th>
+                <td>{{metalType}}</td>
+            </tr>
+            <tr>
+                <th>Pureza:</th>
+                <td>{{formatarPercentual purity}}</td>
+            </tr>
+            <tr>
+                <th>Peso Inicial:</th>
+                <td>{{formatarNumero initialGrams}} g</td>
+            </tr>
+            <tr>
+                <th>Peso Restante:</th>
+                <td>{{formatarNumero remainingGrams}} g</td>
+            </tr>
+            <tr>
+                <th>Origem:</th>
+                <td>
+                    {{sourceType}}
+                    {{#if originDetails.orderNumber}} - Nº {{originDetails.orderNumber}}{{/if}}
+                    {{#if originDetails.name}} ({{originDetails.name}}){{/if}}
+                </td>
+            </tr>
+            <tr>
+                <th>Observações:</th>
+                <td>{{notes}}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="movements-section">
+        <h3>Histórico de Movimentações</h3>
+        <table class="movements-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Peso (g)</th>
+                    <th>Observações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each movements}}
+                <tr>
+                    <td>{{formatarData date}}</td>
+                    <td>{{type}}</td>
+                    <td>{{formatarNumero grams}}</td>
+                    <td>{{notes}}</td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="4" style="text-align: center;">Nenhuma movimentação registrada.</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        <p>Sistema ERP Electrosal - Documento gerado eletronicamente.</p>
+    </div>
+</body>
+</html>

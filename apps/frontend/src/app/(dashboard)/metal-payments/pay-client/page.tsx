@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -60,7 +60,12 @@ type PayClientWithMetalFormValues = z.infer<typeof formSchema>;
 
 export default function PayClientWithMetalPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+
+  const paramClientId = searchParams.get("clientId");
+  const paramMetalType = searchParams.get("metalType");
+  const paramGrams = searchParams.get("grams");
 
   // --- Busca de Dados com React Query ---
   // Busca todos os clientes
@@ -84,13 +89,23 @@ export default function PayClientWithMetalPage() {
   const form = useForm<PayClientWithMetalFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      clientId: "",
+      clientId: paramClientId || "",
       pureMetalLotId: "",
-      grams: 0,
+      grams: paramGrams ? Number(paramGrams) : 0,
       notes: "",
       data: new Date(),
     },
   });
+
+  // Pre-fill form when params or data changes
+  useEffect(() => {
+    if (paramClientId) {
+      form.setValue("clientId", paramClientId);
+    }
+    if (paramGrams) {
+      form.setValue("grams", Number(paramGrams));
+    }
+  }, [paramClientId, paramGrams, form]);
 
   const selectedLotId = form.watch("pureMetalLotId");
   const selectedLot = pureMetalLots?.find(lot => lot.id === selectedLotId);
@@ -103,7 +118,8 @@ export default function PayClientWithMetalPage() {
     onSuccess: () => {
       toast.success("Pagamento em metal ao cliente registrado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["pureMetalLots"] }); // Invalida o cache dos lotes
-      router.push("/pure-metal-lots"); // Redireciona para a listagem de lotes
+      queryClient.invalidateQueries({ queryKey: ["metal-credits"] }); // Invalida o cache dos créditos
+      router.push("/creditos-clientes"); // Redireciona para a listagem de créditos
     },
     onError: (error: any) => {
       toast.error(
@@ -127,10 +143,15 @@ export default function PayClientWithMetalPage() {
       label: client.name,
     })) || [];
 
+  // Filter lots by metalType if provided in params
+  const filteredLots = paramMetalType 
+    ? pureMetalLots?.filter(lot => lot.metalType === paramMetalType)
+    : pureMetalLots;
+
   const pureMetalLotOptions: ComboboxOption[] =
-    pureMetalLots?.map((lot) => ({
+    (filteredLots || [])?.map((lot) => ({
       value: lot.id,
-      label: `${lot.lotNumber || lot.id} (${lot.metalType} - ${lot.remainingGrams.toFixed(2)}g)`,
+      label: `${lot.lotNumber || lot.id} (${lot.metalType} - ${lot.remainingGrams.toFixed(4)}g)`,
     })) || [];
 
   if (isLoadingClients || isLoadingPureMetalLots) {
@@ -140,7 +161,7 @@ export default function PayClientWithMetalPage() {
   return (
     <div className="space-y-4 p-4 md:p-8">
       <div className="flex items-center gap-4">
-        <Link href="/pure-metal-lots">
+        <Link href="/creditos-clientes">
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -180,7 +201,7 @@ export default function PayClientWithMetalPage() {
               control={form.control}
               render={({ field }) => (
                 <div className="space-y-2">
-                  <FormLabel>Lote de Metal Puro</FormLabel>
+                  <FormLabel>Lote de Metal Puro {paramMetalType && `(${paramMetalType})`}</FormLabel>
                   <Combobox
                     value={field.value}
                     onChange={field.onChange}
@@ -190,7 +211,7 @@ export default function PayClientWithMetalPage() {
                   <FormMessage>{form.formState.errors.pureMetalLotId?.message}</FormMessage>
                   {selectedLot && (
                     <p className="text-sm text-muted-foreground">
-                      Saldo disponível: {selectedLot.remainingGrams.toFixed(2)}g ({selectedLot.metalType})
+                      Saldo disponível: {selectedLot.remainingGrams.toFixed(4)}g ({selectedLot.metalType})
                     </p>
                   )}
                 </div>
@@ -204,7 +225,7 @@ export default function PayClientWithMetalPage() {
                 <FormItem>
                   <FormLabel>Quantidade em Gramas</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" {...field} />
+                    <Input type="number" step="0.0001" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

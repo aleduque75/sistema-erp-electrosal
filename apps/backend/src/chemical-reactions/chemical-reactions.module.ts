@@ -11,6 +11,7 @@ import { AddPureMetalLotToChemicalReactionUseCase } from './use-cases/add-pure-m
 import { RemovePureMetalLotFromChemicalReactionUseCase } from './use-cases/remove-pure-metal-lot-from-chemical-reaction.use-case';
 import { UpdateChemicalReactionUseCase } from './use-cases/update-chemical-reaction.use-case';
 import { UpdateChemicalReactionLotsUseCase } from './use-cases/update-chemical-reaction-lots.use-case';
+import { GenerateChemicalReactionPdfUseCase } from './use-cases/generate-chemical-reaction-pdf.use-case';
 import { PrismaChemicalReactionRepository } from './repositories/prisma-chemical-reaction.repository';
 import { PrismaMediaRepository } from '../media/repositories/prisma-media.repository';
 import { PrismaPureMetalLotRepository } from '../recovery-orders/repositories/prisma-pure-metal-lot.repository';
@@ -28,6 +29,7 @@ import { PrismaPureMetalLotRepository } from '../recovery-orders/repositories/pr
     RemovePureMetalLotFromChemicalReactionUseCase,
     UpdateChemicalReactionUseCase,
     UpdateChemicalReactionLotsUseCase,
+    GenerateChemicalReactionPdfUseCase,
     {
       provide: 'IChemicalReactionRepository',
       useClass: PrismaChemicalReactionRepository,

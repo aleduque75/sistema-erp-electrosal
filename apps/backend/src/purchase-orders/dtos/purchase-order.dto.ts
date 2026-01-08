@@ -19,6 +19,10 @@ export class CreatePurchaseOrderItemDto {
   @IsNumber()
   @Transform(({ value }) => parseFloat(value))
   price: number;
+
+  @IsString()
+  @IsOptional()
+  unit?: string;
 }
 
 export class UpdatePurchaseOrderItemDto extends PartialType(CreatePurchaseOrderItemDto) {
