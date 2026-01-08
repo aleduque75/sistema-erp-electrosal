@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AccountsRecService } from './accounts-rec.service';
 import { AccountsRecController } from './accounts-rec.controller';
 import { PrismaModule } from '../prisma/prisma.module';
+import { PureMetalLotsModule } from '../pure-metal-lots/pure-metal-lots.module';
 import { PayAccountsRecWithMetalCreditUseCase } from './use-cases/pay-accounts-rec-with-metal-credit.use-case';
 import { PayAccountsRecWithMetalUseCase } from './use-cases/pay-accounts-rec-with-metal.use-case';
 import { SettingsModule } from '../settings/settings.module';
@@ -26,6 +27,7 @@ import { SettingsService } from '../settings/settings.service';
     SalesModule,
     UsersModule,
     MetalAccountsModule,
+    PureMetalLotsModule,
   ],
   controllers: [AccountsRecController],
   providers: [

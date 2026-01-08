@@ -290,10 +290,10 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
           <FormField name="selectedInstallmentId" control={form.control} render={({ field }) => (
             <FormItem>
               <FormLabel>Pagar Parcela Específica (Opcional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ''}>
+              <Select onValueChange={(val) => field.onChange(val === "custom" ? "" : val)} value={field.value || "custom"}>
                 <FormControl><SelectTrigger><SelectValue placeholder="Pagamento avulso" /></SelectTrigger></FormControl>
                 <SelectContent>
-                  <SelectItem value="">Pagamento avulso</SelectItem>
+                  <SelectItem value="custom">Pagamento avulso</SelectItem>
                   {accountRec.saleInstallments.filter(inst => inst.status === 'PENDING').map(inst => (
                     <SelectItem key={inst.id} value={inst.id}>
                       Parcela #{inst.installmentNumber} - {formatCurrency(Number(inst.amount))} (Venc. {new Date(inst.dueDate).toLocaleDateString()})

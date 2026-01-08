@@ -14,21 +14,39 @@ export class PureMetalLotsService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async create(organizationId: string, createPureMetalLotDto: CreatePureMetalLotDto) {
+  async create(organizationId: string, createPureMetalLotDto: CreatePureMetalLotDto, tx?: any) {
     const { initialGrams, remainingGrams, entryDate, ...rest } = createPureMetalLotDto;
     const nextLotNumber = await this.entityCounterService.getNextNumber(EntityType.PURE_METAL_LOT, organizationId);
     const lotNumber = `LMP-${String(nextLotNumber).padStart(6, '0')}`;
 
     const entryDateObject = entryDate ? new Date(`${entryDate}T12:00:00`) : new Date();
 
-    return this.pureMetalLotsRepository.create({
-      ...rest,
-      lotNumber,
-      organizationId,
-      initialGrams,
-      remainingGrams: remainingGrams !== undefined ? remainingGrams : initialGrams,
-      entryDate: entryDateObject,
+    const prisma = tx || this.prisma;
+
+    const lot = await prisma.pure_metal_lots.create({
+      data: {
+        ...rest,
+        lotNumber,
+        organizationId,
+        initialGrams,
+        remainingGrams: remainingGrams !== undefined ? remainingGrams : initialGrams,
+        entryDate: entryDateObject,
+      },
     });
+
+    // Create initial entry movement
+    await prisma.pureMetalLotMovement.create({
+      data: {
+        organizationId,
+        pureMetalLotId: lot.id,
+        type: 'ENTRY',
+        grams: initialGrams,
+        date: entryDateObject,
+        notes: lot.notes || 'Entrada inicial do lote',
+      },
+    });
+
+    return lot;
   }
 
   async findAll(organizationId: string, metalType?: TipoMetal, remainingGramsGt?: number) {
@@ -135,9 +153,21 @@ export class PureMetalLotsService {
       newRemainingGrams -= data.grams;
     }
 
+    let newStatus = lot.status;
+    if (newRemainingGrams <= 0) {
+      newStatus = 'USED';
+    } else if (newRemainingGrams >= lot.initialGrams) {
+      newStatus = 'AVAILABLE';
+    } else {
+      newStatus = 'PARTIALLY_USED';
+    }
+
     await prisma.pure_metal_lots.update({
       where: { id: pureMetalLotId },
-      data: { remainingGrams: newRemainingGrams },
+      data: { 
+        remainingGrams: newRemainingGrams,
+        status: newStatus as any,
+      },
     });
 
     return movement;

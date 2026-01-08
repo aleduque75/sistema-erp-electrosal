@@ -195,9 +195,18 @@ export class SalesService {
     data: UpdateSaleDto,
   ): Promise<Sale> {
     await this.findOne(organizationId, id); // Checa a posse antes de atualizar
+    const { items, clientMetalAccountId, numberOfInstallments, contaCorrenteId, goldQuoteValue, externalId, freightAmount, paymentMetalType, createdAt, orderNumber, ...rest } = data;
+    
+    // Note: Items update logic is not implemented here. 
+    // This is a shallow update for properties directly on the Sale model.
+    // If you need to update items, create a dedicated use case.
+
     return this.prisma.sale.update({
       where: { id },
-      data,
+      data: {
+        ...rest,
+        // Only map simple fields that match schema
+      },
     });
   }
 
@@ -402,6 +411,13 @@ export class SalesService {
     await this.calculateSaleAdjustmentUseCase.execute(saleId, organizationId);
 
     return updatedSale;
+  }
+
+  async updateObservation(organizationId: string, saleId: string, observation?: string): Promise<Sale> {
+    return this.prisma.sale.update({
+      where: { id: saleId, organizationId },
+      data: { observation },
+    });
   }
 
   async backfillQuotations(organizationId: string): Promise<{ message: string; processedCount: number; notFoundCount: number; }> {

@@ -5,7 +5,8 @@ import { SettingsService } from '../../settings/settings.service';
 import { CalculateSaleAdjustmentUseCase } from '../../sales/use-cases/calculate-sale-adjustment.use-case';
 import { PayAccountsRecWithMetalDto } from '../dtos/pay-accounts-rec-with-metal.dto';
 import { Decimal } from 'decimal.js';
-import { TipoTransacaoPrisma, PureMetalLotStatus, SaleStatus } from '@prisma/client';
+import { TipoTransacaoPrisma, SaleStatus } from '@prisma/client';
+import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
 
 @Injectable()
 export class PayAccountsRecWithMetalUseCase {
@@ -16,10 +17,11 @@ export class PayAccountsRecWithMetalUseCase {
     private quotationsService: QuotationsService,
     private settingsService: SettingsService,
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
+    private pureMetalLotsService: PureMetalLotsService,
   ) {}
 
   async execute(
-    organizationId: string,
+organizationId: string,
     userId: string,
     accountsRecId: string,
     dto: PayAccountsRecWithMetalDto,
@@ -94,23 +96,23 @@ export class PayAccountsRecWithMetalUseCase {
         },
       });
 
-      // 5. Create a new pure_metal_lot for the FULL received amount
+      // 5. Create a new pure_metal_lot for the FULL received amount using PureMetalLotsService
       const description = `Pagamento da Venda #${accountsRec.sale?.orderNumber} - Cliente: ${accountsRec.sale?.pessoa.name}`
-      await tx.pure_metal_lots.create({
-        data: {
-          organizationId,
+      await this.pureMetalLotsService.create(
+        organizationId,
+        {
           sourceType: 'PAGAMENTO_PEDIDO_CLIENTE',
           sourceId: accountsRec.id,
-          saleId: accountsRec.saleId,
+          saleId: accountsRec.saleId || undefined,
           description,
-          metalType,
+          metalType: metalType as any,
           initialGrams: requestedGrams.toNumber(),
           remainingGrams: requestedGrams.toNumber(),
           purity: purity,
-          status: PureMetalLotStatus.AVAILABLE,
-          entryDate: paymentDate,
+          notes: description,
         },
-      });
+        tx,
+      );
 
       // 6. Handle Overpayment
       if (overpaymentGrams.isPositive()) {

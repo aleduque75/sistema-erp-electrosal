@@ -273,6 +273,7 @@ model Sale {
   status            SaleStatus        @default(PENDENTE)
   shippingCost      Decimal?          @db.Decimal(10, 2)
   readyForPayment   Boolean           @default(false)
+  observation       String?           @db.Text
   accountsRec       AccountRec[]
   organization      Organization      @relation(fields: [organizationId], references: [id])
   paymentTerm       PaymentTerm?      @relation(fields: [paymentTermId], references: [id])

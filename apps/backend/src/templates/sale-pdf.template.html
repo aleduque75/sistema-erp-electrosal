@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Pedido de Venda</title>
+    <style>
+        @page {
+            margin: 0;
+            size: A4;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: #000;
+            margin: 0;
+            padding: 0;
+            width: 210mm;
+            height: 296mm; /* 297mm is A4 height, using 296mm to be safe */
+            box-sizing: border-box;
+        }
+        .half-page {
+            height: 148mm; /* Exactly half of 296mm */
+            padding: 10mm 15mm; /* Reduced top/bottom padding slightly */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden; /* Ensure content doesn't bleed */
+        }
+        .separator {
+            border-bottom: 1px dashed #000;
+            width: 100%;
+            height: 0; /* Changed from 1px to 0 with border */
+            margin: 0;
+            position: absolute;
+            top: 148mm;
+            left: 0;
+            z-index: 10;
+        }
+        .separator::after {
+            content: '✂';
+            position: absolute;
+            left: 50%;
+            top: -8px;
+            background: #fff;
+            padding: 0 5px;
+            font-size: 14px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+        .title h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .title p {
+            margin: 2px 0 0;
+            font-size: 11px;
+        }
+        .client-info {
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .info-row {
+            margin-bottom: 2px;
+        }
+        .info-label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 10px;
+        }
+        .items-table th, .items-table td {
+            border: 1px solid #000;
+            padding: 4px;
+            text-align: left;
+        }
+        .items-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .footer-info {
+            margin-top: auto; 
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .observations-box {
+            font-size: 10px;
+            width: 60%;
+        }
+        .signature-area {
+            text-align: center;
+            width: 200px;
+        }
+        .signature-line {
+            border-top: 1px solid #000;
+            margin-top: 30px;
+            padding-top: 5px;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- PRIMEIRA VIA -->
+    <div class="half-page">
+        <div class="header">
+            <div class="title">
+                <h1>Pedido #{{orderNumber}}</h1>
+                <p>Data: {{formatarData createdAt}}</p>
+            </div>
+            <div style="text-align: right;">
+                <p><strong>ELECTROSAL</strong></p>
+            </div>
+        </div>
+
+        <div class="client-info">
+            <div class="info-row"><span class="info-label">Cliente:</span> {{pessoa.name}}</div>
+            {{#if pessoa.document}}
+            <div class="info-row"><span class="info-label">CPF/CNPJ:</span> {{pessoa.document}}</div>
+            {{/if}}
+            
+            {{#if pessoa.logradouro}}
+            <div class="info-row">
+                <span class="info-label">Endereço:</span> 
+                {{pessoa.logradouro}}, {{pessoa.numero}}{{#if pessoa.complemento}} - {{pessoa.complemento}}{{/if}}
+                - {{pessoa.bairro}} - {{pessoa.cidade}}/{{pessoa.uf}} - CEP: {{pessoa.cep}}
+            </div>
+            {{/if}}
+
+            {{#if pessoa.phone}}
+            <div class="info-row"><span class="info-label">Telefone:</span> {{pessoa.phone}}</div>
+            {{/if}}
+        </div>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 70%;">Produto</th>
+                    <th class="text-right">Quantidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each saleItems}}
+                <tr>
+                    <td>{{product.name}}</td>
+                    <td class="text-right">{{formatarNumero quantity 4}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+
+        <div class="footer-info">
+            <div class="observations-box">
+                <p><strong>Observações:</strong></p>
+                {{#if observation}}
+                <div style="border: 1px solid #ddd; padding: 5px; min-height: 40px; white-space: pre-wrap;">{{observation}}</div>
+                {{else}}
+                <div style="border-bottom: 1px solid #000; height: 12px; margin-bottom: 5px;"></div>
+                <div style="border-bottom: 1px solid #000; height: 12px; margin-bottom: 5px;"></div>
+                <div style="border-bottom: 1px solid #000; height: 12px;"></div>
+                {{/if}}
+            </div>
+
+            <div class="signature-area">
+                <div class="signature-line">
+                    Assinatura do Cliente
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <!-- SEGUNDA VIA -->
+    <div class="half-page" style="top: 148mm; position: absolute;">
+        <div class="header">
+            <div class="title">
+                <h1>Pedido #{{orderNumber}}</h1>
+                <p>Data: {{formatarData createdAt}}</p>
+            </div>
+            <div style="text-align: right;">
+                <p><strong>ELECTROSAL</strong></p>
+            </div>
+        </div>
+
+        <div class="client-info">
+            <div class="info-row"><span class="info-label">Cliente:</span> {{pessoa.name}}</div>
+            {{#if pessoa.document}}
+            <div class="info-row"><span class="info-label">CPF/CNPJ:</span> {{pessoa.document}}</div>
+            {{/if}}
+            
+            {{#if pessoa.logradouro}}
+            <div class="info-row">
+                <span class="info-label">Endereço:</span> 
+                {{pessoa.logradouro}}, {{pessoa.numero}}{{#if pessoa.complemento}} - {{pessoa.complemento}}{{/if}}
+                - {{pessoa.bairro}} - {{pessoa.cidade}}/{{pessoa.uf}} - CEP: {{pessoa.cep}}
+            </div>
+            {{/if}}
+            
+            {{#if pessoa.phone}}
+            <div class="info-row"><span class="info-label">Telefone:</span> {{pessoa.phone}}</div>
+            {{/if}}
+        </div>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 70%;">Produto</th>
+                    <th class="text-right">Quantidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each saleItems}}
+                <tr>
+                    <td>{{product.name}}</td>
+                    <td class="text-right">{{formatarNumero quantity 4}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+
+        <div class="footer-info">
+            <div class="observations-box">
+                <p><strong>Observações:</strong></p>
+                {{#if observation}}
+                <div style="border: 1px solid #ddd; padding: 5px; min-height: 40px; white-space: pre-wrap;">{{observation}}</div>
+                {{else}}
+                <div style="border-bottom: 1px solid #000; height: 12px; margin-bottom: 5px;"></div>
+                <div style="border-bottom: 1px solid #000; height: 12px; margin-bottom: 5px;"></div>
+                <div style="border-bottom: 1px solid #000; height: 12px;"></div>
+                {{/if}}
+            </div>
+
+            <div class="signature-area">
+                <div class="signature-line">
+                    Assinatura do Cliente
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

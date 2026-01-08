@@ -24,6 +24,7 @@ interface ResponsiveDialogProps {
   title: string;
   description: string;
   children: React.ReactNode;
+  className?: string;
 }
 
 export function ResponsiveDialog({
@@ -32,6 +33,7 @@ export function ResponsiveDialog({
   title,
   description,
   children,
+  className,
 }: ResponsiveDialogProps) {
   // O ponto de quebra do Tailwind para 'md' é 768px
   const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -39,12 +41,14 @@ export function ResponsiveDialog({
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className={className || "sm:max-w-[425px]"}>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
-          {children}
+          <div className="max-h-[80vh] overflow-y-auto pr-2">
+            {children}
+          </div>
         </DialogContent>
       </Dialog>
     );

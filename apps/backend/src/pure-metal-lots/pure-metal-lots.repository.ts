@@ -85,9 +85,9 @@ export class PureMetalLotsRepository {
   }
 
   findManyByPureMetalLotId(pureMetalLotId: string, organizationId: string) {
-    return this.prisma.pure_metal_lots.findMany({
-      where: { id: pureMetalLotId, organizationId },
-      include: { movements: true },
+    return this.prisma.pureMetalLotMovement.findMany({
+      where: { pureMetalLotId, organizationId },
+      orderBy: { date: 'desc' },
     });
   }
 

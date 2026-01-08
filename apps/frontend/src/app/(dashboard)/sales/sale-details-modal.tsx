@@ -70,6 +70,24 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
     return 'A Receber';
   };
 
+  const uniqueTransactions = useMemo(() => {
+    if (!sale) return [];
+    
+    const transactions = [
+      ...(sale.accountsRec?.flatMap(ar => ar.transacoes || []) || []),
+      ...(sale.installments?.flatMap(inst => inst.accountRec?.transacoes || []) || [])
+    ];
+
+    const uniqueMap = new Map();
+    transactions.forEach(t => {
+        if (t && t.id) {
+            uniqueMap.set(t.id, t);
+        }
+    });
+
+    return Array.from(uniqueMap.values());
+  }, [sale]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
@@ -132,14 +150,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sale.accountsRec?.flatMap(ar => ar.transacoes || []).map((transacao) => (
-                        <TableRow key={transacao.id}>
-                          <TableCell>{transacao.contaCorrente?.nome || 'N/A'}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(transacao.valor)}</TableCell>
-                          <TableCell className="text-right">{formatGrams(transacao.goldAmount)} g</TableCell>
-                        </TableRow>
-                      ))}
-                      {sale.installments?.flatMap(inst => inst.accountRec?.transacoes || []).map((transacao) => (
+                      {uniqueTransactions.map((transacao) => (
                         <TableRow key={transacao.id}>
                           <TableCell>{transacao.contaCorrente?.nome || 'N/A'}</TableCell>
                           <TableCell className="text-right">{formatCurrency(transacao.valor)}</TableCell>
@@ -147,8 +158,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                         </TableRow>
                       ))}
                       {/* Mensagem se não houver pagamentos */}
-                      {(!sale.accountsRec?.flatMap(ar => ar.transacoes || []).length &&
-                        !sale.installments?.flatMap(inst => inst.accountRec?.transacoes || []).length) && (
+                      {uniqueTransactions.length === 0 && (
                           <TableRow>
                             <TableCell colSpan={3} className="text-center text-muted-foreground">Nenhum pagamento registrado.</TableCell>
                           </TableRow>
@@ -184,6 +194,16 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                   </Table>
                 </CardContent>
               </Card>
+
+              {/* Observações */}
+              {sale.observation && (
+                <Card>
+                  <CardHeader><CardTitle>Observações</CardTitle></CardHeader>
+                  <CardContent>
+                    <p className="text-sm whitespace-pre-wrap">{sale.observation}</p>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Installments List */}
               {sale.installments && sale.installments.length > 0 && (

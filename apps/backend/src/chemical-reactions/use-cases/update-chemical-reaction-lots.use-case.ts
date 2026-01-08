@@ -2,8 +2,8 @@ import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { IChemicalReactionRepository, IPureMetalLotRepository } from '@sistema-erp-electrosal/core';
 import { UpdateChemicalReactionLotsDto } from '../dtos/update-chemical-reaction-lots.dto';
 import Decimal from 'decimal.js';
-import { PureMetalLotStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
 
 export interface UpdateChemicalReactionLotsCommand {
   chemicalReactionId: string;
@@ -19,6 +19,7 @@ export class UpdateChemicalReactionLotsUseCase {
     @Inject('IPureMetalLotRepository')
     private readonly pureMetalLotRepository: IPureMetalLotRepository,
     private readonly prisma: PrismaService,
+    private readonly pureMetalLotsService: PureMetalLotsService,
   ) {}
 
   async execute(command: UpdateChemicalReactionLotsCommand): Promise<void> {
@@ -47,17 +48,22 @@ export class UpdateChemicalReactionLotsUseCase {
 
       // Handle lots that were removed (add grams back)
       for (const lotId of lotsToRemove) {
-        const lot = await this.pureMetalLotRepository.findById(lotId, organizationId);
-        if (lot) {
-          const chemicalReactionLot = currentChemicalReactionLots.find(crl => crl.pureMetalLotId === lotId);
-          if (chemicalReactionLot) {
-            lot.props.remainingGrams = new Decimal(lot.props.remainingGrams).plus(chemicalReactionLot.gramsToUse).toNumber();
-            lot.props.status = lot.props.remainingGrams === lot.props.initialGrams ? PureMetalLotStatus.AVAILABLE : PureMetalLotStatus.PARTIALLY_USED;
-            await this.pureMetalLotRepository.save(lot);
-            await this.prisma.chemicalReactionLot.delete({
-              where: { chemicalReactionId_pureMetalLotId: { chemicalReactionId, pureMetalLotId: lotId } },
-            });
-          }
+        const chemicalReactionLot = currentChemicalReactionLots.find(crl => crl.pureMetalLotId === lotId);
+        if (chemicalReactionLot) {
+          await this.pureMetalLotsService.createPureMetalLotMovement(
+            organizationId,
+            lotId,
+            {
+              type: 'ENTRY',
+              grams: chemicalReactionLot.gramsToUse,
+              notes: `Removido da Reação Química ${chemicalReaction.props.reactionNumber}`,
+            },
+            this.prisma,
+          );
+
+          await this.prisma.chemicalReactionLot.delete({
+            where: { chemicalReactionId_pureMetalLotId: { chemicalReactionId, pureMetalLotId: lotId } },
+          });
         }
       }
 
@@ -68,9 +74,18 @@ export class UpdateChemicalReactionLotsUseCase {
           if (new Decimal(lot.props.remainingGrams).lt(lotInfo.gramsToUse)) {
             throw new NotFoundException(`Lote ${lot.props.lotNumber} não tem gramas suficientes. Restante: ${lot.props.remainingGrams}, Solicitado: ${lotInfo.gramsToUse}`);
           }
-          lot.props.remainingGrams = new Decimal(lot.props.remainingGrams).minus(lotInfo.gramsToUse).toNumber();
-          lot.props.status = lot.props.remainingGrams === 0 ? PureMetalLotStatus.USED : PureMetalLotStatus.PARTIALLY_USED;
-          await this.pureMetalLotRepository.save(lot);
+
+          await this.pureMetalLotsService.createPureMetalLotMovement(
+            organizationId,
+            lotInfo.pureMetalLotId,
+            {
+              type: 'EXIT',
+              grams: lotInfo.gramsToUse,
+              notes: `Adicionado na Reação Química ${chemicalReaction.props.reactionNumber}`,
+            },
+            this.prisma,
+          );
+
           await this.prisma.chemicalReactionLot.create({
             data: {
               chemicalReactionId,
@@ -89,13 +104,35 @@ export class UpdateChemicalReactionLotsUseCase {
         if (lot && oldChemicalReactionLot && oldChemicalReactionLot.gramsToUse !== lotInfo.gramsToUse) {
           const gramsDifference = new Decimal(lotInfo.gramsToUse).minus(oldChemicalReactionLot.gramsToUse);
 
-          if (new Decimal(lot.props.remainingGrams).lt(gramsDifference.toNumber())) {
-            throw new NotFoundException(`Lote ${lot.props.lotNumber} não tem gramas suficientes para a alteração. Restante: ${lot.props.remainingGrams}, Diferença: ${gramsDifference}`);
-          }
+          if (gramsDifference.gt(0)) {
+            // Increased usage, subtract more
+            if (new Decimal(lot.props.remainingGrams).lt(gramsDifference.toNumber())) {
+              throw new NotFoundException(`Lote ${lot.props.lotNumber} não tem gramas suficientes para a alteração. Restante: ${lot.props.remainingGrams}, Diferença: ${gramsDifference}`);
+            }
 
-          lot.props.remainingGrams = new Decimal(lot.props.remainingGrams).minus(gramsDifference).toNumber();
-          lot.props.status = lot.props.remainingGrams === 0 ? PureMetalLotStatus.USED : PureMetalLotStatus.PARTIALLY_USED;
-          await this.pureMetalLotRepository.save(lot);
+            await this.pureMetalLotsService.createPureMetalLotMovement(
+              organizationId,
+              lotInfo.pureMetalLotId,
+              {
+                type: 'EXIT',
+                grams: gramsDifference.toNumber(),
+                notes: `Aumento de consumo na Reação Química ${chemicalReaction.props.reactionNumber}`,
+              },
+              this.prisma,
+            );
+          } else if (gramsDifference.lt(0)) {
+            // Decreased usage, add back
+            await this.pureMetalLotsService.createPureMetalLotMovement(
+              organizationId,
+              lotInfo.pureMetalLotId,
+              {
+                type: 'ENTRY',
+                grams: Math.abs(gramsDifference.toNumber()),
+                notes: `Redução de consumo na Reação Química ${chemicalReaction.props.reactionNumber}`,
+              },
+              this.prisma,
+            );
+          }
 
           await this.prisma.chemicalReactionLot.update({
             where: { chemicalReactionId_pureMetalLotId: { chemicalReactionId, pureMetalLotId: lotInfo.pureMetalLotId } },

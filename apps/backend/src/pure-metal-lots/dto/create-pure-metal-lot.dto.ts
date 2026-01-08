@@ -45,4 +45,8 @@ export class CreatePureMetalLotDto {
   @IsString()
   @IsOptional()
   saleId?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
 }

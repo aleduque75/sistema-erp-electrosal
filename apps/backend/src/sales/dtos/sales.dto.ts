@@ -29,7 +29,7 @@ export class CreateSaleDto {
   @ValidateNested({ each: true })
   @Type(() => SaleItemDto)
   items: SaleItemDto[];
-  @IsString() @IsNotEmpty() paymentMethod: 'A_VISTA' | 'A_PRAZO' | 'CREDIT_CARD' | 'IMPORTADO' | 'METAL';
+  @IsString() @IsNotEmpty() paymentMethod: 'A_VISTA' | 'A_PRAZO' | 'CREDIT_CARD' | 'IMPORTADO' | 'METAL' | 'A_COMBINAR';
 
   @IsUUID() @IsOptional() clientMetalAccountId?: string; // Opcional: ID da conta de metal do cliente, se houver mais de uma
 
@@ -45,9 +45,16 @@ export class CreateSaleDto {
   
   @IsDateString() @IsOptional() createdAt?: string;
   @IsInt() @IsPositive() @IsOptional() orderNumber?: number;
+  @IsString() @IsOptional() observation?: string;
 }
 
 export class UpdateSaleDto extends PartialType(CreateSaleDto) {}
+
+export class UpdateObservationDto {
+  @IsString()
+  @IsOptional()
+  observation?: string;
+}
 
 export class ConfirmSaleDto {
   @IsEnum(TipoMetal)
@@ -56,7 +63,7 @@ export class ConfirmSaleDto {
 
   @IsString()
   @IsNotEmpty()
-  paymentMethod: 'A_VISTA' | 'A_PRAZO' | 'CREDIT_CARD' | 'METAL';
+  paymentMethod: 'A_VISTA' | 'A_PRAZO' | 'CREDIT_CARD' | 'METAL' | 'A_COMBINAR';
 
   @IsInt()
   @Min(1)

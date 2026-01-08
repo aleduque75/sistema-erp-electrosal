@@ -45,6 +45,12 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
+const movementTypeMap = {
+  ENTRY: { label: 'Entrada', className: 'text-green-600 font-medium' },
+  EXIT: { label: 'Saída', className: 'text-red-600 font-medium' },
+  ADJUSTMENT: { label: 'Ajuste', className: 'text-amber-600 font-medium' },
+};
+
 export function PureMetalLotDetailsDialog({ lot, isOpen, onOpenChange }: PureMetalLotDetailsDialogProps) {
   const [movements, setMovements] = useState<PureMetalLotMovement[]>([]);
   const [loading, setLoading] = useState(false);
@@ -257,8 +263,14 @@ export function PureMetalLotDetailsDialog({ lot, isOpen, onOpenChange }: PureMet
                   {movements.map((movement) => (
                     <TableRow key={movement.id}>
                       <TableCell>{format(new Date(movement.date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{movement.type}</TableCell>
-                      <TableCell>{movement.grams.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <span className={movementTypeMap[movement.type as keyof typeof movementTypeMap]?.className}>
+                          {movementTypeMap[movement.type as keyof typeof movementTypeMap]?.label || movement.type}
+                        </span>
+                      </TableCell>
+                      <TableCell className={movement.type === 'EXIT' ? 'text-red-600' : 'text-green-600'}>
+                        {movement.type === 'EXIT' ? '-' : '+'}{movement.grams.toFixed(2)} g
+                      </TableCell>
                       <TableCell>{movement.notes || '-'}</TableCell>
                     </TableRow>
                   ))}

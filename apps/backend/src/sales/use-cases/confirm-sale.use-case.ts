@@ -6,6 +6,7 @@ import { SettingsService } from '../../settings/settings.service';
 import { ConfirmSaleDto } from '../dtos/sales.dto';
 import Decimal from 'decimal.js';
 import { CalculateSaleAdjustmentUseCase } from './calculate-sale-adjustment.use-case';
+import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
 
 @Injectable()
 export class ConfirmSaleUseCase {
@@ -13,6 +14,7 @@ export class ConfirmSaleUseCase {
     private prisma: PrismaService,
     private settingsService: SettingsService,
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
+    private pureMetalLotsService: PureMetalLotsService,
   ) {}
 
   async execute(organizationId: string, userId: string, saleId: string, confirmSaleDto: ConfirmSaleDto) {
@@ -125,21 +127,21 @@ export class ConfirmSaleUseCase {
           ? await tx.accountRec.update({ where: { id: existingAccountRec.id }, data: accountRecData })
           : await tx.accountRec.create({ data: accountRecData });
 
-        await tx.pure_metal_lots.create({
-            data: {
-              organizationId,
-              sourceType: 'PAGAMENTO_PEDIDO_CLIENTE',
-              sourceId: sale.id,
-              saleId: sale.id,
-              description: `Pagamento da Venda #${sale.orderNumber} em ${metalType}`,
-              metalType: metalType,
-              initialGrams: finalGoldValue.toNumber(),
-              remainingGrams: finalGoldValue.toNumber(),
-              purity: 1,
-              status: 'AVAILABLE',
-              entryDate: new Date(),
-            },
-          });
+        await this.pureMetalLotsService.create(
+          organizationId,
+          {
+            sourceType: 'PAGAMENTO_PEDIDO_CLIENTE',
+            sourceId: sale.id,
+            saleId: sale.id,
+            description: `Pagamento da Venda #${sale.orderNumber} em ${metalType}`,
+            metalType: metalType as any,
+            initialGrams: finalGoldValue.toNumber(),
+            remainingGrams: finalGoldValue.toNumber(),
+            purity: 1,
+            notes: `Pagamento da Venda #${sale.orderNumber} em ${metalType}`,
+          },
+          tx,
+        );
   
           await tx.transacao.create({
             data: {
@@ -216,6 +218,21 @@ export class ConfirmSaleUseCase {
           ? tx.accountRec.update({ where: { id: existingAccountRec.id }, data: accountRecData })
           : tx.accountRec.create({ data: accountRecData }));
           
+      } else if (paymentMethod === 'A_COMBINAR') {
+        const accountRecData = {
+          organizationId,
+          saleId: saleWithAdjustment.id,
+          description: `Receber de ${saleWithAdjustment.pessoa.name} venda #${saleWithAdjustment.orderNumber} (A Combinar)`,
+          amount: amountToReceive,
+          goldAmount: goldAmountToReceive,
+          dueDate: saleWithAdjustment.createdAt, // Due immediately or can be adjusted later
+          received: false,
+        };
+
+        await (existingAccountRec 
+          ? tx.accountRec.update({ where: { id: existingAccountRec.id }, data: accountRecData })
+          : tx.accountRec.create({ data: accountRecData }));
+
       } else if (paymentMethod !== 'A_VISTA' && paymentMethod !== 'METAL') {
         // Fallback para IMPORTADO ou método não especificado
         if (!existingAccountRec) {

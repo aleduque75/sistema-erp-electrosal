@@ -10,6 +10,7 @@ import { useForm } from 'react-hook-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +36,7 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
       updatedGoldPrice: 0,
       shippingCost: 0,
       paymentConditionId: '' as string | null,
+      observation: '',
     }
   });
 
@@ -66,6 +68,7 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
           updatedGoldPrice: initialSale.goldPrice || 0,
           shippingCost: initialSale.shippingCost || 0,
           paymentConditionId: initialSale.paymentTermId || initialSale.paymentMethod || null,
+          observation: initialSale.observation || '',
         });
       });
     }
@@ -131,6 +134,7 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
       shippingCost: formData.shippingCost,
       paymentTermId: paymentTermId,
       paymentMethod: paymentMethod,
+      observation: formData.observation,
     };
 
     setIsSubmitting(true);
@@ -182,6 +186,14 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                             ))}
                           </SelectContent>
                         </Select>
+                      </FormItem>
+                    )}/>
+                    <FormField control={control} name="observation" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Observações</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Observações adicionais..." className="resize-none h-24" />
+                        </FormControl>
                       </FormItem>
                     )}/>
                   </CardContent>

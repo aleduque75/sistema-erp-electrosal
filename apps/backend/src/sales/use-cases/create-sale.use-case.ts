@@ -136,6 +136,7 @@ export class CreateSaleUseCase {
         netAmount,
         goldPrice,
         goldValue,
+        observation: createSaleDto.observation,
         paymentMethod,
         paymentTermId,
         commissionAmount: totalCommissionAmount,
@@ -154,7 +155,13 @@ export class CreateSaleUseCase {
 
     await this.updateInventoryAndCreateStockMovements(inventoryLotUpdates, sale);
 
-    if (paymentTermId) {
+    if (paymentMethod === 'A_COMBINAR') {
+      const confirmSaleDto: ConfirmSaleDto = {
+        paymentMethod: 'A_COMBINAR',
+        keepSaleStatusPending: false, // Finalize immediately
+      };
+      await this.confirmSaleUseCase.execute(organizationId, userId, sale.id, confirmSaleDto);
+    } else if (paymentTermId) {
       await this.createInstallments(paymentTermId, netAmount, sale.id, sale.createdAt);
     } else if (paymentMethod === 'A_VISTA' || paymentMethod === 'METAL') {
       const confirmSaleDto: ConfirmSaleDto = {

@@ -6,7 +6,7 @@ import * as z from "zod";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Edit } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -253,169 +253,123 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
-        {/* Campos principais do Pedido de Compra */}
-        <FormField
-          control={form.control}
-          name="orderNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Número do Pedido</FormLabel>
-              <FormControl>
-                <Input placeholder="Ex: PO-2023-001" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6">
+        {/* Campos principais do Pedido de Compra em Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="orderNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Número do Pedido</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: PO-2023-001" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="fornecedorId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Fornecedor</FormLabel>
-              <FormControl>
+          <FormField
+            control={form.control}
+            name="fornecedorId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fornecedor</FormLabel>
+                <FormControl>
+                  <Combobox
+                    options={fornecedores.map(fornecedor => ({ value: fornecedor.id, label: fornecedor.name }))}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Selecione um fornecedor"
+                    searchPlaceholder="Buscar fornecedor..."
+                    emptyText="Nenhum fornecedor encontrado."
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="paymentTermId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Prazo de Pagamento</FormLabel>
                 <Combobox
-                  options={fornecedores.map(fornecedor => ({ value: fornecedor.id, label: fornecedor.name }))}
+                  options={paymentTerms.map(term => ({ value: term.id, label: term.name }))}
                   value={field.value}
                   onChange={field.onChange}
-                  placeholder="Selecione um fornecedor"
-                  searchPlaceholder="Buscar fornecedor..."
-                  emptyText="Nenhum fornecedor encontrado."
+                  placeholder="Selecione um prazo de pagamento"
+                  searchPlaceholder="Buscar prazo..."
+                  emptyText="Nenhum prazo encontrado."
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="paymentTermId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Prazo de Pagamento</FormLabel>
-              <Combobox
-                options={paymentTerms.map(term => ({ value: term.id, label: term.name }))}
-                value={field.value}
-                onChange={field.onChange}
-                placeholder="Selecione um prazo de pagamento"
-                searchPlaceholder="Buscar prazo..."
-                emptyText="Nenhum prazo encontrado."
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="PENDING">Pendente</SelectItem>
+                    <SelectItem value="RECEIVED">Recebido</SelectItem>
+                    <SelectItem value="CANCELED">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+          <FormField
+            control={form.control}
+            name="orderDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Data do Pedido</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
+                  <Input type="date" {...field} />
                 </FormControl>
-                <SelectContent>
-                  <SelectItem value="PENDING">Pendente</SelectItem>
-                  <SelectItem value="RECEIVED">Recebido</SelectItem>
-                  <SelectItem value="CANCELED">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="orderDate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Data do Pedido</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="expectedDeliveryDate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Data de Entrega Prevista</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="expectedDeliveryDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Data de Entrega Prevista</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         {/* Seção de Itens do Pedido */}
-        <div className="border-t pt-4 mt-4">
-          <h3 className="text-lg font-medium mb-4">Itens do Pedido</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Quantidade</TableHead>
-                <TableHead>Unidade</TableHead>
-                <TableHead>Preço Unitário</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead className="w-[100px]">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    Nenhum item adicionado.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                items.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{item.productName || item.rawMaterialName}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.unit === "KILOGRAMS" ? "Quilo (kg)" : "Grama (g)"}</TableCell>
-                    <TableCell>{Number(item.price).toFixed(2)}</TableCell>
-                    <TableCell>{(item.quantity * Number(item.price)).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setEditingItemIndex(index);
-                          setIsItemModalOpen(true);
-                        }}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveItem(index)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <div className="flex justify-end mt-4">
+        <div className="border-t pt-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium">Itens do Pedido</h3>
             <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setIsItemModalOpen(true)}
               disabled={isLoading}
             >
@@ -423,13 +377,71 @@ export function PurchaseOrderForm({ initialData, onSave }: PurchaseOrderFormProp
               {isLoading ? "Carregando..." : "Adicionar Item"}
             </Button>
           </div>
-          <div className="text-right text-lg font-bold mt-4">
-            Total do Pedido: {totalAmount.toFixed(2)}
+          
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Quantidade</TableHead>
+                  <TableHead>Unidade</TableHead>
+                  <TableHead>Preço Unitário</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead className="w-[100px] text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      Nenhum item adicionado.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  items.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{item.productName || item.rawMaterialName}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>{item.unit === "KILOGRAMS" ? "Quilo (kg)" : "Grama (g)"}</TableCell>
+                      <TableCell>R$ {Number(item.price).toFixed(2)}</TableCell>
+                      <TableCell>R$ {(item.quantity * Number(item.price)).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingItemIndex(index);
+                              setIsItemModalOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Editar</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveItem(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <span className="sr-only">Remover</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          
+          <div className="text-right text-lg font-bold mt-4 p-2 bg-muted/50 rounded-md">
+            Total do Pedido: R$ {totalAmount.toFixed(2)}
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button type="submit" disabled={form.formState.isSubmitting}>
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button type="submit" disabled={form.formState.isSubmitting} size="lg">
             {form.formState.isSubmitting ? "Salvando..." : "Salvar Pedido"}
           </Button>
         </div>

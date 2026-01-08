@@ -14,6 +14,7 @@ import {
   PureMetalLotStatus,
   SaleStatus,
 } from '@prisma/client';
+import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
 
 @Injectable()
 export class PayAccountsRecWithMetalMultipleUseCase {
@@ -23,6 +24,7 @@ export class PayAccountsRecWithMetalMultipleUseCase {
     private prisma: PrismaService,
     private settingsService: SettingsService,
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
+    private pureMetalLotsService: PureMetalLotsService,
   ) {}
 
   async execute(
@@ -111,21 +113,21 @@ export class PayAccountsRecWithMetalMultipleUseCase {
       });
 
       for (const payment of payments) {
-        await tx.pure_metal_lots.create({
-          data: {
-            organizationId,
+        await this.pureMetalLotsService.create(
+          organizationId,
+          {
             sourceType: 'PAGAMENTO_PEDIDO_CLIENTE',
             sourceId: accountsRec.id,
-            saleId: accountsRec.saleId,
+            saleId: accountsRec.saleId || undefined,
             description: `Pagamento da Venda #${accountsRec.sale?.orderNumber} - Cliente: ${accountsRec.sale?.pessoa.name}`,
-            metalType: payment.metalType,
+            metalType: payment.metalType as any,
             initialGrams: payment.amountInGrams,
             remainingGrams: payment.amountInGrams,
             purity: payment.purity,
-            status: PureMetalLotStatus.AVAILABLE,
-            entryDate: paymentDate,
+            notes: `Pagamento da Venda #${accountsRec.sale?.orderNumber} em ${payment.metalType}`,
           },
-        });
+          tx,
+        );
       }
 
       if (overpaymentGrams.isPositive()) {

@@ -103,28 +103,30 @@ export function PurchaseOrderDetailsView({ order }: PurchaseOrderDetailsViewProp
           <CardTitle>Itens do Pedido</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Produto</TableHead>
-                <TableHead className="text-right">Quantidade</TableHead>
-                <TableHead className="text-center">Unidade</TableHead>
-                <TableHead className="text-right">Preço Unitário</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {order.items.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell>{item.product?.name || item.rawMaterial?.name}</TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
-                  <TableCell className="text-center">{formatUnit(item.unit)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(item.quantity * item.price)}</TableCell>
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Produto</TableHead>
+                  <TableHead className="text-right">Quantidade</TableHead>
+                  <TableHead className="text-center">Unidade</TableHead>
+                  <TableHead className="text-right">Preço Unitário</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {order.items.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{item.product?.name || item.rawMaterial?.name}</TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell className="text-center">{formatUnit(item.unit)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.quantity * item.price)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

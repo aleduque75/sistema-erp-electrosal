@@ -27,6 +27,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { PlusCircle, Trash2, PackageSearch } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { LotSelectionModal } from "@/components/sales/LotSelectionModal";
 import { AddItemModal } from "./AddItemModal";
 import { Product } from "@/types/product";
@@ -48,6 +49,7 @@ const formSchema = z.object({
   numberOfInstallments: z.coerce.number().int().min(1).optional(),
   contaCorrenteId: z.string().nullable().optional(),
   orderNumber: z.coerce.number().int().positive().optional(),
+  observation: z.string().optional(),
 });
 
 export function NewSaleForm({ onSave }: any) {
@@ -79,7 +81,7 @@ export function NewSaleForm({ onSave }: any) {
     clearErrors,
   } = useForm<any>({
     resolver: zodResolver(formSchema),
-    defaultValues: { clientId: "", paymentConditionId: "", numberOfInstallments: 1, contaCorrenteId: null },
+    defaultValues: { clientId: "", paymentConditionId: "", numberOfInstallments: 1, contaCorrenteId: null, observation: "" },
   });
   const paymentConditionId = watch("paymentConditionId");
   const numberOfInstallments = watch("numberOfInstallments");
@@ -90,6 +92,7 @@ export function NewSaleForm({ onSave }: any) {
       ...terms,
       { value: 'CREDIT_CARD', label: 'Cartão de Crédito', isTerm: false },
       { value: 'METAL', label: 'Metal', isTerm: false },
+      { value: 'A_COMBINAR', label: 'A Combinar (Gerar Recebível)', isTerm: false },
     ];
   }, [paymentTerms]);
 
@@ -101,6 +104,7 @@ export function NewSaleForm({ onSave }: any) {
     if (!selectedPaymentCondition) return null;
     if (selectedPaymentCondition.value === 'CREDIT_CARD') return 'CREDIT_CARD';
     if (selectedPaymentCondition.value === 'METAL') return 'METAL';
+    if (selectedPaymentCondition.value === 'A_COMBINAR') return 'A_COMBINAR';
     if (selectedPaymentCondition.isTerm) {
       const term = paymentTerms.find(t => t.id === selectedPaymentCondition.value);
       if (term && term.installmentsDays.length === 1 && selectedPaymentCondition.label.toLowerCase().includes('vista')) {
@@ -213,7 +217,13 @@ export function NewSaleForm({ onSave }: any) {
     
     const updatedItems = [...items];
     updatedItems[itemIndex].lots = selectedLots;
-    // Opcionalmente, recalcular o preço se for um produto de conversão e a quantidade total mudou
+    
+    // Auto-update total quantity based on selected lots if product is not service/reaction
+    // But usually we want quantity to match lots sum
+    const totalLotQty = selectedLots.reduce((acc, lot) => acc + lot.quantity, 0);
+    // Use toFixed to avoid 100.000000000001 issues
+    updatedItems[itemIndex].quantity = parseFloat(totalLotQty.toFixed(4));
+
     setItems(updatedItems);
     
     setItemToSelectLots(null);
@@ -269,6 +279,8 @@ export function NewSaleForm({ onSave }: any) {
         paymentMethod = 'CREDIT_CARD';
       } else if (selectedPaymentCondition.value === 'METAL') {
         paymentMethod = 'METAL';
+      } else if (selectedPaymentCondition.value === 'A_COMBINAR') {
+        paymentMethod = 'A_COMBINAR';
       } else if (selectedPaymentCondition.isTerm) {
         paymentTermId = selectedPaymentCondition.value;
         paymentMethod = selectedPaymentCondition.label.toLowerCase().includes('vista') ? 'A_VISTA' : 'A_PRAZO';
@@ -309,6 +321,7 @@ export function NewSaleForm({ onSave }: any) {
       contaCorrenteId: formData.contaCorrenteId,
       createdAt: saleDate?.toISOString(),
       orderNumber: formData.orderNumber,
+      observation: formData.observation,
     };
 
     if (paymentMethod === 'A_PRAZO' && paymentTermId) {
@@ -436,15 +449,29 @@ export function NewSaleForm({ onSave }: any) {
                   />
                 </div>
               </div>
-              <div className="space-y-1">
-                <Label>Frete (R$)</Label>
-                <Input
-                  type="number"
-                  value={freightAmount}
-                  onChange={(e) => setFreightAmount(Number(e.target.value))}
-                  step="0.01"
-                />
-              </div>
+                <div className="space-y-1">
+                  <Label>Frete (R$)</Label>
+                  <Input
+                    type="number"
+                    value={freightAmount}
+                    onChange={(e) => setFreightAmount(Number(e.target.value))}
+                    step="0.01"
+                  />
+                </div>
+              <Controller
+                name="observation"
+                control={control}
+                render={({ field }) => (
+                  <div className="space-y-1">
+                    <Label>Observações</Label>
+                    <Textarea 
+                      {...field} 
+                      placeholder="Observações adicionais..." 
+                      className="resize-none h-24"
+                    />
+                  </div>
+                )}
+              />
               {paymentConditionId === "CREDIT_CARD" && (
                 <Controller
                   name="numberOfInstallments"
@@ -533,7 +560,11 @@ export function NewSaleForm({ onSave }: any) {
                             <Input
                               type="number"
                               value={item.quantity}
-                              onChange={(e) => handleUpdateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                // Allow typing decimals, but limit precision if needed or just pass as string then parse
+                                handleUpdateItem(index, 'quantity', val === '' ? 0 : parseFloat(val));
+                              }}
                               className="w-24"
                               step="0.0001"
                             />
@@ -542,7 +573,10 @@ export function NewSaleForm({ onSave }: any) {
                             <Input
                               type="number"
                               value={item.price}
-                              onChange={(e) => handleUpdateItem(index, 'price', parseFloat(e.target.value) || 0)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                handleUpdateItem(index, 'price', val === '' ? 0 : parseFloat(val));
+                              }}
                               className="w-24"
                               step="0.01"
                             />

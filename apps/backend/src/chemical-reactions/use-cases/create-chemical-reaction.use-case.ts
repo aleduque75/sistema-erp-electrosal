@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateChemicalReactionDto } from '../dtos/create-chemical-reaction.dto';
-import { PureMetalLotStatus, ChemicalReactionStatusPrisma, TipoMetal, EntityType } from '@prisma/client';
+import { ChemicalReactionStatusPrisma, EntityType } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { GenerateNextNumberUseCase } from '../../common/use-cases/generate-next-number.use-case';
+import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
 
 export interface CreateChemicalReactionCommand {
   organizationId: string;
@@ -12,7 +13,11 @@ export interface CreateChemicalReactionCommand {
 
 @Injectable()
 export class CreateChemicalReactionUseCase {
-  constructor(private readonly prisma: PrismaService, private readonly generateNextNumberUseCase: GenerateNextNumberUseCase) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly generateNextNumberUseCase: GenerateNextNumberUseCase,
+    private readonly pureMetalLotsService: PureMetalLotsService,
+  ) {}
 
   async execute(command: CreateChemicalReactionCommand): Promise<any> {
     const { organizationId, dto } = command;
@@ -66,15 +71,17 @@ export class CreateChemicalReactionUseCase {
           throw new BadRequestException(`Lote ${lot.id} não tem gramas suficientes. Restante: ${lot.remainingGrams}, Solicitado: ${lotInfo.gramsToUse}`);
         }
 
-        const newRemainingGrams = new Decimal(lot.remainingGrams).minus(lotInfo.gramsToUse);
-
-        await tx.pure_metal_lots.update({
-          where: { id: lot.id },
-          data: {
-            remainingGrams: newRemainingGrams.toNumber(),
-            status: newRemainingGrams.gt(0) ? PureMetalLotStatus.PARTIALLY_USED : PureMetalLotStatus.USED,
+        // Use PureMetalLotsService to create movement and update balance
+        await this.pureMetalLotsService.createPureMetalLotMovement(
+          organizationId,
+          lot.id,
+          {
+            type: 'EXIT',
+            grams: lotInfo.gramsToUse,
+            notes: `Utilizado na Reação Química ${reactionNumber}`,
           },
-        });
+          tx,
+        );
 
         totalGoldGrams = totalGoldGrams.plus(lotInfo.gramsToUse);
         sourceLotIds.push(lot.id);

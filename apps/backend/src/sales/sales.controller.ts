@@ -8,12 +8,13 @@ import {
   UseGuards,
   Query,
   Req,
+  Res,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { SaleStatus, Role } from '@prisma/client'; // Keep Sale for now, will refactor later
 import { LinkLotsToSaleItemDto } from './dtos/link-lots-to-sale-item.dto';
 import { LinkLotsToSaleItemUseCase } from './use-cases/link-lots-to-sale-item.use-case';
-import { CreateSaleDto, UpdateSaleDto, ConfirmSaleDto, ReceiveInstallmentPaymentDto, BulkConfirmSalesDto } from './dtos/sales.dto';
+import { CreateSaleDto, UpdateSaleDto, ConfirmSaleDto, ReceiveInstallmentPaymentDto, BulkConfirmSalesDto, UpdateObservationDto } from './dtos/sales.dto';
 import { EditSaleDto } from './dtos/edit-sale.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -32,6 +33,8 @@ import { ProcessClientMetalPaymentToSupplierUseCase, ProcessClientMetalPaymentTo
 
 import { ReceiveInstallmentPaymentUseCase } from './use-cases/receive-installment-payment.use-case';
 import { LinkSaleItemToBatchDto } from './dtos/link-sale-item-to-batch.dto';
+import { GenerateSalePdfUseCase } from './use-cases/generate-sale-pdf.use-case';
+import { Response } from 'express';
 
 import { Public } from '../auth/decorators/public.decorator';
 
@@ -52,6 +55,7 @@ export class SalesController {
     private readonly releaseToPcpUseCase: ReleaseToPcpUseCase,
     private readonly backfillInstallmentsUseCase: BackfillInstallmentsUseCase,
     private readonly receiveInstallmentPaymentUseCase: ReceiveInstallmentPaymentUseCase,
+    private readonly generateSalePdfUseCase: GenerateSalePdfUseCase,
   ) {}
 
 
@@ -156,6 +160,26 @@ export class SalesController {
     return { exists };
   }
 
+  @Get(':id/pdf')
+  async getPdf(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.generateSalePdfUseCase.execute({
+      saleId: id,
+      organizationId,
+    });
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="pedido-${id}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
+  }
+
   @Get(':id')
   findOne(
     @CurrentUser('orgId') organizationId: string,
@@ -172,6 +196,16 @@ export class SalesController {
   ) {
     await this.salesService.updateFinancials(organizationId, id, body);
     return { message: 'Dados financeiros atualizados com sucesso.' };
+  }
+
+  @Patch(':id/observation')
+  async updateObservation(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') id: string,
+    @Body() updateObservationDto: UpdateObservationDto,
+  ) {
+    await this.salesService.updateObservation(organizationId, id, updateObservationDto.observation);
+    return { message: 'Observação atualizada com sucesso.' };
   }
 
   @Patch(':id')

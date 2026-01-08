@@ -54,6 +54,15 @@ export class GerarPdfPureMetalLotUseCase {
       if (typeof valor !== 'number' || isNaN(valor)) return 'N/A';
       return `${valor.toFixed(2)}%`.replace('.', ',');
     });
+
+    Handlebars.registerHelper('traduzirTipoMovimentacao', (tipo) => {
+      const mapa = {
+        ENTRY: 'Entrada',
+        EXIT: 'Saída',
+        ADJUSTMENT: 'Ajuste',
+      };
+      return mapa[tipo] || tipo;
+    });
   }
 
   private async getImageAsBase64(filePath: string): Promise<string | null> {

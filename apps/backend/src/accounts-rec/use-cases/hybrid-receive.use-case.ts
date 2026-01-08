@@ -9,6 +9,7 @@ import { HybridReceiveDto } from '../dtos/hybrid-receive.dto';
 import { Decimal } from 'decimal.js';
 import { SettingsService } from '../../settings/settings.service';
 import { CalculateSaleAdjustmentUseCase } from '../../sales/use-cases/calculate-sale-adjustment.use-case';
+import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
 
 enum TipoTransacaoPrisma {
   CREDITO = 'CREDITO',
@@ -21,6 +22,7 @@ export class HybridReceiveUseCase {
     private readonly prisma: PrismaService,
     private readonly settingsService: SettingsService,
     private readonly calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
+    private readonly pureMetalLotsService: PureMetalLotsService,
   ) {}
 
   async execute(
@@ -291,21 +293,21 @@ export class HybridReceiveUseCase {
         }
         for (const payment of dto.metalPayments) {
           const description = `Pagamento da Venda #${accountRec.sale?.orderNumber} - Cliente: ${accountRec.sale?.pessoa.name}`;
-          await tx.pure_metal_lots.create({
-            data: {
-              organizationId,
+          await this.pureMetalLotsService.create(
+            organizationId,
+            {
               sourceType: 'PAGAMENTO_PEDIDO_CLIENTE',
               sourceId: accountRec.id,
-              saleId: accountRec.saleId,
+              saleId: accountRec.saleId || undefined,
               description,
-              metalType: payment.metalType,
+              metalType: payment.metalType as any,
               initialGrams: payment.amountInGrams,
               remainingGrams: payment.amountInGrams,
               purity: payment.purity,
-              status: 'AVAILABLE',
-              entryDate: new Date(dto.receivedAt),
+              notes: description,
             },
-          });
+            tx,
+          );
 
           const valorBRL = new Decimal(payment.amountInGrams).times(quotation).toDecimalPlaces(2);
           await tx.transacao.create({

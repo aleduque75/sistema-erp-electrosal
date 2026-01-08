@@ -7,6 +7,7 @@ import { QuotationsService } from '../../quotations/quotations.service';
 import { CalculateSaleAdjustmentUseCase } from './calculate-sale-adjustment.use-case';
 import { Decimal } from 'decimal.js';
 import { startOfDay } from 'date-fns';
+import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
 
 @Injectable()
 export class ReceiveInstallmentPaymentUseCase {
@@ -17,6 +18,7 @@ export class ReceiveInstallmentPaymentUseCase {
     private settingsService: SettingsService,
     private quotationsService: QuotationsService,
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
+    private pureMetalLotsService: PureMetalLotsService,
   ) {}
 
   async execute(
@@ -194,19 +196,20 @@ export class ReceiveInstallmentPaymentUseCase {
           },
         });
 
-        await tx.pure_metal_lots.create({
-          data: {
-            organizationId,
+        await this.pureMetalLotsService.create(
+          organizationId,
+          {
             sourceType: 'SALE_PAYMENT',
             sourceId: installment.id,
-            metalType: paymentMetalType,
+            metalType: paymentMetalType as any,
             initialGrams: finalAmountReceivedGold.toNumber(),
             remainingGrams: finalAmountReceivedGold.toNumber(),
             purity: purity / 100, // Store as decimal (e.g., 0.999)
-            notes: `Metal recebido como pagamento da Parcela #${installment.installmentNumber} da Venda #${installment.sale.orderNumber} (Installment ID: ${installment.id})`,
+            notes: `Metal recebido como pagamento da Parcela #${installment.installmentNumber} da Venda #${installment.sale.orderNumber}`,
             saleId: installment.sale.id,
           },
-        });
+          tx,
+        );
 
       } else {
         throw new BadRequestException('Método de pagamento inválido.');

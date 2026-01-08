@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ChemicalReactionStatusPrisma, TipoMetal, PureMetalLotStatus, StockUnit } from '@prisma/client';
+import { ChemicalReactionStatusPrisma } from '@prisma/client';
 import { CompleteReactionDto } from '../dtos/complete-reaction.dto';
 import { QuotationsService } from '../../quotations/quotations.service';
 import Decimal from 'decimal.js';
+import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
 
 export interface CompleteProductionStepCommand {
   organizationId: string;
@@ -16,6 +17,7 @@ export class CompleteProductionStepUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly quotationsService: QuotationsService,
+    private readonly pureMetalLotsService: PureMetalLotsService,
   ) {}
 
   private async getNextBatchNumber(organizationId: string, tx: any): Promise<string> {
@@ -126,11 +128,11 @@ export class CompleteProductionStepUseCase {
         },
       });
 
-      // Create lots for leftovers
+      // Create lots for leftovers using PureMetalLotsService
       if (outputBasketLeftoverGrams && outputBasketLeftoverGrams > 0) {
-        await tx.pure_metal_lots.create({
-          data: {
-            organizationId,
+        await this.pureMetalLotsService.create(
+          organizationId,
+          {
             sourceType: 'REACTION_LEFTOVER',
             sourceId: reaction.id,
             metalType: reaction.metalType,
@@ -139,12 +141,13 @@ export class CompleteProductionStepUseCase {
             purity: 1, // Assuming 100% purity for leftovers
             notes: `CESTO LOTE ${batchNumber}`,
           },
-        });
+          tx,
+        );
       }
       if (outputDistillateLeftoverGrams > 0) {
-        await tx.pure_metal_lots.create({
-          data: {
-            organizationId,
+        await this.pureMetalLotsService.create(
+          organizationId,
+          {
             sourceType: 'REACTION_LEFTOVER',
             sourceId: reaction.id,
             metalType: reaction.metalType,
@@ -153,7 +156,8 @@ export class CompleteProductionStepUseCase {
             purity: 1, // Assuming 100% purity for leftovers
             notes: `DESTILADO LOTE ${batchNumber}`,
           },
-        });
+          tx,
+        );
       }
 
       // Update the reaction itself

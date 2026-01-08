@@ -5,6 +5,7 @@ import { PessoaModule } from '../pessoa/pessoa.module';
 import { ProductsModule } from '../products/products.module';
 import { SettingsModule } from '../settings/settings.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { PureMetalLotsModule } from '../pure-metal-lots/pure-metal-lots.module';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case';
 import { ConfirmSaleUseCase } from './use-cases/confirm-sale.use-case';
 import { BulkConfirmSalesUseCase } from './use-cases/bulk-confirm-sales.use-case';
@@ -26,6 +27,7 @@ import { ProcessClientMetalPaymentToSupplierUseCase } from './use-cases/process-
 import { ReceiveInstallmentPaymentUseCase } from './use-cases/receive-installment-payment.use-case';
 import { PrismaMetalAccountRepository } from '../metal-accounts/repositories/prisma-metal-account.repository'; // Assuming path
 import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositories/prisma-metal-account-entry.repository'; // Assuming path
+import { GenerateSalePdfUseCase } from './use-cases/generate-sale-pdf.use-case';
 
 
 @Module({
@@ -36,6 +38,7 @@ import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositorie
     PessoaModule,
     QuotationsModule,
     MetalAccountsModule,
+    PureMetalLotsModule,
   ],
   controllers: [SalesController],
   providers: [
@@ -55,6 +58,7 @@ import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositorie
     CalculateSaleAdjustmentUseCase,
     ReceiveInstallmentPaymentUseCase,
     ProcessClientMetalPaymentToSupplierUseCase,
+    GenerateSalePdfUseCase,
   ],
   exports: [SalesService, CreateSaleUseCase, ConfirmSaleUseCase, CalculateSaleAdjustmentUseCase],
 })

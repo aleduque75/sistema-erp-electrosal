@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { MoreHorizontal, PlusCircle, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUpDown, Printer } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -34,6 +34,7 @@ import { NewSaleForm } from './components/NewSaleForm';
 import { SaleDetailsModal } from './sale-details-modal';
 import { EditSaleModal } from './components/EditSaleModal';
 import { ConfirmSaleModal } from './components/ConfirmSaleModal';
+import { EditObservationModal } from './components/EditObservationModal';
 import { ReceivePaymentForm } from '../accounts-rec/components/receive-payment-form';
 
 // ... (existing interfaces)
@@ -62,6 +63,7 @@ export default function SalesPage() {
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [saleToEdit, setSaleToEdit] = useState<Sale | null>(null);
+  const [saleToEditObservation, setSaleToEditObservation] = useState<Sale | null>(null);
   const [saleToConfirm, setSaleToConfirm] = useState<Sale | null>(null);
   const [accountToReceive, setAccountToReceive] = useState<Sale['accountsRec'][0] | null>(null);
   const [rowSelection, setRowSelection] = useState({});
@@ -73,81 +75,84 @@ export default function SalesPage() {
     endDate: '',
     orderNumber: '',
     clientId: '',
-    status: '',
-  });
-
-  const [orderToDiagnose, setOrderToDiagnose] = useState('');
-  const [diagnosticResult, setDiagnosticResult] = useState<any | null>(null);
-
-  const fetchClients = async () => {
-    try {
-      const response = await api.get('/pessoas?role=CLIENT');
-      const clientOptions = response.data.map((c: any) => ({ value: c.id, label: c.name }));
-      setClients(clientOptions);
-    } catch (err) {
-      toast.error('Falha ao buscar clientes.');
-    }
-  };
-
-  const handleFilterChange = (key: keyof typeof filters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const fetchSales = async (filterOverride?: typeof filters) => {
-    setIsLoading(true);
-    try {
-      const activeFilters = filterOverride ?? filters;
-      const params = new URLSearchParams();
-      if (activeFilters.startDate) params.append('startDate', activeFilters.startDate);
-      if (activeFilters.endDate) params.append('endDate', activeFilters.endDate);
-      if (activeFilters.orderNumber) params.append('orderNumber', activeFilters.orderNumber);
-      if (activeFilters.clientId) params.append('clientId', activeFilters.clientId);
-      if (activeFilters.status) params.append('status', activeFilters.status);
-
-      const response = await api.get(`/sales?${params.toString()}`);
-      setSales(response.data);
-    } catch (err) {
-      toast.error('Falha ao buscar vendas.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchClients();
-    fetchSales(); // Initial fetch
-  }, []);
-
-  const handleFilterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchSales();
-  };
-
-  const handleClearFilters = () => {
-    const initialFilters = {
-      startDate: '',
-      endDate: '',
-      orderNumber: '',
-      clientId: '',
-      status: '',
-    };
-    setFilters(initialFilters);
-    fetchSales(initialFilters);
-  };
-
-  const handleDiagnose = async () => {
-    if (!orderToDiagnose) return;
-    try {
-      const response = await api.get(`/sales/diagnose/${orderToDiagnose}`);
-      setDiagnosticResult(response.data);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Falha ao buscar dados de diagnóstico.');
-      setDiagnosticResult({ error: err.response?.data?.message || 'Erro desconhecido.' });
-    }
-  };
-
-  const handleSaveSuccess = () => {
-    setIsNewSaleModalOpen(false);
+          status: '',
+      });
+    
+      const fetchClients = async () => {
+        try {
+          const response = await api.get('/pessoas?role=CLIENT');
+          const clientOptions = response.data.map((c: any) => ({ value: c.id, label: c.name }));
+          setClients(clientOptions);
+        } catch (err) {
+          toast.error('Falha ao buscar clientes.');
+        }
+      };
+    
+      const handleFilterChange = (key: keyof typeof filters, value: string) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+      };
+    
+      const fetchSales = async (filterOverride?: typeof filters) => {
+        setIsLoading(true);
+        try {
+          const activeFilters = filterOverride ?? filters;
+          const params = new URLSearchParams();
+          if (activeFilters.startDate) params.append('startDate', activeFilters.startDate);
+          if (activeFilters.endDate) params.append('endDate', activeFilters.endDate);
+          if (activeFilters.orderNumber) params.append('orderNumber', activeFilters.orderNumber);
+          if (activeFilters.clientId) params.append('clientId', activeFilters.clientId);
+          if (activeFilters.status) params.append('status', activeFilters.status);
+    
+          const response = await api.get(`/sales?${params.toString()}`);
+          setSales(response.data);
+        } catch (err) {
+          toast.error('Falha ao buscar vendas.');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+    
+      useEffect(() => {
+        fetchClients();
+        fetchSales(); // Initial fetch
+      }, []);
+    
+      const handleFilterSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        fetchSales();
+      };
+    
+      const handleClearFilters = () => {
+        const initialFilters = {
+          startDate: '',
+          endDate: '',
+          orderNumber: '',
+          clientId: '',
+          status: '',
+        };
+        setFilters(initialFilters);
+        fetchSales(initialFilters);
+      };
+    
+      const handleDownloadPdf = async (sale: Sale) => {
+        try {
+          const response = await api.get(`/sales/${sale.id}/pdf`, {
+            responseType: 'blob',
+          });
+          const url = window.URL.createObjectURL(new Blob([response.data]));
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', `pedido-${sale.orderNumber}.pdf`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        } catch (err) {
+          console.error(err);
+          toast.error('Falha ao baixar PDF do pedido.');
+        }
+      };
+    
+      const handleSaveSuccess = () => {    setIsNewSaleModalOpen(false);
     fetchSales();
   };
 
@@ -331,6 +336,15 @@ export default function SalesPage() {
                 <DropdownMenuItem onClick={() => setSelectedSale(sale)}>
                   Ver Detalhes
                 </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={() => handleDownloadPdf(sale)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Imprimir Pedido
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={() => setSaleToEditObservation(sale)}>
+                  Editar Observação
+                </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
 
@@ -339,6 +353,7 @@ export default function SalesPage() {
                   <>
                     <DropdownMenuItem onClick={() => setSaleToEdit(sale)}>Editar Pedido</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleReleaseToPcp(sale.id)}>Liberar para Separação</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>Confirmar Venda</DropdownMenuItem>
                     <DropdownMenuItem className="text-red-600" onClick={() => handleCancelSale(sale.id)}>Cancelar Venda</DropdownMenuItem>
                   </>
                 )}
@@ -438,29 +453,6 @@ export default function SalesPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Diagnosticar Venda</CardTitle>
-          <CardDescription>Digite o número de um pedido para ver os dados financeiros brutos que o sistema está usando para os cálculos.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Input 
-              type="text" 
-              placeholder="Nº do Pedido..." 
-              value={orderToDiagnose} 
-              onChange={(e) => setOrderToDiagnose(e.target.value)}
-            />
-            <Button onClick={handleDiagnose}>Diagnosticar</Button>
-          </div>
-          {diagnosticResult && (
-            <pre className="mt-4 p-4 bg-muted rounded-lg text-sm overflow-x-auto">
-              {JSON.stringify(diagnosticResult, null, 2)}
-            </pre>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-2 mb-4">
             {Object.keys(rowSelection).length > 0 && (
@@ -493,6 +485,15 @@ export default function SalesPage() {
           sale={saleToEdit}
           open={!!saleToEdit}
           onOpenChange={(open) => !open && setSaleToEdit(null)}
+          onSave={fetchSales}
+        />
+      )}
+
+      {saleToEditObservation && (
+        <EditObservationModal
+          sale={saleToEditObservation}
+          open={!!saleToEditObservation}
+          onOpenChange={(open) => !open && setSaleToEditObservation(null)}
           onSave={fetchSales}
         />
       )}
