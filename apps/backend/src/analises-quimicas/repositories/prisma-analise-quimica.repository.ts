@@ -200,17 +200,19 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     }).filter((a): a is AnaliseQuimica => a !== null);
   }
 
-  async create(analise: AnaliseQuimica, organizationId: string): Promise<AnaliseQuimica> {
+  async create(analise: AnaliseQuimica, organizationId: string, tx?: Prisma.TransactionClient): Promise<AnaliseQuimica> {
+    const prisma = tx || this.prisma;
     const data = this.mapToPrismaPayload(analise, organizationId);
-    const dbAnalise = await this.prisma.analiseQuimica.create({ data });
+    const dbAnalise = await prisma.analiseQuimica.create({ data });
     return this.mapToDomain(dbAnalise)!;
   }
 
-  async save(analise: AnaliseQuimica, organizationId: string): Promise<AnaliseQuimica> {
+  async save(analise: AnaliseQuimica, organizationId: string, tx?: Prisma.TransactionClient): Promise<AnaliseQuimica> {
+    const prisma = tx || this.prisma;
     const { id, clienteId, numeroAnalise, ...updatePayload } =
       this.mapToPrismaPayload(analise, organizationId);
     return this.mapToDomain(
-      await this.prisma.analiseQuimica.update({
+      await prisma.analiseQuimica.update({
         where: { id: analise.id.toString() },
         data: updatePayload,
       }),

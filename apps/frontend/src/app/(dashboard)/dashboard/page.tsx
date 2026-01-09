@@ -11,6 +11,10 @@ import { RecentSales } from "@/components/recent-sales";
 import { ThirdPartyLoansCard } from "./third-party-loans-card";
 import { TotalSalesChart } from "@/components/dashboard/total-sales-chart";
 import { QuotationChart } from "@/components/quotation-chart";
+import { MarketDataCards } from "@/components/market-data-cards";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function DashboardPage() {
   // Replace 'any' with the actual KpiData type if available
@@ -49,10 +53,24 @@ export default function DashboardPage() {
     <div className="space-y-8  md:p-8">
       <h1 className="text-3xl font-bold">Dashboard</h1>
 
+      {summaryData && !summaryData.todayQuotationRegistered && (
+        <Alert variant="destructive" className="bg-destructive/10 border-destructive animate-pulse">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Cotação do Dia Pendente!</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>Você ainda não registrou a cotação manual de ouro para hoje. Os novos lançamentos podem usar valores desatualizados.</span>
+            <Link href="/quotations" className="flex items-center gap-1 font-bold underline">
+              Registrar agora <ArrowRight className="h-4 w-4" />
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Grid principal que organiza os elementos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {summaryData && <KpiCards data={summaryData} />}
         <ThirdPartyLoansCard />
+        <MarketDataCards />
       </div>
 
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">

@@ -15,6 +15,8 @@ import {
 } from '@sistema-erp-electrosal/core';
 import { GenerateNextNumberUseCase } from '../../common/use-cases/generate-next-number.use-case';
 import { EntityType } from '@prisma/client';
+import { AddRawMaterialToRecoveryOrderUseCase } from './add-raw-material.use-case';
+import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CreateRecoveryOrderCommand {
   organizationId: string;
@@ -23,6 +25,10 @@ export interface CreateRecoveryOrderCommand {
   dataInicio?: string;
   dataFim?: string;
   descricaoProcesso?: string;
+  salespersonId?: string;
+  commissionPercentage?: number;
+  commissionAmount?: number;
+  rawMaterials?: { rawMaterialId: string; quantity: number }[];
 }
 
 @Injectable()
@@ -33,6 +39,8 @@ export class CreateRecoveryOrderUseCase {
     @Inject('IAnaliseQuimicaRepository')
     private readonly analiseRepository: IAnaliseQuimicaRepository,
     private readonly generateNextNumberUseCase: GenerateNextNumberUseCase,
+    private readonly addRawMaterialUseCase: AddRawMaterialToRecoveryOrderUseCase,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(command: CreateRecoveryOrderCommand): Promise<RecoveryOrder> {
@@ -43,6 +51,10 @@ export class CreateRecoveryOrderUseCase {
       dataInicio,
       dataFim,
       descricaoProcesso,
+      salespersonId,
+      commissionPercentage,
+      commissionAmount,
+      rawMaterials,
     } = command;
 
     const orderNumber = await this.generateNextNumberUseCase.execute(
@@ -117,19 +129,37 @@ export class CreateRecoveryOrderUseCase {
       dataFim: dataFim ? new Date(dataFim) : undefined,
       descricaoProcesso,
       totalBrutoEstimadoGramas,
+      salespersonId,
+      commissionPercentage,
+      commissionAmount,
     });
 
-    const createdRecoveryOrder = await this.recoveryOrderRepository.create(
-      recoveryOrder,
-    );
+    return await this.prisma.$transaction(async (tx) => {
+      const createdRecoveryOrder = await this.recoveryOrderRepository.create(
+        recoveryOrder,
+        tx as any, // Repository might need adjustment to accept tx
+      );
 
-    // Update status of chemical analyses
-    for (const analise of analyses) {
-      analise.update({ status: StatusAnaliseQuimica.EM_RECUPERACAO });
-      await this.analiseRepository.save(analise);
-    }
+      // Update status of chemical analyses
+      for (const analise of analyses) {
+        analise.update({ status: StatusAnaliseQuimica.EM_RECUPERACAO });
+        await this.analiseRepository.save(analise, tx as any);
+      }
 
-    return createdRecoveryOrder;
+      // Add raw materials if provided
+      if (rawMaterials && rawMaterials.length > 0) {
+        for (const rm of rawMaterials) {
+          await this.addRawMaterialUseCase.execute(
+            organizationId,
+            createdRecoveryOrder.id.toString(),
+            rm,
+            tx,
+          );
+        }
+      }
+
+      return createdRecoveryOrder;
+    });
   }
 }
 

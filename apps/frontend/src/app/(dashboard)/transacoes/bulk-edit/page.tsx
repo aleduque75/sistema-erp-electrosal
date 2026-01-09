@@ -8,7 +8,6 @@ import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
@@ -94,8 +93,18 @@ export default function BulkEditTransacoesPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <DatePicker date={dateRange.from} setDate={(date) => setDateRange(prev => ({...prev, from: date}))} placeholder="Data Inicial" />
-              <DatePicker date={dateRange.to} setDate={(date) => setDateRange(prev => ({...prev, to: date}))} placeholder="Data Final" />
+              <Input
+                type="date"
+                value={dateRange.from ? dateRange.from.toISOString().split('T')[0] : ""}
+                onChange={(e) => setDateRange(prev => ({...prev, from: e.target.value ? new Date(e.target.value + 'T12:00:00') : undefined}))}
+                className="w-40"
+              />
+              <Input
+                type="date"
+                value={dateRange.to ? dateRange.to.toISOString().split('T')[0] : ""}
+                onChange={(e) => setDateRange(prev => ({...prev, to: e.target.value ? new Date(e.target.value + 'T12:00:00') : undefined}))}
+                className="w-40"
+              />
             </div>
              <Input
                 placeholder="Filtrar por descrição..."

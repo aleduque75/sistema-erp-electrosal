@@ -78,6 +78,12 @@ interface Sale {
   feeAmount: number;
   goldValue: number | null;
   netAmount: number;
+  adjustment?: {
+    netProfitBRL: number;
+    netDiscrepancyGrams: number;
+    totalCostBRL: number;
+    paymentReceivedBRL: number;
+  };
 }
 
 interface SaleDetailsViewProps {
@@ -126,7 +132,10 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
 
   const receivedPayments = sale.accountsRec.filter(ar => ar.received);
   const pendingAccountsRec = sale.accountsRec.find(ar => !ar.received);
-  const paymentLocation = receivedPayments[0]?.transacao?.contaCorrente?.name || 'N/A';
+  const paymentLocation = receivedPayments[0]?.transacoes?.[0]?.contaCorrente?.name || 'N/A';
+
+  const profitBRL = Number(sale.adjustment?.netProfitBRL || 0);
+  const profitGrams = Number(sale.adjustment?.netDiscrepancyGrams || 0);
 
   return (
     <div className="space-y-4">
@@ -137,8 +146,31 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
         totalQuantityNeeded={selectedSaleItem?.quantity || 0}
         onAddItem={handleLinkLots} // Reutilizando onAddItem para a lógica de vincular
       />
-      {/* ... (conteúdo existente do componente) ... */}
-      <div className="grid grid-cols-2 gap-4 border-b pb-4">
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-primary/5 border-primary/20 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Lucro Líquido (R$)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${profitBRL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(profitBRL)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-primary/5 border-primary/20 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Lucro em Metal (g)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${profitGrams >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatGold(profitGrams)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 border-b pb-4 pt-2">
         <div>
           <h3 className="font-semibold">Cliente</h3>
           <p className="text-muted-foreground">{sale.pessoa.name}</p>

@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as Papa from 'papaparse';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 import { SaleInstallmentStatus, SaleStatus, EntityType } from '@prisma/client';
 import { GenerateNextNumberUseCase } from '../common/use-cases/generate-next-number.use-case';
 import { QuotationsService } from '../quotations/quotations.service';

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { DatePicker } from '@/components/ui/date-picker'; // Assuming this component exists
+import { Label } from '@/components/ui/label';
 
 // Interfaces
 interface Pessoa {
@@ -134,8 +134,13 @@ export default function SettleMetalReceivablesPage() {
                           <Input type="number" onChange={e => setPaymentAmountBRL(Number(e.target.value))} />
                         </div>
                         <div>
-                          <label>Data do Pagamento</label>
-                          <DatePicker date={paymentDate} onDateChange={setPaymentDate} />
+                          <Label htmlFor="payment-date">Data do Pagamento</Label>
+                          <Input
+                            id="payment-date"
+                            type="date"
+                            value={paymentDate ? paymentDate.toISOString().split('T')[0] : ""}
+                            onChange={(e) => setPaymentDate(e.target.value ? new Date(e.target.value + 'T12:00:00') : undefined)}
+                          />
                         </div>
                         <Button onClick={handleSettlePayment} className="w-full">Salvar Pagamento</Button>
                       </div>

@@ -29,6 +29,8 @@ import { IRecoveryOrderRepository } from '@sistema-erp-electrosal/core';
 import { AssociateImageToRecoveryOrderUseCase } from './use-cases/associate-image-to-recovery-order.use-case';
 import { CancelRecoveryOrderUseCase } from './use-cases/cancel-recovery-order.use-case';
 import { GerarPdfRecoveryOrderUseCase } from './use-cases/gerar-pdf-recovery-order.use-case';
+import { ApplyRecoveryOrderCommissionUseCase, ApplyRecoveryOrderCommissionDto } from './use-cases/apply-recovery-order-commission.use-case';
+import { UpdateRecoveryOrderUseCase } from './use-cases/update-recovery-order.use-case';
 
 @UseGuards(JwtAuthGuard)
 @Controller('recovery-orders')
@@ -42,9 +44,35 @@ export class RecoveryOrdersController {
     private readonly cancelRecoveryOrderUseCase: CancelRecoveryOrderUseCase,
     private readonly associateImageToRecoveryOrderUseCase: AssociateImageToRecoveryOrderUseCase,
     private readonly gerarPdfRecoveryOrderUseCase: GerarPdfRecoveryOrderUseCase,
+    private readonly applyRecoveryOrderCommissionUseCase: ApplyRecoveryOrderCommissionUseCase,
+    private readonly updateRecoveryOrderUseCase: UpdateRecoveryOrderUseCase,
     @Inject('IRecoveryOrderRepository')
     private readonly recoveryOrderRepository: IRecoveryOrderRepository,
   ) {}
+
+  @Patch(':id')
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: { descricao?: string; observacoes?: string },
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    await this.updateRecoveryOrderUseCase.execute({
+      organizationId,
+      recoveryOrderId: id,
+      ...body,
+    });
+  }
+
+  @Post(':id/apply-commission')
+  async applyCommission(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: ApplyRecoveryOrderCommissionDto,
+    @Req() req,
+  ) {
+    const organizationId = req.user?.orgId;
+    await this.applyRecoveryOrderCommissionUseCase.execute(organizationId, id, dto);
+  }
 
   @Post()
   async createRecoveryOrder(@Body() dto: CreateRecoveryOrderDto, @Req() req) {

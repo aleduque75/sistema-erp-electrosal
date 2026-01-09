@@ -7,6 +7,10 @@ export interface CreateRecoveryOrderDto {
   dataInicio?: string;
   dataFim?: string;
   metalType: TipoMetal;
+  salespersonId?: string;
+  commissionPercentage?: number;
+  commissionAmount?: number;
+  rawMaterials?: { rawMaterialId: string; quantity: number }[];
 }
 
 export interface UpdateRecoveryOrderPurityDto {

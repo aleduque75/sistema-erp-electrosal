@@ -11,6 +11,15 @@ class SourceLotDto {
   gramsToUse: number;
 }
 
+class RawMaterialItemDto {
+  @IsString()
+  @IsNotEmpty()
+  rawMaterialId: string;
+
+  @IsNumber()
+  quantity: number;
+}
+
 export class CreateChemicalReactionDto {
   @IsDateString()
   @IsOptional()
@@ -31,6 +40,12 @@ export class CreateChemicalReactionDto {
   @ValidateNested({ each: true })
   @Type(() => SourceLotDto)
   sourceLots: SourceLotDto[];
+
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => RawMaterialItemDto)
+  rawMaterials?: RawMaterialItemDto[];
 
   @IsString()
   @IsOptional()

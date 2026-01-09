@@ -10,24 +10,22 @@ export class RecoveryOrderResponseDto {
   status: RecoveryOrderStatus;
   dataInicio: Date;
   dataFim?: Date;
-  descricao?: string; // Renomeado de descricaoProcesso
+  descricao?: string; 
   observacoes?: string;
   dataCriacao: Date;
   dataAtualizacao: Date;
 
-  // --- INPUT ---
   totalBrutoEstimadoGramas: number;
-
-  // --- PROCESSAMENTO ---
   resultadoProcessamentoGramas?: number;
   teorFinal?: number;
-
-  // --- OUTPUT (Calculado) ---
   auPuroRecuperadoGramas?: number;
   residuoGramas?: number;
-
-  // --- VÍNCULO COM RESÍDUO ---
   residueAnalysisId?: string;
+
+  salespersonId?: string;
+  salespersonName?: string;
+  commissionPercentage?: number;
+  commissionAmount?: number;
 
   rawMaterialsUsed?: RawMaterialUsedResumida[];
   analisesEnvolvidas?: AnaliseQuimicaResumida[];
@@ -43,16 +41,22 @@ export class RecoveryOrderResponseDto {
     dto.status = recoveryOrder.status;
     dto.dataInicio = recoveryOrder.dataInicio;
     dto.dataFim = recoveryOrder.dataFim;
-    dto.descricao = recoveryOrder.descricao; // Mapeado
+    dto.descricao = recoveryOrder.descricao; 
     dto.observacoes = recoveryOrder.observacoes;
     dto.dataCriacao = recoveryOrder.dataCriacao;
     dto.dataAtualizacao = recoveryOrder.dataAtualizacao;
-    dto.totalBrutoEstimadoGramas = recoveryOrder.totalBrutoEstimadoGramas; // Mapeado
-    dto.resultadoProcessamentoGramas = recoveryOrder.resultadoProcessamentoGramas; // Mapeado
-    dto.teorFinal = recoveryOrder.teorFinal; // Mapeado
-    dto.auPuroRecuperadoGramas = recoveryOrder.auPuroRecuperadoGramas; // Mapeado
-    dto.residuoGramas = recoveryOrder.residuoGramas; // Mapeado
-    dto.residueAnalysisId = recoveryOrder.residueAnalysisId; // Mapeado
+    dto.totalBrutoEstimadoGramas = recoveryOrder.totalBrutoEstimadoGramas;
+    dto.resultadoProcessamentoGramas = recoveryOrder.resultadoProcessamentoGramas;
+    dto.teorFinal = recoveryOrder.teorFinal;
+    dto.auPuroRecuperadoGramas = recoveryOrder.auPuroRecuperadoGramas;
+    dto.residuoGramas = recoveryOrder.residuoGramas;
+    dto.residueAnalysisId = recoveryOrder.residueAnalysisId;
+    
+    dto.salespersonId = recoveryOrder.salespersonId;
+    dto.salespersonName = (recoveryOrder as any).salespersonName;
+    dto.commissionPercentage = recoveryOrder.commissionPercentage;
+    dto.commissionAmount = recoveryOrder.commissionAmount;
+
     dto.rawMaterialsUsed = recoveryOrder.rawMaterialsUsed?.map(rmu => ({
       id: rmu.id,
       rawMaterialId: rmu.rawMaterialId,

@@ -29,6 +29,8 @@ export interface Sale {
   createdAt: string;
   status: 'PENDENTE' | 'CONFIRMADO' | 'A_SEPARAR' | 'SEPARADO' | 'FINALIZADO' | 'CANCELADO';
   lucro?: number;
+  salespersonId?: string;
+  commissionAmount?: number;
   paymentAccountName?: string;
   adjustment?: {
     netDiscrepancyGrams: number;

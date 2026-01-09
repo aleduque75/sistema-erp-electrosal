@@ -6,7 +6,7 @@ import { TransacoesService } from '../transacoes/transacoes.service';
 import { QuotationsService } from '../quotations/quotations.service';
 import { SettingsService } from '../settings/settings.service';
 import { TipoTransacaoPrisma, TipoMetal, MetalCreditStatus } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 
 @Injectable()
 export class MetalPaymentsService {

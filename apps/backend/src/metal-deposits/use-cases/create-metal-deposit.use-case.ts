@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMetalDepositDto } from '../dtos/create-metal-deposit.dto';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 import { TipoMetal } from '@prisma/client';
 
 @Injectable()

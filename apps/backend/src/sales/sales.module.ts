@@ -28,6 +28,7 @@ import { ReceiveInstallmentPaymentUseCase } from './use-cases/receive-installmen
 import { PrismaMetalAccountRepository } from '../metal-accounts/repositories/prisma-metal-account.repository'; // Assuming path
 import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositories/prisma-metal-account-entry.repository'; // Assuming path
 import { GenerateSalePdfUseCase } from './use-cases/generate-sale-pdf.use-case';
+import { ApplySaleCommissionUseCase } from './use-cases/apply-sale-commission.use-case';
 
 
 @Module({
@@ -59,6 +60,7 @@ import { GenerateSalePdfUseCase } from './use-cases/generate-sale-pdf.use-case';
     ReceiveInstallmentPaymentUseCase,
     ProcessClientMetalPaymentToSupplierUseCase,
     GenerateSalePdfUseCase,
+    ApplySaleCommissionUseCase,
   ],
   exports: [SalesService, CreateSaleUseCase, ConfirmSaleUseCase, CalculateSaleAdjustmentUseCase],
 })

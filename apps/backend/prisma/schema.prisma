@@ -49,11 +49,13 @@ model Organization {
   recoveryOrders          RecoveryOrder[]
   recuperacoes            Recuperacao[]
   saleAdjustments         SaleAdjustment[]
-  rawMaterials            RawMaterial[]
-  rawMaterialsUsed        RawMaterialUsed[]
-  transacoes              Transacao[]
-  pureMetalLotMovements   PureMetalLotMovement[]
-}
+    rawMaterials        RawMaterial[]
+    rawMaterialsUsed    RawMaterialUsed[]
+    transacoes          Transacao[]
+    pureMetalLotMovements PureMetalLotMovement[]
+    marketData          MarketData[]
+  }
+  
 
 model User {
   id             String        @id @default(uuid())
@@ -104,8 +106,10 @@ model Pessoa {
   createdAt                   DateTime          @default(now())
   updatedAt                   DateTime          @updatedAt
   externalId                  String?           @unique
-  sales                       Sale[]
+  sales                       Sale[]            @relation("ClientSales")
+  salespersonSales            Sale[]            @relation("SalespersonSales")
   analisesQuimicasComoCliente AnaliseQuimica[]  @relation("PessoaAnalisesQuimicas")
+  recoveryOrdersAsSalesperson RecoveryOrder[]   @relation("SalespersonRecoveryOrders")
   client                      Client?
   fornecedor                  Fornecedor?
   funcionario                 Funcionario?
@@ -274,10 +278,12 @@ model Sale {
   shippingCost      Decimal?          @db.Decimal(10, 2)
   readyForPayment   Boolean           @default(false)
   observation       String?           @db.Text
+  salespersonId     String?
+  salesperson       Pessoa?           @relation("SalespersonSales", fields: [salespersonId], references: [id])
   accountsRec       AccountRec[]
   organization      Organization      @relation(fields: [organizationId], references: [id])
   paymentTerm       PaymentTerm?      @relation(fields: [paymentTermId], references: [id])
-  pessoa            Pessoa            @relation(fields: [pessoaId], references: [id])
+  pessoa            Pessoa            @relation("ClientSales", fields: [pessoaId], references: [id])
   saleItems         SaleItem[]
   metalReceivable   MetalReceivable?
   pureMetalLots     pure_metal_lots[]
@@ -369,6 +375,8 @@ model AccountPay {
   id                String         @id @default(uuid())
   description       String
   amount            Decimal        @db.Decimal(10, 2)
+  goldAmount        Decimal?       @db.Decimal(12, 4)
+  goldPrice         Decimal?       @db.Decimal(10, 2)
   dueDate           DateTime
   paid              Boolean        @default(false)
   paidAt            DateTime?
@@ -810,7 +818,11 @@ model RecoveryOrder {
   resultadoProcessamentoGramas Float?
   teorFinal                    Float?
   totalBrutoEstimadoGramas     Float
+  salespersonId                String?
+  commissionPercentage         Decimal?                  @db.Decimal(5, 2)
+  commissionAmount             Decimal?                  @db.Decimal(10, 2)
   organization                 Organization              @relation(fields: [organizationId], references: [id])
+  salesperson                  Pessoa?                   @relation("SalespersonRecoveryOrders", fields: [salespersonId], references: [id])
   residueAnalysis              AnaliseQuimica?           @relation("ResidueOfRecovery", fields: [residueAnalysisId], references: [id])
   rawMaterialsUsed             RawMaterialUsed[]
   images                       Media[]
@@ -1058,9 +1070,10 @@ model SaleAdjustment {
   netDiscrepancyGrams    Decimal?     @db.Decimal(12, 4)
   totalCostBRL           Decimal?     @db.Decimal(14, 2)
   grossProfitBRL         Decimal?     @db.Decimal(14, 2)
-  otherCostsBRL          Decimal?     @db.Decimal(14, 2)
-  netProfitBRL           Decimal?     @db.Decimal(14, 2)
-  createdAt              DateTime     @default(now())
+    otherCostsBRL          Decimal?          @db.Decimal(14, 2)
+    commissionBRL           Decimal?          @db.Decimal(14, 2)
+    netProfitBRL           Decimal?          @db.Decimal(14, 2)
+    createdAt              DateTime          @default(now())
   updatedAt              DateTime     @updatedAt
   organization           Organization @relation(fields: [organizationId], references: [id])
   sale                   Sale         @relation(fields: [saleId], references: [id])
@@ -1215,4 +1228,20 @@ enum MetalCreditStatus {
   PARTIALLY_PAID
   PAID
   CANCELED
+}
+
+model MarketData {
+  id              String       @id @default(uuid())
+  date            DateTime     @db.Date
+  usdPrice        Decimal      @db.Decimal(10, 4) // Dolar em Reais
+  goldTroyPrice   Decimal      @db.Decimal(10, 2) // Ouro em Dolar (Troy Ounce)
+  silverTroyPrice Decimal      @db.Decimal(10, 2) // Prata em Dolar (Troy Ounce)
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, date])
+  @@map("market_data")
 }

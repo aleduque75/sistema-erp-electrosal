@@ -5,6 +5,7 @@ import { ChemicalReactionStatusPrisma, EntityType } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { GenerateNextNumberUseCase } from '../../common/use-cases/generate-next-number.use-case';
 import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { AddRawMaterialToChemicalReactionUseCase } from './add-raw-material.use-case';
 
 export interface CreateChemicalReactionCommand {
   organizationId: string;
@@ -17,11 +18,12 @@ export class CreateChemicalReactionUseCase {
     private readonly prisma: PrismaService,
     private readonly generateNextNumberUseCase: GenerateNextNumberUseCase,
     private readonly pureMetalLotsService: PureMetalLotsService,
+    private readonly addRawMaterialUseCase: AddRawMaterialToChemicalReactionUseCase,
   ) {}
 
   async execute(command: CreateChemicalReactionCommand): Promise<any> {
     const { organizationId, dto } = command;
-    const { sourceLots, notes, outputProductId, metalType, reactionDate } = dto;
+    const { sourceLots, notes, outputProductId, metalType, reactionDate, rawMaterials } = dto;
 
     if (!sourceLots || sourceLots.length === 0) {
       throw new BadRequestException('Pelo menos um lote de origem deve ser fornecido.');
@@ -114,6 +116,18 @@ export class CreateChemicalReactionUseCase {
           },
         },
       });
+
+      // 4. Add raw materials if provided
+      if (rawMaterials && rawMaterials.length > 0) {
+        for (const rm of rawMaterials) {
+          await this.addRawMaterialUseCase.execute(
+            organizationId,
+            reaction.id,
+            rm,
+            tx,
+          );
+        }
+      }
 
       return { reaction };
     });

@@ -30,7 +30,7 @@ interface AccountRec {
   dueDate: string;
   received: boolean;
   receivedAt?: string | null;
-  sale?: { id: string; orderNumber: number; observation?: string | null };
+  sale?: { id: string; orderNumber: number; observation?: string | null; createdAt?: string };
   pessoa?: { name: string };
   clientId: string;
   saleInstallments?: any[];

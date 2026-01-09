@@ -31,8 +31,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Quotation {
   id: string;
@@ -43,16 +48,28 @@ interface Quotation {
   tipoPagamento?: string;
 }
 
+const METAL_TYPES = ["AU", "AG", "RH"] as const;
+
 export default function QuotationsPage() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [metal, setMetal] = useState<string>("all");
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+      value || 0
+    );
+
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
   const fetchQuotations = async () => {
     try {
       const params = new URLSearchParams();
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
+      if (metal && metal !== "all") params.append("metalType", metal);
 
       const response = await api.get(`/quotations?${params.toString()}`);
       const quotationsWithNumbers = response.data.map((q: Quotation) => ({
@@ -73,6 +90,23 @@ export default function QuotationsPage() {
   const handleFilter = () => {
     fetchQuotations();
   }
+
+  const handleClearFilters = () => {
+    setStartDate("");
+    setEndDate("");
+    setMetal("all");
+    // We need to fetch without filters, but setStates are async. 
+    // It's better to fetch with empty values.
+    const params = new URLSearchParams();
+    api.get(`/quotations?${params.toString()}`).then(response => {
+      const quotationsWithNumbers = response.data.map((q: Quotation) => ({
+        ...q,
+        buyPrice: Number(q.buyPrice),
+        sellPrice: Number(q.sellPrice),
+      }));
+      setQuotations(quotationsWithNumbers);
+    });
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -100,7 +134,7 @@ export default function QuotationsPage() {
           <NovaQuotationModal onSaveSuccess={handleSaveSuccess} />
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-end">
             <div>
               <Label htmlFor="start-date">Data Inicial</Label>
               <Input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -109,7 +143,26 @@ export default function QuotationsPage() {
               <Label htmlFor="end-date">Data Final</Label>
               <Input id="end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
-            <Button onClick={handleFilter}>Filtrar</Button>
+            <div>
+              <Label htmlFor="metal-filter">Metal</Label>
+              <Select value={metal} onValueChange={setMetal}>
+                <SelectTrigger id="metal-filter">
+                  <SelectValue placeholder="Todos os metais" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os metais</SelectItem>
+                  {METAL_TYPES.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleFilter}>Filtrar</Button>
+              <Button variant="outline" onClick={handleClearFilters}>Limpar</Button>
+            </div>
           </div>
           {quotations.length > 0 ? (
             <Table>
@@ -126,12 +179,12 @@ export default function QuotationsPage() {
               <TableBody>
                 {quotations.map((quotation) => (
                   <TableRow key={quotation.id}>
-                    <TableCell>{quotation.metal}</TableCell>
+                    <TableCell className="font-medium">{quotation.metal}</TableCell>
                     <TableCell>
-                      {format(new Date(quotation.date), "PPP", { locale: ptBR })}
+                      {formatDate(quotation.date)}
                     </TableCell>
-                    <TableCell>{quotation.buyPrice.toFixed(2)}</TableCell>
-                    <TableCell>{quotation.sellPrice.toFixed(2)}</TableCell>
+                    <TableCell>{formatCurrency(quotation.buyPrice)}</TableCell>
+                    <TableCell>{formatCurrency(quotation.sellPrice)}</TableCell>
                     <TableCell>{quotation.tipoPagamento || "N/A"}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>

@@ -39,6 +39,7 @@ import { PlusCircle, Trash2 } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { MetalLotSelectionModal } from "./metal-lot-selection-modal";
 import { TipoMetal } from "@/types/tipo-metal";
+import { FormCombobox } from "@/components/ui/FormCombobox";
 
 // ZOD SCHEMA for the creation step
 const formSchema = z.object({
@@ -59,6 +60,10 @@ const formSchema = z.object({
     .string()
     .min(1, "Selecione o grupo de produto de saída."),
   batchNumber: z.string().optional(),
+  rawMaterials: z.array(z.object({
+    rawMaterialId: z.string().min(1, "Selecione uma matéria-prima"),
+    quantity: z.coerce.number().positive("Quantidade deve ser positiva"),
+  })).optional(),
 });
 
 type NewReactionFormValues = z.infer<typeof formSchema>;
@@ -81,6 +86,7 @@ interface ProductGroup {
 export function NewReactionForm() {
   const router = useRouter();
   const [isMetalLotModalOpen, setIsMetalLotModalOpen] = useState(false);
+  const [rawMaterialsList, setRawMaterialsList] = useState<{ id: string; name: string; unit: string }[]>([]);
 
   const form = useForm<NewReactionFormValues>({
     resolver: zodResolver(formSchema),
@@ -91,6 +97,7 @@ export function NewReactionForm() {
       sourceLots: [],
       outputProductGroupId: "",
       batchNumber: "",
+      rawMaterials: [],
     },
   });
 
@@ -100,6 +107,11 @@ export function NewReactionForm() {
   } = useFieldArray({
     control: form.control,
     name: "sourceLots",
+  });
+
+  const { fields: rawMaterialFields, append: appendRawMaterial, remove: removeRawMaterial } = useFieldArray({
+    control: form.control,
+    name: "rawMaterials",
   });
 
   const { data: productGroups, isLoading: isLoadingProductGroups } = useQuery<
@@ -113,6 +125,18 @@ export function NewReactionForm() {
       );
     },
   });
+
+  useEffect(() => {
+    const fetchRawMaterials = async () => {
+      try {
+        const response = await api.get("/raw-materials");
+        setRawMaterialsList(response.data);
+      } catch (error) {
+        console.error("Erro ao buscar matérias-primas:", error);
+      }
+    };
+    fetchRawMaterials();
+  }, []);
 
   const selectedOutputProductGroupId = form.watch("outputProductGroupId");
   const selectedMetalType = form.watch("metalType");
@@ -307,6 +331,82 @@ export function NewReactionForm() {
                       .map((f) => f.pureMetalLotId)}
                   />
                 </Dialog>
+              </CardContent>
+            </Card>
+
+            {/* Seção de Matérias-Primas do Estoque */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg">Matérias-Primas do Estoque</CardTitle>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => appendRawMaterial({ rawMaterialId: "", quantity: 0 })}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Insumo
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {rawMaterialFields.length === 0 && (
+                  <p className="text-sm text-muted-foreground italic text-center">
+                    Nenhum insumo adicional do estoque adicionado.
+                  </p>
+                )}
+                {rawMaterialFields.map((field, index) => (
+                  <div key={field.id} className="flex items-end gap-2">
+                    <FormField
+                      control={form.control}
+                      name={`rawMaterials.${index}.rawMaterialId`}
+                      render={({ field: rmField }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel className={index > 0 ? "sr-only" : ""}>Item</FormLabel>
+                          <FormControl>
+                            <FormCombobox
+                              items={rawMaterialsList.map(rm => ({ value: rm.id, label: `${rm.name} (${rm.unit})` }))}
+                              value={rmField.value}
+                              onSelect={rmField.onChange}
+                              triggerPlaceholder="Selecione..."
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`rawMaterials.${index}.quantity`}
+                      render={({ field: quantityField }) => (
+                        <FormItem className="w-32">
+                          <FormLabel className={index > 0 ? "sr-only" : ""}>Quantidade</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.001"
+                              placeholder="0.000"
+                              {...quantityField}
+                              onChange={(e) =>
+                                quantityField.onChange(
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeRawMaterial(index)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </CardContent>
             </Card>
 

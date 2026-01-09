@@ -5,7 +5,7 @@ import * as path from 'path';
 import { ContaCorrenteType, TipoTransacaoPrisma } from '@prisma/client';
 import { exec } from 'child_process';
 import { SalesService } from '../sales/sales.service';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 
 import { ImportProductsUseCase } from './import-products.use-case';
 import { SalesMovementImportUseCase } from '../sales-movement-import/sales-movement-import.use-case';

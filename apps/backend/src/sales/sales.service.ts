@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSaleDto, UpdateSaleDto } from './dtos/sales.dto';
 import { Sale, SaleInstallmentStatus, TipoTransacaoPrisma, Prisma, SaleStatus, Transacao } from '@prisma/client'; // Keep Sale for now, will refactor later
 import { addMonths, addDays } from 'date-fns';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 import { StockMovement, SaleItem } from '@sistema-erp-electrosal/core'; // Added SaleItem
 import { StockMovementMapper } from '../products/mappers/stock-movement.mapper'; // Added
 import { SaleItemMapper } from './mappers/sale-item.mapper'; // Added

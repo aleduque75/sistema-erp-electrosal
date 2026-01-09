@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Buffer } from 'buffer';
 import * as Handlebars from 'handlebars';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 
 export interface GerarPdfResumoFinanceiroCommand {
   organizationId: string;

@@ -28,6 +28,8 @@ interface RawMaterial {
 const formSchema = z.object({
   rawMaterialId: z.string().min(1, "Selecione uma matéria-prima."),
   quantity: z.coerce.number().positive("A quantidade deve ser um número positivo."),
+  costInAu: z.coerce.number().min(0).optional(),
+  costInBrl: z.coerce.number().min(0).optional(),
 });
 
 type AddRawMaterialFormValues = z.infer<typeof formSchema>;
@@ -40,6 +42,8 @@ export function AddRawMaterialModal({ isOpen, onClose, recoveryOrderId, onRawMat
     defaultValues: {
       rawMaterialId: "",
       quantity: 0,
+      costInAu: 0,
+      costInBrl: 0,
     },
   });
 
@@ -59,7 +63,12 @@ export function AddRawMaterialModal({ isOpen, onClose, recoveryOrderId, onRawMat
 
   const onSubmit = async (data: AddRawMaterialFormValues) => {
     try {
-      await api.post(`/recovery-orders/${recoveryOrderId}/raw-materials`, data);
+      const payload = {
+        ...data,
+        costInAu: data.costInAu || undefined,
+        costInBrl: data.costInBrl || undefined,
+      };
+      await api.post(`/recovery-orders/${recoveryOrderId}/raw-materials`, payload);
       toast.success("Matéria-prima adicionada com sucesso!");
       onRawMaterialAdded();
       onClose();
@@ -113,6 +122,38 @@ export function AddRawMaterialModal({ isOpen, onClose, recoveryOrderId, onRawMat
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="costInAu"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Custo em Ouro (g) - Opcional</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.0001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="costInBrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Custo em Reais (R$) - Opcional</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground italic">
+              * Se os campos de custo ficarem vazios, o sistema usará o custo padrão do cadastro.
+            </p>
             <DialogFooter>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? "Adicionando..." : "Adicionar"}

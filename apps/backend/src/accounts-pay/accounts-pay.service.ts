@@ -12,7 +12,7 @@ import {
 } from './dtos/account-pay.dto';
 import { AccountPay, Prisma, TipoTransacaoPrisma } from '@prisma/client';
 import { addMonths } from 'date-fns';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 import { SettingsService } from '../settings/settings.service';
 import { PureMetalLotsService } from '../pure-metal-lots/pure-metal-lots.service';
 

@@ -59,6 +59,16 @@ export class HybridReceiveUseCase {
       let totalPaidGoldForAccountRec = new Decimal(0); 
       const quotation = new Decimal(dto.quotation || 0);
 
+      // --- Validar installmentId se fornecido ---
+      if (dto.installmentId) {
+        const installment = await tx.saleInstallment.findFirst({
+          where: { id: dto.installmentId, saleId: accountRec.saleId || undefined }
+        });
+        if (!installment) {
+          throw new BadRequestException('A parcela informada não pertence a esta venda ou não existe.');
+        }
+      }
+
       // --- NOVO: Processar transferências para outros MetalCredits ANTES de aplicar à AccountRec atual ---
       if (dto.transferToOtherMetalCredits && dto.transferToOtherMetalCredits.length > 0) {
         for (const transfer of dto.transferToOtherMetalCredits) {
@@ -339,6 +349,46 @@ export class HybridReceiveUseCase {
           goldAmountPaid: updatedGoldAmountPaid.toDP(4).toNumber(),
         },
       });
+
+      // --- Atualizar Parcelas (SaleInstallments) ---
+      if (accountRec.saleId) {
+        if (dto.installmentId) {
+          // Pagamento de uma parcela específica
+          await tx.saleInstallment.update({
+            where: { id: dto.installmentId },
+            data: {
+              status: 'PAID',
+              paidAt: new Date(dto.receivedAt),
+            }
+          });
+        } else {
+          // Pagamento avulso: Amortizar parcelas pendentes
+          let remainingAmortization = totalPaidBRLForAccountRec;
+          const pendingInstallments = await tx.saleInstallment.findMany({
+            where: { saleId: accountRec.saleId, status: { in: ['PENDING', 'PARTIALLY_PAID'] } },
+            orderBy: { dueDate: 'asc' },
+          });
+
+          for (const inst of pendingInstallments) {
+            if (remainingAmortization.lte(0)) break;
+
+            const instAmount = new Decimal(inst.amount);
+            if (remainingAmortization.gte(instAmount.minus(0.01))) {
+              await tx.saleInstallment.update({
+                where: { id: inst.id },
+                data: { status: 'PAID', paidAt: new Date(dto.receivedAt) },
+              });
+              remainingAmortization = remainingAmortization.minus(instAmount);
+            } else if (remainingAmortization.gt(0.01)) {
+              await tx.saleInstallment.update({
+                where: { id: inst.id },
+                data: { status: 'PARTIALLY_PAID' },
+              });
+              remainingAmortization = new Decimal(0);
+            }
+          }
+        }
+      }
 
       const totalAmount = new Decimal(accountRec.amount);
       let isFullyPaid = false;

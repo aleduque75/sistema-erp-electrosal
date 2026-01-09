@@ -4,9 +4,11 @@ import React, { useState, useMemo } from 'react';
 import { DataTable } from '@/components/ui/data-table';
 import { getColumns } from './columns';
 import { RecoveryOrderDto } from '@/types/recovery-order';
-import { ViewRecoveryOrderModal } from './ViewRecoveryOrderModal';
+import { RecoveryOrderDetailsModal } from './RecoveryOrderDetailsModal';
 import { LaunchPurityModal } from './LaunchPurityModal';
 import { LaunchResultModal } from './LaunchResultModal';
+import { ApplyRecoveryOrderCommissionModal } from './ApplyRecoveryOrderCommissionModal';
+import { EditRecoveryOrderModal } from './EditRecoveryOrderModal';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { startRecoveryOrder } from '@/services/recoveryOrdersApi';
@@ -16,6 +18,7 @@ interface RecoveryOrdersTableProps {
   isLoading: boolean;
   onRecoveryOrderUpdated: () => void;
   onCancelRecoveryOrder: (id: string) => void;
+  onApplyCommission: (order: RecoveryOrderDto) => void;
 }
 
 export function RecoveryOrdersTable({
@@ -23,6 +26,7 @@ export function RecoveryOrdersTable({
   isLoading,
   onRecoveryOrderUpdated,
   onCancelRecoveryOrder,
+  onApplyCommission,
 }: RecoveryOrdersTableProps) {
   const [selectedOrder, setSelectedOrder] = useState<RecoveryOrderDto | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -34,6 +38,9 @@ export function RecoveryOrdersTable({
   const [recoveryOrderToLaunchResult, setRecoveryOrderToLaunchResult] = useState<RecoveryOrderDto | null>(null);
   const [isLaunchResultModalOpen, setIsLaunchResultModalOpen] = useState(false);
 
+  const [recoveryOrderToEdit, setRecoveryOrderToEdit] = useState<RecoveryOrderDto | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const handleViewDetails = (id: string) => {
     const order = recoveryOrders.find(o => o.id === id);
     if (order) {
@@ -43,9 +50,11 @@ export function RecoveryOrdersTable({
   };
 
   const handleEdit = (id: string) => {
-    // TODO: Implement edit functionality
-    toast.info(`Edit action called for order ID: ${id}. Not implemented yet.`);
-    console.log("Edit order with ID:", id);
+    const order = recoveryOrders.find(o => o.id === id);
+    if (order) {
+      setRecoveryOrderToEdit(order);
+      setIsEditModalOpen(true);
+    }
   };
 
   const handleDownloadPdf = async (orderId: string) => {
@@ -70,8 +79,6 @@ export function RecoveryOrdersTable({
     } catch (error) {
       console.error("Falha ao baixar o PDF:", error);
       toast.error("Falha ao baixar o PDF. Tente novamente.");
-    } finally {
-      setIsDownloadingPdf(null);
     }
   };
 
@@ -118,8 +125,12 @@ export function RecoveryOrdersTable({
       handleStartRecoveryOrder,
       handleLaunchResult,
       handleLaunchPurity,
+      (id: string) => {
+        const order = recoveryOrders.find(o => o.id === id);
+        if (order) onApplyCommission(order);
+      }
     ),
-    [onCancelRecoveryOrder, isDownloadingPdf]
+    [onCancelRecoveryOrder, isDownloadingPdf, recoveryOrders, onApplyCommission]
   );
 
   return (
@@ -132,10 +143,11 @@ export function RecoveryOrdersTable({
         filterPlaceholder="Filtrar por número da ordem..."
       />
       {selectedOrder && (
-        <ViewRecoveryOrderModal
+        <RecoveryOrderDetailsModal
           isOpen={isViewModalOpen}
           onOpenChange={setIsViewModalOpen}
-          recoveryOrder={selectedOrder}
+          recoveryOrder={selectedOrder as any}
+          onUpdate={onRecoveryOrderUpdated}
         />
       )}
       {recoveryOrderToLaunchResult && (
@@ -152,6 +164,14 @@ export function RecoveryOrdersTable({
           onOpenChange={setIsLaunchPurityModalOpen}
           recoveryOrder={recoveryOrderToLaunchPurity}
           onSuccess={handleModalSuccess}
+        />
+      )}
+      {recoveryOrderToEdit && (
+        <EditRecoveryOrderModal
+          isOpen={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          recoveryOrder={recoveryOrderToEdit as any}
+          onSuccess={onRecoveryOrderUpdated}
         />
       )}
     </>

@@ -18,12 +18,14 @@ import { ContasContabeisModule } from '../contas-contabeis/contas-contabeis.modu
 import { TransacoesModule } from '../transacoes/transacoes.module';
 import { UsersModule } from '../users/users.module';
 import { MediaModule } from '../media/media.module';
-import { PessoaModule } from '../pessoa/pessoa.module'; // Adicionado
+import { PessoaModule } from '../pessoa/pessoa.module'; 
+import { ApplyRecoveryOrderCommissionUseCase } from './use-cases/apply-recovery-order-commission.use-case';
+import { UpdateRecoveryOrderUseCase } from './use-cases/update-recovery-order.use-case';
 
 import { PrismaPureMetalLotRepository } from './repositories/prisma-pure-metal-lot.repository';
 
 @Module({
-  imports: [PrismaModule, AnalisesQuimicasModule, MetalCreditsModule, MetalAccountsModule, QuotationsModule, ContasContabeisModule, TransacoesModule, UsersModule, PessoaModule, MediaModule], // Adicionado
+  imports: [PrismaModule, AnalisesQuimicasModule, MetalCreditsModule, MetalAccountsModule, QuotationsModule, ContasContabeisModule, TransacoesModule, UsersModule, PessoaModule, MediaModule],
   controllers: [RecoveryOrdersController],
   providers: [
     {
@@ -39,10 +41,12 @@ import { PrismaPureMetalLotRepository } from './repositories/prisma-pure-metal-l
     UpdateRecoveryOrderPurityUseCase,
     ProcessRecoveryFinalizationUseCase,
     AddRawMaterialToRecoveryOrderUseCase,
-    CancelRecoveryOrderUseCase, // Add the new use case
+    CancelRecoveryOrderUseCase, 
     AssociateImageToRecoveryOrderUseCase,
     GerarPdfRecoveryOrderUseCase,
+    ApplyRecoveryOrderCommissionUseCase,
+    UpdateRecoveryOrderUseCase,
   ],
-  exports: ['IRecoveryOrderRepository'], // Export it
+  exports: ['IRecoveryOrderRepository'], 
 })
 export class RecoveryOrdersModule {}

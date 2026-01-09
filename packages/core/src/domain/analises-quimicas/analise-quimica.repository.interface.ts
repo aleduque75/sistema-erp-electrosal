@@ -19,7 +19,7 @@ export interface IAnaliseQuimicaRepository {
   findAnalisesAprovadasSemOrdem(organizationId: string, clienteId?: string): Promise<AnaliseQuimica[]>;
   findAll(filtros?: FiltrosAnaliseQuimica & { organizationId?: string }): Promise<AnaliseQuimica[]>;
   findLastNumeroAnalise(organizationId: string): Promise<string | null>;
-  create(analise: AnaliseQuimica, organizationId: string): Promise<AnaliseQuimica>;
-  save(analise: AnaliseQuimica, organizationId: string): Promise<AnaliseQuimica>;
+  create(analise: AnaliseQuimica, organizationId: string, tx?: any): Promise<AnaliseQuimica>;
+  save(analise: AnaliseQuimica, organizationId: string, tx?: any): Promise<AnaliseQuimica>;
   delete(id: string): Promise<void>;
 }

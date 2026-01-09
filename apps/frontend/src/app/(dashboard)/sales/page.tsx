@@ -34,12 +34,10 @@ import { NewSaleForm } from './components/NewSaleForm';
 import { SaleDetailsModal } from './sale-details-modal';
 import { EditSaleModal } from './components/EditSaleModal';
 import { ConfirmSaleModal } from './components/ConfirmSaleModal';
+import { ApplyCommissionModal } from './components/ApplyCommissionModal';
 import { EditObservationModal } from './components/EditObservationModal';
 import { ReceivePaymentForm } from '../accounts-rec/components/receive-payment-form';
-
-// ... (existing interfaces)
-
-// ... (existing component code)
+import { Sale } from '@/types/sale';
 
 export default function SalesPage() {
   const formatCurrency = (value: number) =>
@@ -65,6 +63,7 @@ export default function SalesPage() {
   const [saleToEdit, setSaleToEdit] = useState<Sale | null>(null);
   const [saleToEditObservation, setSaleToEditObservation] = useState<Sale | null>(null);
   const [saleToConfirm, setSaleToConfirm] = useState<Sale | null>(null);
+  const [saleToApplyCommission, setSaleToApplyCommission] = useState<Sale | null>(null);
   const [accountToReceive, setAccountToReceive] = useState<Sale['accountsRec'][0] | null>(null);
   const [rowSelection, setRowSelection] = useState({});
 
@@ -345,6 +344,10 @@ export default function SalesPage() {
                 <DropdownMenuItem onClick={() => setSaleToEditObservation(sale)}>
                   Editar Observação
                 </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={() => setSaleToApplyCommission(sale)}>
+                  Incluir Comissão
+                </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
 
@@ -504,6 +507,15 @@ export default function SalesPage() {
           open={!!saleToConfirm}
           onOpenChange={(open) => !open && setSaleToConfirm(null)}
           onSuccess={() => { fetchSales(); setSaleToConfirm(null); }}
+        />
+      )}
+
+      {saleToApplyCommission && (
+        <ApplyCommissionModal
+          sale={saleToApplyCommission}
+          open={!!saleToApplyCommission}
+          onOpenChange={(open) => !open && setSaleToApplyCommission(null)}
+          onSuccess={() => { fetchSales(); setSaleToApplyCommission(null); }}
         />
       )}
 

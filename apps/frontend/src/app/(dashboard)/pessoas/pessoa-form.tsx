@@ -77,7 +77,7 @@ type FormValues = z.infer<typeof formSchema>;
 const rolesDisponiveis = [
   { id: "CLIENT", label: "Cliente" },
   { id: "FORNECEDOR", label: "Fornecedor" },
-  { id: "FUNCIONARIO", label: "Funcionário" },
+  { id: "FUNCIONARIO", label: "Vendedor / Funcionário" },
 ];
 
 export function PessoaForm({ initialData, onSave }: PessoaFormProps) {

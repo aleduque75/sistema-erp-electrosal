@@ -29,7 +29,6 @@ import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { PurchaseOrderForm } from "./purchase-order-form";
 import { PurchaseOrderDetailsView } from "./components/purchase-order-details-view";
 import { MoreHorizontal, Info, Edit } from "lucide-react";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 
 // Interfaces
@@ -292,7 +291,12 @@ useEffect(() => {
                 Data de Recebimento
               </Label>
               <div className="col-span-3">
-                <DatePicker date={receptionDate} setDate={setReceptionDate} />
+                <Input
+                  id="reception-date"
+                  type="date"
+                  value={receptionDate ? receptionDate.toISOString().split('T')[0] : ""}
+                  onChange={(e) => setReceptionDate(e.target.value ? new Date(e.target.value + 'T12:00:00') : undefined)}
+                />
               </div>
             </div>
           </div>

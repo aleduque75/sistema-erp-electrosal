@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
-import { DatePicker } from "@/components/ui/date-picker";
 import api from "@/lib/api";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -53,16 +52,16 @@ const formSchema = z.object({
   pureMetalLotId: z.string().min(1, "Selecione um lote de metal puro."),
   grams: z.coerce.number().min(0.01, "A quantidade em gramas deve ser maior que zero."),
   notes: z.string().optional(),
-  data: z.date({ required_error: "A data é obrigatória." }),
+  data: z.string().min(1, "A data é obrigatória."),
 });
 
 type PayClientWithMetalFormValues = z.infer<typeof formSchema>;
 
 export default function PayClientWithMetalPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
+  const searchParams = useSearchParams();
   const paramClientId = searchParams.get("clientId");
   const paramMetalType = searchParams.get("metalType");
   const paramGrams = searchParams.get("grams");
@@ -93,7 +92,7 @@ export default function PayClientWithMetalPage() {
       pureMetalLotId: "",
       grams: paramGrams ? Number(paramGrams) : 0,
       notes: "",
-      data: new Date(),
+      data: new Date().toISOString().split('T')[0],
     },
   });
 
@@ -113,7 +112,11 @@ export default function PayClientWithMetalPage() {
   // --- Mutação para salvar os dados ---
   const mutation = useMutation({
     mutationFn: (data: PayClientWithMetalFormValues) => {
-      return api.post("/metal-payments/pay-client", data);
+      const payload = {
+        ...data,
+        data: new Date(data.data + 'T12:00:00').toISOString(),
+      };
+      return api.post("/metal-payments/pay-client", payload);
     },
     onSuccess: () => {
       toast.success("Pagamento em metal ao cliente registrado com sucesso!");
@@ -239,9 +242,9 @@ export default function PayClientWithMetalPage() {
                 <FormItem>
                   <FormLabel>Data da Transação</FormLabel>
                   <FormControl>
-                    <DatePicker
-                      date={field.value}
-                      setDate={field.onChange}
+                    <Input 
+                      type="date"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />

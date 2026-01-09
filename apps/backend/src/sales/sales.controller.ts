@@ -34,6 +34,7 @@ import { ProcessClientMetalPaymentToSupplierUseCase, ProcessClientMetalPaymentTo
 import { ReceiveInstallmentPaymentUseCase } from './use-cases/receive-installment-payment.use-case';
 import { LinkSaleItemToBatchDto } from './dtos/link-sale-item-to-batch.dto';
 import { GenerateSalePdfUseCase } from './use-cases/generate-sale-pdf.use-case';
+import { ApplySaleCommissionUseCase, ApplySaleCommissionDto } from './use-cases/apply-sale-commission.use-case';
 import { Response } from 'express';
 
 import { Public } from '../auth/decorators/public.decorator';
@@ -56,9 +57,17 @@ export class SalesController {
     private readonly backfillInstallmentsUseCase: BackfillInstallmentsUseCase,
     private readonly receiveInstallmentPaymentUseCase: ReceiveInstallmentPaymentUseCase,
     private readonly generateSalePdfUseCase: GenerateSalePdfUseCase,
+    private readonly applySaleCommissionUseCase: ApplySaleCommissionUseCase,
   ) {}
 
-
+  @Post(':id/apply-commission')
+  async applyCommission(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') saleId: string,
+    @Body() applySaleCommissionDto: ApplySaleCommissionDto,
+  ) {
+    return this.applySaleCommissionUseCase.execute(organizationId, saleId, applySaleCommissionDto);
+  }
 
   @Post('backfill-installments')
   async backfillInstallments(@CurrentUser('organizationId') organizationId: string) {

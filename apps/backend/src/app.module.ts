@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ScheduleModule } from '@nestjs/schedule';
 import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -62,6 +63,7 @@ import { PureMetalLotMovementsModule } from './pure-metal-lot-movements/pure-met
 import { MetalPaymentsModule } from './metal-payments/metal-payments.module';
 import { PdfModule } from './pdf/pdf.module';
 import { ReportsModule } from './reports/reports.module';
+import { MarketDataModule } from './market-data/market-data.module';
 
 @Module({
   imports: [
@@ -72,6 +74,7 @@ import { ReportsModule } from './reports/reports.module';
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -122,6 +125,7 @@ import { ReportsModule } from './reports/reports.module';
     MetalPaymentsModule,
     PdfModule,
     ReportsModule,
+    MarketDataModule,
   ],
   controllers: [AppController, RawMaterialsController],
   providers: [

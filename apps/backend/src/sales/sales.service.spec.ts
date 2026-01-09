@@ -14,7 +14,7 @@ import {
   // O tipo 'TipoContaContabilPrisma' foi removido pois não era utilizado.
 } from '@prisma/client';
 import { CreateSaleDto } from './dtos/sales.dto';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 // Definindo o tipo do Mock do PrismaService com os tipos de retorno e argumentos corretos para jest.fn()

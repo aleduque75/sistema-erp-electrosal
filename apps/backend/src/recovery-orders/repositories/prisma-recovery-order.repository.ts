@@ -13,6 +13,7 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     dbData: PrismaRecoveryOrder & {
       rawMaterialsUsed?: (PrismaRawMaterialUsed & { rawMaterial: PrismaRawMaterial })[];
       images?: Media[];
+      salesperson?: { name: string } | null;
     },
     analisesEnvolvidas?: AnaliseQuimicaResumida[]
   ): RecoveryOrder {
@@ -36,10 +37,16 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         auPuroRecuperadoGramas: props.auPuroRecuperadoGramas ?? undefined,
         residuoGramas: props.residuoGramas ?? undefined,
         residueAnalysisId: props.residueAnalysisId ?? undefined,
+        salespersonId: props.salespersonId ?? undefined,
+        commissionPercentage: props.commissionPercentage ? props.commissionPercentage.toNumber() : undefined,
+        commissionAmount: props.commissionAmount ? props.commissionAmount.toNumber() : undefined,
         images: props.images ? props.images.map(MediaMapper.toDomain) : [],
       },
       UniqueEntityID.create(id),
     );
+
+    // Adiciona o nome do vendedor ao objeto de domínio (usando cast pois não está na entidade do core)
+    (domainRecoveryOrder as any).salespersonName = dbData.salesperson?.name || null;
 
     if (analisesEnvolvidas) {
       domainRecoveryOrder.setAnalisesEnvolvidas(analisesEnvolvidas);
@@ -62,7 +69,8 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     return domainRecoveryOrder;
   }
 
-  async create(recoveryOrder: RecoveryOrder): Promise<RecoveryOrder> {
+  async create(recoveryOrder: RecoveryOrder, tx?: Prisma.TransactionClient): Promise<RecoveryOrder> {
+    const prisma = tx || this.prisma;
     const data = {
       id: recoveryOrder.id.toString(),
       organizationId: recoveryOrder.organizationId,
@@ -77,9 +85,12 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       dataCriacao: recoveryOrder.dataCriacao,
       dataAtualizacao: recoveryOrder.dataAtualizacao,
       totalBrutoEstimadoGramas: recoveryOrder.totalBrutoEstimadoGramas,
+      salespersonId: recoveryOrder.salespersonId,
+      commissionPercentage: recoveryOrder.commissionPercentage,
+      commissionAmount: recoveryOrder.commissionAmount,
     };
 
-    const dbRecoveryOrder = await this.prisma.recoveryOrder.create({ data });
+    const dbRecoveryOrder = await prisma.recoveryOrder.create({ data });
     return this.mapToDomain(dbRecoveryOrder);
   }
 
@@ -90,6 +101,7 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         organizationId,
       },
       include: {
+        salesperson: { select: { name: true } },
         rawMaterialsUsed: {
           include: {
             rawMaterial: true,
@@ -145,11 +157,8 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
 
   async findById(id: string, organizationId: string): Promise<RecoveryOrder | null> {
     const dbRecoveryOrder = await this.prisma.recoveryOrder.findFirst({
-      where: {
-        id,
-        organizationId,
-      },
       include: {
+        salesperson: { select: { name: true } },
         rawMaterialsUsed: {
           include: {
             rawMaterial: true,
@@ -226,6 +235,7 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     const dbRecoveryOrders = await this.prisma.recoveryOrder.findMany({
       where: whereClause,
       include: {
+        salesperson: { select: { name: true } },
         rawMaterialsUsed: {
           include: {
             rawMaterial: true,
@@ -284,7 +294,8 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
     return recoveryOrdersWithAnalyses;
   }
 
-  async save(recoveryOrder: RecoveryOrder): Promise<RecoveryOrder> {
+  async save(recoveryOrder: RecoveryOrder, tx?: Prisma.TransactionClient): Promise<RecoveryOrder> {
+    const prisma = tx || this.prisma;
     const data = {
       status: recoveryOrder.status as RecoveryOrderStatusPrisma,
       dataFim: recoveryOrder.dataFim,
@@ -296,12 +307,16 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       auPuroRecuperadoGramas: recoveryOrder.auPuroRecuperadoGramas,
       residuoGramas: recoveryOrder.residuoGramas,
       residueAnalysisId: recoveryOrder.residueAnalysisId,
+      salespersonId: recoveryOrder.salespersonId,
+      commissionPercentage: recoveryOrder.commissionPercentage,
+      commissionAmount: recoveryOrder.commissionAmount,
     };
 
-    const dbRecoveryOrder = await this.prisma.recoveryOrder.update({
+    const dbRecoveryOrder = await prisma.recoveryOrder.update({
       where: { id: recoveryOrder.id.toString() },
       data,
       include: {
+        salesperson: { select: { name: true } },
         images: true,
       },
     });

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 import { Prisma, TipoMetal } from '@prisma/client';
 
 type PrismaTransactionClient = Prisma.TransactionClient;
@@ -72,10 +72,18 @@ export class CalculateSaleAdjustmentUseCase {
 
 
     // 1. Aggregate Payments
-    const allTransactions = [
+    const allTransactionsRaw = [
       ...sale.accountsRec.flatMap((ar) => ar.transacoes || []),
       ...sale.installments.flatMap((i) => i.accountRec?.transacoes || []),
     ];
+
+    // De-duplicate transactions by ID to avoid double-counting 
+    // when an AccountRec is linked to both the sale and its installments
+    const uniqueTransactionsMap = new Map<string, any>();
+    allTransactionsRaw.forEach(t => {
+      uniqueTransactionsMap.set(t.id, t);
+    });
+    const allTransactions = Array.from(uniqueTransactionsMap.values());
 
     const paymentReceivedBRL = allTransactions.reduce(
       (sum, t) => sum.plus(t.valor || 0),
@@ -166,10 +174,11 @@ export class CalculateSaleAdjustmentUseCase {
 
     const grossProfitBRL = paymentReceivedBRL.minus(totalCostBRL);
     const otherCostsBRL = new Decimal(sale.shippingCost || 0);
+    const commissionBRL = new Decimal(sale.commissionAmount || 0);
     
     // FIX: The labor cost is already part of the gross profit (because it's included in paymentReceived).
-    // We should NOT add it again. Net profit is simply Gross Profit - Other Costs.
-    const netProfitBRL = grossProfitBRL.minus(otherCostsBRL);
+    // We should NOT add it again. Net profit is simply Gross Profit - Other Costs - Commission.
+    const netProfitBRL = grossProfitBRL.minus(otherCostsBRL).minus(commissionBRL);
     
     // FIX: Similarly for grams, the gross discrepancy already includes the labor grams.
     const netDiscrepancyGrams = (grossDiscrepancyGrams || new Decimal(0)).minus(costsInGrams || 0);
@@ -191,6 +200,7 @@ export class CalculateSaleAdjustmentUseCase {
       totalCostBRL,
       grossProfitBRL,
       otherCostsBRL,
+      commissionBRL,
       netProfitBRL,
     };    
 

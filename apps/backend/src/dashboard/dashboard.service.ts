@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { addMonths, startOfMonth, endOfMonth, format } from 'date-fns';
+import { addMonths, startOfMonth, endOfMonth, format, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { TipoMetal } from '@prisma/client';
 
 @Injectable()
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   async getDashboardSummary(organizationId: string) {
-    const [products, accountsPay, accountsRec, salesSummary, inventoryLots] = await Promise.all([
+    const now = new Date();
+    const [products, accountsPay, accountsRec, salesSummary, inventoryLots, todayQuotation] = await Promise.all([
       this.prisma.product.findMany({
         where: { organizationId },
         select: { id: true, price: true },
@@ -29,6 +31,16 @@ export class DashboardService {
         where: { organizationId, remainingQuantity: { gt: 0 } },
         select: { productId: true, remainingQuantity: true, costPrice: true },
       }),
+      this.prisma.quotation.findFirst({
+        where: {
+          organizationId,
+          metal: TipoMetal.AU,
+          date: {
+            gte: startOfDay(now),
+            lte: endOfDay(now),
+          },
+        },
+      }),
     ]);
 
     const totalStockValue = inventoryLots.reduce((sum, lot) => {
@@ -42,6 +54,7 @@ export class DashboardService {
       totalStockValue: totalStockValue,
       totalSalesBRL: salesSummary._sum.totalAmount?.toNumber() || 0,
       totalSalesAu: salesSummary._sum.goldValue?.toNumber() || 0,
+      todayQuotationRegistered: !!todayQuotation,
     };
   }
 

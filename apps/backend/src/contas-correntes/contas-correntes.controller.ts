@@ -101,4 +101,14 @@ export class ContasCorrentesController {
   ) {
     return this.service.remove(organizationId, id);
   }
+
+  @Post(':id/adjust-residue')
+  adjustResidue(
+    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body('transactionIds') transactionIds?: string[],
+  ) {
+    return this.service.adjustGoldResidue(organizationId, id, userId, transactionIds);
+  }
 }

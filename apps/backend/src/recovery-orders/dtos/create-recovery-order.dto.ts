@@ -1,5 +1,16 @@
-import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, IsEnum } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, IsEnum, IsNumber, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { TipoMetal } from '@sistema-erp-electrosal/core';
+
+export class RawMaterialItemDto {
+  @IsUUID()
+  @IsNotEmpty()
+  rawMaterialId: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  quantity: number;
+}
 
 export class CreateRecoveryOrderDto {
   @IsEnum(TipoMetal)
@@ -25,4 +36,22 @@ export class CreateRecoveryOrderDto {
   @IsOptional()
   @IsString()
   dataFim?: string;
+
+  @IsOptional()
+  @IsUUID()
+  salespersonId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  commissionPercentage?: number;
+
+  @IsOptional()
+  @IsNumber()
+  commissionAmount?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RawMaterialItemDto)
+  rawMaterials?: RawMaterialItemDto[];
 }

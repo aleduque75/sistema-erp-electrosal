@@ -9,6 +9,7 @@ import { RecoveryOrdersTable } from "@/components/recovery-orders/RecoveryOrders
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CreateRecoveryOrderModal } from "@/components/recovery-orders/CreateRecoveryOrderModal";
+import { ApplyRecoveryOrderCommissionModal } from "@/components/recovery-orders/ApplyRecoveryOrderCommissionModal";
 import { RecoveryReport } from "@/components/recovery-orders/RecoveryReport";
 import { toast } from "sonner"; // Import toast
 import { // Import AlertDialog components
@@ -27,6 +28,7 @@ export default function RecoveryOrdersPage() {
   const [recoveryOrders, setRecoveryOrders] = useState<RecoveryOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [recoveryOrderToApplyCommission, setRecoveryOrderToApplyCommission] = useState<RecoveryOrder | null>(null);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false); // New state for confirmation dialog
   const [recoveryOrderToCancel, setRecoveryOrderToCancel] = useState<string | null>(null); // New state for ID to cancel
 
@@ -94,11 +96,19 @@ export default function RecoveryOrdersPage() {
         isLoading={isLoading}
         onRecoveryOrderUpdated={fetchRecoveryOrders}
         onCancelRecoveryOrder={handleCancelRecoveryOrder} // Pass the new handler
+        onApplyCommission={(order) => setRecoveryOrderToApplyCommission(order)}
       />
       <CreateRecoveryOrderModal
         isOpen={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
         onSuccess={handleCreateSuccess}
+      />
+
+      <ApplyRecoveryOrderCommissionModal
+        recoveryOrder={recoveryOrderToApplyCommission}
+        open={!!recoveryOrderToApplyCommission}
+        onOpenChange={(open) => !open && setRecoveryOrderToApplyCommission(null)}
+        onSuccess={fetchRecoveryOrders}
       />
 
       {/* Confirmation Dialog for Cancellation */}

@@ -16,16 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { DatePicker } from "@/components/ui/date-picker";
 import { PlusCircle, Trash2, PackageSearch } from "lucide-react";
+import Decimal from "decimal.js";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { LotSelectionModal } from "@/components/sales/LotSelectionModal";
@@ -183,9 +178,54 @@ export function NewSaleForm({ onSave }: any) {
   };
 
   const handleAddItem = (newItemData: any) => {
+    const product = products.find(p => p.id === newItemData.productId);
+    let assignedLots: SaleItemLot[] = [];
+
+    if (newItemData.inventoryLotId) {
+      // User manually selected a lot in the AddItemModal
+      assignedLots = [{ 
+        inventoryLotId: newItemData.inventoryLotId, 
+        quantity: newItemData.quantity 
+      }];
+    } else if (product && product.inventoryLots && product.inventoryLots.length > 0) {
+      // Automatic FIFO allocation
+      let remainingToAssign = new Decimal(newItemData.quantity);
+      
+      // Sort lots by date (oldest first)
+      const sortedLots = [...product.inventoryLots].sort(
+        (a, b) => new Date(a.receivedDate).getTime() - new Date(b.receivedDate).getTime()
+      );
+
+      for (const lot of sortedLots) {
+        if (remainingToAssign.lte(0)) break;
+
+        // Calculate available in this lot (subtracting what's already in other items of this sale)
+        const alreadyUsedInSale = items
+          .filter(item => item.productId === product.id)
+          .flatMap(item => item.lots || [])
+          .filter(l => l.inventoryLotId === lot.id)
+          .reduce((sum, l) => sum.plus(l.quantity), new Decimal(0));
+
+        const availableInLot = new Decimal(lot.remainingQuantity).minus(alreadyUsedInSale);
+
+        if (availableInLot.gt(0)) {
+          const amountFromThisLot = Decimal.min(remainingToAssign, availableInLot);
+          assignedLots.push({
+            inventoryLotId: lot.id,
+            quantity: amountFromThisLot.toNumber()
+          });
+          remainingToAssign = remainingToAssign.minus(amountFromThisLot);
+        }
+      }
+
+      if (remainingToAssign.gt(0.0001)) {
+        toast.warning(`Não foi possível alocar toda a quantidade nos lotes existentes. Faltam ${remainingToAssign.toFixed(4)}g`);
+      }
+    }
+
     const newItem = {
       ...newItemData,
-      lots: newItemData.inventoryLotId ? [{ inventoryLotId: newItemData.inventoryLotId, quantity: newItemData.quantity }] : [],
+      lots: assignedLots,
     };
     setItems(currentItems => [...currentItems, newItem]);
   };
@@ -374,7 +414,11 @@ export function NewSaleForm({ onSave }: any) {
                <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label>Data da Venda</Label>
-                  <DatePicker date={saleDate} setDate={setSaleDate} />
+                  <Input
+                    type="date"
+                    value={saleDate ? saleDate.toISOString().split('T')[0] : ""}
+                    onChange={(e) => setSaleDate(e.target.value ? new Date(e.target.value + 'T12:00:00') : undefined)}
+                  />
                 </div>
                 <Controller
                   name="orderNumber"

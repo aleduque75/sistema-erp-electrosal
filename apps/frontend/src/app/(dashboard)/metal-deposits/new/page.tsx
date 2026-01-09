@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
 
 // Interfaces
@@ -110,8 +109,13 @@ export default function NewMetalDepositPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Data do Pagamento</Label>
-              <DatePicker date={paymentDate} onDateChange={setPaymentDate} />
+              <Label htmlFor="payment-date">Data do Pagamento</Label>
+              <Input
+                id="payment-date"
+                type="date"
+                value={paymentDate ? paymentDate.toISOString().split('T')[0] : ""}
+                onChange={(e) => setPaymentDate(e.target.value ? new Date(e.target.value + 'T12:00:00') : undefined)}
+              />
             </div>
 
             <Button type="submit" disabled={isLoading} className="w-full !mt-8" size="lg">

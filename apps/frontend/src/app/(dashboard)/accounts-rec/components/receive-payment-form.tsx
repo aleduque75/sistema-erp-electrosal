@@ -6,15 +6,14 @@ import * as z from "zod";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { useEffect, useState, useMemo } from "react";
-import { formatISO } from 'date-fns';
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2 } from 'lucide-react';
-import { DatePicker } from "@/components/ui/date-picker";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { AddPaymentDialog } from "./add-payment-dialog"; // Import the new dialog component
 
 // Interfaces
@@ -257,7 +256,7 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
         financialPayments: data.financialPayments?.map(({ goldAmount, ...rest }) => rest), // Remove goldAmount
         metalCreditPayments: data.metalCreditPayments,
         metalPayments: data.metalPayments,
-        installmentId: data.selectedInstallmentId,
+        installmentId: data.selectedInstallmentId || undefined,
       };
       
       await api.post(`/accounts-rec/${accountRec.id}/hybrid-receive`, payload);
@@ -274,10 +273,17 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <p className="text-sm text-muted-foreground">
-          Registrar recebimento para: <span className="font-medium">{accountRec.description}</span>
-          {accountRec.sale?.pessoa?.name && ` (Cliente: ${accountRec.sale.pessoa.name})`}
-        </p>
+        <div className="text-sm text-muted-foreground">
+          <p>Registrar recebimento para: <span className="font-medium">{accountRec.description}</span></p>
+          <div className="flex gap-2 mt-1">
+            {accountRec.sale?.pessoa?.name && <Badge variant="outline">Cliente: {accountRec.sale.pessoa.name}</Badge>}
+            {accountRec.sale?.createdAt && (
+              <Badge variant="outline">
+                Data do Pedido: {new Date(accountRec.sale.createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+              </Badge>
+            )}
+          </div>
+        </div>
 
         <div className="space-y-2 rounded-md border bg-muted/20 p-4">
           <h4 className="font-medium text-sm">Resumo da Dívida</h4>
@@ -319,7 +325,12 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
         <div className="grid grid-cols-2 gap-4">
             <FormField name="receivedAt" control={form.control} render={({ field }) => (
                 <FormItem className="w-fit"><FormLabel>Data do Recebimento</FormLabel>
-                    <FormControl><DatePicker date={field.value ? new Date(field.value) : undefined} setDate={(date) => field.onChange(date ? formatISO(date, { representation: 'date' }) : '')} /></FormControl>
+                    <FormControl>
+                      <Input 
+                        type="date" 
+                        {...field}
+                      />
+                    </FormControl>
                     <FormMessage />
                 </FormItem>
             )} />

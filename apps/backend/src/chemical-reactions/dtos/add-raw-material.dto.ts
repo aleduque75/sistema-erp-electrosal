@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 
 export class AddRawMaterialDto {
   @IsString()
@@ -8,4 +8,12 @@ export class AddRawMaterialDto {
   @IsNumber()
   @IsNotEmpty()
   quantity: number;
+
+  @IsNumber()
+  @IsOptional()
+  costInAu?: number;
+
+  @IsNumber()
+  @IsOptional()
+  costInBrl?: number;
 }

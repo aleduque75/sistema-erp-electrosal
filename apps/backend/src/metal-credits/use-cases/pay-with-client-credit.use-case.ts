@@ -4,7 +4,7 @@ import { TransacoesService } from '../../transacoes/transacoes.service';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { SettingsService } from '../../settings/settings.service';
 import { TipoTransacaoPrisma, MetalCredit, TipoMetal, MetalCreditStatus } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 import { PayWithClientCreditDto } from '../dtos/pay-with-client-credit.dto';
 import { CreateMetalAccountEntryUseCase } from '../../metal-accounts/use-cases/create-metal-account-entry.use-case';
 import { CreateMetalAccountUseCase } from '../../metal-accounts/use-cases/create-metal-account.use-case';

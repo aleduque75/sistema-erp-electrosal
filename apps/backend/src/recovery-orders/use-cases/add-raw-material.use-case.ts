@@ -5,6 +5,8 @@ import { QuotationsService } from '../../quotations/quotations.service';
 import { startOfDay } from 'date-fns';
 import { Decimal } from 'decimal.js';
 
+import { Prisma, TipoMetal } from '@prisma/client';
+
 @Injectable()
 export class AddRawMaterialToRecoveryOrderUseCase {
   constructor(
@@ -16,8 +18,9 @@ export class AddRawMaterialToRecoveryOrderUseCase {
     organizationId: string,
     recoveryOrderId: string,
     dto: AddRawMaterialDto,
+    txClient?: Prisma.TransactionClient,
   ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    const executeAction = async (tx: Prisma.TransactionClient) => {
       const recoveryOrder = await tx.recoveryOrder.findFirst({
         where: { id: recoveryOrderId, organizationId },
       });
@@ -46,18 +49,29 @@ export class AddRawMaterialToRecoveryOrderUseCase {
 
       const quotation = await this.quotationsService.findByDate(
         startOfDay(recoveryOrder.dataInicio),
-        recoveryOrder.metalType,
+        TipoMetal.AU, // Standard for cost conversion
         organizationId,
       );
 
       if (!quotation) {
         throw new BadRequestException(
-          `Cotação não encontrada para a data da ordem de recuperação.`,
+          `Cotação de Ouro não encontrada para a data da ordem de recuperação.`,
         );
       }
 
-      const cost = new Decimal(rawMaterial.cost).times(dto.quantity);
-      const goldEquivalentCost = cost.dividedBy(quotation.buyPrice);
+      let cost: Decimal;
+      let goldEquivalentCost: Decimal;
+
+      if (dto.costInAu) {
+        goldEquivalentCost = new Decimal(dto.costInAu);
+        cost = goldEquivalentCost.times(quotation.buyPrice);
+      } else if (dto.costInBrl) {
+        cost = new Decimal(dto.costInBrl);
+        goldEquivalentCost = cost.dividedBy(quotation.buyPrice);
+      } else {
+        cost = new Decimal(rawMaterial.cost).times(dto.quantity);
+        goldEquivalentCost = cost.dividedBy(quotation.buyPrice);
+      }
 
       await tx.rawMaterialUsed.create({
         data: {
@@ -78,6 +92,14 @@ export class AddRawMaterialToRecoveryOrderUseCase {
           },
         },
       });
-    });
+    };
+
+    if (txClient) {
+      await executeAction(txClient);
+    } else {
+      await this.prisma.$transaction(async (tx) => {
+        await executeAction(tx);
+      });
+    }
   }
 }

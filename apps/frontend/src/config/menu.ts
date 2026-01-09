@@ -232,6 +232,12 @@ export const menuConfig: NavItem[] = [
         description: "Gerencie as cotações diárias de metais.",
       },
       {
+        title: "Dados de Mercado",
+        href: "/market-data",
+        icon: BarChart2,
+        description: "Histórico de Dólar, Ouro e Prata com conversões.",
+      },
+      {
         title: "Gerar Fatura Manual",
         href: "/credit-card-bills/new",
         icon: FilePlus2,

@@ -26,6 +26,8 @@ import { ContasContabeisService } from '../../contas-contabeis/contas-contabeis.
 import { TransacoesService } from '../../transacoes/transacoes.service';
 import { UsersService } from '../../users/users.service';
 import { TipoTransacaoPrisma } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { Decimal } from 'decimal.js';
 
 export interface FinalizeRecoveryOrderCommand {
   recoveryOrderId: string;
@@ -54,6 +56,7 @@ export class ProcessRecoveryFinalizationUseCase {
     private readonly contasContabeisService: ContasContabeisService,
     private readonly transacoesService: TransacoesService,
     private readonly usersService: UsersService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(command: FinalizeRecoveryOrderCommand): Promise<void> {
@@ -197,6 +200,52 @@ export class ProcessRecoveryFinalizationUseCase {
     });
 
     await this.recoveryOrderRepository.save(recoveryOrder);
+
+    // --- Create Commission Account Payable ---
+    if (recoveryOrder.commissionAmount && recoveryOrder.commissionAmount > 0) {
+      const salesperson = recoveryOrder.salespersonId 
+        ? await this.pessoaRepository.findById(recoveryOrder.salespersonId, organizationId)
+        : null;
+
+      // Ensure salesperson has Fornecedor role
+      if (recoveryOrder.salespersonId) {
+        const dbSalesperson = await this.prisma.pessoa.findUnique({
+          where: { id: recoveryOrder.salespersonId },
+          include: { fornecedor: true }
+        });
+        if (dbSalesperson && !dbSalesperson.fornecedor) {
+          await this.prisma.fornecedor.create({
+            data: { pessoaId: dbSalesperson.id, organizationId }
+          });
+        }
+      }
+
+      const description = `Comissão sobre Ordem de Recuperação #${recoveryOrder.orderNumber} - ${salesperson?.name || 'Vendedor não informado'}`;
+      
+      const quotation = await this.cotacoesService.findLatest(
+        TipoMetal.AU, // Always use Gold for commissions
+        organizationId,
+        new Date(),
+      );
+
+      const goldPrice = quotation ? new Decimal(quotation.sellPrice) : null;
+      const goldAmount = goldPrice && !goldPrice.isZero() 
+        ? new Decimal(recoveryOrder.commissionAmount).dividedBy(goldPrice) 
+        : null;
+
+      await this.prisma.accountPay.create({
+        data: {
+          organizationId,
+          description,
+          amount: new Decimal(recoveryOrder.commissionAmount),
+          goldPrice,
+          goldAmount,
+          dueDate: new Date(),
+          fornecedorId: recoveryOrder.salespersonId,
+        }
+      });
+      this.logger.log(`Conta a pagar de comissão gerada: R$ ${recoveryOrder.commissionAmount} (${goldAmount?.toFixed(4)}g)`);
+    }
 
     // --- Update status of associated Chemical Analyses to FINALIZADO_RECUPERADO ---
     for (const analiseId of recoveryOrder.chemicalAnalysisIds) {

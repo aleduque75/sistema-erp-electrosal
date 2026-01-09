@@ -14,6 +14,7 @@ interface ReportData {
   totalRecuperado: number;
   totalPagoCliente: number;
   totalGastoMaterial: number;
+  totalComissao: number;
   totalARecuperar: number;
   lucro: number;
 }
@@ -43,13 +44,13 @@ export function RecoveryReport() {
           acc.totalPagoCliente += order.analisesEnvolvidas?.reduce((sum, analise) => sum + (analise.metalCreditGrams || 0), 0) || 0;
           acc.totalGastoMaterial += order.rawMaterialsUsed?.reduce((sum, rm) => {
             const cost = rm.goldEquivalentCost || 0;
-            console.log('Intermediate goldEquivalentCost sum:', sum, '+', cost, '=', sum + cost);
             return sum + cost;
           }, 0) || 0;
+          acc.totalComissao += order.commissionAmount || 0;
           acc.totalARecuperar += order.residuoGramas || 0;
           return acc;
         },
-        { totalRecuperado: 0, totalPagoCliente: 0, totalGastoMaterial: 0, totalARecuperar: 0, lucro: 0 }
+        { totalRecuperado: 0, totalPagoCliente: 0, totalGastoMaterial: 0, totalComissao: 0, totalARecuperar: 0, lucro: 0 }
       );
 
       aggregatedData.lucro = aggregatedData.totalRecuperado - aggregatedData.totalPagoCliente - aggregatedData.totalGastoMaterial;
@@ -99,6 +100,14 @@ export function RecoveryReport() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{reportData.totalGastoMaterial.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Comissões (R$)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(reportData.totalComissao)}</div>
               </CardContent>
             </Card>
             <Card>

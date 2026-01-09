@@ -55,6 +55,11 @@ export interface RecoveryOrderProps {
   // --- VÍNCULO COM RESÍDUO ---
   residueAnalysisId?: string;
 
+  // --- COMISSÃO ---
+  salespersonId?: string;
+  commissionPercentage?: number;
+  commissionAmount?: number;
+
   // --- DADOS ENVOLVIDOS (POPULADOS PELO REPOSITÓRIO) ---
   analisesEnvolvidas?: AnaliseQuimicaResumida[];
   rawMaterialsUsed?: RawMaterialUsedResumida[];
@@ -111,6 +116,9 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
   get auPuroRecuperadoGramas(): number | undefined { return this.props.auPuroRecuperadoGramas; }
   get residuoGramas(): number | undefined { return this.props.residuoGramas; }
   get residueAnalysisId(): string | undefined { return this.props.residueAnalysisId; }
+  get salespersonId(): string | undefined { return this.props.salespersonId; }
+  get commissionPercentage(): number | undefined { return this.props.commissionPercentage; }
+  get commissionAmount(): number | undefined { return this.props.commissionAmount; }
 
   // Getter para as análises envolvidas
   get analisesEnvolvidas(): AnaliseQuimicaResumida[] | undefined { return this._analisesEnvolvidas; }

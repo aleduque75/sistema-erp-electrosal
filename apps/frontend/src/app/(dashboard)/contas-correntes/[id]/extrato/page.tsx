@@ -27,6 +27,7 @@ import {
   ArrowRightLeft,
   MoreHorizontal,
   Paperclip, // Adicionar Paperclip
+  Scale,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -63,6 +64,8 @@ import { ContaCorrenteType } from "@sistema-erp-electrosal/core"; // Importamos 
 import { TransferFromSupplierAccountForm } from "../../components/transfer-from-supplier-account-form"; // Adicionado
 import { SaleDetailsModal } from "../../../sales/sale-details-modal";
 import { TransactionDetailsModal } from "../../components/TransactionDetailsModal"; // Adicionar import
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info, RefreshCw } from "lucide-react";
 
 // Copied from sales/page.tsx
 
@@ -196,6 +199,28 @@ export default function ExtratoPage() {
   const [initialImageIndex, setInitialImageIndex] = useState(0); // NOVO ESTADO
   const [selectedTransaction, setSelectedTransaction] = useState<TransacaoExtrato | null>(null); // Adicionar estado
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false); // Adicionar estado
+  const [isAdjusting, setIsAdjusting] = useState(false);
+
+  const hasGoldResidue = useMemo(() => {
+    if (!extrato) return false;
+    // Resíduo existe se saldo BRL é quase zero mas o saldo Gold não é
+    return Math.abs(extrato.saldoFinalBRL) < 0.05 && Math.abs(extrato.saldoFinalGold) >= 0.0001;
+  }, [extrato]);
+
+  const handleAdjustResidue = async () => {
+    setIsAdjusting(true);
+    try {
+      const payload = selectedIds.length > 0 ? { transactionIds: selectedIds } : {};
+      await api.post(`/contas-correntes/${id}/adjust-residue`, payload);
+      toast.success("Resíduo de ouro ajustado com sucesso!");
+      setSelectedIds([]);
+      fetchExtrato();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Falha ao ajustar resíduo.");
+    } finally {
+      setIsAdjusting(false);
+    }
+  };
 
   const handleViewSaleDetails = async (saleId: string) => {
     try {
@@ -504,6 +529,15 @@ export default function ExtratoPage() {
               </div>
               <Button onClick={handleBulkUpdate}>Alterar em Lote</Button>
               <Button variant="secondary" onClick={handleBulkCreateAccountPay}>Gerar C.P.</Button>
+              <Button 
+                variant="outline" 
+                onClick={handleAdjustResidue} 
+                className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
+                disabled={isAdjusting}
+              >
+                <Scale className={`mr-2 h-4 w-4 ${isAdjusting ? "animate-spin" : ""}`} />
+                Ajustar Ouro
+              </Button>
             </div>
           )}
 
@@ -530,6 +564,29 @@ export default function ExtratoPage() {
                   </p>
                 </div>
               </div>
+
+              {hasGoldResidue && (
+                <Alert className="mb-4 bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-900">
+                  <Info className="h-4 w-4 text-yellow-600" />
+                  <AlertTitle className="text-yellow-800 dark:text-yellow-500">Resíduo de Ouro Detectado</AlertTitle>
+                  <AlertDescription className="flex items-center justify-between">
+                    <span className="text-yellow-700 dark:text-yellow-400">
+                      Esta conta possui um saldo de <strong>{formatGold(extrato?.saldoFinalGold)}</strong> mas o saldo em Reais está zerado. Isso indica uma variação de cotação.
+                    </span>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="border-yellow-300 text-yellow-800 hover:bg-yellow-100"
+                      onClick={handleAdjustResidue}
+                      disabled={isAdjusting}
+                    >
+                      <RefreshCw className={`mr-2 h-3 w-3 ${isAdjusting ? "animate-spin" : ""}`} />
+                      Zerar Resíduo
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -572,7 +629,7 @@ export default function ExtratoPage() {
                               : ""
                           }
                         >
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={selectedIds.includes(t.id)}
                               onCheckedChange={(checked) => {
@@ -584,8 +641,7 @@ export default function ExtratoPage() {
                                   );
                                 }
                               }}
-                              disabled={!isEligibleForAccountPay}
-                              title={!isEligibleForAccountPay ? 'Esta transação não pode ser convertida em Contas a Pagar (não é um débito ou não possui fornecedor).' : undefined}
+                              title={!isEligibleForAccountPay ? 'Aviso: Esta transação não pode ser convertida em Contas a Pagar (não é um débito ou não possui fornecedor).' : undefined}
                             />
                           </TableCell>
                           <TableCell>{formatDateTime(t.dataHora)}</TableCell>

@@ -46,7 +46,7 @@ export function EditQuotationModal({ quotation, onSaveSuccess }: EditQuotationMo
             Atualize os detalhes da cotação abaixo.
           </DialogDescription>
         </DialogHeader>
-        <QuotationForm onSave={handleSave} initialData={quotation} />
+        <QuotationForm onSave={handleSave} initialData={quotation} id={quotation.id} />
       </DialogContent>
     </Dialog>
   );

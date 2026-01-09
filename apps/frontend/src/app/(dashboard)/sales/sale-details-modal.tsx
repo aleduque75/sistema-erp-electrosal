@@ -19,6 +19,10 @@ import { InstallmentList } from '@/components/sales/InstallmentList';
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 const formatGrams = (value: number | null | undefined) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(value || 0);
 const formatDecimal = (value: number | null | undefined) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
+const formatDate = (dateString?: string | null) => {
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+};
 
 interface SaleDetailsModalProps {
   sale: Sale | null;
@@ -99,6 +103,30 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
         ) : sale ? (
           <>
             <div className="space-y-6 p-4">
+              {/* DESTAQUE DO LUCRO */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="bg-primary/5 border-primary/20 shadow-sm">
+                  <CardHeader className="pb-2 px-4 pt-4">
+                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Lucro Líquido (R$)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    <div className={`text-2xl font-bold ${Number(sale.adjustment?.netProfitBRL || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(Number(sale.adjustment?.netProfitBRL || 0))}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-primary/5 border-primary/20 shadow-sm">
+                  <CardHeader className="pb-2 px-4 pt-4">
+                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Lucro em Metal (AU)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    <div className={`text-2xl font-bold ${Number(sale.adjustment?.netDiscrepancyGrams || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatGrams(Number(sale.adjustment?.netDiscrepancyGrams || 0))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
               {/* Detalhes do Cliente e Venda */}
               <div className="grid grid-cols-2 gap-4 border-b pb-4">
                 <div>
@@ -144,6 +172,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                   <Table size="sm">
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Data</TableHead>
                         <TableHead>Conta Corrente</TableHead>
                         <TableHead className="text-right">Valor (BRL)</TableHead>
                         <TableHead className="text-right">Valor (Au)</TableHead>
@@ -152,6 +181,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                     <TableBody>
                       {uniqueTransactions.map((transacao) => (
                         <TableRow key={transacao.id}>
+                          <TableCell>{formatDate(transacao.dataHora)}</TableCell>
                           <TableCell>{transacao.contaCorrente?.nome || 'N/A'}</TableCell>
                           <TableCell className="text-right">{formatCurrency(transacao.valor)}</TableCell>
                           <TableCell className="text-right">{formatGrams(transacao.goldAmount)} g</TableCell>
@@ -160,7 +190,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                       {/* Mensagem se não houver pagamentos */}
                       {uniqueTransactions.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={3} className="text-center text-muted-foreground">Nenhum pagamento registrado.</TableCell>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground">Nenhum pagamento registrado.</TableCell>
                           </TableRow>
                         )}
                     </TableBody>

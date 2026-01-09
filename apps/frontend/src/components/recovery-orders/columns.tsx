@@ -25,9 +25,10 @@ type ActionsProps = {
   onStart: (id: string) => void;
   onProcessFinalization: (id: string) => void;
   onUpdatePurity: (id: string) => void;
+  onApplyCommission: (id: string) => void;
 };
 
-const ActionsCell = ({ recoveryOrder, onViewDetails, onEdit, onCancel, onDownloadPdf, isDownloadingPdf, onStart, onProcessFinalization, onUpdatePurity }: ActionsProps) => {
+const ActionsCell = ({ recoveryOrder, onViewDetails, onEdit, onCancel, onDownloadPdf, isDownloadingPdf, onStart, onProcessFinalization, onUpdatePurity, onApplyCommission }: ActionsProps) => {
   const isFinalizado = recoveryOrder.status === "FINALIZADA";
   const isPendente = recoveryOrder.status === "PENDENTE";
   const isEmAndamento = recoveryOrder.status === "EM_ANDAMENTO";
@@ -73,6 +74,9 @@ const ActionsCell = ({ recoveryOrder, onViewDetails, onEdit, onCancel, onDownloa
             Lançar Teor
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem onClick={() => onApplyCommission(recoveryOrder.id)}>
+          Incluir Comissão
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => onCancel(recoveryOrder.id)}
@@ -95,6 +99,7 @@ export const getColumns = (
     onStart: (id: string) => void,
     onProcessFinalization: (id: string) => void,
     onUpdatePurity: (id: string) => void,
+    onApplyCommission: (id: string) => void,
 ): ColumnDef<RecoveryOrderDto>[] => [
   {
     accessorKey: "orderNumber",
@@ -140,6 +145,7 @@ export const getColumns = (
           onStart={onStart}
           onProcessFinalization={onProcessFinalization}
           onUpdatePurity={onUpdatePurity}
+          onApplyCommission={onApplyCommission}
         />
       );
     },

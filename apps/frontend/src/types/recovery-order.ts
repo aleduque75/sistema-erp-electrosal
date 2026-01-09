@@ -50,6 +50,9 @@ export interface RecoveryOrder {
   auPuroRecuperadoGramas?: number;
   residuoGramas?: number;
   residueAnalysisId?: string;
+  salespersonId?: string;
+  commissionPercentage?: number;
+  commissionAmount?: number;
   rawMaterialsUsed?: RawMaterialUsedResumida[];
   analisesEnvolvidas?: AnaliseQuimicaResumida[];
   images?: Media[];

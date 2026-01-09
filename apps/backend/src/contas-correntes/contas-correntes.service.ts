@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContaCorrenteDto } from './dtos/create-conta-corrente.dto';
 import { UpdateContaCorrenteDto } from './dtos/update-conta-corrente.dto';
-import { ContaCorrente, Prisma, ContaCorrenteType } from '@prisma/client'; // Adicionado ContaCorrenteType
+import { ContaCorrente, Prisma, ContaCorrenteType, TipoTransacaoPrisma } from '@prisma/client'; // Adicionado ContaCorrenteType
+import { Decimal } from 'decimal.js';
 
 @Injectable()
 export class ContasCorrentesService {
@@ -169,12 +170,87 @@ export class ContasCorrentesService {
         contaContabilNome: t.contaContabil?.nome,
         fornecedorNome: t.fornecedor?.pessoa?.name,
         sale: t.accountRec?.sale,
-        contrapartida: t.linkedTransaction ? { contaCorrente: { nome: t.linkedTransaction.contaCorrente?.nome || 'Conta Desconhecida' } } : null, // Usar linkedTransaction
-        goldPrice: t.goldPrice?.toNumber(),
+        contrapartida: t.linkedTransaction
+          ? {
+              contaCorrente: {
+                nome: t.linkedTransaction.contaCorrente?.nome || 'Conta Desconhecida',
+              },
+            }
+          : null,
+        goldPrice: t.goldPrice ? Number(t.goldPrice) : null,
       })),
     };
   }
 
+  async adjustGoldResidue(organizationId: string, id: string, userId: string, transactionIds?: string[]) {
+    let residualGold = 0;
+
+    if (transactionIds && transactionIds.length > 0) {
+      // Logic for adjusting specific transactions
+      const transactions = await this.prisma.transacao.findMany({
+        where: { id: { in: transactionIds }, contaCorrenteId: id, organizationId },
+      });
+
+      if (transactions.length !== transactionIds.length) {
+        throw new BadRequestException('Uma ou mais transações não foram encontradas.');
+      }
+
+      let totalBRL = new Decimal(0);
+      let totalGold = new Decimal(0);
+
+      transactions.forEach(t => {
+        const valor = new Decimal(t.valor);
+        const gold = new Decimal(t.goldAmount || 0);
+        if (t.tipo === TipoTransacaoPrisma.CREDITO) {
+          totalBRL = totalBRL.plus(valor);
+          totalGold = totalGold.plus(gold);
+        } else {
+          totalBRL = totalBRL.minus(valor);
+          totalGold = totalGold.minus(gold);
+        }
+      });
+
+      if (totalBRL.abs().gt(0.05)) {
+        throw new BadRequestException(`Para ajustar o resíduo, a soma dos valores em Reais deve ser próxima de zero. Soma atual: R$ ${totalBRL.toFixed(2)}`);
+      }
+
+      residualGold = totalGold.toNumber();
+    } else {
+      // Original logic: total account residue
+      const extrato = await this.getExtrato(organizationId, id, new Date(0), new Date());
+      residualGold = extrato.saldoFinalGold;
+    }
+
+    if (Math.abs(residualGold) < 0.0001) {
+      throw new BadRequestException('Não há resíduo de ouro significativo para ajustar.');
+    }
+
+    // Find the variation account
+    const variationAccount = await this.prisma.contaContabil.findFirst({
+      where: {
+        organizationId,
+        nome: { contains: 'Variação de Cotação', mode: 'insensitive' }
+      }
+    });
+
+    if (!variationAccount) {
+      throw new BadRequestException('Conta contábil "Perda por Variação de Cotação" não encontrada. Por favor, crie-a primeiro ou verifique o nome.');
+    }
+
+    return this.prisma.transacao.create({
+      data: {
+        organizationId,
+        contaCorrenteId: id,
+        tipo: residualGold > 0 ? TipoTransacaoPrisma.DEBITO : TipoTransacaoPrisma.CREDITO,
+        valor: 0,
+        goldAmount: Math.abs(residualGold),
+        moeda: 'BRL',
+        descricao: 'Ajuste de resíduo de ouro por variação de cotação (ajuste manual)',
+        contaContabilId: variationAccount.id,
+        dataHora: new Date(),
+      },
+    });
+  }
 
   async update(
     organizationId: string,

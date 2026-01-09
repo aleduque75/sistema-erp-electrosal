@@ -169,31 +169,31 @@ export function AddItemModal({
     }
 
     const isManufactured = selectedProduct.inventoryLots.length > 0;
-    if (isManufactured && !selectedLot) {
-      toast.error('Para este produto, é obrigatório selecionar um lote.');
+    
+    // Calculate total available stock across all lots for this product
+    const totalStockAvailable = isManufactured
+      ? selectedProduct.inventoryLots.reduce((sum, lot) => {
+          const usedInCurrentSale = items
+            .filter((item) => item.inventoryLotId === lot.id)
+            .reduce((acc, item) => acc + Number(item.quantity), 0);
+          return sum + (lot.remainingQuantity - usedInCurrentSale);
+        }, 0)
+      : (selectedProduct.stock || 0);
+
+    if (finalQuantity > totalStockAvailable + 0.0001) {
+      toast.error(`Estoque insuficiente. Total disponível: ${totalStockAvailable.toFixed(4)}`);
       return;
     }
 
-    const lot = selectedProduct.inventoryLots.find((l) => l.id === selectedLot);
-    const usedQuantity = items
-      .filter((item) => item.inventoryLotId === selectedLot)
-      .reduce((acc, item) => acc + Number(item.quantity), 0);
-
-    const stockAvailable = isManufactured
-      ? (lot?.remainingQuantity || 0) - usedQuantity
-      : (selectedProduct.stock || 0) - usedQuantity;
-
-    if (finalQuantity > stockAvailable + 0.0001) {
-      toast.error(`Estoque insuficiente no lote. Disponível: ${stockAvailable.toFixed(4)}`);
-      return;
-    }
+    const lotIdToUse = selectedLot === 'none' ? undefined : selectedLot;
+    const lot = lotIdToUse ? selectedProduct.inventoryLots.find((l) => l.id === lotIdToUse) : null;
 
     onAddItem({
       productId: selectedProduct.id,
       name: selectedProduct.name,
       quantity: finalQuantity,
       price: itemPrice,
-      inventoryLotId: selectedLot || undefined,
+      inventoryLotId: lotIdToUse || undefined,
       batchNumber: lot?.batchNumber,
       laborPercentage: specialConfig ? (typeof laborPercentInput === 'string' ? parseFloat(laborPercentInput) : laborPercentInput) : undefined,
       entryUnit: specialConfig ? entryUnit : undefined,
@@ -293,12 +293,13 @@ export function AddItemModal({
 
           {selectedProduct && selectedProduct.inventoryLots.length > 0 && (
             <div className="sm:col-span-12">
-              <Label>Lote de Produção</Label>
+              <Label>Lote de Produção (Opcional)</Label>
               <Select onValueChange={setSelectedLot} value={selectedLot || ''}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o lote..." />
+                  <SelectValue placeholder="Automático (FIFO) - Recomendado" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Automático (FIFO)</SelectItem>
                   {selectedProduct.inventoryLots
                     .map((lot) => {
                       const used = items

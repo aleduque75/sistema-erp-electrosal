@@ -4,7 +4,7 @@ import { TransacoesService } from '../../transacoes/transacoes.service';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { SettingsService } from '../../settings/settings.service';
 import { TipoTransacaoPrisma, TipoMetal, MetalCreditStatus } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 import { PayMetalCreditWithCashDto } from '../dtos/pay-metal-credit-with-cash.dto';
 import { IMetalAccountRepository, MetalAccount } from '@sistema-erp-electrosal/core';
 

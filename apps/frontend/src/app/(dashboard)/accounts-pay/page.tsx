@@ -57,6 +57,8 @@ interface AccountPay {
   id: string;
   description: string;
   amount: number;
+  goldAmount?: number | null;
+  goldPrice?: number | null;
   dueDate: string;
   paid: boolean;
   paidAt?: string | null;
@@ -73,6 +75,9 @@ const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value || 0
   );
+const formatGrams = (value?: number | null) =>
+  value ? `${Number(value).toFixed(4)}g` : "N/A";
+
 const formatDate = (dateString?: string | null) =>
   dateString
     ? formatInTimeZone(new Date(dateString), "UTC", "dd/MM/yyyy")
@@ -192,10 +197,28 @@ export default function AccountsPayPage() {
     },
     {
       accessorKey: "amount",
-      header: () => <div className="text-right">Valor</div>,
+      header: () => <div className="text-right">Valor (BRL)</div>,
       cell: ({ row }) => (
         <div className="text-right">
           {formatCurrency(row.getValue("amount"))}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "goldAmount",
+      header: () => <div className="text-right">Equiv. Ouro (AU)</div>,
+      cell: ({ row }) => (
+        <div className="text-right font-mono">
+          {formatGrams(row.original.goldAmount)}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "goldPrice",
+      header: () => <div className="text-right">Cotação</div>,
+      cell: ({ row }) => (
+        <div className="text-right text-muted-foreground text-xs">
+          {row.original.goldPrice ? formatCurrency(row.original.goldPrice) : "-"}
         </div>
       ),
     },
