@@ -13,13 +13,14 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, X } from "lucide-react";
+import { MoreHorizontal, X, User, Calendar, Scale, Eye, Edit, CreditCard, Wallet, Coins } from "lucide-react";
 import Link from "next/link";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
-import { MetalCredit } from "@sistema-erp-electrosal/core";
 import { MetalCreditWithUsageDto } from "@/types/metal-credit-with-usage.dto";
 import { Button } from "@/components/ui/button";
 import { MetalCreditDetailsModal } from "@/components/metal-credits/MetalCreditDetailsModal";
@@ -29,6 +30,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 const formatGrams = (value?: number) => {
   return new Intl.NumberFormat("pt-BR", {
@@ -39,7 +43,15 @@ const formatGrams = (value?: number) => {
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "";
-  return new Date(dateString).toLocaleDateString("pt-BR");
+  return new Date(dateString).toLocaleDateString("pt-BR", { timeZone: 'UTC' });
+};
+
+// Status Configuration
+const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
+  PENDING: { label: 'Disponível', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' },
+  PARTIALLY_PAID: { label: 'Parcialmente Usado', color: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-500' },
+  PAID: { label: 'Esgotado / Pago', color: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
+  CANCELED: { label: 'Cancelado', color: 'bg-red-100 text-red-800 border-red-200', dot: 'bg-red-500' },
 };
 
 export default function CreditosClientesPage() {
@@ -55,6 +67,7 @@ export default function CreditosClientesPage() {
   const [metalTypeFilter, setMetalTypeFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [hideZeroed, setHideZeroed] = useState(true);
 
   const fetchData = async () => {
     setIsFetching(true);
@@ -90,6 +103,7 @@ export default function CreditosClientesPage() {
   const filteredCredits = credits.filter((credit) => {
     const matchesMetalType = metalTypeFilter === "ALL" || credit.metalType === metalTypeFilter;
     const matchesStatus = statusFilter === "ALL" || credit.status === statusFilter;
+    const isNotZeroed = !hideZeroed || Number(credit.grams) > 0.0001;
     
     let matchesDate = true;
     if (dateRange?.from) {
@@ -99,7 +113,7 @@ export default function CreditosClientesPage() {
       matchesDate = isWithinInterval(creditDate, { start, end });
     }
 
-    return matchesMetalType && matchesStatus && matchesDate;
+    return matchesMetalType && matchesStatus && matchesDate && isNotZeroed;
   });
 
   const clearFilters = () => {
@@ -112,76 +126,82 @@ export default function CreditosClientesPage() {
     {
       accessorKey: "clientName",
       header: "Cliente",
-      cell: ({ row }) => {
-        return row.original.clientName || "Cliente não encontrado";
-      },
+      cell: ({ row }) => (
+        <div className="font-medium">{row.original.clientName || "Cliente não encontrado"}</div>
+      ),
     },
     {
       accessorKey: "metalType",
-      header: "Tipo de Metal",
-      cell: ({ row }) => {
-        return row.original.metalType;
-      },
+      header: "Metal",
+      cell: ({ row }) => (
+        <Badge variant="outline">{row.original.metalType}</Badge>
+      ),
+    },
+    {
+      accessorKey: "grams",
+      header: "Saldo (g)",
+      cell: ({ row }) => (
+        <span className="font-bold">{formatGrams(Number(row.original.grams))}</span>
+      ),
+    },
+    {
+      accessorKey: "date",
+      header: "Data",
+      cell: ({ row }) => formatDate(row.original.date as unknown as string),
     },
     {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const statusMap: Record<string, string> = {
-          PENDING: "Pendente",
-          PARTIALLY_PAID: "Pago Parcialmente",
-          PAID: "Pago",
-          CANCELED: "Cancelado",
-        };
-        return statusMap[row.original.status] || row.original.status;
-      },
-    },
-    {
-      accessorKey: "grams",
-      header: "Saldo (g)",
-      cell: ({ row }) => formatGrams(Number(row.original.grams)),
-    },
-    {
-      accessorKey: "date",
-      header: "Data do Crédito",
-      cell: ({ row }) => {
-        return formatDate(row.original.date as unknown as string);
+        const statusInfo = statusConfig[row.original.status] || { label: row.original.status, color: 'bg-gray-100', dot: 'bg-gray-400' };
+        return (
+          <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color} border`}>
+             <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${statusInfo.dot}`} />
+             {statusInfo.label}
+          </div>
+        );
       },
     },
     {
       id: "actions",
-      header: "Ações",
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Abrir menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleViewDetails(row.original)}>
-              Visualizar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEdit(row.original)}>
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Pagar</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuItem asChild>
-                  <Link href={`/metal-payments/pay-client?clientId=${row.original.clientId}&metalType=${row.original.metalType}&grams=${row.original.grams}`}>
-                    Pagar com Metal
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handlePayWithCash(row.original)}>
-                  Pagar com Dinheiro
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      cell: ({ row }) => {
+        const credit = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Abrir menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleViewDetails(credit)}>
+                <Eye className="mr-2 h-4 w-4" /> Visualizar
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEdit(credit)}>
+                <Edit className="mr-2 h-4 w-4" /> Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                    <Wallet className="mr-2 h-4 w-4" /> Pagar
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/metal-payments/pay-client?clientId=${credit.clientId}&metalType=${credit.metalType}&grams=${credit.grams}`}>
+                      <CreditCard className="mr-2 h-4 w-4" /> Pagar com Metal
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handlePayWithCash(credit)}>
+                    <Coins className="mr-2 h-4 w-4" /> Pagar com Dinheiro
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 
@@ -190,59 +210,64 @@ export default function CreditosClientesPage() {
     return <p className="text-center p-10">Faça login para continuar.</p>;
 
   return (
-    <>
-      <Card className="mx-auto my-8">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Créditos de Metal dos Clientes</CardTitle>
-          </div>
-          <div className="flex flex-wrap gap-4 mt-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium">Período</label>
-              <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+    <div className="max-w-7xl mx-auto py-8 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Créditos de Metal</h1>
+          <p className="text-muted-foreground">Gerencie o saldo de metal dos clientes.</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center space-x-2 bg-muted/50 p-2 rounded-lg mr-2">
+              <Checkbox
+                id="hide-zeroed"
+                checked={hideZeroed}
+                onCheckedChange={(checked) => setHideZeroed(checked as boolean)}
+              />
+              <Label htmlFor="hide-zeroed" className="text-sm whitespace-nowrap cursor-pointer">Ocultar zerados</Label>
             </div>
-            <div className="flex flex-col gap-1.5 min-w-[150px]">
-              <label className="text-xs font-medium">Tipo de Metal</label>
-              <Select value={metalTypeFilter} onValueChange={setMetalTypeFilter}>
-                <SelectTrigger>
+
+            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+            
+            <Select value={metalTypeFilter} onValueChange={setMetalTypeFilter}>
+                <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Metal" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">Todos</SelectItem>
+                  <SelectItem value="ALL">Todos Metais</SelectItem>
                   <SelectItem value="AU">Ouro (AU)</SelectItem>
                   <SelectItem value="AG">Prata (AG)</SelectItem>
                   <SelectItem value="RH">Ródio (RH)</SelectItem>
                 </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5 min-w-[180px]">
-              <label className="text-xs font-medium">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">Todos</SelectItem>
-                  <SelectItem value="PENDING">Pendente</SelectItem>
-                  <SelectItem value="PARTIALLY_PAID">Pago Parcialmente</SelectItem>
-                  <SelectItem value="PAID">Pago</SelectItem>
+                  <SelectItem value="ALL">Todos Status</SelectItem>
+                  <SelectItem value="PENDING">Disponível</SelectItem>
+                  <SelectItem value="PARTIALLY_PAID">Parcialmente Usado</SelectItem>
+                  <SelectItem value="PAID">Esgotado / Pago</SelectItem>
                   <SelectItem value="CANCELED">Cancelado</SelectItem>
                 </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end">
-              {(metalTypeFilter !== "ALL" || statusFilter !== "ALL" || dateRange) && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-10">
-                  <X className="mr-2 h-4 w-4" />
-                  Limpar Filtros
+            </Select>
+
+            {(metalTypeFilter !== "ALL" || statusFilter !== "ALL" || dateRange) && (
+                <Button variant="ghost" size="icon" onClick={clearFilters} title="Limpar Filtros">
+                  <X className="h-4 w-4" />
                 </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+            )}
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6">
           {isFetching ? (
-            <p className="text-center p-10">Buscando dados...</p>
+             <div className="text-center py-12 text-muted-foreground">
+                <p>Carregando créditos...</p>
+             </div>
           ) : (
             <DataTable
               columns={columns}
@@ -271,6 +296,6 @@ export default function CreditosClientesPage() {
         onClose={() => setEditModalOpen(false)}
         credit={selectedCredit}
       />
-    </>
+    </div>
   );
 }

@@ -80,11 +80,10 @@ export class SeparateSaleUseCase {
 
           // Depois, decrementa o estoque total do produto uma única vez
           const totalItemQuantityToDecrement = new Decimal(item.quantity).toNumber();
-          const currentStock = item.product.stock || 0;
           this.logger.log(`Decrementing total product stock for item ${item.id} by ${totalItemQuantityToDecrement}`);
           await tx.product.update({
             where: { id: item.productId },
-            data: { stock: currentStock - totalItemQuantityToDecrement },
+            data: { stock: { decrement: totalItemQuantityToDecrement } },
           });
         }
 

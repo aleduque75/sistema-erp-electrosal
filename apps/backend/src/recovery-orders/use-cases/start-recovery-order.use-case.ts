@@ -33,9 +33,11 @@ export class StartRecoveryOrderUseCase {
       );
     }
 
-    if (recoveryOrder.status !== RecoveryOrderStatus.PENDENTE) {
+    // Use string comparison to avoid potential enum object mismatch
+    if (String(recoveryOrder.status) !== 'PENDENTE') {
+      console.error(`[StartRecoveryOrder] CONFLICT: Recovery Order ${recoveryOrderId} has status '${recoveryOrder.status}' (type: ${typeof recoveryOrder.status}) but expected 'PENDENTE'.`);
       throw new ConflictException(
-        `Ordem de recuperação não pode ser iniciada pois não está com o status PENDENTE.`,
+        `Ordem de recuperação não pode ser iniciada pois não está com o status PENDENTE. Status atual: ${recoveryOrder.status}`,
       );
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import api from "@/lib/api";
@@ -44,17 +44,23 @@ const financialPaymentSchema = z.object({
   contaCorrenteId: z.string().min(1, "A conta é obrigatória."),
   amount: z.coerce.number().min(0.01, "O valor deve ser no mínimo R$ 0,01."),
   goldAmount: z.coerce.number().optional(),
+  receivedAt: z.string().optional(),
+  quotation: z.coerce.number().optional(),
 });
 
 const metalCreditPaymentSchema = z.object({
   metalCreditId: z.string().min(1, "Selecione o crédito de metal."),
   amountInGrams: z.coerce.number().min(0.000001, "A quantidade em gramas é obrigatória."),
+  receivedAt: z.string().optional(),
+  quotation: z.coerce.number().optional(),
 });
 
 const metalPaymentSchema = z.object({
-  metalType: z.enum(['AU', 'AG', 'RH'], { required_error: "O tipo de metal é obrigatório." }),
+  metalType: z.enum(['AU', 'AG', 'RH'], { errorMap: () => ({ message: "O tipo de metal é obrigatório." }) }),
   amountInGrams: z.coerce.number().min(0.000001, "A quantidade em gramas é obrigatória."),
   purity: z.coerce.number().min(0.01, "A pureza é obrigatória."),
+  receivedAt: z.string().optional(),
+  quotation: z.coerce.number().optional(),
 });
 
 // Main form schema
@@ -81,12 +87,28 @@ const formSchema = z.object({
     });
   }
 
-  if ((hasMetalCredit || hasMetal) && (!data.quotationBuyPrice || data.quotationBuyPrice <= 0)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "A cotação é obrigatória para pagamentos em metal.",
-      path: ["quotationBuyPrice"],
-    });
+  // Validação: se houver pagamento financeiro e a dívida tiver componente em ouro (verificado via lógica ou contexto, aqui simplificado),
+  // ou se houver metal envolvido, precisamos de cotação.
+  // A cotação pode estar no nível superior ou no item.
+  // A validação completa é complexa no Zod sem contexto externo, mas mantemos a básica.
+  // Se não tiver cotação global, verifica se todos os itens que precisam têm cotação individual.
+  
+  if ((hasMetalCredit || hasMetal)) {
+      // Check global quotation
+      const globalQuotation = data.quotationBuyPrice;
+      if (!globalQuotation || globalQuotation <= 0) {
+          // Check if ALL items have individual quotation
+          const allMetalCreditsHaveQuotation = data.metalCreditPayments?.every(p => p.quotation && p.quotation > 0);
+          const allMetalsHaveQuotation = data.metalPayments?.every(p => p.quotation && p.quotation > 0);
+          
+          if (!allMetalCreditsHaveQuotation || !allMetalsHaveQuotation) {
+               ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "A cotação é obrigatória (informe a geral ou em cada item).",
+                path: ["quotationBuyPrice"],
+              });
+          }
+      }
   }
 });
 
@@ -103,7 +125,7 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
   const formatGrams = (value: number) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(value || 0);
 
   const initialRemainingBRL = accountRec.amount - (accountRec.amountPaid || 0);
-  const initialRemainingGold = accountRec.goldAmount - (accountRec.goldAmountPaid || 0);
+  const initialRemainingGold = accountRec.goldAmount ? (accountRec.goldAmount - (accountRec.goldAmountPaid || 0)) : 0;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -124,9 +146,10 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
   const selectedInstallmentId = form.watch("selectedInstallmentId");
   const receivedAt = form.watch("receivedAt");
   const quotationBuyPrice = form.watch("quotationBuyPrice");
-  const watchedFinancialPayments = form.watch("financialPayments");
-  const watchedMetalCreditPayments = form.watch("metalCreditPayments");
-  const watchedMetalPayments = form.watch("metalPayments");
+  
+  const watchedFinancialPayments = useWatch({ control: form.control, name: "financialPayments" });
+  const watchedMetalCreditPayments = useWatch({ control: form.control, name: "metalCreditPayments" });
+  const watchedMetalPayments = useWatch({ control: form.control, name: "metalPayments" });
 
   const displayOriginalBRL = useMemo(() => {
     if (accountRec.goldAmount && quotationBuyPrice && quotationBuyPrice > 0) {
@@ -150,37 +173,57 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
 
   const handleSelectPaymentType = (type: 'financial' | 'metalCredit' | 'metal') => {
     if (selectedInstallmentId) return; // Prevent adding custom payments if an installment is selected
+    const currentReceivedAt = form.getValues('receivedAt');
+    const currentQuotation = form.getValues('quotationBuyPrice');
 
     switch (type) {
       case 'financial':
-        appendFinancial({ amount: 0, contaCorrenteId: "", goldAmount: 0 });
+        appendFinancial({ amount: 0, contaCorrenteId: "", goldAmount: 0, receivedAt: currentReceivedAt, quotation: currentQuotation });
         break;
       case 'metalCredit':
-        appendMetalCredit({ metalCreditId: "", amountInGrams: 0 });
+        appendMetalCredit({ metalCreditId: "", amountInGrams: 0, receivedAt: currentReceivedAt, quotation: currentQuotation });
         break;
       case 'metal':
-        appendMetal({ metalType: "AU", amountInGrams: 0, purity: 100 });
+        appendMetal({ metalType: "AU", amountInGrams: 0, purity: 100, receivedAt: currentReceivedAt, quotation: currentQuotation });
         break;
     }
   };
 
   // Lógica de cálculo do resumo do pagamento
   const paymentSummary = useMemo(() => {
-    const financialTotal = watchedFinancialPayments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-    const currentMetalCreditTotalGrams = watchedMetalCreditPayments?.reduce((sum, p) => sum + (p.amountInGrams || 0), 0) || 0;
-    const currentMetalTotalGrams = watchedMetalPayments?.reduce((sum, p) => sum + (p.amountInGrams || 0), 0) || 0;
-    
-    // Convert financial payments' gold equivalent to grams if quotation is available
-    const financialGoldEquivalent = watchedFinancialPayments?.reduce((sum, p) => {
+    const defaultQuotation = quotationBuyPrice || 0;
+
+    let totalPaidBRL = 0;
+    let totalPaidGold = 0;
+
+    watchedFinancialPayments?.forEach(p => {
+        const q = (p.quotation && p.quotation > 0) ? p.quotation : defaultQuotation;
         const amount = p.amount || 0;
-        return sum + (quotationBuyPrice && quotationBuyPrice > 0 ? amount / quotationBuyPrice : 0);
-    }, 0) || 0;
+        totalPaidBRL += amount;
+        if (q > 0) {
+            totalPaidGold += amount / q;
+        }
+    });
 
+    watchedMetalCreditPayments?.forEach(p => {
+        const q = (p.quotation && p.quotation > 0) ? p.quotation : defaultQuotation;
+        const grams = p.amountInGrams || 0;
+        totalPaidGold += grams;
+        totalPaidBRL += grams * q;
+    });
 
-    const totalPaidBRL = financialTotal + (currentMetalCreditTotalGrams + currentMetalTotalGrams) * (quotationBuyPrice || 0);
-    const totalPaidGold = financialGoldEquivalent + currentMetalCreditTotalGrams + currentMetalTotalGrams;
+    watchedMetalPayments?.forEach(p => {
+         const q = (p.quotation && p.quotation > 0) ? p.quotation : defaultQuotation;
+         const grams = p.amountInGrams || 0;
+         totalPaidGold += grams;
+         totalPaidBRL += grams * q;
+    });
 
-    const remainingBRL = displayInitialRemainingBRL - totalPaidBRL; // Use the dynamic remaining BRL
+    // Ensure we are using the numbers for calculation to avoid string concatenation issues if form values are strings
+    totalPaidBRL = Number(totalPaidBRL);
+    totalPaidGold = Number(totalPaidGold);
+
+    const remainingBRL = displayInitialRemainingBRL - totalPaidBRL;
     const remainingGold = initialRemainingGold - totalPaidGold;
 
 
@@ -209,32 +252,30 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
         if (receivedAt) {
           api.get(`/quotations/by-date?date=${receivedAt}&metal=AU`).then((res) => {
             if (res.data?.buyPrice) {
+                 // Update global quotation
                  form.setValue("quotationBuyPrice", res.data.buyPrice, { shouldValidate: true });
             }
           });
         }
       }, [receivedAt, form]);
-  useEffect(() => {
-    watchedFinancialPayments?.forEach((payment, index) => {
-      const goldValue = (payment.amount && quotationBuyPrice && quotationBuyPrice > 0) ? payment.amount / quotationBuyPrice : 0;
-      if (form.getValues(`financialPayments.${index}.goldAmount`) !== goldValue) {
-        form.setValue(`financialPayments.${index}.goldAmount`, goldValue);
-      }
-    });
-  }, [watchedFinancialPayments, quotationBuyPrice, form]);
+  
+  // Removed useEffect for goldAmount sync as we calculate it on the fly now
 
   useEffect(() => {
     if (selectedInstallmentId && accountRec.saleInstallments) {
       const selected = accountRec.saleInstallments.find(inst => inst.id === selectedInstallmentId);
       if (selected) {
+        const dueDate = new Date(selected.dueDate).toISOString().split("T")[0];
         form.setValue("financialPayments", [{
           amount: parseFloat(Number(selected.amount).toFixed(2)),
           contaCorrenteId: form.getValues("financialPayments.0.contaCorrenteId") || "",
           goldAmount: 0,
+          receivedAt: dueDate,
+          quotation: form.getValues("quotationBuyPrice"),
         }]);
         form.setValue("metalCreditPayments", []);
         form.setValue("metalPayments", []);
-        form.setValue("receivedAt", new Date(selected.dueDate).toISOString().split("T")[0]);
+        form.setValue("receivedAt", dueDate);
         form.clearErrors();
       }
     } else {
@@ -270,9 +311,22 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT") {
+        e.preventDefault();
+      }
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form 
+        onSubmit={form.handleSubmit(onSubmit)} 
+        onKeyDown={handleKeyDown}
+        className="space-y-6"
+      >
         <div className="text-sm text-muted-foreground">
           <p>Registrar recebimento para: <span className="font-medium">{accountRec.description}</span></p>
           <div className="flex gap-2 mt-1">
@@ -291,13 +345,19 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
             <span className="font-bold">Total Original:</span> <span>{formatCurrency(displayOriginalBRL)}</span>
             <span className="font-bold">Já Pago:</span> <span>{formatCurrency(displayAmountPaidBRL)}</span>
             <span className="font-bold text-primary">Restante Inicial:</span> <span className="font-bold text-primary">{formatCurrency(displayInitialRemainingBRL)}</span>
+            {accountRec.goldAmount && (
+                <>
+                <span className="font-bold text-yellow-600 mt-2">Total Ouro:</span> <span className="mt-2 text-yellow-600">{formatGrams(accountRec.goldAmount)}g</span>
+                 <span className="font-bold text-yellow-600">Restante Ouro:</span> <span className="text-yellow-600">{formatGrams(initialRemainingGold)}g</span>
+                </>
+            )}
           </div>
         </div>
         
         {accountRec.sale?.observation && (
-          <div className="space-y-1 rounded-md border border-yellow-200 bg-yellow-50 p-4">
-            <h4 className="font-medium text-sm text-yellow-800">Observações do Pedido</h4>
-            <p className="text-xs text-yellow-700 whitespace-pre-wrap">{accountRec.sale.observation}</p>
+          <div className="space-y-1 rounded-md border border-yellow-500/50 bg-yellow-500/10 p-4">
+            <h4 className="font-medium text-sm text-yellow-600 dark:text-yellow-500">Observações do Pedido</h4>
+            <p className="text-xs text-yellow-700 dark:text-yellow-400 whitespace-pre-wrap">{accountRec.sale.observation}</p>
           </div>
         )}
 
@@ -322,9 +382,10 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
           )} />
         )}
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 border-b pb-4 mb-4">
+            <div className="col-span-2 text-sm font-medium text-gray-500 mb-2">Padrões para novos itens (opcional)</div>
             <FormField name="receivedAt" control={form.control} render={({ field }) => (
-                <FormItem className="w-fit"><FormLabel>Data do Recebimento</FormLabel>
+                <FormItem className="w-fit"><FormLabel>Data Padrão</FormLabel>
                     <FormControl>
                       <Input 
                         type="date" 
@@ -335,7 +396,7 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
                 </FormItem>
             )} />
             <FormField name="quotationBuyPrice" control={form.control} render={({ field }) => (
-                <FormItem className="w-fit"><FormLabel>Cotação Ouro (R$/g)</FormLabel>
+                <FormItem className="w-fit"><FormLabel>Cotação Padrão (R$/g)</FormLabel>
                     <FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl>
                     <FormMessage />
                 </FormItem>
@@ -347,13 +408,26 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
               <h4 className="text-md font-semibold border-b pb-2">Pagamentos Financeiros (R$)</h4>
               <div className="space-y-4">
                 {financialFields.map((field, index) => (
-                  <div key={field.id} className="flex items-start gap-2 rounded-md border p-4">
-                    <div className="grid flex-1 gap-4 grid-cols-2">
+                  <div key={field.id} className="flex flex-col gap-4 rounded-md border p-4 bg-muted/20">
+                    <div className="grid grid-cols-2 gap-4">
                       <FormField control={form.control} name={`financialPayments.${index}.amount`} render={({ field }) => (<FormItem><FormLabel>Valor (R$)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name={`financialPayments.${index}.contaCorrenteId`} render={({ field }) => (<FormItem><FormLabel>Conta</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl><SelectContent>{contasCorrentes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-                      <FormItem><FormLabel>Valor em Ouro (g)</FormLabel><FormControl><Input readOnly value={(quotationBuyPrice ? ((watchedFinancialPayments?.[index]?.amount || 0) / quotationBuyPrice) : 0).toFixed(4)} /></FormControl></FormItem>
                     </div>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeFinancial(index)}><Trash2 className="h-4 w-4" /></Button>
+                    
+                    <div className="grid grid-cols-3 gap-4 items-end">
+                       <FormField control={form.control} name={`financialPayments.${index}.receivedAt`} render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                       <FormField control={form.control} name={`financialPayments.${index}.quotation`} render={({ field }) => (<FormItem><FormLabel>Cotação (R$/g)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
+                       <FormItem><FormLabel>Valor em Ouro (g)</FormLabel><FormControl><Input readOnly value={(() => {
+                           const payment = watchedFinancialPayments?.[index];
+                           const amt = payment?.amount || 0;
+                           const q = (payment?.quotation && payment.quotation > 0) ? payment.quotation : (quotationBuyPrice || 0);
+                           return (amt && q > 0) ? (amt / q).toFixed(4) : "0.0000";
+                       })()} /></FormControl></FormItem>
+                    </div>
+
+                    <div className="flex justify-end">
+                         <Button type="button" variant="destructive" size="sm" onClick={() => removeFinancial(index)}><Trash2 className="h-4 w-4 mr-2" /> Remover</Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -365,8 +439,8 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
               <h4 className="text-md font-semibold border-b pb-2">Pagamentos com Crédito de Metal (g)</h4>
               <div className="space-y-4">
                 {metalCreditFields.map((field, index) => (
-                  <div key={field.id} className="flex items-start gap-2 rounded-md border p-4">
-                    <div className="grid flex-1 gap-4 grid-cols-2">
+                  <div key={field.id} className="flex flex-col gap-4 rounded-md border p-4 bg-muted/20">
+                    <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name={`metalCreditPayments.${index}.metalCreditId`}
@@ -396,7 +470,7 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
                         name={`metalCreditPayments.${index}.amountInGrams`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Quantidade a Utilizar (g)</FormLabel>
+                            <FormLabel>Quantidade (g)</FormLabel>
                             <FormControl>
                               <Input type="number" step="0.0001" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} />
                             </FormControl>
@@ -405,14 +479,13 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
                         )}
                       />
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeMetalCredit(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="grid grid-cols-2 gap-4">
+                       <FormField control={form.control} name={`metalCreditPayments.${index}.receivedAt`} render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                       <FormField control={form.control} name={`metalCreditPayments.${index}.quotation`} render={({ field }) => (<FormItem><FormLabel>Cotação (R$/g)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
+                    </div>
+                     <div className="flex justify-end">
+                        <Button type="button" variant="destructive" size="sm" onClick={() => removeMetalCredit(index)}><Trash2 className="h-4 w-4 mr-2" /> Remover</Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -424,13 +497,19 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
               <h4 className="text-md font-semibold border-b pb-2">Pagamentos com Metal Físico (g)</h4>
               <div className="space-y-4">
                 {metalFields.map((field, index) => (
-                  <div key={field.id} className="flex items-start gap-2 rounded-md border p-4">
-                    <div className="grid flex-1 gap-4 grid-cols-3">
+                  <div key={field.id} className="flex flex-col gap-4 rounded-md border p-4 bg-muted/20">
+                    <div className="grid grid-cols-3 gap-4">
                       <FormField control={form.control} name={`metalPayments.${index}.metalType`} render={({ field }) => (<FormItem><FormLabel>Tipo</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="AU">Ouro</SelectItem><SelectItem value="AG">Prata</SelectItem><SelectItem value="RH">Ródio</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name={`metalPayments.${index}.amountInGrams`} render={({ field }) => (<FormItem><FormLabel>Quantidade (g)</FormLabel><FormControl><Input type="number" step="0.0001" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name={`metalPayments.${index}.purity`} render={({ field }) => (<FormItem><FormLabel>Pureza (%)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
                     </div>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeMetal(index)}><Trash2 className="h-4 w-4" /></Button>
+                     <div className="grid grid-cols-2 gap-4">
+                       <FormField control={form.control} name={`metalPayments.${index}.receivedAt`} render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                       <FormField control={form.control} name={`metalPayments.${index}.quotation`} render={({ field }) => (<FormItem><FormLabel>Cotação (R$/g)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
+                    </div>
+                     <div className="flex justify-end">
+                        <Button type="button" variant="destructive" size="sm" onClick={() => removeMetal(index)}><Trash2 className="h-4 w-4 mr-2" /> Remover</Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -451,9 +530,12 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
         {/* Payment Summary */}
         <div className="space-y-2 rounded-md border border-dashed border-green-500 bg-green-500/10 p-4">
           <h4 className="font-medium text-sm text-green-700">Resumo deste Pagamento</h4>
-          <div className="text-sm grid grid-cols-2 gap-x-4">
-            <span className="font-bold">Total Pago agora:</span> <span className="font-bold">{formatCurrency(paymentSummary.totalPaidBRL)}</span>
-            <span className="font-bold text-primary">Saldo Final:</span> <span className={`font-bold ${paymentSummary.remainingBRL < 0 ? 'text-yellow-500' : 'text-primary'}`}>{formatCurrency(paymentSummary.remainingBRL)}</span>
+          <div className="text-sm grid grid-cols-2 gap-x-4 gap-y-2">
+            <span className="font-bold">Total Pago agora (R$):</span> <span className="font-bold">{formatCurrency(paymentSummary.totalPaidBRL)}</span>
+            <span className="font-bold text-primary">Saldo Final Estimado (R$):</span> <span className={`font-bold ${paymentSummary.remainingBRL < 0 ? 'text-yellow-500' : 'text-primary'}`}>{formatCurrency(paymentSummary.remainingBRL)}</span>
+            
+            <span className="font-bold text-yellow-700">Total Pago agora (Au):</span> <span className="font-bold text-yellow-700">{formatGrams(paymentSummary.totalPaidGold)}g</span>
+             <span className="font-bold text-yellow-700">Saldo Final (Au):</span> <span className={`font-bold text-yellow-700`}>{formatGrams(paymentSummary.remainingGold)}g</span>
           </div>
            {paymentSummary.remainingBRL < 0 && <p className="text-xs text-yellow-600">Este pagamento deixará um crédito de {formatCurrency(Math.abs(paymentSummary.remainingBRL))} para o cliente.</p>}
         </div>

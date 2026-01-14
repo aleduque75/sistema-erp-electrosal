@@ -131,6 +131,7 @@ export class TransacoesService {
         tipo: 'DEBITO',
         valor: amount || 0,
         goldAmount: goldAmount || 0,
+        goldPrice: quotation,
         moeda: 'BRL', // Assumindo BRL para transferências de valor
         descricao: description || `Transferência para ${destinationAccount.nome}`,
         dataHora: dataHora || new Date(),
@@ -146,6 +147,7 @@ export class TransacoesService {
         tipo: 'CREDITO',
         valor: amount || 0,
         goldAmount: goldAmount || 0,
+        goldPrice: quotation,
         moeda: 'BRL', // Assumindo BRL para transferências de valor
         descricao: description || `Transferência de ${sourceAccount.nome}`,
         dataHora: dataHora ? new Date(dataHora) : new Date(),
@@ -190,7 +192,7 @@ export class TransacoesService {
     tx?: any,
   ): Promise<Transacao> {
     return this.prisma.$transaction(async (prisma) => {
-      const { valor, goldAmount, mediaIds, fornecedorId, tipo, ...restData } = data;
+      const { valor, goldAmount, goldPrice, mediaIds, fornecedorId, tipo, ...restData } = data;
 
       const newTransacao = await prisma.transacao.create({
         data: {
@@ -199,6 +201,7 @@ export class TransacoesService {
           fornecedorId,
           valor: valor ?? 0,
           goldAmount: goldAmount,
+          goldPrice: goldPrice,
           organizationId,
           moeda: 'BRL',
         },
@@ -252,21 +255,97 @@ export class TransacoesService {
     data: UpdateTransacaoDto,
     organizationId: string,
   ): Promise<Transacao> {
-    await this.findOne(id, organizationId); // Garante a posse
+    const transacao = await this.findOne(id, organizationId); // Garante a posse
     const { mediaIds, ...restData } = data;
 
+    // Verificar se é uma transferência (tem transação vinculada)
+    if (transacao.linkedTransactionId) {
+      const linkedTransactionId = transacao.linkedTransactionId;
+      
+      // Preparar dados para atualização da transação vinculada
+      // Campos que devem ser sincronizados em uma transferência
+      const linkedData: Prisma.TransacaoUpdateInput = {};
+      if (restData.valor !== undefined) linkedData.valor = restData.valor;
+      if (restData.goldAmount !== undefined) linkedData.goldAmount = restData.goldAmount;
+      if (restData.goldPrice !== undefined) linkedData.goldPrice = restData.goldPrice;
+      if (restData.dataHora !== undefined) linkedData.dataHora = restData.dataHora;
+      if (restData.descricao !== undefined) linkedData.descricao = restData.descricao;
+      // Nota: contaContabilId geralmente é diferente em cada lado da transferência (ex: banco vs caixa),
+      // mas se a intenção for corrigir algo global, pode ser sincronizado. 
+      // Por padrão em transferências contábeis, as contas são diferentes. 
+      // Vamos assumir que se o usuário editou a conta contábil de UM lado da transferência,
+      // ele pode querer manter contas diferentes. ENTRETANTO, o pedido do usuário é "atualizar as 2".
+      // Se ele altera o valor, DEVE atualizar nas duas.
+      // Se ele altera a data, DEVE atualizar nas duas.
+      
+      await this.prisma.$transaction(async (tx) => {
+        // Atualiza a transação principal
+        await tx.transacao.update({
+          where: { id },
+          data: restData,
+        });
+
+        // Atualiza a transação vinculada com os dados sincronizáveis
+        if (Object.keys(linkedData).length > 0) {
+          await tx.transacao.update({
+            where: { id: linkedTransactionId },
+            data: linkedData,
+          });
+        }
+
+        if (mediaIds) {
+            // Atualizar mídias (se necessário, pode ser apenas na principal ou em ambas)
+            // Por simplicidade, vamos manter a lógica original de atualizar apenas na principal
+            // ou podemos replicar. Como mídias ocupam espaço, talvez seja melhor manter o link apenas na que foi editada
+            // ou duplicar a referência.
+            // O serviço de mídia associa pelo ID da transação.
+            
+            // Lógica original de atualização de mídia para a transação principal
+            await tx.media.updateMany({
+                where: { transacaoId: id },
+                data: { transacaoId: null },
+            });
+            // Re-associar é mais complexo dentro da transação sem o service, 
+            // então vamos fazer isso fora ou chamar o service se ele suportar prisma tx.
+            // O mediaService.associateMediaWithTransacao suporta tx (adicionado no create).
+            // Vamos assumir que sim.
+        }
+      });
+      
+      // Atualização de mídia fora da transação do prisma se o método não suportar, 
+      // mas idealmente deveria suportar. O método original `update` chamava o service.
+      if (mediaIds) {
+         // O service associateMediaWithTransacao espera o prisma client ou usa o this.prisma.
+         // Se não passarmos tx, ele usa this.prisma, o que é "ok" mas não atômico com o resto.
+         // Como o método original não usava transaction, vamos manter assim por enquanto para mídias.
+         
+         // Desassociar
+         await this.prisma.media.updateMany({
+            where: { transacaoId: id },
+            data: { transacaoId: null },
+         });
+         // Associar
+         await this.mediaService.associateMediaWithTransacao(
+            id,
+            mediaIds,
+            organizationId,
+         );
+      }
+
+      return this.findOne(id, organizationId);
+    }
+
+    // Se não for transferência, segue o fluxo normal
     const updatedTransacao = await this.prisma.transacao.update({
       where: { id },
       data: restData,
     });
 
     if (mediaIds) {
-      // Primeiro, desassociar todas as mídias existentes
       await this.prisma.media.updateMany({
         where: { transacaoId: id },
         data: { transacaoId: null },
       });
-      // Depois, associar as novas mídias
       await this.mediaService.associateMediaWithTransacao(
         id,
         mediaIds,
@@ -278,7 +357,37 @@ export class TransacoesService {
   }
 
   async remove(id: string, organizationId: string): Promise<Transacao> {
-    await this.findOne(id, organizationId); // Garante a posse
+    const transacao = await this.findOne(id, organizationId); // Garante a posse
+
+    if (transacao.linkedTransactionId) {
+      const linkedTransactionId = transacao.linkedTransactionId;
+      // É uma transferência, precisamos deletar ambas as partes
+      return this.prisma.$transaction(async (tx) => {
+        // 1. Quebrar o vínculo para permitir a deleção (devido a restrições de chave estrangeira)
+        // Precisamos atualizar ambas para null para evitar erros de FK em qualquer ordem de deleção
+        await tx.transacao.update({
+          where: { id },
+          data: { linkedTransactionId: null },
+        });
+
+        await tx.transacao.update({
+          where: { id: linkedTransactionId },
+          data: { linkedTransactionId: null },
+        });
+
+        // 2. Deletar a transação vinculada
+        await tx.transacao.delete({
+          where: { id: linkedTransactionId },
+        });
+
+        // 3. Deletar a transação original
+        return tx.transacao.delete({
+          where: { id },
+        });
+      });
+    }
+
+    // Se não for transferência, deleta apenas a transação alvo
     return this.prisma.transacao.delete({
       where: { id },
     });

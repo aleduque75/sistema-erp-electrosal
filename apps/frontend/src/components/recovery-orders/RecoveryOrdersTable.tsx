@@ -90,6 +90,7 @@ export function RecoveryOrdersTable({
     } catch (error) {
       toast.error("Falha ao iniciar ordem de recuperação.");
       console.error("Error starting recovery order:", error);
+      onRecoveryOrderUpdated(); // Refresh table to show actual status
     }
   };
 

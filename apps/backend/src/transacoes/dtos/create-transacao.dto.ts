@@ -14,6 +14,10 @@ export class CreateTransacaoDto {
   @IsOptional()
   goldAmount?: number;
 
+  @IsNumber()
+  @IsOptional()
+  goldPrice?: number;
+
   @IsEnum(TipoTransacaoPrisma)
   @IsNotEmpty()
   tipo: TipoTransacaoPrisma;

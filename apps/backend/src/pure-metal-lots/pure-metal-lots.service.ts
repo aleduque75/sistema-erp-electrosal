@@ -15,11 +15,15 @@ export class PureMetalLotsService {
   ) {}
 
   async create(organizationId: string, createPureMetalLotDto: CreatePureMetalLotDto, tx?: any) {
-    const { initialGrams, remainingGrams, entryDate, ...rest } = createPureMetalLotDto;
+    const { initialGrams, remainingGrams, entryDate, clientId, ...rest } = createPureMetalLotDto;
     const nextLotNumber = await this.entityCounterService.getNextNumber(EntityType.PURE_METAL_LOT, organizationId);
     const lotNumber = `LMP-${String(nextLotNumber).padStart(6, '0')}`;
 
-    const entryDateObject = entryDate ? new Date(`${entryDate}T12:00:00`) : new Date();
+    const entryDateObject = entryDate
+      ? entryDate.includes('T')
+        ? new Date(entryDate)
+        : new Date(`${entryDate}T12:00:00`)
+      : new Date();
 
     const prisma = tx || this.prisma;
 
@@ -45,6 +49,58 @@ export class PureMetalLotsService {
         notes: lot.notes || 'Entrada inicial do lote',
       },
     });
+
+    // Handle Client Advance Credit
+    if (rest.sourceType === 'ADIANTAMENTO_CLIENTE' && clientId) {
+      const client = await prisma.pessoa.findUnique({
+        where: { id: clientId, organizationId },
+      });
+
+      if (client) {
+        let metalAccount = await prisma.metalAccount.findFirst({
+          where: {
+            personId: client.id,
+            type: rest.metalType,
+            organizationId,
+          },
+        });
+
+        if (!metalAccount) {
+          metalAccount = await prisma.metalAccount.create({
+            data: {
+              organizationId,
+              personId: client.id,
+              type: rest.metalType,
+            },
+          });
+        }
+
+        await prisma.metalAccountEntry.create({
+          data: {
+            metalAccountId: metalAccount.id,
+            date: entryDateObject,
+            description: `Adiantamento de Metal - Lote ${lotNumber}`,
+            grams: initialGrams, // Credit is positive
+            type: 'CREDIT',
+            sourceId: lot.id,
+          },
+        });
+
+        // Also create a MetalCredit record to show in the "Créditos Clientes" page
+        await prisma.metalCredit.create({
+          data: {
+            organizationId,
+            clientId: client.id,
+            metalType: rest.metalType,
+            grams: initialGrams,
+            date: entryDateObject,
+            status: 'PENDING',
+            settledGrams: 0,
+            // chemicalAnalysisId is null by default now
+          }
+        });
+      }
+    }
 
     return lot;
   }
@@ -113,7 +169,9 @@ export class PureMetalLotsService {
     const { entryDate, ...rest } = updatePureMetalLotDto;
     const data: any = { ...rest };
     if (entryDate) {
-      data.entryDate = new Date(`${entryDate}T12:00:00`);
+      data.entryDate = entryDate.includes('T')
+        ? new Date(entryDate)
+        : new Date(`${entryDate}T12:00:00`);
     }
     return this.pureMetalLotsRepository.update(id, data);
   }

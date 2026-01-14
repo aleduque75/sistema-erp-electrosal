@@ -16,6 +16,8 @@ export interface PaymentTerm {
   installmentsDays: number[];
 }
 
+export type SaleStatus = 'PENDENTE' | 'CONFIRMADO' | 'A_SEPARAR' | 'SEPARADO' | 'FINALIZADO' | 'CANCELADO' | 'PAGO_PARCIALMENTE';
+
 export interface Sale {
   id: string;
   orderNumber: number;
@@ -27,7 +29,7 @@ export interface Sale {
   goldValue?: number;
   paymentMethod?: string;
   createdAt: string;
-  status: 'PENDENTE' | 'CONFIRMADO' | 'A_SEPARAR' | 'SEPARADO' | 'FINALIZADO' | 'CANCELADO';
+  status: SaleStatus;
   lucro?: number;
   salespersonId?: string;
   commissionAmount?: number;
@@ -35,6 +37,19 @@ export interface Sale {
   adjustment?: {
     netDiscrepancyGrams: number;
     paymentReceivedBRL: number;
+    paymentEquivalentGrams?: number;
+    saleExpectedGrams?: number;
+    grossDiscrepancyGrams?: number;
+    costsInBRL?: number;
+    costsInGrams?: number;
+    laborCostGrams?: number;
+    laborCostBRL?: number;
+    totalCostBRL?: number;
+    grossProfitBRL?: number;
+    otherCostsBRL?: number;
+    commissionBRL?: number;
+    netProfitBRL?: number;
+    paymentQuotation?: number;
   };
   accountsRec?: {
     id: string;

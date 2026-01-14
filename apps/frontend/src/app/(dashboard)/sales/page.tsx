@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { MoreHorizontal, PlusCircle, ArrowUpDown, Printer } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUpDown, Printer, RotateCcw, Truck, Copy } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -36,6 +36,7 @@ import { EditSaleModal } from './components/EditSaleModal';
 import { ConfirmSaleModal } from './components/ConfirmSaleModal';
 import { ApplyCommissionModal } from './components/ApplyCommissionModal';
 import { EditObservationModal } from './components/EditObservationModal';
+import { UpdateShippingCostModal } from './components/UpdateShippingCostModal';
 import { ReceivePaymentForm } from '../accounts-rec/components/receive-payment-form';
 import { Sale } from '@/types/sale';
 
@@ -64,6 +65,7 @@ export default function SalesPage() {
   const [saleToEditObservation, setSaleToEditObservation] = useState<Sale | null>(null);
   const [saleToConfirm, setSaleToConfirm] = useState<Sale | null>(null);
   const [saleToApplyCommission, setSaleToApplyCommission] = useState<Sale | null>(null);
+  const [saleToUpdateShipping, setSaleToUpdateShipping] = useState<Sale | null>(null);
   const [accountToReceive, setAccountToReceive] = useState<Sale['accountsRec'][0] | null>(null);
   const [rowSelection, setRowSelection] = useState({});
 
@@ -197,6 +199,63 @@ export default function SalesPage() {
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Falha ao separar a venda.');
     }
+  };
+
+  const handleCopyAsText = () => {
+    const selectedIndices = Object.keys(rowSelection).map(Number);
+    const selectedSales = sales.filter((_, index) => selectedIndices.includes(index));
+
+    if (selectedSales.length === 0) {
+      toast.info('Nenhuma venda selecionada.');
+      return;
+    }
+
+    const textToCopy = selectedSales.map(sale => {
+      const saleDate = new Date(sale.createdAt).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'UTC'
+      });
+
+      const pessoa = sale.pessoa as any; // Cast to any to access address fields if not typed in frontend yet
+      const addressParts = [
+        pessoa.logradouro,
+        pessoa.numero,
+        pessoa.complemento,
+        pessoa.bairro,
+        pessoa.cidade,
+        pessoa.uf
+      ].filter(Boolean);
+      const address = addressParts.join(', ');
+      const cep = pessoa.cep || '';
+      const doc = pessoa.cnpj || pessoa.cpf || '';
+
+      const itemsText = sale.saleItems.map(item => {
+        // Use 'gr' as unit if stockUnit is 'GRAMS', otherwise use the unit name or 'un'
+        let unit = 'gr'; 
+        if (item.product.stockUnit === 'KILOGRAMS') unit = 'kg';
+        else if (item.product.stockUnit === 'LITERS') unit = 'L';
+        else if (item.product.stockUnit === 'UNITS') unit = 'un';
+
+        const goldQty = (item.quantity * (item.product.goldValue || 0));
+        
+        // Format: 58,8 (using comma for decimals)
+        const formattedQty = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 4 }).format(item.quantity);
+        const formattedGoldQty = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 4 }).format(goldQty);
+
+        return `Produto: ${item.product.name}\nQtd ${item.product.name}: ${formattedQty} ${unit}  /  Qtd Au: ${formattedGoldQty}`;
+      }).join('\n');
+
+      return `Pedido: ${sale.orderNumber}  - Data: ${saleDate}  - Cliente:  ${sale.pessoa.name}
+Endereço NF: ${address}  - CEP: ${cep} 
+CNPJ/CPF: ${doc}
+${itemsText}`;
+    }).join('\n\n--------------------------------------------------\n\n');
+
+    navigator.clipboard.writeText(textToCopy)
+      .then(() => toast.success('Texto copiado para a área de transferência!'))
+      .catch(() => toast.error('Falha ao copiar texto.'));
   };
 
   const handleBulkConfirm = async () => {
@@ -348,6 +407,11 @@ export default function SalesPage() {
                 <DropdownMenuItem onClick={() => setSaleToApplyCommission(sale)}>
                   Incluir Comissão
                 </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={() => setSaleToUpdateShipping(sale)}>
+                  <Truck className="mr-2 h-4 w-4" />
+                  Incluir/Alterar Frete
+                </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
 
@@ -394,22 +458,27 @@ export default function SalesPage() {
     <div className="space-y-4 p-4 md:p-8">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Vendas</h1>
-        <Dialog open={isNewSaleModalOpen} onOpenChange={setIsNewSaleModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nova Venda
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle>Registrar Nova Venda</DialogTitle>
-            </DialogHeader>
-            <div className="flex-1 overflow-y-auto">
-              <NewSaleForm onSave={handleSaveSuccess} />
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => fetchSales()} title="Atualizar lista">
+            <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Dialog open={isNewSaleModalOpen} onOpenChange={setIsNewSaleModalOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Nova Venda
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
+              <DialogHeader>
+                <DialogTitle>Registrar Nova Venda</DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 overflow-y-auto">
+                <NewSaleForm onSave={handleSaveSuccess} />
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -459,9 +528,15 @@ export default function SalesPage() {
         <CardContent className="pt-6">
           <div className="flex items-center gap-2 mb-4">
             {Object.keys(rowSelection).length > 0 && (
-              <Button onClick={handleBulkConfirm}>
-                Confirmar {Object.keys(rowSelection).length} Venda(s)
-              </Button>
+              <>
+                <Button onClick={handleBulkConfirm}>
+                  Confirmar {Object.keys(rowSelection).length} Venda(s)
+                </Button>
+                <Button variant="outline" onClick={handleCopyAsText}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copiar Texto
+                </Button>
+              </>
             )}
           </div>
           <DataTable
@@ -516,6 +591,15 @@ export default function SalesPage() {
           open={!!saleToApplyCommission}
           onOpenChange={(open) => !open && setSaleToApplyCommission(null)}
           onSuccess={() => { fetchSales(); setSaleToApplyCommission(null); }}
+        />
+      )}
+
+      {saleToUpdateShipping && (
+        <UpdateShippingCostModal
+          sale={saleToUpdateShipping}
+          open={!!saleToUpdateShipping}
+          onOpenChange={(open) => !open && setSaleToUpdateShipping(null)}
+          onSave={fetchSales}
         />
       )}
 

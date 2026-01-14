@@ -502,6 +502,7 @@ model ContaCorrente {
   initialBalanceBRL  Decimal           @default(0) @db.Decimal(10, 2)
   initialBalanceGold Decimal           @default(0) @db.Decimal(10, 4)
   type               ContaCorrenteType @default(BANCO)
+  isActive           Boolean           @default(true) // Adicionado
   contaContabilId    String?
   accountsRec        AccountRec[]
   organization       Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -727,6 +728,7 @@ model AnaliseQuimica {
   dataFinalizacaoRecuperacao  DateTime?
   observacoes                 String?
   ordemDeRecuperacaoId        String?
+  isWriteOff                  Boolean                    @default(false)
   dataCriacao                 DateTime                   @default(now())
   dataAtualizacao             DateTime                   @updatedAt
   cliente                     Pessoa?                    @relation("PessoaAnalisesQuimicas", fields: [clienteId], references: [id], onDelete: Cascade)
@@ -744,7 +746,7 @@ model MetalCredit {
   id                 String            @id @default(uuid())
   organizationId     String
   clientId           String
-  chemicalAnalysisId String            @unique
+  chemicalAnalysisId String?           @unique
   metalType          TipoMetal         @default(AU)
   grams              Decimal           @db.Decimal(10, 4)
   date               DateTime          @default(now())
@@ -752,7 +754,7 @@ model MetalCredit {
   updatedAt          DateTime          @updatedAt
   status             MetalCreditStatus @default(PENDING)
   settledGrams       Decimal?          @db.Decimal(10, 4) @default(0)
-  chemicalAnalysis   AnaliseQuimica    @relation(fields: [chemicalAnalysisId], references: [id])
+  chemicalAnalysis   AnaliseQuimica?   @relation(fields: [chemicalAnalysisId], references: [id])
   client             Pessoa            @relation(fields: [clientId], references: [id])
   organization       Organization      @relation(fields: [organizationId], references: [id])
 

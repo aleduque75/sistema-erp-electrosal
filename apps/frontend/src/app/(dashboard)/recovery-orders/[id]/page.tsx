@@ -1,7 +1,5 @@
 'use client';
 
-import RecoveryOrderDetails from "@/components/recovery-orders/RecoveryOrderDetails";
-
 export default function RecoveryOrderDetailsPage() {
-  return <RecoveryOrderDetails />;
+  return <div>Página em desenvolvimento. Use a listagem principal para ver detalhes via modal.</div>;
 }

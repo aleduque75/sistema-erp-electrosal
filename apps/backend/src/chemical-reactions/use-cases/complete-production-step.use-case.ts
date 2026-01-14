@@ -31,7 +31,9 @@ export class CompleteProductionStepUseCase {
 
   async execute(command: CompleteProductionStepCommand): Promise<any> {
     const { organizationId, reactionId, dto } = command;
-    const { outputProductGrams, outputBasketLeftoverGrams, batchNumber: manualBatchNumber } = dto;
+    const { outputProductGrams, outputBasketLeftoverGrams, batchNumber: manualBatchNumber, reactionDate } = dto;
+
+    const completionDate = reactionDate ? new Date(reactionDate) : new Date();
 
     return this.prisma.$transaction(async (tx) => {
       const reaction = await tx.chemical_reactions.findUnique({
@@ -102,7 +104,7 @@ export class CompleteProductionStepUseCase {
           costPrice: costPricePerGramOfProduct.toDecimalPlaces(2),
           sourceType: 'REACTION',
           sourceId: reaction.id,
-          receivedDate: new Date(),
+          receivedDate: completionDate,
         },
       });
 
@@ -115,6 +117,7 @@ export class CompleteProductionStepUseCase {
           quantity: stockQuantity, // Positive quantity for stock increase
           type: 'ENTRADA_REACAO', // Indicates it came from a reaction
           sourceDocument: `CRIACAO_LOTE #${batchNumber}`,
+          createdAt: completionDate,
         },
       });
 
@@ -140,6 +143,7 @@ export class CompleteProductionStepUseCase {
             remainingGrams: goldInBasketLeftover.toNumber(),
             purity: 1, // Assuming 100% purity for leftovers
             notes: `CESTO LOTE ${batchNumber}`,
+            entryDate: completionDate.toISOString(),
           },
           tx,
         );
@@ -155,6 +159,7 @@ export class CompleteProductionStepUseCase {
             remainingGrams: outputDistillateLeftoverGrams,
             purity: 1, // Assuming 100% purity for leftovers
             notes: `DESTILADO LOTE ${batchNumber}`,
+            entryDate: completionDate.toISOString(),
           },
           tx,
         );
@@ -170,6 +175,7 @@ export class CompleteProductionStepUseCase {
           outputBasketLeftoverGrams: goldInBasketLeftover.toNumber(),
           outputDistillateLeftoverGrams: outputDistillateLeftoverGrams,
           productionBatchId: newInventoryLot.id,
+          reactionDate: completionDate,
         },
       });
 

@@ -39,6 +39,8 @@ import { Response } from 'express';
 
 import { Public } from '../auth/decorators/public.decorator';
 
+import { CalculateSaleAdjustmentUseCase } from './use-cases/calculate-sale-adjustment.use-case';
+
 @UseGuards(AuthGuard('jwt'))
 @Controller('sales')
 export class SalesController {
@@ -58,7 +60,17 @@ export class SalesController {
     private readonly receiveInstallmentPaymentUseCase: ReceiveInstallmentPaymentUseCase,
     private readonly generateSalePdfUseCase: GenerateSalePdfUseCase,
     private readonly applySaleCommissionUseCase: ApplySaleCommissionUseCase,
+    private readonly calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
   ) {}
+
+  @Post(':id/recalculate-adjustment')
+  async recalculateAdjustment(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') saleId: string,
+  ) {
+    await this.calculateSaleAdjustmentUseCase.execute(saleId, organizationId);
+    return { message: 'Ajuste da venda recalculado com sucesso.' };
+  }
 
   @Post(':id/apply-commission')
   async applyCommission(
@@ -201,7 +213,7 @@ export class SalesController {
   async updateFinancials(
     @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
-    @Body() body: { goldPrice?: number; feeAmount?: number },
+    @Body() body: { goldPrice?: number; feeAmount?: number; shippingCost?: number },
   ) {
     await this.salesService.updateFinancials(organizationId, id, body);
     return { message: 'Dados financeiros atualizados com sucesso.' };

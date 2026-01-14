@@ -67,6 +67,7 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
       dataFinalizacaoRecuperacao: analise.dataFinalizacaoRecuperacao,
       observacoes: analise.observacoes,
       ordemDeRecuperacaoId: analise.ordemDeRecuperacaoId,
+      isWriteOff: analise.isWriteOff,
     };
   }
 

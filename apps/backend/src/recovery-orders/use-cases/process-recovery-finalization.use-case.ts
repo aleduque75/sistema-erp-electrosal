@@ -173,6 +173,8 @@ export class ProcessRecoveryFinalizationUseCase {
               tipo: TipoTransacaoPrisma.DEBITO,
               dataHora: dataTransacao,
               contaContabilId: contaDebito.id,
+              goldAmount: auPuroRecuperadoGramas,
+              goldPrice: parseFloat(cotacao.buyPrice.toString()),
             }, organizationId);
 
             // Crédito (Registra o custo da produção/recuperação)
@@ -182,6 +184,8 @@ export class ProcessRecoveryFinalizationUseCase {
               tipo: TipoTransacaoPrisma.CREDITO,
               dataHora: dataTransacao,
               contaContabilId: contaCredito.id,
+              goldAmount: auPuroRecuperadoGramas,
+              goldPrice: parseFloat(cotacao.buyPrice.toString()),
             }, organizationId);
             this.logger.log(`Lançamento contábil de valorização de estoque gerado.`);
           }

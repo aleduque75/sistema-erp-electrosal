@@ -365,7 +365,7 @@ export function CreateRecoveryOrderModal({
                                   />
                                 </FormControl>
                                 <FormLabel className="font-normal cursor-pointer">
-                                  {analise.numeroAnalise} - {analise.cliente?.name || 'N/A'} ({analise.volumeOuPesoEntrada} {analise.unidadeEntrada})
+                                  {analise.numeroAnalise} - {analise.cliente?.name || 'N/A'} ({analise.metalType || 'AU'} Estimado: {analise.auEstimadoBrutoGramas || 0}g)
                                 </FormLabel>
                               </FormItem>
                             );

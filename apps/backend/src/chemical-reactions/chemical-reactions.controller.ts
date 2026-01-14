@@ -166,7 +166,8 @@ export class ChemicalReactionsController {
       where: { id, organizationId },
       include: {
         productionBatch: { include: { product: true } },
-        outputProduct: true, // Adicionar esta linha
+        outputProduct: true,
+        medias: true, // Incluir mídias
         lots: {
           include: {
             pureMetalLot: true,

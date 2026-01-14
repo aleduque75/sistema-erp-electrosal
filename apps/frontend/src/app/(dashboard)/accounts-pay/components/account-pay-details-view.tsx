@@ -71,11 +71,11 @@ export function AccountPayDetailsView({ account }: AccountPayDetailsViewProps) {
       startY: 82,
       head: [['Produto', 'Quantidade', 'Preço Unitário', 'Total']],
       body: purchaseOrder.items.map(item => [
-        item.product?.name || item.rawMaterial?.name,
+        item.product?.name || item.rawMaterial?.name || '',
         item.quantity,
         formatCurrency(item.price),
         formatCurrency(item.quantity * item.price),
-      ]),
+      ]) as any[][],
       theme: 'grid',
     });
 

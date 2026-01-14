@@ -164,7 +164,7 @@ export class GenerateChemicalReactionPdfUseCase {
       inputGoldGrams: reaction.inputGoldGrams,
       sourceLots: reaction.lots.map(l => ({
         lotNumber: l.pureMetalLot?.lotNumber || l.pureMetalLotId.substring(0, 8),
-        description: l.pureMetalLot?.description || '-',
+        description: l.pureMetalLot?.notes || l.pureMetalLot?.description || '-',
         gramsToUse: l.gramsToUse
       })),
       rawMaterials: reaction.rawMaterialsUsed.map(r => ({

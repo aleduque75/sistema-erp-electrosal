@@ -93,20 +93,23 @@ export class PayMetalCreditWithCashUseCase {
           dataHora: transactionDate,
           contaContabilId: settings.metalCreditPayableAccountId,
           goldAmount: gramsToSettle.negated().toNumber(),
+          goldPrice: quotationValue.toNumber(),
         },
         organizationId,
         tx,
       );
 
-      // Credit from the bank account
+      // Credit from the bank account (Should be DEBITO to reduce balance/money out)
       const creditTransaction = await this.transacoesService.create(
         {
-          tipo: TipoTransacaoPrisma.CREDITO,
+          tipo: TipoTransacaoPrisma.DEBITO,
           valor: finalAmountBRL.toNumber(),
           descricao: description,
           dataHora: transactionDate,
           contaContabilId: bankAccount.contaContabilId,
           contaCorrenteId: bankAccountId,
+          goldAmount: gramsToSettle.toNumber(),
+          goldPrice: quotationValue.toNumber(),
         },
         organizationId,
         tx,

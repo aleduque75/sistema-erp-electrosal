@@ -24,6 +24,7 @@ import { ProductionStepClientBlock } from "./[id]/components/production-step-cli
 import { AdjustPurityClientBlock } from "./[id]/components/adjust-purity-client-block";
 import { ChemicalReactionDetails } from "@/types/chemical-reaction";
 import { TipoMetal } from "@/types/tipo-metal";
+import { FlaskConical as FlaskIcon, Zap, CheckCircle2, Activity, ArrowUpRight } from "lucide-react";
 
 const statusVariantMap: { [key in ChemicalReactionDetails['status']]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
   STARTED: 'secondary',
@@ -137,6 +138,13 @@ export default function ChemicalReactionsPage() {
     return matchesStatus && matchesMetalType && matchesDate;
   });
 
+  const stats = {
+    total: filteredReactions.length,
+    inProcess: filteredReactions.filter(r => r.status !== 'COMPLETED' && r.status !== 'CANCELED').length,
+    completed: filteredReactions.filter(r => r.status === 'COMPLETED').length,
+    totalMetalUsed: filteredReactions.reduce((acc, r) => acc + (Number(r.auUsedGrams) || 0), 0),
+  };
+
   const columns: ColumnDef<ChemicalReactionDetails>[] = [
     {
       accessorKey: 'reactionNumber',
@@ -183,7 +191,7 @@ export default function ChemicalReactionsPage() {
     },
     {
       accessorKey: 'reactionDate',
-      header: 'Data de Início',
+      header: 'Data Ref.',
       cell: ({ row }) => {
         const date = new Date(row.getValue('reactionDate') as string);
         return <div>{date.toLocaleDateString('pt-BR')}</div>;
@@ -229,69 +237,112 @@ export default function ChemicalReactionsPage() {
 
   return (
     <>
-      <div className="space-y-4 p-4 md:p-8">
+      <div className="space-y-6 p-4 md:p-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">Reações Químicas</h1>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Produção & Reações</h1>
+            <p className="text-muted-foreground">Gerenciamento de reações químicas e produção de sais.</p>
+          </div>
           <Link href="/producao/reacoes-quimicas/nova">
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
+            <Button size="lg" className="shadow-md">
+              <PlusCircle className="mr-2 h-5 w-5" />
               Nova Reação
             </Button>
           </Link>
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Lista de Reações</CardTitle>
-            <CardDescription>Acompanhe todas as reações químicas em andamento e finalizadas.</CardDescription>
-            <div className="flex flex-wrap gap-4 mt-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium">Período</label>
-                <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+
+        {/* Summary Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="bg-background shadow-sm border-l-4 border-l-blue-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total de Reações</CardTitle>
+              <FlaskIcon className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
+              <p className="text-xs text-muted-foreground mt-1">No período filtrado</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-background shadow-sm border-l-4 border-l-yellow-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Em Processo</CardTitle>
+              <Activity className="h-4 w-4 text-yellow-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.inProcess}</div>
+              <p className="text-xs text-muted-foreground mt-1">Aguardando finalização</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-background shadow-sm border-l-4 border-l-green-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Finalizadas</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.completed}</div>
+              <p className="text-xs text-muted-foreground mt-1">Produção concluída</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-background shadow-sm border-l-4 border-l-purple-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Metal Utilizado</CardTitle>
+              <Zap className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalMetalUsed.toFixed(2)} g</div>
+              <p className="text-xs text-muted-foreground mt-1">Peso acumulado (AU/AG/RH)</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="shadow-md">
+          <CardHeader className="bg-muted/10">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <CardTitle>Histórico de Reações</CardTitle>
+                <CardDescription>Acompanhe o status e resultados de cada etapa da produção.</CardDescription>
               </div>
-              <div className="flex flex-col gap-1.5 min-w-[150px]">
-                <label className="text-xs font-medium">Tipo de Metal</label>
+              <div className="flex flex-wrap gap-2">
+                <DateRangePicker date={dateRange} onDateChange={setDateRange} />
                 <Select value={metalTypeFilter} onValueChange={setMetalTypeFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-[130px]">
                     <SelectValue placeholder="Metal" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">Todos</SelectItem>
+                    <SelectItem value="ALL">Todos Metais</SelectItem>
                     <SelectItem value={TipoMetal.AU}>Ouro (AU)</SelectItem>
                     <SelectItem value={TipoMetal.AG}>Prata (AG)</SelectItem>
                     <SelectItem value={TipoMetal.RH}>Ródio (RH)</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1.5 min-w-[180px]">
-                <label className="text-xs font-medium">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-[160px]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">Todos</SelectItem>
+                    <SelectItem value="ALL">Todos Status</SelectItem>
                     {Object.entries(statusLabelMap).map(([key, label]) => (
                       <SelectItem key={key} value={key}>{label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="flex items-end">
                 {(metalTypeFilter !== "ALL" || statusFilter !== "ALL" || dateRange) && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters} className="h-10">
-                    <X className="mr-2 h-4 w-4" />
-                    Limpar Filtros
+                  <Button variant="outline" size="icon" onClick={clearFilters} className="shrink-0" title="Limpar Filtros">
+                    <X className="h-4 w-4" />
                   </Button>
                 )}
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <DataTable 
               columns={columns} 
               data={filteredReactions} 
               filterColumnId="reactionNumber"
-              filterPlaceholder="Pesquisar por número..."
+              filterPlaceholder="Filtrar por número da reação..."
               isLoading={isLoading}
             />
           </CardContent>

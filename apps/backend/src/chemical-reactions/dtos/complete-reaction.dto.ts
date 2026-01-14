@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsDateString } from 'class-validator';
 
 export class CompleteReactionDto {
   @IsNumber()
@@ -16,4 +16,8 @@ export class CompleteReactionDto {
   @IsString()
   @IsOptional()
   batchNumber?: string;
+
+  @IsOptional()
+  @IsDateString()
+  reactionDate?: string;
 }

@@ -281,6 +281,16 @@ export class CreateSaleUseCase {
           },
         }),
       ),
+      ...sale.saleItems.map((item: any) =>
+        this.prisma.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
+        }),
+      ),
       this.prisma.stockMovement.createMany({
         data: stockMovementsToCreate,
       }),

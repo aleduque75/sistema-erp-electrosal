@@ -4,9 +4,10 @@ import {
   IsOptional,
   IsString,
   Min,
-  IsEnum, // Adicionado
+  IsEnum,
+  IsBoolean, // Adicionado
 } from 'class-validator';
-import { ContaCorrenteType } from '@prisma/client'; // Adicionado
+import { ContaCorrenteType } from '@prisma/client';
 
 export class CreateContaCorrenteDto {
   @IsString()
@@ -18,12 +19,12 @@ export class CreateContaCorrenteDto {
   numeroConta: string;
 
   @IsString()
-  @IsOptional()
+  @IsOptional() // Tornado opcional, assume default BRL se não enviado
   agencia?: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'A moeda é obrigatório.' })
-  moeda: string;
+  @IsOptional() // Tornado opcional
+  moeda?: string;
 
   @IsNumber()
   @IsOptional()
@@ -38,7 +39,15 @@ export class CreateContaCorrenteDto {
   @Min(0)
   limite?: number;
 
-  @IsEnum(ContaCorrenteType) // Adicionado
+  @IsEnum(ContaCorrenteType)
   @IsNotEmpty({ message: 'O tipo da conta é obrigatório.' })
-  type: ContaCorrenteType; // Adicionado
+  type: ContaCorrenteType;
+
+  @IsString() // Adicionado
+  @IsOptional()
+  contaContabilId?: string;
+
+  @IsBoolean() // Adicionado
+  @IsOptional()
+  isActive?: boolean;
 }

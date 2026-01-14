@@ -26,10 +26,16 @@ export class PessoaService {
     organizationId: string,
     role?: 'CLIENT' | 'FORNECEDOR' | 'FUNCIONARIO',
   ): Promise<Pessoa[]> {
+    const includeRoles = {
+      client: true,
+      fornecedor: true,
+      funcionario: true,
+    };
+
     if (role === 'CLIENT') {
       const clients = await this.prisma.client.findMany({
         where: { organizationId },
-        include: { pessoa: true },
+        include: { pessoa: { include: includeRoles } },
         orderBy: { pessoa: { name: 'asc' } },
       });
       return clients.map((c) => c.pessoa);
@@ -38,7 +44,7 @@ export class PessoaService {
       this.logger.log(`Buscando fornecedores para a organização: ${organizationId}`);
       const fornecedores = await this.prisma.fornecedor.findMany({
         where: { organizationId },
-        include: { pessoa: true },
+        include: { pessoa: { include: includeRoles } },
         orderBy: { pessoa: { name: 'asc' } },
       });
       this.logger.log(`Encontrados ${fornecedores.length} fornecedores.`);
@@ -47,7 +53,7 @@ export class PessoaService {
     if (role === 'FUNCIONARIO') {
       const funcionarios = await this.prisma.funcionario.findMany({
         where: { organizationId },
-        include: { pessoa: true },
+        include: { pessoa: { include: includeRoles } },
         orderBy: { pessoa: { name: 'asc' } },
       });
       return funcionarios.map((f) => f.pessoa);
@@ -56,6 +62,7 @@ export class PessoaService {
     // Fallback para buscar todas as pessoas se nenhum role for especificado
     return this.prisma.pessoa.findMany({
       where: { organizationId },
+      include: includeRoles,
       orderBy: {
         name: 'asc',
       },

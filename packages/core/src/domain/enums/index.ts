@@ -9,3 +9,4 @@ export * from './papel-usuario.enum';
 export * from './tipo-documento-fiscal.enum';
 export * from './tipo-pessoa.enum';
 export * from './conta-corrente-type.enum';
+export * from './sale-status.enum';

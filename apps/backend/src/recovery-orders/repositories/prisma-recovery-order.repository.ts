@@ -157,6 +157,10 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
 
   async findById(id: string, organizationId: string): Promise<RecoveryOrder | null> {
     const dbRecoveryOrder = await this.prisma.recoveryOrder.findFirst({
+      where: {
+        id,
+        organizationId,
+      },
       include: {
         salesperson: { select: { name: true } },
         rawMaterialsUsed: {

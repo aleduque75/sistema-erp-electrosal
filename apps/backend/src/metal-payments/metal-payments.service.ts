@@ -66,6 +66,7 @@ export class MetalPaymentsService {
           dataHora: transactionDate,
           contaContabilId: settings.productionCostAccountId,
           goldAmount: new Decimal(grams).toNumber(),
+          goldPrice: quotation.buyPrice.toNumber(),
         },
         organizationId,
         tx,
@@ -80,6 +81,7 @@ export class MetalPaymentsService {
           dataHora: transactionDate,
           contaContabilId: settings.metalStockAccountId,
           goldAmount: new Decimal(grams).negated().toNumber(), // Negativo para indicar saída
+          goldPrice: quotation.buyPrice.toNumber(),
         },
         organizationId,
         tx,

@@ -66,7 +66,7 @@ export function PayAccountForm({ account, onSave }: PayAccountFormProps) {
   const [pureMetalLots, setPureMetalLots] = useState<PureMetalLot[]>([]);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       paymentMethod: "BRL",
       paidAmount: account.amount,
@@ -81,28 +81,37 @@ export function PayAccountForm({ account, onSave }: PayAccountFormProps) {
   const watchPaidAt = watch("paidAt");
   const gramsToPay = watch("paymentMethod") === "METAL" ? watch("gramsToPay") : 0;
   const metalQuotation = watch("paymentMethod") === "METAL" ? watch("quotation") : 0;
-  const paidInBRL = paymentMethod === 'METAL' ? gramsToPay * metalQuotation : watch('paidAmount');
+  const paidInBRL = paymentMethod === 'METAL' ? (gramsToPay || 0) * (metalQuotation || 0) : watch('paidAmount');
 
 
   useEffect(() => {
     setIsLoading(true);
     Promise.all([
       api.get("/contas-correntes"),
-      api.get(`/quotations/find-by-date?date=${watchPaidAt}&metal=AU`),
       api.get("/pure-metal-lots"),
-    ]).then(([contasCorrentesRes, quotationRes, pureMetalLotsRes]) => {
+    ]).then(([contasCorrentesRes, pureMetalLotsRes]) => {
       setContaCorrenteOptions(contasCorrentesRes.data.map((cc: any) => ({ value: cc.id, label: cc.nome })));
       setPureMetalLots(pureMetalLotsRes.data);
-
-      if (paymentMethod === "BRL" && quotationRes.data) {
-        setValue("quotation", quotationRes.data.buyPrice);
-      }
     }).catch(() => {
-      toast.error("Falha ao carregar dados iniciais.");
+      toast.error("Falha ao carregar opções.");
     }).finally(() => {
       setIsLoading(false);
     });
-  }, [watchPaidAt, setValue, paymentMethod]);
+  }, []);
+
+  useEffect(() => {
+    if (!watchPaidAt) return;
+
+    api.get(`/quotations/by-date?date=${watchPaidAt}&metal=AU`)
+      .then((res) => {
+        if (res.data) {
+          setValue("quotation", res.data.buyPrice);
+        }
+      })
+      .catch((err) => {
+        console.error("Falha ao carregar cotação:", err);
+      });
+  }, [watchPaidAt, setValue]);
 
   const onSubmit = async (data: FormValues) => {
     try {

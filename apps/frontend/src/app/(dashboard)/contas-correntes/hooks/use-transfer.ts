@@ -15,7 +15,10 @@ export function useTransfer(transferType: "BRL" | "GOLD", currentAccountId: stri
     setIsLoading(true);
     try {
       const response = await api.get("/contas-correntes", {
-        params: { moeda: transferType === "BRL" ? "BRL" : "XAU" },
+        params: { 
+          moeda: transferType === "BRL" ? "BRL" : "XAU",
+          activeOnly: true // Filtra apenas contas ativas
+        },
       });
       // Filter out the current account from the list
       const filteredAccounts = response.data.filter(

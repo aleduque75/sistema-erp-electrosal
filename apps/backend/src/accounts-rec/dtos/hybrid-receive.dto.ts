@@ -21,6 +21,14 @@ class FinancialPaymentDto {
   @IsNumber()
   @Min(0.01)
   amount: number;
+
+  @IsOptional()
+  @IsDateString()
+  receivedAt?: string;
+
+  @IsOptional()
+  @IsNumber()
+  quotation?: number;
 }
 
 class MetalCreditPaymentDto {
@@ -31,6 +39,14 @@ class MetalCreditPaymentDto {
   @IsNumber()
   @Min(0.000001)
   amountInGrams: number;
+
+  @IsOptional()
+  @IsDateString()
+  receivedAt?: string;
+
+  @IsOptional()
+  @IsNumber()
+  quotation?: number;
 }
 
 class MetalPaymentDto {
@@ -45,6 +61,14 @@ class MetalPaymentDto {
   @IsNumber()
   @Min(0.01)
   purity: number;
+
+  @IsOptional()
+  @IsDateString()
+  receivedAt?: string;
+
+  @IsOptional()
+  @IsNumber()
+  quotation?: number;
 }
 
 export class TransferToOtherMetalCreditDto {

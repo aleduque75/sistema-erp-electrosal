@@ -61,6 +61,10 @@ export const revertAnaliseQuimicaToPendingApproval = async (id: string): Promise
   await apiClient.patch(`/analises-quimicas/${id}/revert-to-pending-approval`);
 };
 
+export const baixarResiduoAnalise = async (id: string): Promise<void> => {
+  await apiClient.patch(`/analises-quimicas/${id}/baixar-residuo`);
+};
+
 export const getAnaliseQuimicaPdf = async (id: string): Promise<Blob> => {
   const response = await apiClient.get(`/analises-quimicas/${id}/pdf`, {
     responseType: "blob",

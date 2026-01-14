@@ -15,9 +15,10 @@ import { QuotationForm } from "./QuotationForm"; // Updated import
 
 interface NovaQuotationModalProps { // Renamed interface
   onSaveSuccess: () => void; // Renamed prop
+  trigger?: React.ReactNode;
 }
 
-export function NovaQuotationModal({ onSaveSuccess }: NovaQuotationModalProps) { // Renamed function and prop
+export function NovaQuotationModal({ onSaveSuccess, trigger }: NovaQuotationModalProps) { // Renamed function and prop
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSave = () => {
@@ -28,9 +29,11 @@ export function NovaQuotationModal({ onSaveSuccess }: NovaQuotationModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Nova Cotação
-        </Button>
+        {trigger || (
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" /> Nova Cotação
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>

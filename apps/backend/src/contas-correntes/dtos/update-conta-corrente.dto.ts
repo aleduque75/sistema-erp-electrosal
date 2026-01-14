@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, Min, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min, IsEnum, IsBoolean } from 'class-validator';
 import { ContaCorrenteType } from '@prisma/client';
 
 export class UpdateContaCorrenteDto {
@@ -34,4 +34,8 @@ export class UpdateContaCorrenteDto {
   @IsString()
   @IsOptional()
   contaContabilId?: string;
+
+  @IsBoolean() // Adicionado
+  @IsOptional()
+  isActive?: boolean;
 }

@@ -7,6 +7,7 @@ import { GerarPdfContasAPagarUseCase } from './use-cases/gerar-pdf-contas-a-paga
 
 import { GenerateTrialBalanceUseCase } from './use-cases/generate-trial-balance.use-case'; // Importar
 import { GenerateTrialBalancePdfUseCase } from './use-cases/generate-trial-balance-pdf.use-case'; // Importar NOVO
+import { GetFinancialBalanceReportUseCase } from './use-cases/get-financial-balance-report.use-case';
 
 @Module({
   controllers: [ReportsController],
@@ -17,6 +18,7 @@ import { GenerateTrialBalancePdfUseCase } from './use-cases/generate-trial-balan
     GerarPdfContasAPagarUseCase,
     GenerateTrialBalanceUseCase, // Adicionar
     GenerateTrialBalancePdfUseCase, // Adicionar NOVO
+    GetFinancialBalanceReportUseCase,
   ],
 })
 export class ReportsModule {}

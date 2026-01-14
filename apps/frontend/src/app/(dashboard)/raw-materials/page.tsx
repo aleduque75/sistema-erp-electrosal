@@ -95,7 +95,20 @@ export default function RawMaterialsPage() {
   };
 
   const columns: ColumnDef<RawMaterial>[] = [
-    { accessorKey: "name", header: "Nome" },
+    {
+      accessorKey: "name",
+      header: "Nome",
+      cell: ({ row }) => (
+        <div className="flex flex-col">
+          <span className="font-medium">{row.original.name}</span>
+          {row.original.description && (
+            <span className="text-[10px] text-muted-foreground leading-tight">
+              {row.original.description}
+            </span>
+          )}
+        </div>
+      ),
+    },
     {
       accessorKey: "cost",
       header: "Custo",

@@ -8,16 +8,27 @@ import { GetAccountsPayableReportQueryDto } from './dto/get-accounts-payable-rep
 import { GerarPdfContasAPagarUseCase } from './use-cases/gerar-pdf-contas-a-pagar.use-case';
 import { GenerateTrialBalancePdfUseCase } from './use-cases/generate-trial-balance-pdf.use-case'; // Importar NOVO
 import { Response } from 'express';
+import { GetFinancialBalanceReportUseCase } from './use-cases/get-financial-balance-report.use-case';
+import { GetFinancialBalanceReportDto } from './dto/get-financial-balance-report.dto';
 
 @Controller('reports')
-// @UseGuards(JwtAuthGuard) // Removido temporariamente para depuração
+@UseGuards(JwtAuthGuard)
 export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,
     private readonly gerarPdfContasAPagarUseCase: GerarPdfContasAPagarUseCase,
     private readonly generateTrialBalanceUseCase: GenerateTrialBalanceUseCase, // Injetar
     private readonly generateTrialBalancePdfUseCase: GenerateTrialBalancePdfUseCase, // Injetar NOVO
+    private readonly getFinancialBalanceReportUseCase: GetFinancialBalanceReportUseCase,
   ) {}
+
+  @Get('financial-balance')
+  async getFinancialBalanceReport(
+    @CurrentUser('orgId') organizationId: string,
+    @Query() query: GetFinancialBalanceReportDto,
+  ) {
+    return this.getFinancialBalanceReportUseCase.execute(organizationId, query);
+  }
 
   @Get('accounts-payable')
   getAccountsPayableReport(
@@ -50,8 +61,7 @@ export class ReportsController {
 
   @Get('trial-balance/pdf') // NOVO ENDPOINT
   async getTrialBalanceReportPdf(
-    // @CurrentUser('organizationId') organizationId: string,
-    organizationId: '2a5bb448-056b-4b87-b02f-fec691dd658d',
+    @CurrentUser('orgId') organizationId: string,
     @Query() query: GetTrialBalanceReportDto,
     @Res() res: Response,
   ) {

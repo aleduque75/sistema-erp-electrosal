@@ -13,6 +13,7 @@ import {
   PlusCircle,
   GitCommitHorizontal,
   Info,
+  RotateCcw,
 } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { addDays } from "date-fns";
@@ -63,6 +64,7 @@ interface AccountPay {
   paid: boolean;
   paidAt?: string | null;
   isInstallment?: boolean;
+  createdAt: string; // Adicionado
   fornecedorId?: string | null;
   fornecedor?: {
     pessoa: {
@@ -94,7 +96,7 @@ export default function AccountsPayPage() {
   });
 
   const [filter, setFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("pending");
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [accountToEdit, setAccountToEdit] = useState<AccountPay | null>(null);
@@ -325,6 +327,9 @@ export default function AccountsPayPage() {
               </SelectContent>
             </Select>
             <DateRangePicker date={date} onDateChange={setDate} />
+            <Button variant="ghost" size="icon" onClick={() => fetchAccounts()} title="Atualizar lista">
+              <RotateCcw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </Button>
         </div>
 
         <Card>

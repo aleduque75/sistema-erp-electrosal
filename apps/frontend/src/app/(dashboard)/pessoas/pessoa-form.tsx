@@ -119,7 +119,7 @@ export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
 
   useEffect(() => {
     if (initialData) {
-      const initialRoles = [];
+      const initialRoles: string[] = [];
       if (initialData.client) initialRoles.push("CLIENT");
       if (initialData.fornecedor) initialRoles.push("FORNECEDOR");
       if (initialData.funcionario) initialRoles.push("FUNCIONARIO");
@@ -173,140 +173,86 @@ export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {/* --- DADOS PESSOAIS --- */}
-        <FormField
-          name="name"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nome Completo</FormLabel>
-              <FormControl>
-                <Input placeholder="Nome da pessoa" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* --- TIPO DE PESSOA --- */}
-        <FormField
-          name="type"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tipo de Pessoa</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="FISICA">Pessoa Física</SelectItem>
-                  <SelectItem value="JURIDICA">Pessoa Jurídica</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          name="email"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder="email@exemplo.com" {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        
+        {/* --- TIPO E PAPÉIS --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
-            name="cpf"
+            name="type"
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>CPF</FormLabel>
-                <FormControl>
-                  <Input placeholder="000.000.000-00" {...field} value={field.value ?? ''}/>
-                </FormControl>
+                <FormLabel>Tipo de Pessoa</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="FISICA">Pessoa Física</SelectItem>
+                    <SelectItem value="JURIDICA">Pessoa Jurídica</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <FormField
-            name="phone"
+            name="roles"
             control={form.control}
-            render={({ field }) => (
+            render={() => (
               <FormItem>
-                <FormLabel>Telefone</FormLabel>
-                <FormControl>
-                  <Input placeholder="(11) 99999-9999" {...field} value={field.value ?? ''}/>
-                </FormControl>
+                <FormLabel className="mb-2 block">Papéis (Funções no Sistema)</FormLabel>
+                <div className="flex flex-wrap gap-2">
+                  {rolesDisponiveis.map((role) => (
+                    <FormField
+                      key={role.id}
+                      name="roles"
+                      control={form.control}
+                      render={({ field }) => {
+                        const isChecked = field.value?.includes(role.id);
+                        return (
+                          <FormItem key={role.id} className="space-y-0">
+                            <FormControl>
+                              <div
+                                onClick={() => {
+                                  const currentRoles = field.value || [];
+                                  const newRoles = isChecked
+                                    ? currentRoles.filter((value) => value !== role.id)
+                                    : [...currentRoles, role.id];
+                                  field.onChange(newRoles);
+                                }}
+                                className={`
+                                  cursor-pointer px-4 py-2 rounded-md border text-sm font-medium transition-colors
+                                  ${isChecked 
+                                    ? "bg-primary text-primary-foreground border-primary" 
+                                    : "bg-background hover:bg-muted text-muted-foreground border-input"}
+                                `}
+                              >
+                                {role.label}
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
 
-        {/* --- PAPÉIS --- */}
-        <FormField
-          name="roles"
-          control={form.control}
-          render={() => (
-            <FormItem>
-              <FormLabel>Papéis</FormLabel>
-              <div className="flex items-center space-x-4">
-                {rolesDisponiveis.map((role) => (
-                  <FormField
-                    key={role.id}
-                    name="roles"
-                    control={form.control}
-                    render={({ field }) => {
-                      return (
-                        <FormItem
-                          key={role.id}
-                          className="flex flex-row items-start space-x-3 space-y-0"
-                        >
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(role.id)}
-                              onCheckedChange={(checked) => {
-                                const currentRoles = field.value || [];
-                                const newRoles = checked
-                                  ? [...currentRoles, role.id]
-                                  : currentRoles.filter(
-                                      (value) => value !== role.id
-                                    );
-                                field.onChange(newRoles);
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            {role.label}
-                          </FormLabel>
-                        </FormItem>
-                      );
-                    }}
-                  />
-                ))}
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         {roles.includes("FORNECEDOR") && (
           <FormField
             name="defaultContaContabilId"
             control={form.control}
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Conta Contábil Padrão (Fornecedor)</FormLabel>
+              <FormItem className="bg-muted/50 p-4 rounded-md border">
+                <FormLabel>Conta Contábil Padrão (Para Fornecedor)</FormLabel>
                 <FormControl>
                   <Combobox
                     options={despesaAccounts}
@@ -323,9 +269,73 @@ export function PessoaForm({ initialData, onSave }: PessoaFormProps) {
           />
         )}
 
+        {/* --- DADOS PESSOAIS --- */}
+        <div>
+          <h3 className="text-lg font-medium mb-4 border-b pb-2">Dados Pessoais</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+                <FormField
+                name="name"
+                control={form.control}
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Nome Completo / Razão Social</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Nome da pessoa ou empresa" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+            
+            <FormField
+            name="email"
+            control={form.control}
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                    <Input placeholder="email@exemplo.com" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            
+            <FormField
+                name="phone"
+                control={form.control}
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Telefone</FormLabel>
+                    <FormControl>
+                    <Input placeholder="(11) 99999-9999" {...field} value={field.value ?? ''}/>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+
+            <FormField
+                name="cpf"
+                control={form.control}
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>CPF / CNPJ</FormLabel>
+                    <FormControl>
+                    <Input placeholder="000.000.000-00" {...field} value={field.value ?? ''}/>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+          </div>
+        </div>
+
         {/* --- ENDEREÇO --- */}
-        <div className="border-t pt-4 mt-4">
-          <h3 className="text-lg font-medium mb-4">Endereço</h3>
+        <div>
+          <h3 className="text-lg font-medium mb-4 border-b pb-2">Endereço</h3>
           <div className="space-y-4">
             <FormField
               name="cep"

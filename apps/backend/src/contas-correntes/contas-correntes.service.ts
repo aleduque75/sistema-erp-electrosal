@@ -19,17 +19,24 @@ export class ContasCorrentesService {
         nome: data.nome,
         numeroConta: data.numeroConta,
         agencia: data.agencia,
-        moeda: data.moeda,
+        moeda: data.moeda || 'BRL', // Default explícito se não vier
         initialBalanceBRL: data.initialBalanceBRL || 0,
         initialBalanceGold: data.initialBalanceGold || 0,
         organizationId: organizationId,
-        type: data.type, // Adicionado
+        type: data.type,
+        contaContabilId: data.contaContabilId || null, // Adicionado
+        isActive: data.isActive ?? true, // Adicionado (default true)
       },
     });
   }
 
-  async findAll(organizationId: string, types?: ContaCorrenteType | ContaCorrenteType[]): Promise<ContaCorrente[]> {
+  async findAll(organizationId: string, types?: ContaCorrenteType | ContaCorrenteType[], activeOnly?: boolean) {
     const where: Prisma.ContaCorrenteWhereInput = { organizationId, deletedAt: null };
+    
+    if (activeOnly) {
+      where.isActive = true;
+    }
+
     if (types) {
       if (Array.isArray(types)) {
         where.type = { in: types };
@@ -37,9 +44,49 @@ export class ContasCorrentesService {
         where.type = types;
       }
     }
-    return this.prisma.contaCorrente.findMany({
+
+    const contas = await this.prisma.contaCorrente.findMany({
       where,
       orderBy: { nome: 'asc' },
+    });
+
+    // Buscar agregados de transações para todas as contas encontradas
+    const contaIds = contas.map(c => c.id);
+    const agregados = await this.prisma.transacao.groupBy({
+      by: ['contaCorrenteId', 'tipo'],
+      where: {
+        contaCorrenteId: { in: contaIds },
+      },
+      _sum: {
+        valor: true,
+        goldAmount: true,
+      },
+    });
+
+    // Mapear saldos
+    return contas.map(conta => {
+      const creditosBRL = agregados
+        .find(a => a.contaCorrenteId === conta.id && a.tipo === 'CREDITO')
+        ?._sum.valor?.toNumber() || 0;
+      const debitosBRL = agregados
+        .find(a => a.contaCorrenteId === conta.id && a.tipo === 'DEBITO')
+        ?._sum.valor?.toNumber() || 0;
+
+      const creditosGold = agregados
+        .find(a => a.contaCorrenteId === conta.id && a.tipo === 'CREDITO')
+        ?._sum.goldAmount?.toNumber() || 0;
+      const debitosGold = agregados
+        .find(a => a.contaCorrenteId === conta.id && a.tipo === 'DEBITO')
+        ?._sum.goldAmount?.toNumber() || 0;
+
+      const saldoAtualBRL = conta.initialBalanceBRL.toNumber() + creditosBRL - debitosBRL;
+      const saldoAtualGold = conta.initialBalanceGold.toNumber() + creditosGold - debitosGold;
+
+      return {
+        ...conta,
+        saldoAtualBRL,
+        saldoAtualGold,
+      };
     });
   }
 
@@ -258,9 +305,16 @@ export class ContasCorrentesService {
     data: UpdateContaCorrenteDto,
   ): Promise<ContaCorrente> {
     await this.findOne(organizationId, id); // Garante a posse
+
+    // Sanitização para evitar erro de Foreign Key com string vazia
+    const updateData: any = { ...data };
+    if (updateData.contaContabilId === '') {
+      updateData.contaContabilId = null;
+    }
+
     return this.prisma.contaCorrente.update({
       where: { id },
-      data,
+      data: updateData,
     });
   }
 

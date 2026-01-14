@@ -101,22 +101,30 @@ export default function PessoasPage() {
 
   const columns: ColumnDef<Pessoa>[] = [
     { accessorKey: "name", header: "Nome" },
-    { accessorKey: "email", header: "Email" },
-    { accessorKey: "phone", header: "Telefone" },
+    { 
+      accessorKey: "email", 
+      header: "Email",
+      cell: ({ row }) => row.original.email || "-"
+    },
+    { 
+      accessorKey: "phone", 
+      header: "Telefone",
+      cell: ({ row }) => row.original.phone || "-"
+    },
     {
       id: "roles",
       header: "Papéis",
       cell: ({ row }) => {
         const pessoa = row.original;
         const roles = [];
-        if (pessoa.client) roles.push("Cliente");
-        if (pessoa.fornecedor) roles.push("Fornecedor");
-        if (pessoa.funcionario) roles.push("Funcionário");
+        if (pessoa.client) roles.push({ label: "Cliente", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800" });
+        if (pessoa.fornecedor) roles.push({ label: "Fornecedor", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300 border-orange-200 dark:border-orange-800" });
+        if (pessoa.funcionario) roles.push({ label: "Funcionário", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800" });
         return (
-          <div className="flex space-x-1">
+          <div className="flex flex-wrap gap-1">
             {roles.map((role) => (
-              <Badge key={role} variant="secondary">
-                {role}
+              <Badge key={role.label} variant="outline" className={`${role.color} border`}>
+                {role.label}
               </Badge>
             ))}
           </div>
@@ -211,6 +219,7 @@ export default function PessoasPage() {
         onOpenChange={setIsFormModalOpen}
         title={pessoaToEdit ? "Editar Pessoa" : "Nova Pessoa"}
         description="Preencha os detalhes da pessoa aqui."
+        className="sm:max-w-3xl"
       >
         <PessoaForm initialData={pessoaToEdit} onSave={handleSave} />
       </ResponsiveDialog>

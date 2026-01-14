@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import Decimal from 'decimal.js';
 import { useForm, Controller } from 'react-hook-form';
+import { RotateCcw, User, MapPin, Calendar, CreditCard } from 'lucide-react';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,22 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
         .finally(() => setIsLoading(false));
     }
   }, [open, initialSale]);
+
+  const handleRecalculate = async () => {
+    if (!sale) return;
+    setIsLoading(true);
+    try {
+      await api.post(`/sales/${sale.id}/recalculate-adjustment`);
+      toast.success("Lucro e ajustes recalculados com sucesso!");
+      // Refetch sale data
+      const res = await api.get(`/sales/${sale.id}`);
+      setSale(res.data);
+    } catch (err) {
+      toast.error("Falha ao recalcular ajuste.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getPaymentInfo = () => {
     if (!sale) return 'N/A';
@@ -102,7 +119,15 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
           <p>Carregando...</p>
         ) : sale ? (
           <>
-            <div className="space-y-6 p-4">
+            <div className="space-y-6 p-4 max-h-[70vh] overflow-y-auto">
+              
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={handleRecalculate} disabled={isLoading}>
+                  <RotateCcw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  Recalcular Lucro/Ajuste
+                </Button>
+              </div>
+
               {/* DESTAQUE DO LUCRO */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="bg-primary/5 border-primary/20 shadow-sm">
@@ -113,6 +138,23 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                     <div className={`text-2xl font-bold ${Number(sale.adjustment?.netProfitBRL || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatCurrency(Number(sale.adjustment?.netProfitBRL || 0))}
                     </div>
+                    {/* Detalhamento do Lucro */}
+                    {sale.adjustment && (
+                      <div className="mt-4 pt-4 border-t border-primary/10 space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Lucro Bruto:</span>
+                          <span className="font-medium text-foreground">{formatCurrency(Number(sale.adjustment.grossProfitBRL || 0))}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Frete/Outros Custos:</span>
+                          <span className="font-medium text-red-500">-{formatCurrency(Number(sale.adjustment.otherCostsBRL || 0))}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground font-bold text-blue-600">Comissão:</span>
+                          <span className="font-bold text-blue-600">-{formatCurrency(Number(sale.adjustment.commissionBRL || 0))}</span>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 <Card className="bg-primary/5 border-primary/20 shadow-sm">
@@ -123,46 +165,94 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                     <div className={`text-2xl font-bold ${Number(sale.adjustment?.netDiscrepancyGrams || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatGrams(Number(sale.adjustment?.netDiscrepancyGrams || 0))}
                     </div>
+                    {/* Detalhamento do Lucro em Ouro */}
+                    {sale.adjustment && (
+                      <div className="mt-4 pt-4 border-t border-primary/10 space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Diferença Bruta (Au):</span>
+                          <span className="font-medium text-foreground">{formatGrams(Number(sale.adjustment.grossDiscrepancyGrams || 0))} g</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Custos (Au):</span>
+                          <span className="font-medium text-red-500">-{formatGrams(Number(sale.adjustment.costsInGrams || 0))} g</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Mão de Obra (Au):</span>
+                          <span className="font-medium text-foreground">{formatGrams(Number(sale.adjustment.laborCostGrams || 0))} g</span>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Detalhes do Cliente e Venda */}
-              <div className="grid grid-cols-2 gap-4 border-b pb-4">
-                <div>
-                  <h3 className="font-semibold">Cliente</h3>
-                  <p className="text-muted-foreground">{sale.pessoa.name}</p>
-                  <p className="text-muted-foreground text-sm">
-                    {`${sale.pessoa.logradouro || ''}, ${sale.pessoa.numero || ''}`}
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    {`${sale.pessoa.bairro || ''} - ${sale.pessoa.cidade || ''}/${sale.pessoa.uf || ''}`}
-                  </p>
-                  <p className="text-muted-foreground text-sm">{`CEP: ${sale.pessoa.cep || ''}`}</p>
-                </div>
-                <div className="text-right">
-                  <h3 className="font-semibold">Data da Venda</h3>
-                  <p className="text-muted-foreground">{new Date(sale.createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</p>
-                  <h3 className="font-semibold mt-2">Status do Pagamento</h3>
-                  <p className="text-muted-foreground font-bold">{getPaymentInfo()}</p>
+              {/* Detalhes do Cliente e Venda em Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Card do Cliente */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                      <User className="h-4 w-4" />
+                      Dados do Cliente
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="font-semibold text-lg">{sale.pessoa.name}</p>
+                    </div>
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                      <div>
+                        <p>{`${sale.pessoa.logradouro || ''}, ${sale.pessoa.numero || ''}`}</p>
+                        <p>{`${sale.pessoa.bairro || ''} - ${sale.pessoa.cidade || ''}/${sale.pessoa.uf || ''}`}</p>
+                        <p>{`CEP: ${sale.pessoa.cep || ''}`}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {sale.adjustment && (
-                    <>
-                      <h3 className="font-semibold mt-2">Cotação do Pagamento</h3>
-                      <p className="text-muted-foreground">{formatCurrency(sale.adjustment.paymentQuotation)}</p>
-                      <h3 className="font-semibold mt-2">Gramas Equivalentes Pagas</h3>
-                      <p className="text-muted-foreground">{formatGrams(sale.adjustment.paymentEquivalentGrams)} g</p>
-                      <h3 className="font-semibold mt-2">Ganho/Perda Cotação (%)</h3>
-                      <p className={`font-bold ${sale.adjustment.grossDiscrepancyGrams > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatDecimal(
-                          (sale.adjustment.grossDiscrepancyGrams /
-                            (sale.adjustment.saleExpectedGrams || 1)) *
-                            100,
-                        )}%
-                      </p>
-                    </>
-                  )}
-                </div>
+                {/* Card da Venda */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                      <Calendar className="h-4 w-4" />
+                      Resumo da Venda
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Data:</span>
+                      <span className="font-medium">{new Date(sale.createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Status Pagamento:</span>
+                      <span className="font-bold">{getPaymentInfo()}</span>
+                    </div>
+
+                    {sale.adjustment && (
+                      <div className="pt-2 mt-2 border-t border-border/50 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Cotação Pagamento:</span>
+                          <span>{formatCurrency(sale.adjustment.paymentQuotation)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Equivalente em Ouro:</span>
+                          <span>{formatGrams(sale.adjustment.paymentEquivalentGrams)} g</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Variação Cotação:</span>
+                          <span className={`font-bold ${sale.adjustment.grossDiscrepancyGrams > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatDecimal(
+                              (sale.adjustment.grossDiscrepancyGrams /
+                                (sale.adjustment.saleExpectedGrams || 1)) *
+                                100,
+                            )}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Detalhes dos Pagamentos */}

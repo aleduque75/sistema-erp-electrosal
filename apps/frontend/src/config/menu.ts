@@ -22,6 +22,7 @@ import {
   ClipboardList, // Ícone para PCP
   HandCoins,
   BarChart2, // Adicionado para Créditos de Clientes
+  TrendingUp,
 } from "lucide-react";
 import React from "react";
 
@@ -279,6 +280,12 @@ export const menuConfig: NavItem[] = [
                       href: "/relatorios/balancete",
                       icon: ListChecks, // Usando ListChecks, pode ser alterado
                       description: "Visualize o balancete de verificação por período.",
+                    },
+                    {
+                      title: "Resultado Financeiro",
+                      href: "/relatorios/resultado-financeiro",
+                      icon: TrendingUp,
+                      description: "Visão consolidada de receitas, pagamentos e custos.",
                     },
                   ],
                 },          ];

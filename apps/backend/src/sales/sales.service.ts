@@ -392,14 +392,17 @@ export class SalesService {
     };
   }
 
-  async updateFinancials(organizationId: string, saleId: string, data: { goldPrice?: number; feeAmount?: number }): Promise<Sale> {
-    const dataToUpdate: { goldPrice?: number; feeAmount?: number } = {};
+  async updateFinancials(organizationId: string, saleId: string, data: { goldPrice?: number; feeAmount?: number; shippingCost?: number }): Promise<Sale> {
+    const dataToUpdate: { goldPrice?: number; feeAmount?: number; shippingCost?: number } = {};
 
     if (data.goldPrice !== undefined) {
       dataToUpdate.goldPrice = data.goldPrice;
     }
     if (data.feeAmount !== undefined) {
       dataToUpdate.feeAmount = data.feeAmount;
+    }
+    if (data.shippingCost !== undefined) {
+      dataToUpdate.shippingCost = data.shippingCost;
     }
 
     const updatedSale = await this.prisma.sale.update({

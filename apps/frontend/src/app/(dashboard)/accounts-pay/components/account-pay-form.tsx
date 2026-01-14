@@ -59,7 +59,7 @@ const formSchema = z
       .number()
       .int()
       .optional(),
-    createdAt: z.string().optional(), // Adicionado
+    createdAt: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -81,7 +81,7 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       description: account?.description || "",
       amount: account?.amount || 0,
@@ -89,9 +89,9 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
         ? new Date(account.dueDate).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
       contaContabilId: account?.contaContabilId || user?.settings?.defaultDespesaContaId || null,
-      fornecedorId: account?.fornecedorId || null, // NOVO CAMPO
+      fornecedorId: account?.fornecedorId || null,
       isInstallment: account?.isInstallment || false,
-      totalInstallments: account?.totalInstallments || 2,
+      totalInstallments: account?.totalInstallments ?? 2,
       createdAt: account ? new Date(account.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
     },
   });

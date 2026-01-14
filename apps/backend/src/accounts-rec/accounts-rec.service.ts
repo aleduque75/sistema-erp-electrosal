@@ -283,6 +283,46 @@ export class AccountsRecService {
     return updatedAccountRec;
   }
 
+  async forceFinalize(organizationId: string, id: string): Promise<AccountRec> {
+    const account = await this.findOne(organizationId, id);
+
+    const updatedAccountRec = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.accountRec.update({
+        where: { id },
+        data: {
+          received: true,
+          receivedAt: account.receivedAt || new Date(),
+        },
+      });
+
+      // Update linked SaleInstallment if exists
+      const saleInstallment = await tx.saleInstallment.findFirst({
+        where: { accountRecId: id },
+      });
+
+      if (saleInstallment) {
+        await tx.saleInstallment.update({
+          where: { id: saleInstallment.id },
+          data: {
+            status: SaleInstallmentStatus.PAID,
+            paidAt: saleInstallment.paidAt || new Date(),
+          },
+        });
+      }
+
+      return updated;
+    });
+
+    if (updatedAccountRec.saleId) {
+      await this.calculateSaleAdjustmentUseCase.execute(
+        updatedAccountRec.saleId,
+        organizationId,
+      );
+    }
+
+    return updatedAccountRec;
+  }
+
   async remove(organizationId: string, id: string): Promise<AccountRec> {
     await this.findOne(organizationId, id);
     return this.prisma.accountRec.delete({

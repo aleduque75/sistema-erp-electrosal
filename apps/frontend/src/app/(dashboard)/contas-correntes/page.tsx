@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link"; // ✅ 1. Importar o Link para navegação
+import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuLabel,
-  DropdownMenuSeparator, // ✅ Importar o Separator
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -34,31 +34,53 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { ContaCorrenteForm } from "./conta-corrente-form";
 import { TransacaoForm } from "./transacao-form";
 import { ContaCorrenteType } from "@sistema-erp-electrosal/core";
-
-// ✅ 2. A importação do ExtratoModal não é mais necessária aqui
-// import { ExtratoModal } from './extrato-modal';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface ContaCorrente {
   id: string;
   nome: string;
   numeroConta: string;
   agencia?: string;
-  saldo: number;
-  type: (typeof ContaCorrenteType)[keyof typeof ContaCorrenteType]; 
+  saldoAtualBRL: number;
+  saldoAtualGold: number;
+  isActive: boolean;
+  type: (typeof ContaCorrenteType)[keyof typeof ContaCorrenteType];
 }
+
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value || 0
   );
 
+const formatGold = (value?: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  }).format(value || 0) + " g";
+
+const CONTA_CORRENTE_TYPES = ["BANCO", "FORNECEDOR_METAL", "EMPRESTIMO", "CLIENTE"];
+
 export default function ContasCorrentesPage() {
   const { user, loading } = useAuth();
   const [contas, setContas] = useState<ContaCorrente[]>([]);
   const [isFetching, setIsFetching] = useState(true);
+
+  const [currencyMode, setCurrencyMode] = useState<"BRL" | "GOLD">("BRL");
+  const [filterType, setFilterType] = useState<string>("ALL");
+  const [showInactive, setShowInactive] = useState(false);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [contaToEdit, setContaToEdit] = useState<ContaCorrente | null>(null);
@@ -68,14 +90,24 @@ export default function ContasCorrentesPage() {
   const [contaForLancamento, setContaForLancamento] =
     useState<ContaCorrente | null>(null);
 
-  // ✅ 3. O estado contaToViewExtrato foi removido
-
   const fetchContas = async () => {
     setIsFetching(true);
     try {
-      const response = await api.get("/contas-correntes");
+      const params: any = {};
+      if (filterType && filterType !== "ALL") {
+        params.types = filterType;
+      }
+      if (!showInactive) {
+        params.activeOnly = true;
+      }
+      
+      const response = await api.get("/contas-correntes", { params });
       setContas(
-        response.data.map((c: any) => ({ ...c, saldo: parseFloat(c.saldo) }))
+        response.data.map((c: any) => ({
+          ...c,
+          saldoAtualBRL: parseFloat(c.saldoAtualBRL),
+          saldoAtualGold: parseFloat(c.saldoAtualGold),
+        }))
       );
     } catch (err) {
       toast.error("Falha ao carregar contas.");
@@ -86,7 +118,7 @@ export default function ContasCorrentesPage() {
 
   useEffect(() => {
     if (user && !loading) fetchContas();
-  }, [user, loading]);
+  }, [user, loading, filterType, showInactive]);
 
   const handleSave = () => {
     setIsFormModalOpen(false);
@@ -116,13 +148,45 @@ export default function ContasCorrentesPage() {
   };
 
   const columns: ColumnDef<ContaCorrente>[] = [
-    { accessorKey: "nome", header: "Nome da Conta" },
+    { 
+      accessorKey: "nome", 
+      header: "Nome da Conta",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          {row.original.nome}
+          {!row.original.isActive && (
+            <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full dark:bg-red-900/30 dark:text-red-400">
+              Inativa
+            </span>
+          )}
+        </div>
+      )
+    },
     { accessorKey: "numeroConta", header: "Número / ID" },
     { accessorKey: "agencia", header: "Agência" },
     {
-      accessorKey: "saldo",
-      header: "Saldo Atual",
-      cell: ({ row }) => formatCurrency(row.getValue("saldo")),
+      accessorKey: "type",
+      header: "Tipo",
+      cell: ({ row }) => row.original.type || "-",
+    },
+    {
+      id: "saldo",
+      header: currencyMode === "BRL" ? "Saldo (R$)" : "Saldo (Au)",
+      cell: ({ row }) => {
+        const val =
+          currencyMode === "BRL"
+            ? row.original.saldoAtualBRL
+            : row.original.saldoAtualGold;
+        const formatted =
+          currencyMode === "BRL" ? formatCurrency(val) : formatGold(val);
+        
+        const isNegative = val < 0;
+        return (
+          <span className={isNegative ? "text-red-600 font-bold" : "font-medium"}>
+            {formatted}
+          </span>
+        );
+      },
     },
     {
       id: "actions",
@@ -137,8 +201,10 @@ export default function ContasCorrentesPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              {/* ✅ 4. Ação de "Ver Extrato" agora é um Link para a nova página */}
-              <Link href={`/contas-correntes/${conta.id}/extrato`} passHref>
+              <Link
+                href={`/contas-correntes/${conta.id}/extrato?mode=${currencyMode}`}
+                passHref
+              >
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                   <FileText className="mr-2 h-4 w-4" /> Ver Extrato
                 </DropdownMenuItem>
@@ -171,9 +237,47 @@ export default function ContasCorrentesPage() {
     <>
       <Card className="mx-auto my-8">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <CardTitle>Contas Correntes (Caixa e Bancos)</CardTitle>
-            <Button onClick={handleOpenNewModal}>Nova Conta</Button>
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="showInactive" 
+                  checked={showInactive} 
+                  onCheckedChange={(checked) => setShowInactive(!!checked)} 
+                />
+                <Label htmlFor="showInactive" className="text-sm cursor-pointer">Mostrar Inativas</Label>
+              </div>
+
+              <div className="w-[200px]">
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Todos os Tipos</SelectItem>
+                    {CONTA_CORRENTE_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Tabs
+                value={currencyMode}
+                onValueChange={(v) => setCurrencyMode(v as "BRL" | "GOLD")}
+              >
+                <TabsList>
+                  <TabsTrigger value="BRL">R$ (Reais)</TabsTrigger>
+                  <TabsTrigger value="GOLD">Au (Ouro)</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <Button onClick={handleOpenNewModal}>Nova Conta</Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -196,22 +300,23 @@ export default function ContasCorrentesPage() {
         title={contaToEdit ? "Editar Conta" : "Nova Conta"}
         description="Preencha os detalhes da sua conta corrente, caixa ou carteira."
       >
-                  <ContaCorrenteForm
-                    conta={
-                      contaToEdit
-                        ? {
-                            ...contaToEdit,
-                            saldoInicial:
-                              (contaToEdit as any).saldoInicial ??
-                              contaToEdit.saldo ??
-                              0,
-                            limite: (contaToEdit as any).limite ?? null,
-                            type: (contaToEdit as any).type ?? null,
-                          }
-                        : null
-                    }
-                    onSave={handleSave}
-                  />      </ResponsiveDialog>
+        <ContaCorrenteForm
+          conta={
+            contaToEdit
+              ? {
+                  ...contaToEdit,
+                  saldoInicial:
+                    (contaToEdit as any).saldoInicial ??
+                    (contaToEdit as any).saldo ?? // Fallback antigo
+                    0,
+                  limite: (contaToEdit as any).limite ?? null,
+                  type: (contaToEdit as any).type ?? null,
+                }
+              : null
+          }
+          onSave={handleSave}
+        />
+      </ResponsiveDialog>
 
       <Dialog
         open={!!contaToDelete}
@@ -253,10 +358,6 @@ export default function ContasCorrentesPage() {
           />
         </DialogContent>
       </Dialog>
-
-      {/* ✅ 5. O Modal de Extrato foi removido daqui */}
     </>
   );
 }
-
-

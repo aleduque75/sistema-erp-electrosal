@@ -29,6 +29,7 @@ export interface AnaliseQuimicaProps {
   dataFinalizacaoRecuperacao: Date | null;
   observacoes: string | null;
   ordemDeRecuperacaoId: string | null;
+  isWriteOff?: boolean;
   dataCriacao: Date;
   dataAtualizacao: Date;
 }
@@ -45,6 +46,7 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
     const analise = new AnaliseQuimica(
       {
         ...props,
+        isWriteOff: false,
         dataCriacao: now,
         dataAtualizacao: now,
         status: StatusAnaliseQuimica.EM_ANALISE, // Define o status inicial como EM_ANALISE
@@ -81,8 +83,15 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
   get dataFinalizacaoRecuperacao(): Date | null { return this.props.dataFinalizacaoRecuperacao; }
   get observacoes(): string | null { return this.props.observacoes; }
   get ordemDeRecuperacaoId(): string | null { return this.props.ordemDeRecuperacaoId; }
+  get isWriteOff(): boolean { return this.props.isWriteOff ?? false; }
   get dataCriacao(): Date { return this.props.dataCriacao; }
   get dataAtualizacao(): Date { return this.props.dataAtualizacao; }
+
+  public baixarComoPerda() {
+    this.props.isWriteOff = true;
+    this.props.status = StatusAnaliseQuimica.CANCELADO;
+    this.props.dataAtualizacao = new Date();
+  }
 
   public lancarResultado(dto: {
     resultadoAnaliseValor: number;
@@ -161,6 +170,7 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
         numeroAnalise: `RESIDUO-${nanoid(8)}`, // Generate a unique number for residue analysis
         dataEntrada: now,
         status: StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO, // A new status for residue
+        isWriteOff: false,
         dataCriacao: now,
         dataAtualizacao: now,
       },

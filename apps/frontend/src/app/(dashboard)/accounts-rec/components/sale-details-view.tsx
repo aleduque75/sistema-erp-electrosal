@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import api from "@/lib/api";
+import { toast } from "sonner";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -75,14 +77,21 @@ interface Sale {
   goldValue: number | null;
   netAmount: number;
   observation?: string | null;
+  adjustment?: {
+    netProfitBRL: number;
+    netDiscrepancyGrams: number;
+    totalCostBRL: number;
+    paymentReceivedBRL: number;
+  };
 }
 
 interface SaleDetailsViewProps {
   sale: Sale;
   onReceivePayment?: (accountRec: AccountRec) => void;
+  onUpdate?: () => void;
 }
 
-export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps) {
+export function SaleDetailsView({ sale, onReceivePayment, onUpdate }: SaleDetailsViewProps) {
   if (!sale) return null;
 
   console.log('Sale object in SaleDetailsView:', JSON.stringify(sale, null, 2));
@@ -93,8 +102,44 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
 
   const pendingAccountsRec = sale.accountsRec.find(ar => !ar.received);
 
+  const profitBRL = Number(sale.adjustment?.netProfitBRL || 0);
+  const profitGrams = Number(sale.adjustment?.netDiscrepancyGrams || 0);
+
+  const handleForceFinalize = async (accountRecId: string) => {
+    try {
+      await api.patch(`/accounts-rec/${accountRecId}/force-finalize`);
+      toast.success("Duplicata finalizada manualmente com sucesso!");
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      toast.error("Erro ao finalizar duplicata.");
+    }
+  };
+
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-primary/5 border-primary/20 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Lucro Líquido (R$)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${profitBRL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(profitBRL)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-primary/5 border-primary/20 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Lucro em Metal (g)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${profitGrams >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatGold(profitGrams)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-2 gap-4 border-b pb-4">
         <div>
           <h3 className="font-semibold">Cliente</h3>
@@ -194,12 +239,17 @@ export function SaleDetailsView({ sale, onReceivePayment }: SaleDetailsViewProps
         </Card>
       )}
 
-      {/* Botão de Receber Pagamento Condicional */}
-      {sale.status === 'SEPARADO' && onReceivePayment && pendingAccountsRec && (
-        <div className="pt-4 flex justify-end">
-            <Button onClick={() => onReceivePayment(pendingAccountsRec)}>
-                Receber Pagamento
+      {/* Botões de Ação */}
+      {pendingAccountsRec && (
+        <div className="pt-4 flex justify-end gap-2">
+           <Button variant="secondary" onClick={() => handleForceFinalize(pendingAccountsRec.id)}>
+                Finalizar Duplicata Manualmente
             </Button>
+            {sale.status === 'SEPARADO' && onReceivePayment && (
+                <Button onClick={() => onReceivePayment(pendingAccountsRec)}>
+                    Receber Pagamento
+                </Button>
+            )}
         </div>
       )}
     </div>

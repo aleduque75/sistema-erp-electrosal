@@ -8,15 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
@@ -30,8 +23,11 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Printer } from 'lucide-react';
+import { Printer, Package, Scale, Calendar, ArrowUpRight, ArrowDownLeft, History, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PureMetalLotDetailsDialogProps {
   lot: PureMetalLot | null;
@@ -44,12 +40,6 @@ const formSchema = z.object({
   grams: z.coerce.number().min(0.01, { message: "Gramas devem ser maiores que 0." }),
   notes: z.string().optional(),
 });
-
-const movementTypeMap = {
-  ENTRY: { label: 'Entrada', className: 'text-green-600 font-medium' },
-  EXIT: { label: 'Saída', className: 'text-red-600 font-medium' },
-  ADJUSTMENT: { label: 'Ajuste', className: 'text-amber-600 font-medium' },
-};
 
 export function PureMetalLotDetailsDialog({ lot, isOpen, onOpenChange }: PureMetalLotDetailsDialogProps) {
   const [movements, setMovements] = useState<PureMetalLotMovement[]>([]);
@@ -126,166 +116,199 @@ export function PureMetalLotDetailsDialog({ lot, isOpen, onOpenChange }: PureMet
     }
   };
 
+  if (!lot) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-4 border-b">
           <div className="flex justify-between items-start">
-            <DialogTitle className="text-xl">
-              Detalhes do Lote: {lot?.lotNumber || lot?.id}
-            </DialogTitle>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleDownloadPdf}
-              disabled={isDownloadingPdf}
-            >
-              <Printer className="w-4 h-4 mr-2" />
-              {isDownloadingPdf ? 'Gerando PDF...' : 'Imprimir Extrato'}
-            </Button>
+            <div className="space-y-1">
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <Package className="w-5 h-5 text-muted-foreground" />
+                Lote {lot.lotNumber || lot.id}
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{lot.metalType}</Badge>
+                <span className="text-sm text-muted-foreground">{lot.purity.toFixed(2)}% Pureza</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+                <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+                >
+                <Printer className="w-4 h-4 mr-2" />
+                {isDownloadingPdf ? 'Gerando...' : 'Extrato PDF'}
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
+                    <span className="sr-only">Fechar</span>
+                    {/* X icon is default in DialogContent close button, adding explicit close action button if needed or rely on default X */}
+                </Button>
+            </div>
           </div>
         </DialogHeader>
 
-        {lot && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 border-b">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Tipo de Metal</p>
-              <p className="text-lg">{lot.metalType}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Pureza</p>
-              <p className="text-lg">{lot.purity.toFixed(2)}%</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Peso Inicial</p>
-              <p className="text-lg">{lot.initialGrams.toFixed(2)} g</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Peso Restante</p>
-              <p className="text-lg font-bold text-green-600">{lot.remainingGrams.toFixed(2)} g</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Data de Entrada</p>
-              <p>{format(new Date(lot.entryDate), 'dd/MM/yyyy')}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Origem</p>
-              <p>
-                {lot.originDetails?.orderNumber ? `${lot.originDetails.orderNumber} ` : ''}
-                {lot.originDetails?.name ? `(${lot.originDetails.name})` : ''}
-                {!lot.originDetails?.orderNumber && !lot.originDetails?.name ? lot.sourceType : ''}
-              </p>
-            </div>
-            <div className="md:col-span-2">
-              <p className="text-sm font-medium text-gray-500">Observações</p>
-              <p>{lot.notes || '-'}</p>
-            </div>
-          </div>
-        )}
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="bg-muted/30">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-2">
+                  <Scale className="w-3.5 h-3.5" /> Peso Inicial
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="text-2xl font-bold">{lot.initialGrams.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">g</span></div>
+                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    Entrada: {format(new Date(lot.entryDate), 'dd/MM/yyyy')}
+                </div>
+              </CardContent>
+            </Card>
 
-        <div className="mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Histórico de Movimentações</h3>
-            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="secondary">Adicionar Movimentação</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Nova Movimentação</DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de Movimentação</FormLabel>
-                          <FormControl>
-                            <select {...field} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                              {Object.values(PureMetalLotMovementType).map((type) => (
-                                <option key={type} value={type}>{type}</option>
-                              ))}
-                            </select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="grams"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Gramas</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Observações (Opcional)</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit">Salvar</Button>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+            <Card className="bg-muted/30">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-2">
+                  <Package className="w-3.5 h-3.5" /> Origem
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="font-medium truncate" title={lot.originDetails?.name || lot.sourceType}>
+                    {lot.originDetails?.name || lot.sourceType}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                    {lot.originDetails?.orderNumber ? `Ref: ${lot.originDetails.orderNumber}` : (lot.notes || '-')}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-primary/5 border-primary/20">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-xs font-bold text-primary uppercase flex items-center gap-2">
+                  <Scale className="w-3.5 h-3.5" /> Saldo Atual
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="text-3xl font-black text-primary">{lot.remainingGrams.toFixed(2)} <span className="text-lg font-bold text-primary/70">g</span></div>
+                <div className="text-xs font-medium text-primary/80 mt-1">
+                    Disponível para uso
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {loading ? (
-            <div>Carregando...</div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Gramas</TableHead>
-                    <TableHead>Observações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {movements.map((movement) => (
-                    <TableRow key={movement.id}>
-                      <TableCell>{format(new Date(movement.date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>
-                        <span className={movementTypeMap[movement.type as keyof typeof movementTypeMap]?.className}>
-                          {movementTypeMap[movement.type as keyof typeof movementTypeMap]?.label || movement.type}
-                        </span>
-                      </TableCell>
-                      <TableCell className={movement.type === 'EXIT' ? 'text-red-600' : 'text-green-600'}>
-                        {movement.type === 'EXIT' ? '-' : '+'}{movement.grams.toFixed(2)} g
-                      </TableCell>
-                      <TableCell>{movement.notes || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-                  {movements.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-4">
-                        Nenhuma movimentação registrada.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+          {/* Movements Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold flex items-center gap-2">
+                    <History className="w-4 h-4" /> Histórico de Movimentações
+                </h3>
+                <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="secondary" size="sm">
+                        <PlusCircle className="w-4 h-4 mr-2" />
+                        Nova Movimentação
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                    <DialogTitle>Nova Movimentação Manual</DialogTitle>
+                    </DialogHeader>
+                    <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField
+                        control={form.control}
+                        name="type"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Tipo</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione o tipo" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="ENTRY">Entrada (Ajuste +)</SelectItem>
+                                    <SelectItem value="EXIT">Saída (Ajuste -)</SelectItem>
+                                    <SelectItem value="ADJUSTMENT">Correção</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="grams"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Quantidade (g)</FormLabel>
+                            <FormControl>
+                                <Input type="number" step="0.01" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Observações</FormLabel>
+                            <FormControl>
+                                <Input {...field} placeholder="Motivo do ajuste..." />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <Button type="submit" className="w-full">Salvar Movimentação</Button>
+                    </form>
+                    </Form>
+                </DialogContent>
+                </Dialog>
             </div>
-          )}
+
+            {loading ? (
+                <div className="py-8 text-center text-muted-foreground">Carregando histórico...</div>
+            ) : movements.length === 0 ? (
+                <div className="py-12 text-center border-2 border-dashed rounded-lg bg-muted/10 text-muted-foreground">
+                    <History className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                    <p>Nenhuma movimentação registrada.</p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {movements.map((movement) => (
+                        <div key={movement.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/20 transition-colors">
+                            <div className="flex items-center gap-4">
+                                <div className={`p-2 rounded-full ${movement.type === 'EXIT' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                    {movement.type === 'EXIT' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                                </div>
+                                <div>
+                                    <p className="font-medium text-sm">
+                                        {movement.type === 'ENTRY' ? 'Entrada / Recebimento' : 
+                                         movement.type === 'EXIT' ? 'Saída / Utilização' : 'Ajuste Manual'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">{format(new Date(movement.date), 'dd/MM/yyyy HH:mm')} • {movement.notes || 'Sem observações'}</p>
+                                </div>
+                            </div>
+                            <div className={`text-right font-mono font-bold ${movement.type === 'EXIT' ? 'text-red-600' : 'text-emerald-600'}`}>
+                                {movement.type === 'EXIT' ? '-' : '+'}{movement.grams.toFixed(2)} g
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+          </div>
         </div>
+        <DialogFooter className="p-4 border-t bg-muted/10">
+            <Button onClick={() => onOpenChange(false)}>Fechar Detalhes</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

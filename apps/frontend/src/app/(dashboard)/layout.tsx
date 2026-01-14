@@ -15,8 +15,10 @@ async function getLandingPageData(): Promise<LandingPageData | null> {
 
 export default async function DashboardLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  modal: React.ReactNode;
 }) {
   const landingPageData = await getLandingPageData();
 
@@ -28,6 +30,7 @@ export default async function DashboardLayout({
       />
       <main className="flex-1">
         {children}
+        {modal}
       </main>
     </div>
   );

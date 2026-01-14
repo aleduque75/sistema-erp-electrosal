@@ -160,6 +160,14 @@ export class AccountsRecController {
     );
   }
 
+  @Patch(':id/force-finalize')
+  forceFinalize(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.accountsRecService.forceFinalize(organizationId, id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(

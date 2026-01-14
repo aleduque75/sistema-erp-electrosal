@@ -10,18 +10,24 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ContasCorrentesService } from './contas-correntes.service';
 import { CreateContaCorrenteDto } from './dtos/create-conta-corrente.dto';
 import { UpdateContaCorrenteDto } from './dtos/update-conta-corrente.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ContaCorrenteType } from '@prisma/client'; // Adicionado
+import { GenerateExtratoPdfUseCase } from './use-cases/generate-extrato-pdf.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('contas-correntes')
 export class ContasCorrentesController {
-  constructor(private readonly service: ContasCorrentesService) {}
+  constructor(
+    private readonly service: ContasCorrentesService,
+    private readonly generateExtratoPdfUseCase: GenerateExtratoPdfUseCase,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -36,8 +42,9 @@ export class ContasCorrentesController {
   findAll(
     @CurrentUser('orgId') organizationId: string,
     @Query('types') types?: ContaCorrenteType[],
+    @Query('activeOnly') activeOnly?: string,
   ) {
-    return this.service.findAll(organizationId, types);
+    return this.service.findAll(organizationId, types, activeOnly === 'true');
   }
 
   @Get(':id/extrato')
@@ -74,6 +81,55 @@ export class ContasCorrentesController {
     }
 
     return this.service.getExtrato(organizationId, id, startDate, endDate);
+  }
+
+  @Get(':id/extrato/pdf')
+  async getExtratoPdf(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+    @Query('startDate') startDateString?: string,
+    @Query('endDate') endDateString?: string,
+  ) {
+    let startDate: Date;
+    let endDate: Date;
+
+    if (startDateString) {
+      startDate = new Date(startDateString);
+    } else {
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    if (endDateString) {
+      endDate = new Date(endDateString);
+    } else {
+      endDate = new Date();
+    }
+    
+    endDate.setHours(23, 59, 59, 999);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+    }
+
+    const pdfBuffer = await this.generateExtratoPdfUseCase.execute({
+        contaCorrenteId: id,
+        organizationId,
+        startDate,
+        endDate
+    });
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="extrato-${id}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
   }
 
   @Get(':id')

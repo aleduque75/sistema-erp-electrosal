@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, RotateCcw } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { DateRange } from 'react-day-picker';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -60,22 +60,23 @@ export default function AccountsRecPage() {
   const [statusFilter, setStatusFilter] = useState('pending');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  useEffect(() => {
-    const fetchAccounts = async () => {
-      setIsLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (statusFilter && statusFilter !== 'all') {
-          params.append('status', statusFilter);
-        }
-        const response = await api.get(`/accounts-rec?${params.toString()}`);
-        setAccounts(response.data);
-      } catch (err) {
-        toast.error("Falha ao buscar contas a receber.");
-      } finally {
-        setIsLoading(false);
+  const fetchAccounts = async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter && statusFilter !== 'all') {
+        params.append('status', statusFilter);
       }
-    };
+      const response = await api.get(`/accounts-rec?${params.toString()}`);
+      setAccounts(response.data);
+    } catch (err) {
+      toast.error("Falha ao buscar contas a receber.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAccounts();
   }, [statusFilter]);
 
@@ -97,19 +98,13 @@ export default function AccountsRecPage() {
 
   const handleSavePayment = () => {
     setAccountToReceive(null);
-    // Re-trigger fetch
-    const currentFilter = statusFilter;
-    setStatusFilter('REFETCH');
-    setTimeout(() => setStatusFilter(currentFilter), 0);
+    fetchAccounts();
   };
 
   const handleSaveEdit = () => {
     setIsEditModalOpen(false);
     setAccountToEdit(null);
-    // Re-trigger fetch
-    const currentFilter = statusFilter;
-    setStatusFilter('REFETCH');
-    setTimeout(() => setStatusFilter(currentFilter), 0);
+    fetchAccounts();
   };
 
   const handleEdit = (account: AccountRec) => {
@@ -225,6 +220,9 @@ export default function AccountsRecPage() {
               </SelectContent>
             </Select>
             <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+            <Button variant="ghost" size="icon" onClick={fetchAccounts} title="Atualizar lista">
+              <RotateCcw className="h-4 w-4" />
+            </Button>
         </div>
 
         <Card>
@@ -261,7 +259,7 @@ export default function AccountsRecPage() {
                 <DialogHeader>
                     <DialogTitle>Detalhes da Venda - Pedido #{saleToView?.orderNumber}</DialogTitle>
                 </DialogHeader>
-                {saleToView ? <SaleDetailsView sale={saleToView} onReceivePayment={setAccountToReceive} /> : <p>Carregando...</p>}
+                {saleToView ? <SaleDetailsView sale={saleToView} onReceivePayment={setAccountToReceive} onUpdate={() => handleViewSale(saleToView.id)} /> : <p>Carregando...</p>}
             </DialogContent>
         </Dialog>
     </div>

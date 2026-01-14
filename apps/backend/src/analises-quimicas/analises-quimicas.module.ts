@@ -22,6 +22,7 @@ import { AprovarAnaliseUseCase } from './use-cases/aprovar-analise.use-case';
 import { ReprovarAnaliseUseCase } from './use-cases/reprovar-analise.use-case';
 import { RefazerAnaliseUseCase } from './use-cases/refazer-analise.use-case';
 import { RevertAnaliseQuimicaToPendingApprovalUseCase } from './use-cases/revert-analise-quimica-to-pending-approval.use-case'; // Import the new use case
+import { BaixarResiduoUseCase } from './use-cases/baixar-residuo.use-case';
 
 @Module({
   // 2. ADICIONAR O MÓDULO NAS IMPORTAÇÕES
@@ -45,6 +46,7 @@ import { RevertAnaliseQuimicaToPendingApprovalUseCase } from './use-cases/revert
     ReprovarAnaliseUseCase,
     RefazerAnaliseUseCase,
     RevertAnaliseQuimicaToPendingApprovalUseCase, // Add the new use case
+    BaixarResiduoUseCase,
     // --- Repositórios ---
     {
       provide: 'IAnaliseQuimicaRepository',

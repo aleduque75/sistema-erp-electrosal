@@ -143,7 +143,7 @@ export class CreateRecoveryOrderUseCase {
       // Update status of chemical analyses
       for (const analise of analyses) {
         analise.update({ status: StatusAnaliseQuimica.EM_RECUPERACAO });
-        await this.analiseRepository.save(analise, tx as any);
+        await this.analiseRepository.save(analise, organizationId, tx as any);
       }
 
       // Add raw materials if provided

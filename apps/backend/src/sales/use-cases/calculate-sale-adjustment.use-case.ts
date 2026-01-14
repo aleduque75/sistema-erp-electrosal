@@ -89,20 +89,56 @@ export class CalculateSaleAdjustmentUseCase {
       (sum, t) => sum.plus(t.valor || 0),
       new Decimal(0),
     );
-    const paymentEquivalentGrams = allTransactions.reduce(
+    let paymentEquivalentGrams = allTransactions.reduce(
       (sum, t) => sum.plus(t.goldAmount || 0),
       new Decimal(0),
     );
 
+    // --- SILVER DETECTION LOGIC ---
+    const silverKeywords = ['prata', 'silver', 'ag '];
+    const isSilverSale = sale.saleItems.length > 0 && sale.saleItems.every(item => {
+       const name = (item.product.name + ' ' + (item.product.productGroup?.name || '')).toLowerCase();
+       return silverKeywords.some(kw => name.includes(kw));
+    });
+
+    let silverPrice: Decimal | null = null;
+    let goldPrice: Decimal | null = null;
+
+    if (isSilverSale) {
+        silverPrice = await this.getSilverPrice(prismaClient, organizationId, sale.createdAt);
+        goldPrice = await this.getGoldPrice(prismaClient, organizationId, sale.createdAt);
+
+        if (silverPrice) {
+            this.logger.log(`[SALE_ADJUSTMENT] Detected Silver Sale. Silver Price: ${silverPrice.toFixed(4)} BRL/g`);
+        }
+        if (goldPrice) {
+             this.logger.log(`[SALE_ADJUSTMENT] Detected Silver Sale. Gold Price: ${goldPrice.toFixed(4)} BRL/g`);
+        }
+    }
+    // -----------------------------
+
     // 2. Determine Effective Payment Quotation
     let paymentQuotation: Decimal | null = null;
-    if (!paymentReceivedBRL.isZero() && !paymentEquivalentGrams.isZero()) {
-      paymentQuotation = paymentReceivedBRL.dividedBy(paymentEquivalentGrams);
+
+    if (isSilverSale && goldPrice && silverPrice) {
+        // For Silver sales, we Normalize EVERYTHING to GOLD.
+        // So Payment Quotation is the GOLD Price.
+        paymentQuotation = goldPrice;
+
+        // Payment Equivalent Grams is strictly Payment / GoldPrice
+        if (!paymentReceivedBRL.isZero()) {
+            paymentEquivalentGrams = paymentReceivedBRL.dividedBy(goldPrice);
+        }
     } else {
-      paymentQuotation = sale.goldPrice; // Fallback to sale quotation
+        // Standard Gold Logic
+        if (!paymentReceivedBRL.isZero() && !paymentEquivalentGrams.isZero()) {
+            paymentQuotation = paymentReceivedBRL.dividedBy(paymentEquivalentGrams);
+        } else {
+            paymentQuotation = sale.goldPrice; // Fallback to sale quotation
+        }
     }
 
-    // 3. Calculate Expected Gold Grams and Total Cost
+    // 3. Calculate Expected Grams (Metal Content) and Total Cost
     let saleExpectedGrams = new Decimal(0);
     let totalCostBRL = new Decimal(0);
     let itemsLaborGrams = new Decimal(0);
@@ -125,6 +161,19 @@ export class CalculateSaleAdjustmentUseCase {
           }
           break;
       }
+
+      // NORMALIZE EXPECTED GRAMS TO GOLD IF SILVER SALE
+      if (isSilverSale && silverPrice && goldPrice) {
+           // Currently itemExpectedGrams is in Silver.
+           // Value in BRL = SilverGrams * SilverPrice
+           const valueBRL = itemExpectedGrams.times(silverPrice);
+           // Value in Gold = ValueBRL / GoldPrice
+           const itemExpectedGramsAu = valueBRL.dividedBy(goldPrice);
+           
+           this.logger.log(`[SALE_ADJUSTMENT] Converting Item Expected from Ag (${itemExpectedGrams}) to Au (${itemExpectedGramsAu})`);
+           itemExpectedGrams = itemExpectedGramsAu;
+      }
+      
       saleExpectedGrams = saleExpectedGrams.plus(itemExpectedGrams);
       
       // Calculate item-specific labor if laborPercentage is present
@@ -133,7 +182,9 @@ export class CalculateSaleAdjustmentUseCase {
         itemsLaborGrams = itemsLaborGrams.plus(itemLabor);
       }
 
-      // Corrected Total Cost Calculation
+      // Total Cost Calculation
+      // If paymentQuotation is Gold (for Silver Sale), and itemExpectedGrams is converted to Gold, 
+      // then Cost = GoldGrams * GoldPrice = Correct BRL Cost.
       const itemCost = (paymentQuotation || new Decimal(0)).times(itemExpectedGrams);
       totalCostBRL = totalCostBRL.plus(itemCost);
     }
@@ -176,13 +227,29 @@ export class CalculateSaleAdjustmentUseCase {
     const otherCostsBRL = new Decimal(sale.shippingCost || 0);
     const commissionBRL = new Decimal(sale.commissionAmount || 0);
     
+    this.logger.log(`[DEBUG CALC] GrossProfit: ${grossProfitBRL}, OtherCosts: ${otherCostsBRL}, Commission: ${commissionBRL} (from sale.commissionAmount: ${sale.commissionAmount})`);
+
     // FIX: The labor cost is already part of the gross profit (because it's included in paymentReceived).
     // We should NOT add it again. Net profit is simply Gross Profit - Other Costs - Commission.
     const netProfitBRL = grossProfitBRL.minus(otherCostsBRL).minus(commissionBRL);
+
+    this.logger.log(`[DEBUG CALC] NetProfit Calculated: ${netProfitBRL}`);
     
     // FIX: Similarly for grams, the gross discrepancy already includes the labor grams.
-    const netDiscrepancyGrams = (grossDiscrepancyGrams || new Decimal(0)).minus(costsInGrams || 0);
+    // Convert commission to grams to subtract it from the metal profit as well.
+    const commissionInGrams = (commissionBRL.gt(0) && paymentQuotation && paymentQuotation.gt(0))
+      ? commissionBRL.dividedBy(paymentQuotation)
+      : new Decimal(0);
 
+    let netDiscrepancyGrams = (grossDiscrepancyGrams || new Decimal(0))
+      .minus(costsInGrams || 0)
+      .minus(commissionInGrams);
+
+    this.logger.log(`[DEBUG CALC] CommissionInGrams: ${commissionInGrams}, NetDiscrepancyGrams: ${netDiscrepancyGrams}`);
+
+    // --- SILVER TO GOLD CONVERSION BLOCK REMOVED (Handled natively above) ---
+    // ---------------------------------------------
+    
     // 6. Save Adjustment
     const adjustmentData = {
       saleId,
@@ -263,5 +330,66 @@ export class CalculateSaleAdjustmentUseCase {
     }
 
     this.logger.log(`Ajuste da venda ${saleId} calculado e salvo com sucesso.`);
+  }
+
+  private async getSilverPrice(client: Prisma.TransactionClient | PrismaService, organizationId: string, date: Date): Promise<Decimal | null> {
+    const marketData = await client.marketData.findFirst({
+      where: {
+        organizationId,
+        date: { lte: date },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    if (marketData && marketData.silverTroyPrice && marketData.usdPrice) {
+      // (SilverTroy * USD) / 31.1034768
+      return new Decimal(marketData.silverTroyPrice)
+        .times(marketData.usdPrice)
+        .dividedBy(31.1034768);
+    }
+    return null;
+  }
+
+  private async getGoldPrice(client: Prisma.TransactionClient | PrismaService, organizationId: string, date: Date): Promise<Decimal | null> {
+    // 1. Try to find explicit Quotation
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const quotation = await client.quotation.findFirst({
+        where: {
+            organizationId,
+            date: { gte: startOfDay, lte: endOfDay },
+            metal: 'AU',
+        }
+    });
+
+    if (quotation) {
+        // Use sellPrice as the reference for profit calculation? Or buyPrice?
+        // Usually profit is realized when selling, so maybe SellPrice.
+        // But users often use the "Cotacao do Dia" which might be Buy Price depending on context.
+        // Let's use SellPrice as it's typically higher and represents what the company sells gold for.
+        // However, if we want to be conservative or if this is about "value of gold we have", it might be BuyPrice.
+        // Let's use SellPrice for now as it's the standard "Price".
+        return quotation.sellPrice;
+    }
+
+    // 2. Fallback to MarketData
+    const marketData = await client.marketData.findFirst({
+      where: {
+        organizationId,
+        date: { lte: date },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    if (marketData && marketData.goldTroyPrice && marketData.usdPrice) {
+      // (GoldTroy * USD) / 31.1034768
+      return new Decimal(marketData.goldTroyPrice)
+        .times(marketData.usdPrice)
+        .dividedBy(31.1034768);
+    }
+    return null;
   }
 }

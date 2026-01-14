@@ -11,7 +11,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Badge } from '@/components/ui/badge';
 
 interface MetalReceivable {
@@ -164,7 +164,7 @@ export default function MetalReceivablesPage() {
             <SelectItem value="CANCELADO">Cancelado</SelectItem>
           </SelectContent>
         </Select>
-        <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+        <DateRangePicker date={dateRange} onDateChange={setDateRange} />
       </div>
 
       <Card>

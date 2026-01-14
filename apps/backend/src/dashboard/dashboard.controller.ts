@@ -33,6 +33,14 @@ export class DashboardController {
     return this.dashboardService.getThirdPartyLoansSummary(organizationId);
   }
 
+  @Get('gold-balance')
+  @UseGuards(AuthGuard('jwt'))
+  getGoldBalance(
+    @CurrentUser('orgId') organizationId: string,
+  ) {
+    return this.dashboardService.getGoldBalanceSheet(organizationId);
+  }
+
   @Get('financial-summary-by-period')
   getFinancialSummaryByPeriod(@CurrentUser('orgId') organizationId: string) {
     return this.dashboardService.getFinancialSummaryByPeriod(organizationId);

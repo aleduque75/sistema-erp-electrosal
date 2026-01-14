@@ -33,6 +33,7 @@ import { RefazerAnaliseUseCase } from './use-cases/refazer-analise.use-case';
 import { UpdateAnaliseQuimicaUseCase } from './use-cases/update-analise-quimica.use-case';
 import { AnaliseQuimicaWithClientNameDto } from './dtos/analise-quimica-with-client-name.dto'; // Import the new DTO
 import { RevertAnaliseQuimicaToPendingApprovalUseCase } from './use-cases/revert-analise-quimica-to-pending-approval.use-case'; // Import the new use case
+import { BaixarResiduoUseCase } from './use-cases/baixar-residuo.use-case';
 
 
 @UseGuards(JwtAuthGuard)
@@ -49,6 +50,7 @@ export class AnalisesQuimicasController {
 			private readonly reprovarAnaliseUseCase: ReprovarAnaliseUseCase,
 			private readonly refazerAnaliseUseCase: RefazerAnaliseUseCase,
 			private readonly revertAnaliseQuimicaToPendingApprovalUseCase: RevertAnaliseQuimicaToPendingApprovalUseCase, // Inject the new use case
+			private readonly baixarResiduoUseCase: BaixarResiduoUseCase,
 			private readonly updateAnaliseQuimicaUseCase: UpdateAnaliseQuimicaUseCase,
 		) {}
 
@@ -162,5 +164,11 @@ export class AnalisesQuimicasController {
 			const organizationId = req.user?.orgId;
 			const command = { analiseId: id, organizationId };
 			await this.revertAnaliseQuimicaToPendingApprovalUseCase.execute(command);
+		}
+
+		@Patch(':id/baixar-residuo')
+		async baixarResiduo(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
+			const organizationId = req.user?.orgId;
+			await this.baixarResiduoUseCase.execute(id, organizationId);
 		}
 }

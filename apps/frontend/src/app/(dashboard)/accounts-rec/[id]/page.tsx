@@ -7,8 +7,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { InstallmentList } from '@/components/sales/InstallmentList';
 
-import { SaleInstallment } from '@/types/sale';
-import { SaleStatus } from '@prisma/client'; // Import SaleStatus
+import { SaleInstallment, SaleStatus } from '@/types/sale';
 
 interface AccountRec {
   id: string;

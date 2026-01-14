@@ -47,3 +47,41 @@ export const getAccountsPayableReportPdf = async (
   });
   return response.data;
 };
+
+export interface SingleMetalReport {
+  period: { startDate: string; endDate: string };
+  priceUsed: number;
+  
+  totalRecoveredGrams: number;
+  totalRecoveredValue: number;
+
+  totalReactionConsumptionGrams: number;
+  totalReactionConsumptionValue: number;
+  
+  totalClientCreditGrams: number;
+  totalClientCreditValue: number;
+  
+  totalResidueGrams: number;
+  totalResidueValue: number;
+  
+  totalRawMaterialsCost: number;
+  totalRawMaterialsGrams: number;
+  
+  totalCommissions: number;
+  totalCommissionsGrams: number;
+
+  totalPendingAnalysisGrams: number;
+  totalPendingAnalysisValue: number;
+  
+  netResultGrams: number;
+  netResultValue: number;
+}
+
+export type FinancialBalanceReport = Record<string, SingleMetalReport>;
+
+export const getFinancialBalanceReport = async (params: { startDate: string; endDate: string; goldPrice?: number; metalType?: string }): Promise<FinancialBalanceReport> => {
+  const { data } = await api.get<FinancialBalanceReport>("/reports/financial-balance", {
+    params,
+  });
+  return data;
+};

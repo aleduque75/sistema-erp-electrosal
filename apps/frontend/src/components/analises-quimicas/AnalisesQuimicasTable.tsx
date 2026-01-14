@@ -26,6 +26,7 @@ import {
   ThumbsDown,
   RotateCw,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import { LancarResultadoModal } from "./LancarResultadoModal";
 import { VisualizarAnaliseModal } from "./VisualizarAnaliseModal";
@@ -41,7 +42,18 @@ import {
   aprovarAnaliseQuimica,
   reprovarAnaliseQuimica,
   refazerAnaliseQuimica,
+  baixarResiduoAnalise,
 } from "@/services/analisesApi";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface AnalisesQuimicasTableProps {
   analises: AnaliseQuimica[];
@@ -63,6 +75,7 @@ export function AnalisesQuimicasTable({
   const [analiseParaEditar, setAnaliseParaEditar] =
     useState<AnaliseQuimica | null>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<string | null>(null); // Armazena o ID da análise sendo baixada
+  const [analiseParaBaixarResiduo, setAnaliseParaBaixarResiduo] = useState<AnaliseQuimica | null>(null);
 
   const handleLancarResultadoSuccess = () => {
     setAnaliseParaLancar(null);
@@ -72,6 +85,19 @@ export function AnalisesQuimicasTable({
   const handleEditarSuccess = () => {
     setAnaliseParaEditar(null);
     onAnaliseUpdated();
+  };
+
+  const handleBaixarResiduo = async () => {
+    if (!analiseParaBaixarResiduo) return;
+    try {
+      await baixarResiduoAnalise(analiseParaBaixarResiduo.id);
+      toast.success("Resíduo baixado como perda com sucesso!");
+      onAnaliseUpdated();
+    } catch (error: any) {
+      toast.error("Erro ao baixar resíduo", { description: error.message });
+    } finally {
+        setAnaliseParaBaixarResiduo(null);
+    }
   };
 
   const handleDownloadPdf = async (analiseId: string) => {
@@ -153,6 +179,7 @@ export function AnalisesQuimicasTable({
               <TableHead className="w-[150px]">Data Entrada</TableHead>
               <TableHead>Material</TableHead>
               <TableHead className="w-[100px]">Metal</TableHead>
+              <TableHead className="w-[120px]">Au Estimado Bruto</TableHead>
               <TableHead className="w-[180px]">Status</TableHead>
               <TableHead className="w-[50px] text-right">Ações</TableHead>
             </TableRow>
@@ -160,6 +187,8 @@ export function AnalisesQuimicasTable({
           <TableBody>
             {[...Array(5)].map((_, i) => (
               <TableRow key={i}>
+                <TableCell>...</TableCell>
+                <TableCell>...</TableCell>
                 <TableCell>...</TableCell>
                 <TableCell>...</TableCell>
                 <TableCell>...</TableCell>
@@ -202,13 +231,13 @@ export function AnalisesQuimicasTable({
               <TableHead className="w-[150px]">Data Entrada</TableHead>
               <TableHead>Material</TableHead>
               <TableHead className="w-[100px]">Metal</TableHead>
+              <TableHead className="w-[120px]">Au Estimado Bruto</TableHead>
               <TableHead className="w-[180px]">Status</TableHead>
               <TableHead className="w-[50px] text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {analises.map((analise) => {
-              console.log("Analise data in table row:", analise);
               return (
               <TableRow key={analise.id}>
                 <TableCell className="font-medium">
@@ -220,6 +249,11 @@ export function AnalisesQuimicasTable({
                 </TableCell>
                 <TableCell>{analise.descricaoMaterial}</TableCell>
                 <TableCell>{analise.metalType || 'AU'}</TableCell>
+                <TableCell>
+                  {analise.auEstimadoBrutoGramas != null
+                    ? `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(analise.auEstimadoBrutoGramas)} g` 
+                    : '-'}
+                </TableCell>
                 <TableCell>
                   {/* Removemos 'as any' e confiamos no tipo corrigido do Badge */}
                   <ChemicalAnalysisStatusBadge status={analise.status} />
@@ -308,6 +342,15 @@ export function AnalisesQuimicasTable({
                           </DropdownMenuItem>
                         </>
                       )}
+                      {analise.status === "RESIDUO" && (
+                        <DropdownMenuItem
+                          onClick={() => setAnaliseParaBaixarResiduo(analise)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Baixar como Perda
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -327,6 +370,7 @@ export function AnalisesQuimicasTable({
         isOpen={!!analiseParaVisualizar}
         onOpenChange={(open) => !open && setAnaliseParaVisualizar(null)}
         analise={analiseParaVisualizar}
+        onUpdate={onAnaliseUpdated}
       />
 
       <EditarAnaliseModal
@@ -335,6 +379,23 @@ export function AnalisesQuimicasTable({
         analise={analiseParaEditar}
         onSuccess={handleEditarSuccess}
       />
+
+      <AlertDialog open={!!analiseParaBaixarResiduo} onOpenChange={(open) => !open && setAnaliseParaBaixarResiduo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Baixar Resíduo como Perda</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja baixar este resíduo como perda? Esta ação não pode ser desfeita e o valor do resíduo será contabilizado como perda financeira.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBaixarResiduo} className="bg-destructive hover:bg-destructive/90">
+              Confirmar Baixa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

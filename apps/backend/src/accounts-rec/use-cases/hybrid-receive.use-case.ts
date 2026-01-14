@@ -188,11 +188,27 @@ export class HybridReceiveUseCase {
       // --- FIM DA LÓGICA DE TRANSFERÊNCIA ---
 
       if (dto.financialPayments && dto.financialPayments.length > 0) {
-        if (quotation.isZero() && totalPaidGoldForAccountRec.gt(0)) { // A cotação é necessária se houver ouro já pago
-          throw new BadRequestException('Cotação é necessária para pagamentos financeiros em dívidas de metal.');
-        }
         for (const payment of dto.financialPayments) {
-          const financialGoldEquivalent = new Decimal(payment.amount).dividedBy(quotation);
+          const paymentDate = payment.receivedAt ? new Date(payment.receivedAt) : new Date(dto.receivedAt);
+          const paymentQuotation = payment.quotation ? new Decimal(payment.quotation) : new Decimal(dto.quotation || 0);
+
+          if (paymentQuotation.isZero() && totalPaidGoldForAccountRec.gt(0)) {
+             // Fallback check: If we are paying a gold debt (implied by previous gold payments or accountRec structure), we might need a quotation.
+             // However, for pure financial payment on a BRL debt, we might not need it.
+             // But the original code enforced it if totalPaidGold > 0.
+             // Let's keep a check but based on the specific payment context if possible.
+             // The original check was: if (quotation.isZero() && totalPaidGoldForAccountRec.gt(0))
+             throw new BadRequestException('Cotação é necessária para pagamentos financeiros em dívidas de metal (verifique se a cotação foi informada no item ou no cabeçalho).');
+          }
+
+          // Calculate Gold Equivalent for this specific payment
+          let financialGoldEquivalent = new Decimal(0);
+          if (paymentQuotation.gt(0)) {
+            financialGoldEquivalent = new Decimal(payment.amount).dividedBy(paymentQuotation);
+          } else if (accountRec.goldAmount && new Decimal(accountRec.goldAmount).gt(0)) {
+             throw new BadRequestException('Cotação é obrigatória para pagamento financeiro de dívida em ouro.');
+          }
+
           await tx.transacao.create({
             data: {
               organizationId,
@@ -200,7 +216,7 @@ export class HybridReceiveUseCase {
               accountRecId: accountRec.id,
               valor: payment.amount,
               goldAmount: financialGoldEquivalent.toDP(4).toNumber(),
-              dataHora: new Date(dto.receivedAt),
+              dataHora: paymentDate,
               descricao: `Recebimento Ref. ${accountRec.description}`,
               tipo: TipoTransacaoPrisma.CREDITO,
               moeda: 'BRL',
@@ -218,10 +234,14 @@ export class HybridReceiveUseCase {
             'Pagamentos com crédito de metal só podem ser aplicados a contas a receber de vendas.',
           );
         }
-        if (quotation.isZero() && totalPaidGoldForAccountRec.gt(0)) { // A cotação é necessária se houver ouro já pago
-          throw new BadRequestException('Cotação é necessária para pagamentos com metal.');
-        }
         for (const payment of dto.metalCreditPayments) {
+          const paymentDate = payment.receivedAt ? new Date(payment.receivedAt) : new Date(dto.receivedAt);
+          const paymentQuotation = payment.quotation ? new Decimal(payment.quotation) : new Decimal(dto.quotation || 0);
+
+          if (paymentQuotation.isZero()) {
+             throw new BadRequestException('Cotação é necessária para pagamentos com metal.');
+          }
+
           const metalCredit = await tx.metalCredit.findFirst({
             where: { id: payment.metalCreditId, organizationId },
           });
@@ -266,7 +286,7 @@ export class HybridReceiveUseCase {
           await tx.metalAccountEntry.create({
             data: {
               metalAccountId: metalAccount.id,
-              date: new Date(dto.receivedAt),
+              date: paymentDate,
               description: `Pagamento da Venda #${accountRec.sale?.orderNumber}`,
               grams: new Decimal(payment.amountInGrams).negated().toDecimalPlaces(4).toNumber(), // Débito na conta do cliente
               type: 'DEBIT',
@@ -274,14 +294,14 @@ export class HybridReceiveUseCase {
             }
           });
 
-          const valorBRL = new Decimal(payment.amountInGrams).times(quotation).toDecimalPlaces(2);
+          const valorBRL = new Decimal(payment.amountInGrams).times(paymentQuotation).toDecimalPlaces(2);
           await tx.transacao.create({
             data: {
               organizationId,
               accountRecId: accountRec.id,
               valor: valorBRL.toNumber(),
               goldAmount: new Decimal(payment.amountInGrams).toDecimalPlaces(4).toNumber(),
-              dataHora: new Date(dto.receivedAt),
+              dataHora: paymentDate,
               descricao: `Pagamento com crédito de metal - Venda #${accountRec.sale?.orderNumber}`,
               tipo: TipoTransacaoPrisma.CREDITO,
               moeda: 'BRL',
@@ -298,10 +318,14 @@ export class HybridReceiveUseCase {
         if (!accountRec.sale) {
           throw new BadRequestException('Pagamentos com metal físico só podem ser aplicados a contas a receber de vendas.');
         }
-        if (quotation.isZero() && totalPaidGoldForAccountRec.gt(0)) { // A cotação é necessária se houver ouro já pago
-          throw new BadRequestException('Cotação é necessária para pagamentos com metal.');
-        }
         for (const payment of dto.metalPayments) {
+          const paymentDate = payment.receivedAt ? new Date(payment.receivedAt) : new Date(dto.receivedAt);
+          const paymentQuotation = payment.quotation ? new Decimal(payment.quotation) : new Decimal(dto.quotation || 0);
+
+          if (paymentQuotation.isZero()) {
+             throw new BadRequestException('Cotação é necessária para pagamentos com metal.');
+          }
+
           const description = `Pagamento da Venda #${accountRec.sale?.orderNumber} - Cliente: ${accountRec.sale?.pessoa.name}`;
           await this.pureMetalLotsService.create(
             organizationId,
@@ -319,14 +343,14 @@ export class HybridReceiveUseCase {
             tx,
           );
 
-          const valorBRL = new Decimal(payment.amountInGrams).times(quotation).toDecimalPlaces(2);
+          const valorBRL = new Decimal(payment.amountInGrams).times(paymentQuotation).toDecimalPlaces(2);
           await tx.transacao.create({
             data: {
               organizationId,
               accountRecId: accountRec.id,
               valor: valorBRL.toNumber(),
               goldAmount: new Decimal(payment.amountInGrams).toDecimalPlaces(4).toNumber(),
-              dataHora: new Date(dto.receivedAt),
+              dataHora: paymentDate,
               descricao: `Pagamento com metal físico - Venda #${accountRec.sale?.orderNumber}`,
               tipo: TipoTransacaoPrisma.CREDITO,
               moeda: 'BRL',
