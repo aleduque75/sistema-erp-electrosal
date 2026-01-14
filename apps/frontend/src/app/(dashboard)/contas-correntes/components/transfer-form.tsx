@@ -63,20 +63,31 @@ export function TransferForm({ fromAccountId, transferType, onSave }: TransferFo
 
   const { accounts, isLoading, performTransfer } = useTransfer(transferType, fromAccountId);
 
-  // Buscar cotação inicial
+  const dataHora = watch("dataHora");
+
+  // Buscar cotação quando a data muda
   useEffect(() => {
     const fetchQuotation = async () => {
+      if (!dataHora) return;
       try {
-        const response = await api.get(`/quotations/by-date?date=${new Date().toISOString().split('T')[0]}&metal=AU`);
+        const response = await api.get(`/quotations/by-date?date=${dataHora}&metal=AU`);
         const fetchedQuotation = response.data?.buyPrice || 0;
         setQuotation(fetchedQuotation);
+        // Limpar os valores se a cotação for zero para evitar cálculos errados
+        if (fetchedQuotation === 0) {
+            toast.info('Cotação não encontrada para a data selecionada. O valor será zerado.');
+            setValue('amount', 0);
+            setValue('goldAmount', 0);
+        }
       } catch (error) {
         setQuotation(0);
-        toast.info('Cotação não encontrada para a data de hoje.');
+        setValue('amount', 0);
+        setValue('goldAmount', 0);
+        toast.info('Cotação não encontrada para a data selecionada. O valor será zerado.');
       }
     };
     fetchQuotation();
-  }, []);
+  }, [dataHora, setValue]);
 
   // Buscar contas contábeis
   useEffect(() => {
@@ -84,12 +95,16 @@ export function TransferForm({ fromAccountId, transferType, onSave }: TransferFo
       try {
         const response = await api.get("/contas-contabeis");
         setContasContabeis(response.data);
+        const defaultAccount = response.data.find((cc: any) => cc.codigo === "1.1.7");
+        if (defaultAccount) {
+          setValue('contaContabilId', defaultAccount.id);
+        }
       } catch (error) {
         toast.error("Falha ao carregar contas contábeis.");
       }
     };
     fetchContasContabeis();
-  }, []);
+  }, [setValue]);
 
   const filteredContasContabeisOptions = useMemo(() => {
     return contasContabeis.map((cc) => ({

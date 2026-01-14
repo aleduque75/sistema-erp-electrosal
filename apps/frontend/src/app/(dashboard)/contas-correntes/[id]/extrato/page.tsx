@@ -3,7 +3,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import {
   MoreHorizontal,
   Paperclip, // Adicionar Paperclip
   Scale,
+  FileText,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -96,14 +97,27 @@ export interface Sale {
 
 
 const formatCurrency = (value?: number | null) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-    value || 0
-  );
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value || 0);
 
 const formatGold = (value?: number | null) => {
   if (value == null) return "-";
-  return `${value.toFixed(4).replace(".", ",")} g`;
+  return `${value.toFixed(2).replace(".", ",")} g`;
 };
+
+const formatDateOnly = (dateString?: string | null) =>
+  dateString
+    ? new Date(dateString).toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+        timeZone: "UTC",
+      })
+    : "N/A";
 
 const formatDateTime = (dateString?: string | null) =>
   dateString
@@ -159,6 +173,8 @@ interface ExtratoData {
 export default function ExtratoPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = searchParams.get('mode');
   const id = (params?.id ?? "") as string;
 
   const [extrato, setExtrato] = useState<ExtratoData | null>(null);
@@ -169,7 +185,7 @@ export default function ExtratoPage() {
   );
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
-  const [currencyView, setCurrencyView] = useState<"BRL" | "GOLD">("BRL");
+  const [currencyView, setCurrencyView] = useState<"BRL" | "GOLD">(mode === "GOLD" ? "GOLD" : "BRL");
 
   const [isLancamentoModalOpen, setIsLancamentoModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo estado para o modal de transferência
@@ -408,6 +424,27 @@ export default function ExtratoPage() {
     );
   }, [displayTransacoes, descriptionFilter]);
 
+  const handleGeneratePdf = async () => {
+    try {
+      const queryParams = new URLSearchParams({ startDate, endDate });
+      const response = await api.get(
+        `/contas-correntes/${id}/extrato/pdf?${queryParams.toString()}`,
+        { responseType: "blob" }
+      );
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `extrato-${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error("Erro ao gerar PDF.");
+    }
+  };
+
   if (isFetching && !extrato) {
     return <p className="text-center p-10">Buscando extrato...</p>;
   }
@@ -425,7 +462,7 @@ export default function ExtratoPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <ToggleGroup
                 type="single"
                 value={currencyView}
@@ -442,9 +479,15 @@ export default function ExtratoPage() {
                 </ToggleGroupItem>
               </ToggleGroup>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button variant="outline" onClick={() => router.back()}>
                   <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+                </Button>
+                <Button variant="outline" onClick={fetchExtrato}>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
+                </Button>
+                <Button variant="outline" onClick={handleGeneratePdf}>
+                  <FileText className="mr-2 h-4 w-4" /> PDF
                 </Button>
                 <Button onClick={() => setIsLancamentoModalOpen(true)}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Novo Lançamento
@@ -587,33 +630,34 @@ export default function ExtratoPage() {
                 </Alert>
               )}
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={
-                          selectedIds.length === filteredTransacoes.length &&
-                          filteredTransacoes.length > 0
-                        }
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedIds(filteredTransacoes.map((t) => t.id));
-                          } else {
-                            setSelectedIds([]);
-                          }
-                        }}
-                      />
-                    </TableHead>
-                    <TableHead>Data/Hora</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Fornecedor</TableHead>
-                    <TableHead>Conta Contábil</TableHead>
-                    <TableHead className="text-right">
-                      Valor ({currencyView === "BRL" ? "R$" : "Au"})
-                    </TableHead>
-                    <TableHead className="w-[50px]">Ações</TableHead>
-                  </TableRow>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                                        <TableRow>
+                                          <TableHead className="w-[40px]">
+                                            <Checkbox
+                                              checked={
+                                                selectedIds.length === filteredTransacoes.length &&
+                                                filteredTransacoes.length > 0
+                                              }
+                                              onCheckedChange={(checked) => {
+                                                if (checked) {
+                                                  setSelectedIds(filteredTransacoes.map((t) => t.id));
+                                                } else {
+                                                  setSelectedIds([]);
+                                                }
+                                              }}
+                                            />
+                                          </TableHead>
+                                          <TableHead className="w-[100px]">Data</TableHead>
+                                          <TableHead className="min-w-[150px]">Descrição</TableHead>
+                                          <TableHead className="hidden lg:table-cell">Fornecedor</TableHead>
+                                          <TableHead className="hidden xl:table-cell">Conta Contábil</TableHead>
+                                          <TableHead className="text-right px-2 min-w-[120px]">
+                                            Valor
+                                          </TableHead>
+                                          <TableHead className="w-[40px]">Ações</TableHead>
+                                        </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredTransacoes.length > 0 ? (
@@ -644,42 +688,65 @@ export default function ExtratoPage() {
                               title={!isEligibleForAccountPay ? 'Aviso: Esta transação não pode ser convertida em Contas a Pagar (não é um débito ou não possui fornecedor).' : undefined}
                             />
                           </TableCell>
-                          <TableCell>{formatDateTime(t.dataHora)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <span>{t.descricao}</span>
-                              {t.sale && (
-                                <Button
-                                  variant="link"
-                                  className="h-auto p-1 ml-2 whitespace-nowrap"
-                                  onClick={() => handleViewSaleDetails(t.sale.id)}
-                                >
-                                  (Venda #{t.sale.orderNumber})
-                                </Button>
-                              )}
-                              {t.medias && t.medias.length > 0 && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedMedias(t.medias);
-                                    setInitialImageIndex(0); // Definir o índice inicial para 0 ao abrir a galeria
-                                    setIsMediaModalOpen(true);
-                                  }}
-                                >
-                                  <Paperclip className="h-4 w-4" />
-                                </Button>
-                              )}
+                          <TableCell className="py-2 text-sm font-medium whitespace-nowrap">{formatDateOnly(t.dataHora)}</TableCell>
+                          <TableCell className="py-2 max-w-[150px] md:max-w-[200px] lg:max-w-[250px] xl:max-w-[300px] truncate" title={t.descricao}>
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1 overflow-hidden">
+                                <span className="truncate text-sm">{t.descricao}</span>
+                                {t.sale && (
+                                  <Button
+                                    variant="link"
+                                    className="h-auto p-0 text-[10px] text-blue-600 hover:underline shrink-0"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewSaleDetails(t.sale!.id);
+                                    }}
+                                  >
+                                    #{t.sale.orderNumber}
+                                  </Button>
+                                )}
+                                {t.medias && t.medias.length > 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 shrink-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedMedias(t.medias!);
+                                      setInitialImageIndex(0);
+                                      setIsMediaModalOpen(true);
+                                    }}
+                                  >
+                                    <Paperclip className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground flex flex-wrap gap-x-1.5 items-center opacity-70">
+                                <span className="font-mono bg-muted/30 px-1 rounded">{formatCurrency(t.valor)}</span>
+                                {t.goldAmount !== undefined && t.goldAmount !== 0 && (
+                                  <>
+                                    <span className="opacity-30">|</span>
+                                    <span className="font-mono bg-muted/30 px-1 rounded">{formatGold(t.goldAmount)}</span>
+                                    {t.goldPrice && (
+                                      <>
+                                        <span className="opacity-30">|</span>
+                                        <span className="font-mono bg-muted/30 px-1 rounded">
+                                          @{formatCurrency(t.goldPrice)}
+                                        </span>
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </TableCell>
-                          <TableCell>{t.fornecedorNome || 'N/A'}</TableCell>
+                          <TableCell className="hidden lg:table-cell py-2 text-sm">{t.fornecedorNome || 'N/A'}</TableCell>
                           <TableCell
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditingTransacaoId(t.id);
                             }}
-                            className="cursor-pointer hover:bg-muted/50"
+                            className="cursor-pointer hover:bg-muted/50 hidden xl:table-cell py-2 text-sm"
                           >
                             {editingTransacaoId === t.id ? (
                               <Combobox
@@ -698,12 +765,14 @@ export default function ExtratoPage() {
                             )}
                           </TableCell>
                           <TableCell
-                            className={`text-right font-semibold ${t.tipo === "CREDITO" ? "text-green-600" : "text-red-600"}`}
+                            className={`text-right px-2 py-2 font-bold whitespace-nowrap min-w-[110px] ${t.tipo === "CREDITO" ? "text-green-600" : "text-red-600"}`}
                           >
-                            {t.tipo === "CREDITO" ? "+ " : "- "}
-                            {currencyView === "BRL"
-                              ? formatCurrency(Math.abs(t.valor))
-                              : formatGold(Math.abs(t.goldAmount || 0))}
+                            <span className="tabular-nums text-sm">
+                              {t.tipo === "CREDITO" ? "+" : "-"}
+                              {currencyView === "BRL"
+                                ? formatCurrency(Math.abs(t.valor)).replace("R$", "").trim()
+                                : formatGold(Math.abs(t.goldAmount || 0))}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -774,6 +843,7 @@ export default function ExtratoPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           ) : (
             <p className="text-center p-10">

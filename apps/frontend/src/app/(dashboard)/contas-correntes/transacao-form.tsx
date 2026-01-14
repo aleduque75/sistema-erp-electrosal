@@ -23,8 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { ImageUpload } from "@/components/shared/ImageUpload"; // Importar ImageUpload
-import { ImageGallery } from "@/components/shared/ImageGallery"; // Importar ImageGallery
+import { ImageUpload } from "@/components/shared/ImageUpload";
+import { ImageGallery } from "@/components/shared/ImageGallery";
 
 const formSchema = z.object({
   descricao: z.string().min(3, "A descrição é obrigatória."),
@@ -35,10 +35,11 @@ const formSchema = z.object({
     required_error: "Selecione uma conta contábil.",
   }),
   fornecedorId: z.string().optional().nullable(),
+  contaCorrenteId: z.string().optional(), // Adicionar contaCorrenteId ao schema
   dataHora: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de data inválido (AAAA-MM-DD)."),
-  mediaIds: z.array(z.string()).optional(), // Adicionar mediaIds ao schema
+  mediaIds: z.array(z.string()).optional(),
 });
 
 interface TransacaoFormProps {
@@ -48,31 +49,17 @@ interface TransacaoFormProps {
   moeda?: string;
 }
 
-interface TransacaoExtrato {
-  id: string;
-  dataHora: string;
-  descricao: string;
-  valor: number;
-  goldAmount?: number;
-  tipo: "CREDITO" | "DEBITO";
-  contaContabilId: string;
-  contaContabilNome: string;
-  fornecedorId?: string;
-  medias?: { id: string; path: string }[]; // Adicionar medias ao TransacaoExtrato
-}
-interface ContaContabil {
+// ... TransacaoExtrato, ContaContabil, Fornecedor interfaces ...
+
+interface ContaCorrente { // Adicionar interface
   id: string;
   nome: string;
-  codigo: string;
-}
-interface Fornecedor {
-  id: string;
-  name: string;
 }
 
 export function TransacaoForm({ contaCorrenteId, onSave, initialData }: TransacaoFormProps) {
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [contasCorrentes, setContasCorrentes] = useState<ContaCorrente[]>([]);
   const [quotation, setQuotation] = useState(0);
   const [uploadedMedia, setUploadedMedia] = useState<{ id: string; path: string }[]>(initialData?.medias || []);
   const [tipoLancamento, setTipoLancamento] = useState<'CREDITO' | 'DEBITO'>(initialData?.tipo || 'CREDITO');
@@ -90,10 +77,11 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
       contaContabilId: "",
       fornecedorId: null,
       mediaIds: [],
+      contaCorrenteId: contaCorrenteId,
     },
   });
 
-  const { watch, setValue, reset } = form;
+  const { watch, setValue, reset, getValues } = form;
   const dataHora = watch("dataHora");
 
   useEffect(() => {
@@ -102,15 +90,26 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
         ...initialData,
         dataHora: initialData.dataHora.split('T')[0],
         mediaIds: initialData.medias?.map(media => media.id) || [],
+        contaCorrenteId: contaCorrenteId,
       });
       setTipoLancamento(initialData.tipo);
       setUploadedMedia(initialData.medias || []);
     } else {
-      reset();
+      reset({
+        dataHora: new Date().toISOString().split("T")[0],
+        tipo: "CREDITO",
+        descricao: "",
+        valor: 0,
+        goldAmount: 0,
+        contaContabilId: "",
+        fornecedorId: null,
+        mediaIds: [],
+        contaCorrenteId: contaCorrenteId,
+      });
       setTipoLancamento('CREDITO');
       setUploadedMedia([]);
     }
-  }, [initialData, reset]);
+  }, [initialData, reset, contaCorrenteId]);
 
   useEffect(() => {
     const fetchContas = async () => {
@@ -134,17 +133,28 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
         setFornecedores([]);
       }
     };
+    const fetchContasCorrentes = async () => {
+      try {
+        const res = await api.get("/contas-correntes", {
+          params: { activeOnly: true }, // Filtra apenas ativas
+        });
+        setContasCorrentes(res.data);
+      } catch (error) {
+        setContasCorrentes([]);
+      }
+    };
 
     fetchContas();
     fetchFornecedores();
+    fetchContasCorrentes();
   }, [tipoLancamento]);
-  
+
   const handleTipoChange = (value: 'CREDITO' | 'DEBITO') => {
     setTipoLancamento(value);
     setValue('tipo', value);
-    setValue('contaContabilId', ''); // Resetar a conta contábil ao mudar o tipo
+    setValue('contaContabilId', '');
     if (value === 'CREDITO') {
-      setValue('fornecedorId', null); // Limpa o fornecedor se for crédito
+      setValue('fornecedorId', null);
     }
   };
 
@@ -156,16 +166,22 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
           const response = await api.get(`/quotations/by-date?date=${dataHora}&metal=AU`);
           const fetchedQuotation = response.data?.buyPrice || 0;
           setQuotation(fetchedQuotation);
+          if (fetchedQuotation === 0) {
+              toast.info('Cotação não encontrada para a data selecionada. O valor será zerado.');
+              setValue('valor', 0);
+              setValue('goldAmount', 0);
+          }
         } catch (error) {
           setQuotation(0);
-          toast.info('Cotação não encontrada para a data selecionada.');
+          setValue('valor', 0);
+          setValue('goldAmount', 0);
+          toast.info('Cotação não encontrada para a data selecionada. O valor será zerado.');
         }
       }
     };
     fetchQuotation();
-  }, [dataHora]);
+  }, [dataHora, setValue]);
 
-  // Handlers for dynamic conversion
   const handleBrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newBrlValue = parseFloat(e.target.value) || 0;
     setValue('valor', newBrlValue);
@@ -210,7 +226,10 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
 
       await api[method](url, {
         ...data,
-        contaCorrenteId,
+        // contaCorrenteId já está em 'data' agora, mas o backend espera ele.
+        // Se estiver editando, o backend permite atualizar se passar.
+        // Se for criação, usa o do form ou da prop.
+        contaCorrenteId: data.contaCorrenteId || contaCorrenteId,
       });
 
       toast.success(`Lançamento ${initialData ? 'atualizado' : 'realizado'} com sucesso!`);
@@ -223,6 +242,29 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* ... existing fields ... */}
+        
+        {/* Campo de Conta Corrente (Editável apenas se for edição ou se quiser permitir mudar na criação) */}
+        <FormField
+          name="contaCorrenteId"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Conta Corrente</FormLabel>
+              <Combobox
+                options={contasCorrentes.map((c) => ({
+                  value: c.id,
+                  label: c.nome,
+                }))}
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Selecione a conta corrente..."
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           name="tipo"
           control={form.control}
