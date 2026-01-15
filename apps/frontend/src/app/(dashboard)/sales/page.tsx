@@ -327,6 +327,25 @@ ${itemsText}`;
     },
     { accessorKey: 'pessoa.name', header: 'Cliente' },
     {
+      id: 'products',
+      header: 'Produtos',
+      cell: ({ row }) => {
+        const saleItems = row.original.saleItems;
+        if (!saleItems || saleItems.length === 0) {
+          return '-';
+        }
+        return (
+          <div className="flex flex-col">
+            {saleItems.map(item => (
+              <span key={item.id}>
+                {item.product?.name || 'Produto desconhecido'} ({item.quantity})
+              </span>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: 'createdAt',
       header: 'Data',
       cell: ({ row }) => formatDate(row.original.createdAt),
