@@ -200,20 +200,11 @@ export class CalculateSaleAdjustmentUseCase {
       totalCostBRL = totalCostBRL.plus(itemCost);
     }
 
-    // Se a venda não for baseada em quantidade de metal, o lucro do metal deve ser zero.
-    const isQuantityBasedSale = sale.saleItems.some(item => item.product.productGroup?.adjustmentCalcMethod === 'QUANTITY_BASED');
-    if (!isQuantityBasedSale) {
-      saleExpectedGrams = paymentEquivalentGrams;
-    }
-
-    // 4. Calculate Discrepancy and Profits in Grams
-    let grossDiscrepancyGrams: Decimal | null = null;
+    // 4. Calculate Costs
     let costsInGrams: Decimal | null = null;
     let laborCostInGrams: Decimal = new Decimal(0);
 
     if (paymentEquivalentGrams) {
-      grossDiscrepancyGrams = paymentEquivalentGrams.minus(saleExpectedGrams);
-
       if (!itemsLaborGrams.isZero()) {
         laborCostInGrams = itemsLaborGrams;
       } else {
@@ -233,8 +224,8 @@ export class CalculateSaleAdjustmentUseCase {
           ? new Decimal(0)
           : otherCostsBRL.dividedBy(paymentQuotation);
     }
-
-    // 5. Calculate Profits in BRL
+    
+    // 5. Calculate Profits
     const laborCostInBRL =
       paymentQuotation && !paymentQuotation.isZero()
         ? laborCostInGrams.times(paymentQuotation)
@@ -243,26 +234,28 @@ export class CalculateSaleAdjustmentUseCase {
     const grossProfitBRL = paymentReceivedBRL.minus(totalCostBRL);
     const otherCostsBRL = new Decimal(sale.shippingCost || 0);
     const commissionBRL = new Decimal(sale.commissionAmount || 0);
-    
-    this.logger.log(`[DEBUG CALC] GrossProfit: ${grossProfitBRL}, OtherCosts: ${otherCostsBRL}, Commission: ${commissionBRL} (from sale.commissionAmount: ${sale.commissionAmount})`);
-
-    // FIX: The labor cost is already part of the gross profit (because it's included in paymentReceived).
-    // We should NOT add it again. Net profit is simply Gross Profit - Other Costs - Commission.
     const netProfitBRL = grossProfitBRL.minus(otherCostsBRL).minus(commissionBRL);
 
-    this.logger.log(`[DEBUG CALC] NetProfit Calculated: ${netProfitBRL}`);
-    
-    // FIX: Similarly for grams, the gross discrepancy already includes the labor grams.
-    // Convert commission to grams to subtract it from the metal profit as well.
+    // 6. Unify Profit Logic: BRL profit is the source of truth. Gram profit is derived from it.
+    let netDiscrepancyGrams: Decimal;
+    let grossDiscrepancyGrams: Decimal;
+
+    if (paymentQuotation && paymentQuotation.gt(0)) {
+      netDiscrepancyGrams = netProfitBRL.dividedBy(paymentQuotation);
+    } else {
+      netDiscrepancyGrams = new Decimal(0);
+    }
+
     const commissionInGrams = (commissionBRL.gt(0) && paymentQuotation && paymentQuotation.gt(0))
       ? commissionBRL.dividedBy(paymentQuotation)
       : new Decimal(0);
 
-    let netDiscrepancyGrams = (grossDiscrepancyGrams || new Decimal(0))
-      .minus(costsInGrams || 0)
-      .minus(commissionInGrams);
+    // Back-calculate gross discrepancy and expected grams for data consistency
+    grossDiscrepancyGrams = netDiscrepancyGrams.plus(costsInGrams || 0).plus(commissionInGrams);
+    // We must redefine saleExpectedGrams here to ensure the final adjustment data is consistent
+    saleExpectedGrams = paymentEquivalentGrams.minus(grossDiscrepancyGrams);
 
-    this.logger.log(`[DEBUG CALC] CommissionInGrams: ${commissionInGrams}, NetDiscrepancyGrams: ${netDiscrepancyGrams}`);
+    this.logger.log(`[DEBUG CALC] NetProfit: ${netProfitBRL}, NetDiscrepancyGrams: ${netDiscrepancyGrams}`);
 
     // --- SILVER TO GOLD CONVERSION BLOCK REMOVED (Handled natively above) ---
     // ---------------------------------------------
