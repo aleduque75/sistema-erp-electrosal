@@ -21,12 +21,15 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ContaCorrenteType } from '@prisma/client'; // Adicionado
 import { GenerateExtratoPdfUseCase } from './use-cases/generate-extrato-pdf.use-case';
 
+import { GenerateSelectedExtratoPdfUseCase } from './use-cases/generate-selected-extrato-pdf.use-case';
+
 @UseGuards(AuthGuard('jwt'))
 @Controller('contas-correntes')
 export class ContasCorrentesController {
   constructor(
     private readonly service: ContasCorrentesService,
     private readonly generateExtratoPdfUseCase: GenerateExtratoPdfUseCase,
+    private readonly generateSelectedExtratoPdfUseCase: GenerateSelectedExtratoPdfUseCase,
   ) {}
 
   @Post()
@@ -126,6 +129,26 @@ export class ContasCorrentesController {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="extrato-${id}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
+  }
+
+  @Post('extrato/pdf/selected')
+  async getSelectedExtratoPdf(
+    @CurrentUser('orgId') organizationId: string,
+    @Res() res: Response,
+    @Body('transactionIds') transactionIds: string[],
+  ) {
+    const pdfBuffer = await this.generateSelectedExtratoPdfUseCase.execute({
+      transactionIds,
+      organizationId,
+    });
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="extrato-selecionado.pdf"`,
       'Content-Length': pdfBuffer.length,
     });
 

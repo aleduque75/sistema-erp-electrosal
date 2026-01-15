@@ -50,6 +50,8 @@ export class AccountsPayController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('status') status?: 'pending' | 'paid' | 'all',
+    @Query('description') description?: string,
+    @Query('fornecedorId') fornecedorId?: string,
   ) {
     const parsedStartDate = startDate ? new Date(startDate) : undefined;
     const parsedEndDate = endDate ? new Date(endDate) : undefined;
@@ -58,6 +60,8 @@ export class AccountsPayController {
       parsedStartDate,
       parsedEndDate,
       status,
+      description,
+      fornecedorId,
     );
   }
 

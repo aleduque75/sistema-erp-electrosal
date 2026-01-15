@@ -186,8 +186,23 @@ export class ContasCorrentesService {
       orderBy: { dataHora: 'asc' },
     });
 
-    // 4. Não precisamos mais buscar a contrapartida separadamente, já está incluída
-    const transacoesComContrapartida = transacoesNoPeriodo;
+    // 4. Busca as Cotações do Período para referência
+    const quotations = await this.prisma.quotation.findMany({
+      where: {
+        organizationId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+    });
+
+    const quotationMap = new Map<string, number>();
+    quotations.forEach((q) => {
+      const dateKey = q.date.toISOString().split('T')[0];
+      // Usando sellPrice como o preço do ouro para o dia
+      quotationMap.set(dateKey, q.sellPrice.toNumber());
+    });
 
     // 5. Calcula os Saldos Finais (BRL e Gold)
     const saldosFinais = transacoesNoPeriodo.reduce(
@@ -212,20 +227,31 @@ export class ContasCorrentesService {
       saldoFinalBRL: saldosFinais.brl,
       saldoFinalGold: saldosFinais.gold,
       contaCorrente,
-      transacoes: transacoesComContrapartida.map((t) => ({
-        ...t,
-        contaContabilNome: t.contaContabil?.nome,
-        fornecedorNome: t.fornecedor?.pessoa?.name,
-        sale: t.accountRec?.sale,
-        contrapartida: t.linkedTransaction
-          ? {
-              contaCorrente: {
-                nome: t.linkedTransaction.contaCorrente?.nome || 'Conta Desconhecida',
-              },
-            }
-          : null,
-        goldPrice: t.goldPrice ? Number(t.goldPrice) : null,
-      })),
+      transacoes: transacoesNoPeriodo.map((t) => {
+        const dateKey = t.dataHora.toISOString().split('T')[0];
+        const dailyQuotation = quotationMap.get(dateKey);
+
+        // Prioriza a cotação do dia. Se não houver, usa a cotação da transação (se existir), senão null.
+        const goldPrice =
+          dailyQuotation ?? (t.goldPrice ? Number(t.goldPrice) : null);
+
+        return {
+          ...t,
+          contaContabilNome: t.contaContabil?.nome,
+          fornecedorNome: t.fornecedor?.pessoa?.name,
+          sale: t.accountRec?.sale,
+          contrapartida: t.linkedTransaction
+            ? {
+                contaCorrente: {
+                  nome:
+                    t.linkedTransaction.contaCorrente?.nome ||
+                    'Conta Desconhecida',
+                },
+              }
+            : null,
+          goldPrice, // Usa o goldPrice calculado
+        };
+      }),
     };
   }
 

@@ -30,6 +30,7 @@ const formSchema = z.object({
   descricao: z.string().min(3, "A descrição é obrigatória."),
   valor: z.coerce.number().optional(),
   goldAmount: z.coerce.number().optional(),
+  goldPrice: z.coerce.number().optional(),
   tipo: z.enum(["CREDITO", "DEBITO"]),
   contaContabilId: z.string({
     required_error: "Selecione uma conta contábil.",
@@ -47,6 +48,30 @@ interface TransacaoFormProps {
   onSave: () => void;
   initialData?: TransacaoExtrato | null;
   moeda?: string;
+}
+
+interface TransacaoExtrato {
+  id: string;
+  dataHora: string;
+  descricao: string;
+  valor: number;
+  goldAmount?: number;
+  tipo: 'CREDITO' | 'DEBITO';
+  contaContabilId: string;
+  fornecedorId?: string | null;
+  medias?: { id: string; path: string }[];
+  goldPrice?: number;
+}
+
+interface ContaContabil {
+  id: string;
+  nome: string;
+  codigo: string;
+}
+
+interface Fornecedor {
+  id: string;
+  name: string;
 }
 
 // ... TransacaoExtrato, ContaContabil, Fornecedor interfaces ...
@@ -94,6 +119,9 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
       });
       setTipoLancamento(initialData.tipo);
       setUploadedMedia(initialData.medias || []);
+      if (initialData.goldPrice) {
+        setQuotation(initialData.goldPrice);
+      }
     } else {
       reset({
         dataHora: new Date().toISOString().split("T")[0],
@@ -163,24 +191,29 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
     const fetchQuotation = async () => {
       if (dataHora) {
         try {
-          const response = await api.get(`/quotations/by-date?date=${dataHora}&metal=AU`);
-          const fetchedQuotation = response.data?.buyPrice || 0;
+          const response = await api.get(
+            `/quotations/by-date?date=${dataHora}&metal=AU`,
+          );
+          const fetchedQuotation = response.data?.sellPrice || 0;
           setQuotation(fetchedQuotation);
-          if (fetchedQuotation === 0) {
-              toast.info('Cotação não encontrada para a data selecionada. O valor será zerado.');
-              setValue('valor', 0);
-              setValue('goldAmount', 0);
+
+          const currentBrlValue = getValues('valor') || 0;
+          if (fetchedQuotation > 0 && currentBrlValue > 0) {
+            const newGoldAmount = currentBrlValue / fetchedQuotation;
+            setValue('goldAmount', parseFloat(newGoldAmount.toFixed(4)));
+          } else if (fetchedQuotation === 0) {
+            toast.info(
+              'Cotação não encontrada para a data. Ajuste os valores.',
+            );
           }
         } catch (error) {
           setQuotation(0);
-          setValue('valor', 0);
-          setValue('goldAmount', 0);
-          toast.info('Cotação não encontrada para a data selecionada. O valor será zerado.');
+          toast.error('Falha ao buscar cotação.');
         }
       }
     };
     fetchQuotation();
-  }, [dataHora, setValue]);
+  }, [dataHora, setValue, getValues]);
 
   const handleBrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newBrlValue = parseFloat(e.target.value) || 0;
@@ -226,6 +259,7 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
 
       await api[method](url, {
         ...data,
+        goldPrice: quotation,
         // contaCorrenteId já está em 'data' agora, mas o backend espera ele.
         // Se estiver editando, o backend permite atualizar se passar.
         // Se for criação, usa o do form ou da prop.

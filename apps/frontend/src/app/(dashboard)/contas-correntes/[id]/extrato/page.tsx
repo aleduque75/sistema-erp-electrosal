@@ -445,6 +445,31 @@ export default function ExtratoPage() {
     }
   };
 
+  const handleGenerateSelectedPdf = async () => {
+    if (selectedIds.length === 0) {
+      toast.error("Selecione as transações para imprimir.");
+      return;
+    }
+    try {
+      const response = await api.post(
+        `/contas-correntes/extrato/pdf/selected`,
+        { transactionIds: selectedIds },
+        { responseType: "blob" }
+      );
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `extrato-selecionado.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error("Erro ao gerar PDF dos selecionados.");
+    }
+  };
+
   if (isFetching && !extrato) {
     return <p className="text-center p-10">Buscando extrato...</p>;
   }
@@ -629,6 +654,13 @@ export default function ExtratoPage() {
                   </AlertDescription>
                 </Alert>
               )}
+              <Button
+                variant="outline"
+                onClick={handleGenerateSelectedPdf}
+                disabled={selectedIds.length === 0}
+              >
+                <FileText className="mr-2 h-4 w-4" /> Imprimir Selecionados
+              </Button>
 
               <div className="overflow-x-auto">
                 <Table>

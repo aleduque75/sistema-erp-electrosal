@@ -35,7 +35,9 @@ export class QuotationsController {
     @Query('date') date: string,
     @Query('metal') metal: TipoMetal,
   ) {
-    return this.quotationsService.findByDate(new Date(date), metal, organizationId);
+    // Adiciona o fuso horário para garantir que a data seja interpretada corretamente
+    const searchDate = new Date(`${date}T12:00:00.000Z`);
+    return this.quotationsService.findByDate(searchDate, metal, organizationId);
   }
 
   @Get('latest')

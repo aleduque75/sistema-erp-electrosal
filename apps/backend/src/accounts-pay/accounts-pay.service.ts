@@ -140,19 +140,31 @@ export class AccountsPayService {
     startDate?: Date,
     endDate?: Date,
     status?: 'pending' | 'paid' | 'all',
+    description?: string,
+    fornecedorId?: string,
   ): Promise<any> {
     const where: Prisma.AccountPayWhereInput = {
       organizationId,
+      dueDate: { gte: startDate, lte: endDate },
     };
 
     if (status === 'pending') {
       where.paid = false;
     } else if (status === 'paid') {
       where.paid = true;
-      where.dueDate = { gte: startDate, lte: endDate };
-    } else { // status === 'all' or undefined
-      where.dueDate = { gte: startDate, lte: endDate };
     }
+    
+    if (description) {
+      where.description = {
+        contains: description,
+        mode: 'insensitive',
+      }
+    }
+
+    if (fornecedorId) {
+      where.fornecedorId = fornecedorId;
+    }
+
 
     const accounts = await this.prisma.accountPay.findMany({
       where,
@@ -163,18 +175,16 @@ export class AccountsPayService {
             pessoa: true,
           },
         },
+        transacao: {
+          include: {
+            contaCorrente: true,
+          },
+        },
       },
       orderBy: { dueDate: 'asc' },
     });
 
-    const totalWhere: Prisma.AccountPayWhereInput = {
-      organizationId,
-      paid: false,
-    };
-
-    if (status !== 'pending') {
-      totalWhere.dueDate = { gte: startDate, lte: endDate };
-    }
+    const totalWhere = { ...where, paid: false };
 
     const totalResult = await this.prisma.accountPay.aggregate({
       where: totalWhere,
@@ -192,6 +202,13 @@ export class AccountsPayService {
   async findOne(organizationId: string, id: string): Promise<AccountPay> {
     const account = await this.prisma.accountPay.findFirst({
       where: { id, organizationId },
+      include: {
+        transacao: {
+          include: {
+            contaCorrente: true,
+          },
+        },
+      },
     });
     if (!account) {
       throw new NotFoundException(`Conta a pagar com ID ${id} não encontrada.`);

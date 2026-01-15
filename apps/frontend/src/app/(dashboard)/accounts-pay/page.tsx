@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -14,16 +14,11 @@ import {
   GitCommitHorizontal,
   Info,
   RotateCcw,
+  X,
 } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { addDays } from "date-fns";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -48,11 +43,14 @@ import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AccountPayForm } from "./components/account-pay-form"; // <-- CORRIGIDO AQUI
+import { AccountPayForm } from "./components/account-pay-form";
 import { SplitAccountPayForm } from "./components/split-account-pay-form";
-import { PayAccountForm } from "./components/pay-account-form"; // Added
+import { PayAccountForm } from "./components/pay-account-form";
 import { AccountPayDetailsView } from "./components/account-pay-details-view";
 import { formatInTimeZone } from "date-fns-tz";
+import { Pessoa } from "@/@types/pessoa";
+import { useDebounce } from "@/hooks/use-debounce";
+import { Combobox } from "@/components/ui/combobox";
 
 interface AccountPay {
   id: string;
@@ -64,7 +62,7 @@ interface AccountPay {
   paid: boolean;
   paidAt?: string | null;
   isInstallment?: boolean;
-  createdAt: string; // Adicionado
+  createdAt: string;
   fornecedorId?: string | null;
   fornecedor?: {
     pessoa: {
@@ -85,28 +83,52 @@ const formatDate = (dateString?: string | null) =>
     ? formatInTimeZone(new Date(dateString), "UTC", "dd/MM/yyyy")
     : "N/A";
 
+const INITIAL_DATE_RANGE = {
+  from: addDays(new Date(), -30),
+  to: new Date(),
+};
+
 export default function AccountsPayPage() {
   const { user, loading } = useAuth();
   const [accounts, setAccounts] = useState<AccountPay[]>([]);
   const [total, setTotal] = useState(0);
   const [isFetching, setIsFetching] = useState(true);
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: addDays(new Date(), -30),
-    to: new Date(),
-  });
-
-  const [filter, setFilter] = useState("");
+  
+  const [date, setDate] = useState<DateRange | undefined>(INITIAL_DATE_RANGE);
+  const [descriptionFilter, setDescriptionFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
+  const [fornecedorFilter, setFornecedorFilter] = useState("all");
+  
+  const debouncedDescription = useDebounce(descriptionFilter, 500);
+
+  const [fornecedores, setFornecedores] = useState<Pessoa[]>([]);
+
+  const fornecedorOptions = [
+    { value: 'all', label: 'Todos os Fornecedores' },
+    ...fornecedores.map(f => ({ value: f.id, label: f.name }))
+  ];
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [accountToEdit, setAccountToEdit] = useState<AccountPay | null>(null);
-  const [accountToDelete, setAccountToDelete] = useState<AccountPay | null>(
-    null
-  );
+  const [accountToDelete, setAccountToDelete] = useState<AccountPay | null>(null);
   const [accountToPay, setAccountToPay] = useState<AccountPay | null>(null);
   const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
   const [accountToSplit, setAccountToSplit] = useState<AccountPay | null>(null);
   const [accountToView, setAccountToView] = useState<AccountPay | null>(null);
+  
+  useEffect(() => {
+    const fetchFornecedores = async () => {
+      try {
+        const response = await api.get('/pessoas?role=FORNECEDOR');
+        setFornecedores(response.data || []);
+      } catch (error) {
+        toast.error('Falha ao carregar fornecedores.');
+      }
+    };
+    if (user) {
+      fetchFornecedores();
+    }
+  }, [user]);
 
   const fetchAccounts = useCallback(async () => {
     if (!date?.from || !date?.to) return;
@@ -119,6 +141,13 @@ export default function AccountsPayPage() {
       if (statusFilter && statusFilter !== 'all') {
         params.append('status', statusFilter);
       }
+      if (debouncedDescription) {
+        params.append('description', debouncedDescription);
+      }
+      if (fornecedorFilter && fornecedorFilter !== 'all') {
+        params.append('fornecedorId', fornecedorFilter);
+      }
+
       const response = await api.get(`/accounts-pay?${params.toString()}`);
       setAccounts(response.data.accounts || []);
       setTotal(response.data.total || 0);
@@ -127,20 +156,20 @@ export default function AccountsPayPage() {
     } finally {
       setIsFetching(false);
     }
-  }, [date, statusFilter]);
+  }, [date, statusFilter, debouncedDescription, fornecedorFilter]);
 
   useEffect(() => {
     if (user && !loading) {
       fetchAccounts();
     }
-  }, [user, loading, fetchAccounts, statusFilter]);
+  }, [user, loading, fetchAccounts]);
 
-  const filteredAccounts = useMemo(() => {
-    return accounts.filter(acc => {
-      const searchTerm = filter.toLowerCase();
-      return searchTerm === '' || acc.description.toLowerCase().includes(searchTerm);
-    });
-  }, [accounts, filter]);
+  const handleClearFilters = () => {
+    setDate(INITIAL_DATE_RANGE);
+    setDescriptionFilter("");
+    setStatusFilter("pending");
+    setFornecedorFilter("all");
+  };
 
   const handleSave = () => {
     setIsFormModalOpen(false);
@@ -301,42 +330,58 @@ export default function AccountsPayPage() {
       <div className="space-y-4 p-4 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <h1 className="text-2xl font-bold">Contas a Pagar</h1>
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button onClick={handleOpenNewModal} className="w-full sm:w-auto">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nova Conta
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-            <Input 
-              placeholder="Filtrar por descrição..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="max-w-sm"
-            />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="paid">Pago</SelectItem>
-              </SelectContent>
-            </Select>
-            <DateRangePicker date={date} onDateChange={setDate} />
-            <Button variant="ghost" size="icon" onClick={() => fetchAccounts()} title="Atualizar lista">
-              <RotateCcw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            </Button>
+          <Button onClick={handleOpenNewModal} className="w-full sm:w-auto">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Nova Conta
+          </Button>
         </div>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-4">
+             <div className="flex flex-wrap items-center gap-2">
+                <Input 
+                  placeholder="Filtrar por descrição..."
+                  value={descriptionFilter}
+                  onChange={(e) => setDescriptionFilter(e.target.value)}
+                  className="w-full max-w-xs"
+                />
+                <div className="w-full max-w-[200px]">
+                  <Combobox
+                    options={fornecedorOptions}
+                    value={fornecedorFilter}
+                    onChange={(value) => setFornecedorFilter(value || 'all')}
+                    placeholder="Selecione um fornecedor"
+                    searchPlaceholder="Buscar fornecedor..."
+                    emptyText="Nenhum fornecedor encontrado."
+                  />
+                </div>
+                <div className="w-full max-w-[180px]">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="pending">Pendente</SelectItem>
+                      <SelectItem value="paid">Pago</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <DateRangePicker date={date} onDateChange={setDate} />
+             </div>
+             <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => fetchAccounts()} title="Atualizar lista">
+                  <RotateCcw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleClearFilters}>
+                  <X className="mr-2 h-4 w-4" />
+                  Limpar Filtros
+                </Button>
+             </div>
+
             <DataTable
               columns={columns}
-              data={filteredAccounts}
+              data={accounts}
               isLoading={isFetching}
             />
           </CardContent>
