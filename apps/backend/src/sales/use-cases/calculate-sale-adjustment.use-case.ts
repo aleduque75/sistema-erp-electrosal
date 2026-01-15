@@ -43,6 +43,11 @@ export class CalculateSaleAdjustmentUseCase {
                 productGroup: true,
               },
             },
+            saleItemLots: {
+              include: {
+                inventoryLot: true,
+              },
+            },
           },
         },
       },
@@ -144,6 +149,7 @@ export class CalculateSaleAdjustmentUseCase {
     let itemsLaborGrams = new Decimal(0);
 
     for (const item of sale.saleItems) {
+      // --- Mantenha a lógica de cálculo de `saleExpectedGrams` e `itemsLaborGrams` como está ---
       let itemExpectedGrams = new Decimal(0);
       const calcMethod = item.product.productGroup?.adjustmentCalcMethod;
 
@@ -161,31 +167,32 @@ export class CalculateSaleAdjustmentUseCase {
           }
           break;
       }
-
-      // NORMALIZE EXPECTED GRAMS TO GOLD IF SILVER SALE
       if (isSilverSale && silverPrice && goldPrice) {
-           // Currently itemExpectedGrams is in Silver.
-           // Value in BRL = SilverGrams * SilverPrice
            const valueBRL = itemExpectedGrams.times(silverPrice);
-           // Value in Gold = ValueBRL / GoldPrice
            const itemExpectedGramsAu = valueBRL.dividedBy(goldPrice);
-           
-           this.logger.log(`[SALE_ADJUSTMENT] Converting Item Expected from Ag (${itemExpectedGrams}) to Au (${itemExpectedGramsAu})`);
            itemExpectedGrams = itemExpectedGramsAu;
       }
-      
       saleExpectedGrams = saleExpectedGrams.plus(itemExpectedGrams);
-      
-      // Calculate item-specific labor if laborPercentage is present
       if (item.laborPercentage) {
         const itemLabor = itemExpectedGrams.times(new Decimal(item.laborPercentage).dividedBy(100));
         itemsLaborGrams = itemsLaborGrams.plus(itemLabor);
       }
+      // --- Fim da lógica mantida ---
 
-      // Total Cost Calculation
-      // If paymentQuotation is Gold (for Silver Sale), and itemExpectedGrams is converted to Gold, 
-      // then Cost = GoldGrams * GoldPrice = Correct BRL Cost.
-      const itemCost = (paymentQuotation || new Decimal(0)).times(itemExpectedGrams);
+      // --- NOVA LÓGICA PARA totalCostBRL ---
+      let itemCost = new Decimal(0);
+      const saleItemLots = (item as any).saleItemLots;
+
+      if (saleItemLots && saleItemLots.length > 0) {
+        // Se o item de venda tem lotes associados, o custo é a soma dos custos desses lotes
+        for (const lot of saleItemLots) {
+          const lotCost = new Decimal(lot.inventoryLot.costPrice || 0).times(new Decimal(lot.quantity));
+          itemCost = itemCost.plus(lotCost);
+        }
+      } else {
+        // Fallback: se não houver lotes, use o costPriceAtSale do próprio item
+        itemCost = new Decimal(item.costPriceAtSale || 0).times(new Decimal(item.quantity));
+      }
       totalCostBRL = totalCostBRL.plus(itemCost);
     }
 

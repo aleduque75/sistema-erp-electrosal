@@ -432,14 +432,20 @@ export class HybridReceiveUseCase {
           });
 
           if (accountRec.sale) {
-              if (accountRec.doNotUpdateSaleStatus) {
-                  // Not doing anything with the sale
-              } else {
-                   await tx.sale.update({
-                      where: { id: accountRec.saleId! },
-                      data: { status: 'FINALIZADO' },
-                  });
-              }
+            // Se o DTO.finalize for true, ele tem precedência e finaliza a venda.
+            if (dto.finalize) {
+              await tx.sale.update({
+                where: { id: accountRec.saleId! },
+                data: { status: 'FINALIZADO' },
+              });
+            } 
+            // Se não, verificamos a flag da AccountRec para decidir se atualizamos o status.
+            else if (!accountRec.doNotUpdateSaleStatus) {
+              await tx.sale.update({
+                where: { id: accountRec.saleId! },
+                data: { status: 'FINALIZADO' },
+              });
+            }
           }
         }
         
