@@ -262,7 +262,7 @@ export function NewSaleForm({ onSave }: any) {
     // But usually we want quantity to match lots sum
     const totalLotQty = selectedLots.reduce((acc, lot) => acc + lot.quantity, 0);
     // Use toFixed to avoid 100.000000000001 issues
-    updatedItems[itemIndex].quantity = parseFloat(totalLotQty.toFixed(4));
+    updatedItems[itemIndex].quantity = parseFloat(totalLotQty.toFixed(2));
 
     setItems(updatedItems);
     
@@ -346,7 +346,7 @@ export function NewSaleForm({ onSave }: any) {
       pessoaId: formData.clientId,
       items: items.map(({ productId, quantity, price, lots, laborPercentage, entryUnit, entryQuantity }) => ({
         productId,
-        quantity: Number(quantity.toFixed(4)),
+        quantity: Number(quantity.toFixed(2)),
         price: Number(price.toFixed(2)),
         lots,
         laborPercentage,
@@ -610,7 +610,7 @@ export function NewSaleForm({ onSave }: any) {
                                 handleUpdateItem(index, 'quantity', val === '' ? 0 : parseFloat(val));
                               }}
                               className="w-24"
-                              step="0.0001"
+                              step="0.01"
                             />
                           </TableCell>
                           <TableCell>

@@ -111,7 +111,7 @@ export function LotSelectionModal({
     const totalSelected = getTotalSelectedQuantity();
     const required = new Decimal(quantityRequired);
 
-    if (required.minus(totalSelected).abs().greaterThan('0.0001')) {
+    if (required.minus(totalSelected).abs().greaterThan('0.01')) {
       toast.warning(`A quantidade selecionada (${totalSelected}) não corresponde à quantidade necessária (${quantityRequired}).`);
       return;
     }
@@ -149,7 +149,7 @@ export function LotSelectionModal({
             <div>
               <p className="font-medium">Quantidade Restante</p>
               <p className={`text-2xl font-bold ${quantityRemaining < 0 ? 'text-destructive' : 'text-success'}`}>
-                {quantityRemaining.toFixed(4)}
+                {quantityRemaining.toFixed(2)}
               </p>
             </div>
           </div>
@@ -179,11 +179,11 @@ export function LotSelectionModal({
                         <TableCell>{lot.batchNumber}</TableCell>
                         <TableCell>{format(new Date(lot.receivedDate), 'dd/MM/yyyy')}</TableCell>
                         <TableCell className="text-right">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lot.costPrice)}</TableCell>
-                        <TableCell className="text-right">{remainingAfterSelection.toFixed(4)}</TableCell>
+                        <TableCell className="text-right">{remainingAfterSelection.toFixed(2)}</TableCell>
                         <TableCell className="text-right">
                           <Input
                             type="number"
-                            step="0.0001"
+                            step="0.01"
                             value={selectedQty}
                             onChange={(e) => handleQuantityChange(lot.id, parseFloat(e.target.value) || 0)}
                             max={remainingAfterSelection.toNumber()}

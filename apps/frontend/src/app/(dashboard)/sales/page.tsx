@@ -241,8 +241,8 @@ export default function SalesPage() {
         const goldQty = (item.quantity * (item.product.goldValue || 0));
         
         // Format: 58,8 (using comma for decimals)
-        const formattedQty = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 4 }).format(item.quantity);
-        const formattedGoldQty = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 4 }).format(goldQty);
+        const formattedQty = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(item.quantity);
+        const formattedGoldQty = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(goldQty);
 
         return `Produto: ${item.product.name}\nQtd ${item.product.name}: ${formattedQty} ${unit}  /  Qtd Au: ${formattedGoldQty}`;
       }).join('\n');

@@ -180,8 +180,8 @@ export function AddItemModal({
         }, 0)
       : (selectedProduct.stock || 0);
 
-    if (finalQuantity > totalStockAvailable + 0.0001) {
-      toast.error(`Estoque insuficiente. Total disponível: ${totalStockAvailable.toFixed(4)}`);
+    if (finalQuantity > totalStockAvailable + 0.01) {
+      toast.error(`Estoque insuficiente. Total disponível: ${totalStockAvailable.toFixed(2)}`);
       return;
     }
 
@@ -246,8 +246,8 @@ export function AddItemModal({
                   type="number"
                   value={entryQuantity}
                   onChange={(e) => setEntryQuantity(e.target.value)}
-                  min="0.0001"
-                  step="0.0001"
+                  min="0.01"
+                  step="0.01"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -271,11 +271,11 @@ export function AddItemModal({
               </div>
               <div className="sm:col-span-2">
                 <Label>Total {specialConfig.metal} (g)</Label>
-                <Input type="number" value={totalMetalAmount.toFixed(4)} readOnly disabled className="font-bold" />
+                <Input type="number" value={totalMetalAmount.toFixed(2)} readOnly disabled className="font-bold" />
               </div>
               <div className="sm:col-span-3">
                 <Label>Qtd. Final ({specialConfig.unitName})</Label>
-                <Input type="number" value={finalQuantity.toFixed(4)} readOnly disabled />
+                <Input type="number" value={finalQuantity.toFixed(2)} readOnly disabled />
               </div>
             </>
           ) : (
@@ -286,7 +286,7 @@ export function AddItemModal({
               </div>
               <div className="sm:col-span-6">
                 <Label>Qtd.</Label>
-                <Input type="number" value={entryQuantity} onChange={(e) => setEntryQuantity(e.target.value)} min="0.0001" step="0.0001" />
+                <Input type="number" value={entryQuantity} onChange={(e) => setEntryQuantity(e.target.value)} min="0.01" step="0.01" />
               </div>
             </>
           )}
@@ -308,10 +308,10 @@ export function AddItemModal({
                       const available = lot.remainingQuantity - used;
                       return { ...lot, available };
                     })
-                    .filter((lot) => lot.available > 0.0001)
+                    .filter((lot) => lot.available > 0.01)
                     .map((lot) => (
                       <SelectItem key={lot.id} value={lot.id}>
-                        Lote {lot.batchNumber || `#${lot.id.substring(0, 8)}`} (Disponível: {lot.available.toFixed(4)})
+                        Lote {lot.batchNumber || `#${lot.id.substring(0, 8)}`} (Disponível: {lot.available.toFixed(2)})
                       </SelectItem>
                     ))}
                 </SelectContent>
