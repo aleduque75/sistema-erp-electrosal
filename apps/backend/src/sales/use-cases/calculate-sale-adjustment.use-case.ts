@@ -184,16 +184,26 @@ export class CalculateSaleAdjustmentUseCase {
       const saleItemLots = (item as any).saleItemLots;
 
       if (saleItemLots && saleItemLots.length > 0) {
-        // Se o item de venda tem lotes associados, o custo é a soma dos custos desses lotes
         for (const lot of saleItemLots) {
-          const lotCost = new Decimal(lot.inventoryLot.costPrice || 0).times(new Decimal(lot.quantity));
-          itemCost = itemCost.plus(lotCost);
+          const lotCostPrice = new Decimal(lot.inventoryLot.costPrice || 0);
+          if (lotCostPrice.isZero()) {
+            // Se o custo do lote for zero, usar o custo do item no momento da venda como fallback
+            itemCost = itemCost.plus(new Decimal(item.costPriceAtSale || 0).times(new Decimal(lot.quantity)));
+          } else {
+            const lotCost = lotCostPrice.times(new Decimal(lot.quantity));
+            itemCost = itemCost.plus(lotCost);
+          }
         }
       } else {
-        // Fallback: se não houver lotes, use o costPriceAtSale do próprio item
         itemCost = new Decimal(item.costPriceAtSale || 0).times(new Decimal(item.quantity));
       }
       totalCostBRL = totalCostBRL.plus(itemCost);
+    }
+
+    // Se a venda não for baseada em quantidade de metal, o lucro do metal deve ser zero.
+    const isQuantityBasedSale = sale.saleItems.some(item => item.product.productGroup?.adjustmentCalcMethod === 'QUANTITY_BASED');
+    if (!isQuantityBasedSale) {
+      saleExpectedGrams = paymentEquivalentGrams;
     }
 
     // 4. Calculate Discrepancy and Profits in Grams
