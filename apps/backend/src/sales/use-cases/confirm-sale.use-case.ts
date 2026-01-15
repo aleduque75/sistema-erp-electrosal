@@ -28,7 +28,8 @@ export class ConfirmSaleUseCase {
         include: {
           saleItems: { include: { product: { include: { productGroup: true } } } },
           pessoa: true,
-          paymentTerm: true, // Incluir o prazo de pagamento
+          paymentTerm: true,
+          installments: true, // Adicionar aqui
         },
       });
 
@@ -37,11 +38,6 @@ export class ConfirmSaleUseCase {
       }
 
       const { paymentMethod, contaCorrenteId, updatedGoldPrice, paymentMetalType } = confirmSaleDto;
-
-      // Buscar se já existe um AccountRec para esta venda (comum em vendas importadas)
-      const existingAccountRec = await tx.accountRec.findFirst({
-        where: { saleId: saleId },
-      });
 
       let finalNetAmount = new Decimal(sale.netAmount || 0);
 
@@ -68,6 +64,10 @@ export class ConfirmSaleUseCase {
         if (!contaCorrenteId) {
           throw new BadRequestException('Conta corrente para pagamento à vista não especificada.');
         }
+
+        const existingAccountRec = await tx.accountRec.findFirst({
+          where: { saleId: sale.id },
+        });
 
         const accountRecData = {
           organizationId,
@@ -109,6 +109,10 @@ export class ConfirmSaleUseCase {
         if (finalGoldValue.isZero()) {
             throw new BadRequestException('A quantidade de ouro para pagamento em metal não pode ser zero.');
         }
+
+        const existingAccountRec = await tx.accountRec.findFirst({
+          where: { saleId: sale.id },
+        });
 
         const accountRecData = {
           organizationId,
@@ -157,7 +161,7 @@ export class ConfirmSaleUseCase {
             },
           });
       }
-
+      
       await this.calculateSaleAdjustmentUseCase.execute(saleId, organizationId, tx);
 
       const saleWithAdjustment = await tx.sale.findUnique({
@@ -177,33 +181,42 @@ export class ConfirmSaleUseCase {
         if (!saleWithAdjustment.paymentTerm) {
           throw new BadRequestException('Prazo de pagamento não encontrado para venda A Prazo.');
         }
-        const installmentsCount = saleWithAdjustment.paymentTerm.installmentsDays.length;
-        if (installmentsCount === 0) {
-          throw new BadRequestException('Prazo de pagamento não possui parcelas configuradas.');
+        if (sale.installments.length === 0) {
+          throw new BadRequestException('Venda a prazo não possui parcelas configuradas.');
         }
-        const lastDueDate = new Date(saleWithAdjustment.createdAt);
-        const maxDays = Math.max(...saleWithAdjustment.paymentTerm.installmentsDays);
-        lastDueDate.setDate(lastDueDate.getDate() + maxDays);
 
-        const accountRecData = {
-          organizationId,
-          saleId: saleWithAdjustment.id,
-          description: `Receber de ${saleWithAdjustment.pessoa.name} (a prazo) venda #${saleWithAdjustment.orderNumber}`,
-          amount: amountToReceive,
-          goldAmount: goldAmountToReceive,
-          dueDate: lastDueDate,
-          received: false,
-        };
+        // UNCONDITIONALLY remove any existing AccountRec for this sale
+        // This handles cases where a consolidated AccountRec might exist from import or prior processing
+        // before individual installment AccountRecs are created.
+        const existingAccountRecsForSale = await tx.accountRec.findMany({ where: { saleId: sale.id } });
+        if (existingAccountRecsForSale.length > 0) {
+          await tx.accountRec.deleteMany({ where: { saleId: sale.id } });
+        }
+        
+        // Criar um AccountRec para cada SaleInstallment
+        for (const installment of sale.installments) {
+          const individualAccountRecData = {
+            organizationId,
+            saleId: sale.id,
+            description: `Receber da Venda #${sale.orderNumber} - Parcela ${installment.installmentNumber}/${sale.installments.length}`,
+            amount: installment.amount,
+            goldAmount: new Decimal(0), // O goldAmount individual será definido no pagamento da parcela, se houver.
+            dueDate: installment.dueDate,
+            received: false,
+          };
 
-        const accountRec = existingAccountRec 
-          ? await tx.accountRec.update({ where: { id: existingAccountRec.id }, data: accountRecData })
-          : await tx.accountRec.create({ data: accountRecData });
+          const newAccountRec = await tx.accountRec.create({ data: individualAccountRecData });
 
-        await tx.saleInstallment.updateMany({
-          where: { saleId: saleWithAdjustment.id },
-          data: { accountRecId: accountRec.id },
-        });
+          await tx.saleInstallment.update({
+            where: { id: installment.id },
+            data: { accountRecId: newAccountRec.id },
+          });
+        }
       } else if (paymentMethod === 'CREDIT_CARD') {
+        const existingAccountRec = await tx.accountRec.findFirst({
+          where: { saleId: sale.id },
+        });
+
         const accountRecData = {
           organizationId,
           saleId: saleWithAdjustment.id,
@@ -219,6 +232,10 @@ export class ConfirmSaleUseCase {
           : tx.accountRec.create({ data: accountRecData }));
           
       } else if (paymentMethod === 'A_COMBINAR') {
+        const existingAccountRec = await tx.accountRec.findFirst({
+          where: { saleId: sale.id },
+        });
+
         const accountRecData = {
           organizationId,
           saleId: saleWithAdjustment.id,
@@ -233,8 +250,12 @@ export class ConfirmSaleUseCase {
           ? tx.accountRec.update({ where: { id: existingAccountRec.id }, data: accountRecData })
           : tx.accountRec.create({ data: accountRecData }));
 
-      } else if (paymentMethod !== 'A_VISTA' && paymentMethod !== 'METAL') {
+      } else if (paymentMethod !== 'A_VISTA' && paymentMethod !== 'METAL' && paymentMethod !== 'A_PRAZO' && paymentMethod !== 'CREDIT_CARD' && paymentMethod !== 'A_COMBINAR') {
         // Fallback para IMPORTADO ou método não especificado
+        const existingAccountRec = await tx.accountRec.findFirst({
+          where: { saleId: sale.id },
+        });
+
         if (!existingAccountRec) {
           await tx.accountRec.create({
             data: {
