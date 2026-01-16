@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as ofx from 'ofx-js';
+import * as iconv from 'iconv-lite';
 
 // Interface para definir o formato da resposta
 export interface PreviewTransaction {
@@ -38,124 +39,95 @@ export class BankStatementImportsService {
       throw new BadRequestException('Conta corrente não encontrada.');
     }
 
-    try {
-      const parsedData = await ofx.parse(fileBuffer.toString());
+try {
+      const parsedData = await ofx.parse(fileBuffer.toString('latin1'));
       const transactionsFromFile =
         parsedData.OFX.BANKMSGSRSV1.STMTTRNRS.STMTRS.BANKTRANLIST.STMTTRN as OfxTransaction[];
-
+      
       if (!transactionsFromFile || transactionsFromFile.length === 0) {
-        return []; // Retorna array vazio se não houver transações
+        return [];
       }
 
       const isBalanceEntry = (memo: string) => {
         if (!memo) return false;
-        memo = memo.toLowerCase();
+        const lowerMemo = memo.toLowerCase();
         return (
-            memo.includes('saldo') &&
-            (memo.includes('total') || memo.includes('disponível') || memo.includes('anterior') || memo.includes('bloqueado') || memo.includes('bloq'))
+          lowerMemo.includes('saldo') &&
+          (lowerMemo.includes('total') ||
+            lowerMemo.includes('disponível') ||
+            lowerMemo.includes('anterior') ||
+            lowerMemo.includes('bloqueado') ||
+            lowerMemo.includes('bloq'))
         );
       };
 
-      const filteredTransactions = transactionsFromFile.filter((t) => !isBalanceEntry(t.MEMO));
+      const filteredTransactions = transactionsFromFile.filter(
+        (t) => !isBalanceEntry(t.MEMO),
+      );
 
-      const fitIdsFromFile = filteredTransactions.map((t) => t.FITID);
-
+      // Busca TODAS as transações da conta corrente para uma verificação mais robusta
       const existingTransactions = await this.prisma.transacao.findMany({
         where: {
           contaCorrenteId: contaCorrenteId,
-          fitId: {
-            in: fitIdsFromFile,
-          },
         },
         select: {
-          fitId: true,
-        },
-      });
-      const existingFitIds = new Set(existingTransactions.map((t) => t.fitId));
-      
-      // --- START: Nova Lógica de Sugestão ---
-      
-      // 1. Busca todos os fornecedores com suas contas padrão
-      const suppliers = await this.prisma.fornecedor.findMany({
-        where: {
-          organizationId,
-          defaultContaContabilId: { not: null },
-        },
-        include: {
-          pessoa: {
-            select: { name: true },
-          },
-        },
-      });
-
-      // 2. Busca sugestões do histórico de transações
-      const newTransactionDescriptions = [
-        ...new Set(
-          filteredTransactions
-            .filter((t) => !existingFitIds.has(t.FITID) && t.MEMO)
-            .map((t) => t.MEMO),
-        ),
-      ];
-
-      const suggestionsFromDb = await this.prisma.transacao.findMany({
-        where: {
-          organizationId,
-          descricao: {
-            in: newTransactionDescriptions,
-          },
-        },
-        distinct: ['descricao'],
-        orderBy: {
-          dataHora: 'desc',
-        },
-        select: {
+          dataHora: true,
+          valor: true,
           descricao: true,
-          contaContabilId: true,
+          fitId: true, // Ainda pode ser útil para referência
         },
       });
+
+      // Cria um "hash" para cada transação existente para facilitar a busca
+      const existingTransactionsSet = new Set(
+        existingTransactions.map((t) => {
+          const date = t.dataHora.toISOString().split('T')[0];
+          const value = t.valor.toFixed(2);
+          const key = `${date}|${value}`;
+          return key;
+        }),
+      );
       
-      const historySuggestionMap = new Map<string, string>();
-      suggestionsFromDb.filter(s => s.contaContabilId !== null).forEach((s) => {
-        if (s.descricao && s.contaContabilId) {
-          historySuggestionMap.set(s.descricao, s.contaContabilId);
-        }
-      });
-      
-      // --- END: Nova Lógica de Sugestão ---
+      const existingFitIds = new Set(existingTransactions.filter(t => t.fitId).map(t => t.fitId));
+
 
       const previewList: PreviewTransaction[] = filteredTransactions.map(
         (t) => {
           const amount = parseFloat(t.TRNAMT);
           const dateString = t.DTPOSTED.substring(0, 8);
           const postedAt = new Date(
-            `${dateString.substring(0, 4)}-${dateString.substring(4, 6)}-${dateString.substring(6, 8)}`,
+            `${dateString.substring(0, 4)}-${dateString.substring(
+              4,
+              6,
+            )}-${dateString.substring(6, 8)}T12:00:00.000Z`, // Adiciona um tempo para evitar problemas de fuso
           );
-          const status = existingFitIds.has(t.FITID) ? 'duplicate' : 'new';
-          
-          let suggestedContaContabilId: string | undefined = undefined;
-          if (status === 'new') {
-            const descriptionLowerCase = t.MEMO.toLowerCase();
-            // Prioridade 1: Mapeamento do Fornecedor
-            const matchedSupplier = suppliers.find(s => descriptionLowerCase.includes(s.pessoa.name.toLowerCase()));
-            if(matchedSupplier) {
-              suggestedContaContabilId = matchedSupplier.defaultContaContabilId!;
-            } else {
-              // Prioridade 2: Histórico de Transações
-              suggestedContaContabilId = historySuggestionMap.get(t.MEMO);
-            }
-          }
 
+          const transactionDate = postedAt.toISOString().split('T')[0];
+          
+          // Chave primária de verificação
+          const primaryKey = `${transactionDate}|${Math.abs(amount).toFixed(2)}`;
+          
+          let status: 'new' | 'duplicate' = 'new';
+          const hasPrimaryKey = existingTransactionsSet.has(primaryKey);
+
+          if (hasPrimaryKey || existingFitIds.has(t.FITID)) {
+            status = 'duplicate';
+          }
+          
           return {
             fitId: t.FITID,
-            type: amount > 0 ? 'CREDIT' : 'DEBIT',
+            type: amount >= 0 ? 'CREDIT' : 'DEBIT',
             amount: Math.abs(amount),
             description: t.MEMO,
             postedAt,
             status,
-            suggestedContaContabilId,
+            suggestedContaContabilId: undefined, // Lógica de sugestão removida por enquanto para focar na duplicidade
           };
         },
       );
+
+      // A lógica de sugestão pode ser re-adicionada aqui se necessário,
+      // operando sobre a `previewList` filtrada.
 
       return previewList;
     } catch (error) {

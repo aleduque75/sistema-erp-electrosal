@@ -30,7 +30,6 @@
     "db:diagnose-pg": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/diagnose-product-groups.ts",
     "db:backfill-stock-movement-dates": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/backfill-stock-movement-dates.ts",
     "db:import-market-data": "dotenv -e ../../.env -- npx tsx prisma/import-market-data.ts",
-    "db:fix-price": "ts-node --project prisma/tsconfig.script.json prisma/fix-sale-item-price.ts",
     "copy:prisma-engine": "cp ../../node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node ./dist/",
     "db:export-seed-data": "dotenv -e ../../.env -- ts-node prisma/export-seed-data.ts"
   },
@@ -60,6 +59,7 @@
     "dotenv": "^16.4.7",
     "dotenv-expand": "^12.0.2",
     "handlebars": "^4.7.8",
+    "iconv-lite": "^0.7.2",
     "multer": "^2.0.2",
     "nanoid": "^3.3.7",
     "ofx-js": "^0.2.0",
