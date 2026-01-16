@@ -213,7 +213,13 @@ export class CreateSaleUseCase {
 
   private validateLotQuantities(item: CreateSaleDto['items'][0], productName: string) {
     const totalLotQuantity = item.lots.reduce((sum, lot) => sum.plus(new Decimal(lot.quantity)), new Decimal(0));
-    const difference = totalLotQuantity.minus(new Decimal(item.quantity)).abs();
+    
+    // Round the total lot quantity to 2 decimal places for comparison, as the item.quantity seems to follow this precision.
+    const roundedTotalLotQuantity = totalLotQuantity.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+    const itemQuantityDecimal = new Decimal(item.quantity);
+
+    const difference = roundedTotalLotQuantity.minus(itemQuantityDecimal).abs();
+
     if (difference.greaterThan(new Decimal('0.0001'))) {
       throw new BadRequestException(`A soma das quantidades dos lotes para o produto ${productName} (${totalLotQuantity}) não corresponde à quantidade total do item (${item.quantity}).`);
     }
