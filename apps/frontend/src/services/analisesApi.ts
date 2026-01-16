@@ -3,6 +3,15 @@ import apiClient from "@/lib/api";
 import type { AnaliseQuimica } from "@/types/analise-quimica";
 import type { CreateAnaliseQuimicaDto, UpdateAnaliseQuimicaDto, LancarResultadoDto } from "@/types/analise-quimica.dtos";
 
+export interface Pessoa {
+  id: string;
+  name: string;
+}
+
+export const getClients = async (): Promise<Pessoa[]> => {
+  const response = await apiClient.get('/pessoas?role=CLIENT');
+  return response.data;
+};
 
 export const getAnalisesQuimicas = async (params: string = ''): Promise<AnaliseQuimica[]> => {
   const response = await apiClient.get(`/analises-quimicas?${params}`);
