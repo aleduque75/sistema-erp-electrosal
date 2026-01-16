@@ -31,6 +31,7 @@ import { CancelRecoveryOrderUseCase } from './use-cases/cancel-recovery-order.us
 import { GerarPdfRecoveryOrderUseCase } from './use-cases/gerar-pdf-recovery-order.use-case';
 import { ApplyRecoveryOrderCommissionUseCase, ApplyRecoveryOrderCommissionDto } from './use-cases/apply-recovery-order-commission.use-case';
 import { UpdateRecoveryOrderUseCase } from './use-cases/update-recovery-order.use-case';
+import { UpdateRecoveryOrderDto } from '@sistema-erp-electrosal/core';
 
 @UseGuards(JwtAuthGuard)
 @Controller('recovery-orders')
@@ -53,14 +54,14 @@ export class RecoveryOrdersController {
   @Patch(':id')
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() body: { descricao?: string; observacoes?: string },
+    @Body() dto: UpdateRecoveryOrderDto,
     @Req() req,
   ) {
     const organizationId = req.user?.orgId;
     await this.updateRecoveryOrderUseCase.execute({
       organizationId,
       recoveryOrderId: id,
-      ...body,
+      ...dto,
     });
   }
 

@@ -7,6 +7,9 @@ export interface UpdateRecoveryOrderCommand {
   recoveryOrderId: string;
   descricao?: string;
   observacoes?: string;
+  dataInicio?: Date | null;
+  dataFim?: Date | null;
+  dataCriacao?: Date | null;
 }
 
 @Injectable()
@@ -18,7 +21,7 @@ export class UpdateRecoveryOrderUseCase {
   ) {}
 
   async execute(command: UpdateRecoveryOrderCommand): Promise<void> {
-    const { organizationId, recoveryOrderId, descricao, observacoes } = command;
+    const { organizationId, recoveryOrderId, descricao, observacoes, dataInicio, dataFim, dataCriacao } = command;
 
     const recoveryOrder = await this.recoveryOrderRepository.findById(
       recoveryOrderId,
@@ -34,6 +37,9 @@ export class UpdateRecoveryOrderUseCase {
     recoveryOrder.update({
       descricao: descricao ?? recoveryOrder.descricao,
       observacoes: observacoes ?? recoveryOrder.observacoes,
+      dataInicio: dataInicio,
+      dataFim: dataFim,
+      dataCriacao: dataCriacao,
     });
 
     await this.recoveryOrderRepository.save(recoveryOrder);

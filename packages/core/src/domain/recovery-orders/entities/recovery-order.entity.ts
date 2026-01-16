@@ -36,11 +36,11 @@ export interface RecoveryOrderProps {
   metalType: TipoMetal;
   chemicalAnalysisIds: string[];
   status: RecoveryOrderStatus;
-  dataInicio: Date;
-  dataFim?: Date;
+  dataInicio: Date | null;
+  dataFim?: Date | null;
   descricao?: string;
   observacoes?: string;
-  dataCriacao: Date;
+  dataCriacao: Date | null;
   dataAtualizacao: Date;
 
   // --- INPUT ---
@@ -104,11 +104,11 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
   get metalType(): TipoMetal { return this.props.metalType; }
   get chemicalAnalysisIds(): string[] { return this.props.chemicalAnalysisIds; }
   get status(): RecoveryOrderStatus { return this.props.status; }
-  get dataInicio(): Date { return this.props.dataInicio; }
-  get dataFim(): Date | undefined { return this.props.dataFim; }
+  get dataInicio(): Date | null { return this.props.dataInicio; }
+  get dataFim(): Date | null | undefined { return this.props.dataFim; }
   get descricao(): string | undefined { return this.props.descricao; }
   get observacoes(): string | undefined { return this.props.observacoes; }
-  get dataCriacao(): Date { return this.props.dataCriacao; }
+  get dataCriacao(): Date | null { return this.props.dataCriacao; }
   get dataAtualizacao(): Date { return this.props.dataAtualizacao; }
 
   // --- New getters ---
@@ -146,9 +146,38 @@ export class RecoveryOrder extends AggregateRoot<RecoveryOrderProps> {
     this.props.dataAtualizacao = new Date();
   }
 
-  public update(dto: Partial<Omit<RecoveryOrderProps, 'totalBrutoEstimadoGramas' | 'organizationId' | 'chemicalAnalysisIds' | 'analisesEnvolvidas' | 'rawMaterialsUsed' | 'orderNumber'>>) {
-    // Prevent updating immutable fields
-    const { totalBrutoEstimadoGramas, organizationId, chemicalAnalysisIds, analisesEnvolvidas, rawMaterialsUsed, orderNumber, ...updateDto } = dto as any;
+  public update(dto: Partial<RecoveryOrderProps & { 
+    dataInicio?: string | null;
+    dataFim?: string | null;
+    dataCriacao?: string | null;
+  }>) {
+    // Manually parse string dates to Date objects if they exist in the DTO
+    if (typeof dto.dataInicio === 'string') {
+      this.props.dataInicio = new Date(dto.dataInicio);
+      delete dto.dataInicio;
+    } else if (dto.dataInicio === null) {
+      this.props.dataInicio = null;
+      delete dto.dataInicio;
+    }
+
+    if (typeof dto.dataFim === 'string') {
+      this.props.dataFim = new Date(dto.dataFim);
+      delete dto.dataFim;
+    } else if (dto.dataFim === null) {
+      this.props.dataFim = null;
+      delete dto.dataFim;
+    }
+
+    if (typeof dto.dataCriacao === 'string') {
+      this.props.dataCriacao = new Date(dto.dataCriacao);
+      delete dto.dataCriacao;
+    } else if (dto.dataCriacao === null) {
+      this.props.dataCriacao = null;
+      delete dto.dataCriacao;
+    }
+
+    // Prevent updating immutable fields explicitly listed in the Omit from the static create method
+    const { organizationId, chemicalAnalysisIds, analisesEnvolvidas, rawMaterialsUsed, orderNumber, ...updateDto } = dto as any; // Cast to any to allow destructuring
     Object.assign(this.props, updateDto);
     this.props.dataAtualizacao = new Date();
   }

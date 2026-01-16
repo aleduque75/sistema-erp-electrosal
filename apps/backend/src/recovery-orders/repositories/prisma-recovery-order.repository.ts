@@ -104,18 +104,56 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         salesperson: { select: { name: true } },
         rawMaterialsUsed: {
           include: {
-        const mappedAnalises: AnaliseQuimicaResumida[] = analisesEnvolvidas.map(analise => ({
+            rawMaterial: true,
+          },
+        },
+      },
+    });
+
+    if (!dbRecoveryOrder) {
+      return null;
+    }
+
+    const analisesEnvolvidas = await this.prisma.analiseQuimica.findMany({
+      where: {
+        id: { in: dbRecoveryOrder.chemicalAnalysisIds },
+        organizationId: dbRecoveryOrder.organizationId,
+      },
+      select: {
+        id: true,
+        numeroAnalise: true,
+        metalType: true,
+        volumeOuPesoEntrada: true,
+        unidadeEntrada: true, // ADDED
+        resultadoAnaliseValor: true,
+        auEstimadoBrutoGramas: true,
+        auLiquidoParaClienteGramas: true,
+        isWriteOff: true, // ADDED
+        cliente: {
+          select: {
+            name: true,
+          },
+        },
+        metalCredit: {
+          select: {
+            grams: true,
+          },
+        },
+      },
+    });
+
+    const mappedAnalises: AnaliseQuimicaResumida[] = analisesEnvolvidas.map(analise => ({
       id: analise.id,
       numeroAnalise: analise.numeroAnalise,
       clienteName: analise.cliente?.name || 'N/A',
       metalType: analise.metalType,
       volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
-      unidadeEntrada: analise.unidadeEntrada,
+      unidadeEntrada: analise.unidadeEntrada, // ADDED
       resultadoAnaliseValor: analise.resultadoAnaliseValor,
       auEstimadoBrutoGramas: analise.auEstimadoBrutoGramas,
       auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
       metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
-      isResidue: analise.isWriteOff,
+      isResidue: analise.isWriteOff, // ADDED
     }));
 
     return this.mapToDomain(dbRecoveryOrder, mappedAnalises);
@@ -147,27 +185,28 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         id: { in: dbRecoveryOrder.chemicalAnalysisIds },
         organizationId: dbRecoveryOrder.organizationId,
       },
-              select: {
-                id: true,
-                numeroAnalise: true,
-                metalType: true,
-                volumeOuPesoEntrada: true,
-                unidadeEntrada: true,
-                resultadoAnaliseValor: true,
-                auEstimadoBrutoGramas: true,
-                auLiquidoParaClienteGramas: true,
-                isWriteOff: true,
-                cliente: {
-                  select: {
-                    name: true,
-                  },
-                },
-                metalCredit: {
-                  select: {
-                    grams: true,
-                  },
-                },
-              },    });
+      select: {
+        id: true,
+        numeroAnalise: true,
+        metalType: true,
+        volumeOuPesoEntrada: true,
+        unidadeEntrada: true, // ADDED
+        resultadoAnaliseValor: true,
+        auEstimadoBrutoGramas: true,
+        auLiquidoParaClienteGramas: true,
+        isWriteOff: true, // ADDED
+        cliente: {
+          select: {
+            name: true,
+          },
+        },
+        metalCredit: {
+          select: {
+            grams: true,
+          },
+        },
+      },
+    });
 
     const mappedAnalises: AnaliseQuimicaResumida[] = analisesEnvolvidas.map(analise => ({
       id: analise.id,
@@ -175,12 +214,12 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       clienteName: analise.cliente?.name || 'N/A',
       metalType: analise.metalType,
       volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
-      unidadeEntrada: analise.unidadeEntrada,
+      unidadeEntrada: analise.unidadeEntrada, // ADDED
       resultadoAnaliseValor: analise.resultadoAnaliseValor,
       auEstimadoBrutoGramas: analise.auEstimadoBrutoGramas,
       auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
       metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
-      isResidue: analise.isWriteOff,
+      isResidue: analise.isWriteOff, // ADDED
     }));
 
     return this.mapToDomain(dbRecoveryOrder, mappedAnalises);
@@ -233,11 +272,11 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
           numeroAnalise: true,
           metalType: true,
           volumeOuPesoEntrada: true,
-          unidadeEntrada: true,
+          unidadeEntrada: true, // ADDED
           resultadoAnaliseValor: true,
           auEstimadoBrutoGramas: true,
           auLiquidoParaClienteGramas: true,
-          isWriteOff: true,
+          isWriteOff: true, // ADDED
           cliente: {
             select: {
               name: true,
@@ -257,10 +296,12 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         clienteName: analise.cliente?.name || 'N/A',
         metalType: analise.metalType,
         volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+        unidadeEntrada: analise.unidadeEntrada, // ADDED
         resultadoAnaliseValor: analise.resultadoAnaliseValor,
         auEstimadoBrutoGramas: analise.auEstimadoBrutoGramas,
         auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
         metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
+        isResidue: analise.isWriteOff, // ADDED
       }));
 
       recoveryOrdersWithAnalyses.push(this.mapToDomain(dbRecoveryOrder, mappedAnalises));
