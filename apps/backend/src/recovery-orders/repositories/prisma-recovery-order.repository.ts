@@ -104,52 +104,18 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         salesperson: { select: { name: true } },
         rawMaterialsUsed: {
           include: {
-            rawMaterial: true,
-          },
-        },
-      },
-    });
-
-    if (!dbRecoveryOrder) {
-      return null;
-    }
-
-    const analisesEnvolvidas = await this.prisma.analiseQuimica.findMany({
-      where: {
-        id: { in: dbRecoveryOrder.chemicalAnalysisIds },
-        organizationId: dbRecoveryOrder.organizationId,
-      },
-      select: {
-        id: true,
-        numeroAnalise: true,
-        metalType: true,
-        volumeOuPesoEntrada: true,
-        resultadoAnaliseValor: true,
-        auEstimadoBrutoGramas: true,
-        auLiquidoParaClienteGramas: true,
-        cliente: {
-          select: {
-            name: true,
-          },
-        },
-        metalCredit: {
-          select: {
-            grams: true,
-          },
-        },
-      },
-    });
-
-    const mappedAnalises: AnaliseQuimicaResumida[] = analisesEnvolvidas.map(analise => ({
+        const mappedAnalises: AnaliseQuimicaResumida[] = analisesEnvolvidas.map(analise => ({
       id: analise.id,
       numeroAnalise: analise.numeroAnalise,
       clienteName: analise.cliente?.name || 'N/A',
       metalType: analise.metalType,
       volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+      unidadeEntrada: analise.unidadeEntrada,
       resultadoAnaliseValor: analise.resultadoAnaliseValor,
       auEstimadoBrutoGramas: analise.auEstimadoBrutoGramas,
       auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
       metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
+      isResidue: analise.isWriteOff,
     }));
 
     return this.mapToDomain(dbRecoveryOrder, mappedAnalises);
@@ -181,26 +147,27 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
         id: { in: dbRecoveryOrder.chemicalAnalysisIds },
         organizationId: dbRecoveryOrder.organizationId,
       },
-      select: {
-        id: true,
-        numeroAnalise: true,
-        metalType: true,
-        volumeOuPesoEntrada: true,
-        resultadoAnaliseValor: true,
-        auEstimadoBrutoGramas: true,
-        auLiquidoParaClienteGramas: true,
-        cliente: {
-          select: {
-            name: true,
-          },
-        },
-        metalCredit: {
-          select: {
-            grams: true,
-          },
-        },
-      },
-    });
+              select: {
+                id: true,
+                numeroAnalise: true,
+                metalType: true,
+                volumeOuPesoEntrada: true,
+                unidadeEntrada: true,
+                resultadoAnaliseValor: true,
+                auEstimadoBrutoGramas: true,
+                auLiquidoParaClienteGramas: true,
+                isWriteOff: true,
+                cliente: {
+                  select: {
+                    name: true,
+                  },
+                },
+                metalCredit: {
+                  select: {
+                    grams: true,
+                  },
+                },
+              },    });
 
     const mappedAnalises: AnaliseQuimicaResumida[] = analisesEnvolvidas.map(analise => ({
       id: analise.id,
@@ -208,10 +175,12 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       clienteName: analise.cliente?.name || 'N/A',
       metalType: analise.metalType,
       volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+      unidadeEntrada: analise.unidadeEntrada,
       resultadoAnaliseValor: analise.resultadoAnaliseValor,
       auEstimadoBrutoGramas: analise.auEstimadoBrutoGramas,
       auLiquidoParaClienteGramas: analise.auLiquidoParaClienteGramas,
       metalCreditGrams: analise.metalCredit?.grams.toNumber() || null,
+      isResidue: analise.isWriteOff,
     }));
 
     return this.mapToDomain(dbRecoveryOrder, mappedAnalises);
@@ -264,9 +233,11 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
           numeroAnalise: true,
           metalType: true,
           volumeOuPesoEntrada: true,
+          unidadeEntrada: true,
           resultadoAnaliseValor: true,
           auEstimadoBrutoGramas: true,
           auLiquidoParaClienteGramas: true,
+          isWriteOff: true,
           cliente: {
             select: {
               name: true,

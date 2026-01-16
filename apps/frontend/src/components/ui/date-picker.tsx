@@ -1,89 +1,47 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { format, parse } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon } from "lucide-react";
+import * as React from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { SelectSingleEventHandler } from 'react-day-picker';
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/popover';
 
-interface DatePickerProps {
+interface DatePickerProps extends React.HTMLAttributes<HTMLDivElement> {
   date: Date | undefined;
-  setDate: (date: Date | undefined) => void;
+  onDateChange: SelectSingleEventHandler;
   placeholder?: string;
 }
 
-export function DatePicker({
-  date,
-  setDate,
-  placeholder = "dd/mm/aaaa",
-}: DatePickerProps) {
-  const [inputValue, setInputValue] = React.useState<string>("");
-
-  React.useEffect(() => {
-    if (date) {
-      setInputValue(format(date, "dd/MM/yyyy"));
-    } else {
-      setInputValue("");
-    }
-  }, [date]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
-
-  const handleInputBlur = () => {
-    const parsedDate = parse(inputValue, "dd/MM/yyyy", new Date());
-    if (!isNaN(parsedDate.getTime())) {
-      setDate(parsedDate);
-    } else {
-      // If parsing fails, revert to the original date or clear it
-      setDate(date);
-      setInputValue(date ? format(date, "dd/MM/yyyy") : "");
-    }
-  };
-  
-  const handleCalendarSelect = (selectedDate: Date | undefined) => {
-    setDate(selectedDate);
-    if (selectedDate) {
-      setInputValue(format(selectedDate, "dd/MM/yyyy"));
-    }
-  }
-
+export function DatePicker({ className, date, onDateChange, placeholder = "Selecione uma data" }: DatePickerProps) {
   return (
-    <div className="relative">
-      <Input
-        type="text"
-        value={inputValue}
-        onChange={handleInputChange}
-        onBlur={handleInputBlur}
-        placeholder={placeholder}
-        className="pr-10" // Add padding to the right for the icon
-      />
+    <div className={cn('grid gap-2', className)}>
       <Popover>
         <PopoverTrigger asChild>
           <Button
-            variant={"ghost"}
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3"
-            aria-label="Abrir calendário"
+            variant={'outline'}
+            className={cn(
+              'w-[240px] justify-start text-left font-normal',
+              !date && 'text-muted-foreground'
+            )}
           >
-            <CalendarIcon className="h-4 w-4" />
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {date ? format(date, 'dd/MM/yyyy', { locale: ptBR }) : <span>{placeholder}</span>}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
+        <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="single"
             selected={date}
-            onSelect={handleCalendarSelect}
+            onSelect={onDateChange}
             initialFocus
             locale={ptBR}
           />

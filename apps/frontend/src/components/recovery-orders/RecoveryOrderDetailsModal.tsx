@@ -46,10 +46,13 @@ interface RecoveryOrder {
   analisesEnvolvidas?: {
     id: string;
     numeroAnalise: string;
+    clienteName?: string;
     metalType: string;
     volumeOuPesoEntrada: number;
+    unidadeEntrada: string; // Add this
     resultadoAnaliseValor: number | null;
     auEstimadoBrutoGramas: number | null;
+    isResidue: boolean; // Add this
   }[];
   images?: Media[];
 }
@@ -189,8 +192,9 @@ export function RecoveryOrderDetailsModal({ isOpen, onOpenChange, recoveryOrder,
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nº</TableHead>
+                    <TableHead>Cliente</TableHead>
                     <TableHead>Entrada</TableHead>
-                    <TableHead>Teor</TableHead>
+                    <TableHead>Resultado</TableHead>
                     <TableHead>Au Bruto (g)</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -198,8 +202,17 @@ export function RecoveryOrderDetailsModal({ isOpen, onOpenChange, recoveryOrder,
                   {recoveryOrder.analisesEnvolvidas?.map(analise => (
                     <TableRow key={analise.id}>
                       <TableCell>{analise.numeroAnalise}</TableCell>
-                      <TableCell>{analise.volumeOuPesoEntrada.toFixed(2)}</TableCell>
-                      <TableCell>{analise.resultadoAnaliseValor?.toFixed(2) ?? 'N/A'}%</TableCell>
+                      <TableCell>{analise.clienteName || 'N/A'}</TableCell>
+                      <TableCell>
+                        {analise.isResidue
+                          ? 'N/A'
+                          : `${analise.volumeOuPesoEntrada?.toFixed(2) ?? 'N/A'} ${analise.unidadeEntrada || ''}`}
+                      </TableCell>
+                      <TableCell>
+                        {analise.isResidue
+                          ? 'N/A'
+                          : analise.resultadoAnaliseValor?.toFixed(2) ?? 'N/A'}
+                      </TableCell>
                       <TableCell>{analise.auEstimadoBrutoGramas?.toFixed(4) ?? 'N/A'}</TableCell>
                     </TableRow>
                   ))}

@@ -10,7 +10,7 @@ export interface AnaliseQuimicaProps {
   cliente?: { name: string };
   metalType: TipoMetal;
   numeroAnalise: string;
-  dataEntrada: Date;
+  dataEntrada: Date | null;
   descricaoMaterial: string;
   volumeOuPesoEntrada: number;
   unidadeEntrada: string;
@@ -64,7 +64,7 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
   get metalType(): TipoMetal { return this.props.metalType; }
   get cliente(): { name: string } | undefined { return this.props.cliente; }
   get numeroAnalise(): string { return this.props.numeroAnalise; }
-  get dataEntrada(): Date { return this.props.dataEntrada; }
+  get dataEntrada(): Date | null { return this.props.dataEntrada; }
   get descricaoMaterial(): string { return this.props.descricaoMaterial; }
   get volumeOuPesoEntrada(): number { return this.props.volumeOuPesoEntrada; }
   get unidadeEntrada(): string { return this.props.unidadeEntrada; }
@@ -179,7 +179,45 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
     return analise;
   }
 
-  public update(dto: Partial<AnaliseQuimicaProps>) {
+  public update(dto: Partial<AnaliseQuimicaProps & { 
+    dataEntrada?: string | null;
+    dataAnaliseConcluida?: string | null;
+    dataAprovacaoCliente?: string | null;
+    dataFinalizacaoRecuperacao?: string | null;
+  }>) {
+    // Manually parse string dates to Date objects if they exist in the DTO
+    if (typeof dto.dataEntrada === 'string') {
+      this.props.dataEntrada = new Date(dto.dataEntrada);
+      delete dto.dataEntrada; // Remove from dto to avoid re-assigning string
+    } else if (dto.dataEntrada === null) {
+      this.props.dataEntrada = null;
+      delete dto.dataEntrada;
+    }
+
+    if (typeof dto.dataAnaliseConcluida === 'string') {
+      this.props.dataAnaliseConcluida = new Date(dto.dataAnaliseConcluida);
+      delete dto.dataAnaliseConcluida;
+    } else if (dto.dataAnaliseConcluida === null) {
+      this.props.dataAnaliseConcluida = null;
+      delete dto.dataAnaliseConcluida;
+    }
+
+    if (typeof dto.dataAprovacaoCliente === 'string') {
+      this.props.dataAprovacaoCliente = new Date(dto.dataAprovacaoCliente);
+      delete dto.dataAprovacaoCliente;
+    } else if (dto.dataAprovacaoCliente === null) {
+      this.props.dataAprovacaoCliente = null;
+      delete dto.dataAprovacaoCliente;
+    }
+
+    if (typeof dto.dataFinalizacaoRecuperacao === 'string') {
+      this.props.dataFinalizacaoRecuperacao = new Date(dto.dataFinalizacaoRecuperacao);
+      delete dto.dataFinalizacaoRecuperacao;
+    } else if (dto.dataFinalizacaoRecuperacao === null) {
+      this.props.dataFinalizacaoRecuperacao = null;
+      delete dto.dataFinalizacaoRecuperacao;
+    }
+
     Object.assign(this.props, dto);
     this.props.dataAtualizacao = new Date();
   }

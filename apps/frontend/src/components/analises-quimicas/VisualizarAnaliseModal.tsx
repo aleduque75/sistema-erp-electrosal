@@ -15,7 +15,7 @@ import { Media } from '@/types/media'; // NOVO IMPORT
 import { format } from "date-fns";
 import { Printer, X, Paperclip, Pencil, Check, Loader2, ClipboardList, FlaskConical, DollarSign, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
-import { updateAnaliseQuimica } from "@/services/analisesApi";
+
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -31,6 +31,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface VisualizarAnaliseModalProps {
@@ -48,67 +49,150 @@ const DetailItem = ({ label, value, unit = '', className = '' }: { label: string
   </div>
 );
 
+const formatDecimal = (value: number | null | undefined, fractionDigits: number = 2) => {
+  if (value === null || value === undefined) return "N/A";
+  return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(value);
+};
+
+interface EditableDateDetailItemProps {
+  label: string;
+  value: Date | undefined;
+  isEditing: boolean;
+  setIsEditing: (value: boolean) => void;
+  editedValue: Date | undefined;
+  setEditedValue: (value: Date | undefined) => void;
+  isSaving: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+  className?: string;
+}
+
+const EditableDateDetailItem = ({
+  label,
+  value,
+  isEditing,
+  setIsEditing,
+  editedValue,
+  setEditedValue,
+  isSaving,
+  onSave,
+  onCancel,
+  className = '',
+}: EditableDateDetailItemProps) => {
+  return (
+    <div className={cn("flex flex-col", className)}>
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      {isEditing ? (
+        <div className="flex items-center gap-2 mt-1">
+          <DatePicker
+            date={editedValue}
+            onDateChange={setEditedValue}
+            placeholder={label}
+            className="w-auto"
+          />
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={onSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          </Button>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={onCancel} disabled={isSaving}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 group">
+          <p className="text-base font-medium">{value ? format(value, "dd/MM/yyyy HH:mm") : "N/A"}</p>
+          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setIsEditing(true)}>
+            <Pencil className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 
+import { getAnaliseQuimicaById, updateAnaliseQuimica } from "@/services/analisesApi"; 
 
 export function VisualizarAnaliseModal({
   isOpen,
   onOpenChange,
-  analise,
+  analise: initialAnalise, // Rename prop to initialAnalise
   onUpdate,
 }: VisualizarAnaliseModalProps) {
+  const [currentAnalise, setCurrentAnalise] = useState<AnaliseQuimica | null>(initialAnalise); // New state for internal analise
+  const [isFetchingAnalise, setIsFetchingAnalise] = useState(false); // New state for loading indicator
+
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<string | null>(null);
-  const [media, setMedia] = useState<Media[]>([]); // NOVO ESTADO
-  const [isLoadingMedia, setIsLoadingMedia] = useState(false); // NOVO ESTADO
+  const [media, setMedia] = useState<Media[]>([]);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState("");
   const [isSavingDescription, setIsSavingDescription] = useState(false);
 
-  // Efeito para carregar as mídias quando o modal é aberto ou a análise muda
-  useEffect(() => {
-    if (isOpen && analise?.id) {
-      setEditedDescription(analise.descricaoMaterial);
-      const fetchMedia = async () => {
-        setIsLoadingMedia(true);
-        try {
-          const fetchedMedia = await getMediaForAnaliseQuimica(analise.id);
-          setMedia(fetchedMedia);
-        } catch (error) {
-          toast.error("Erro ao carregar mídias da análise.");
-          console.error("Erro ao carregar mídias:", error);
-        } finally {
-          setIsLoadingMedia(false);
-        }
-      };
-      fetchMedia();
-    }
-  }, [isOpen, analise?.id, analise?.descricaoMaterial]);
+  const [isEditingDataEntrada, setIsEditingDataEntrada] = useState(false);
+  const [editedDataEntrada, setEditedDataEntrada] = useState<Date | undefined>(undefined);
+  const [isSavingDataEntrada, setIsSavingDataEntrada] = useState(false);
 
-  const handleMediaUpdate = () => {
-    if (analise?.id) {
-      const fetchMedia = async () => {
-        setIsLoadingMedia(true);
-        try {
-          const fetchedMedia = await getMediaForAnaliseQuimica(analise.id);
-          setMedia(fetchedMedia);
-        } catch (error) {
-          toast.error("Erro ao recarregar mídias da análise.");
-          console.error("Erro ao recarregar mídias:", error);
-        } finally {
-          setIsLoadingMedia(false);
-        }
-      };
-      fetchMedia();
+  const [isEditingDataAnaliseConcluida, setIsEditingDataAnaliseConcluida] = useState(false);
+  const [editedDataAnaliseConcluida, setEditedDataAnaliseConcluida] = useState<Date | undefined>(undefined);
+  const [isSavingDataAnaliseConcluida, setIsSavingDataAnaliseConcluida] = useState(false);
+
+  const [isEditingDataAprovacaoCliente, setIsEditingDataAprovacaoCliente] = useState(false);
+  const [editedDataAprovacaoCliente, setEditedDataAprovacaoCliente] = useState<Date | undefined>(undefined);
+  const [isSavingDataAprovacaoCliente, setIsSavingDataAprovacaoCliente] = useState(false);
+
+  const [isEditingDataFinalizacaoRecuperacao, setIsEditingDataFinalizacaoRecuperacao] = useState<Date | undefined>(undefined);
+  const [isSavingDataFinalizacaoRecuperacao, setIsSavingDataFinalizacaoRecuperacao] = useState(false);
+
+  const fetchAnaliseData = async (analiseId: string) => {
+    setIsFetchingAnalise(true);
+    try {
+      const fetchedAnalise = await getAnaliseQuimicaById(analiseId);
+      setCurrentAnalise(fetchedAnalise);
+      setEditedDescription(fetchedAnalise.descricaoMaterial);
+      setEditedDataEntrada(fetchedAnalise.dataEntrada ? new Date(fetchedAnalise.dataEntrada) : undefined);
+      setEditedDataAnaliseConcluida(fetchedAnalise.dataAnaliseConcluida ? new Date(fetchedAnalise.dataAnaliseConcluida) : undefined);
+      setEditedDataAprovacaoCliente(fetchedAnalise.dataAprovacaoCliente ? new Date(fetchedAnalise.dataAprovacaoCliente) : undefined);
+      setEditedDataFinalizacaoRecuperacao(fetchedAnalise.dataFinalizacaoRecuperacao ? new Date(fetchedAnalise.dataFinalizacaoRecuperacao) : undefined);
+    } catch (error) {
+      toast.error("Erro ao carregar dados da análise.");
+      console.error("Erro ao carregar análise:", error);
+    } finally {
+      setIsFetchingAnalise(false);
     }
   };
 
+  const fetchMedia = async (analiseId: string) => {
+    setIsLoadingMedia(true);
+    try {
+      const fetchedMedia = await getMediaForAnaliseQuimica(analiseId);
+      setMedia(fetchedMedia);
+    } catch (error) {
+      toast.error("Erro ao carregar mídias da análise.");
+      console.error("Erro ao carregar mídias:", error);
+    } finally {
+      setIsLoadingMedia(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && initialAnalise?.id) {
+      fetchAnaliseData(initialAnalise.id);
+      fetchMedia(initialAnalise.id);
+    } else {
+      setCurrentAnalise(null); // Clear analise when modal is closed
+    }
+  }, [isOpen, initialAnalise?.id]); // Depend on initialAnalise.id to refetch when a new analise is opened
+
+
+
   const handleSaveDescription = async () => {
-    if (!analise) return;
+    if (!currentAnalise) return;
     setIsSavingDescription(true);
     try {
-      await updateAnaliseQuimica(analise.id, { descricaoMaterial: editedDescription });
+      await updateAnaliseQuimica(currentAnalise.id, { descricaoMaterial: editedDescription });
       toast.success("Descrição atualizada com sucesso!");
       setIsEditingDescription(false);
+      await fetchAnaliseData(currentAnalise.id); // Re-fetch data after successful save
       onUpdate?.();
     } catch (error) {
       toast.error("Erro ao atualizar descrição.");
@@ -118,9 +202,47 @@ export function VisualizarAnaliseModal({
     }
   };
 
-  if (!analise) {
+  const handleSaveDate = async (
+    field: 'dataEntrada' | 'dataAnaliseConcluida' | 'dataAprovacaoCliente' | 'dataFinalizacaoRecuperacao',
+    dateValue: Date | undefined,
+    setIsEditing: (value: boolean) => void,
+    setIsSaving: (value: boolean) => void,
+  ) => {
+    if (!currentAnalise) return;
+
+    setIsSaving(true);
+    try {
+      // Create a partial DTO with only the updated field
+      const updateDto: Partial<AnaliseQuimica> = {
+        [field]: dateValue ? dateValue.toISOString() : null, // Convert Date to ISO string or null
+      };
+      
+      await updateAnaliseQuimica(currentAnalise.id, updateDto);
+      toast.success("Data atualizada com sucesso!");
+      setIsEditing(false);
+      await fetchAnaliseData(currentAnalise.id); // Re-fetch data after successful save
+      onUpdate?.(); // Trigger a re-fetch of the analysis data
+    } catch (error) {
+      toast.error("Erro ao atualizar data.");
+      console.error(`Erro ao atualizar ${field}:`, error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!currentAnalise) {
+    if (isFetchingAnalise) {
+      return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+          <DialogContent className="sm:max-w-4xl p-0 gap-0 overflow-hidden print:m-0 print:border-none print:shadow-none bg-muted/10 flex items-center justify-center h-[300px]">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </DialogContent>
+        </Dialog>
+      );
+    }
     return null;
   }
+
 
   const handleDownloadPdf = async (analiseId: string, printMode: boolean = false) => {
     setIsDownloadingPdf(analiseId);
@@ -171,8 +293,8 @@ export function VisualizarAnaliseModal({
     }
   };
 
-  const hasResultados = analise.resultado && Object.values(analise.resultado).some(v => v != null);
-  const hasValoresFinais = analise.auEstimadoBrutoGramas || analise.auLiquidoParaClienteGramas;
+  const hasResultados = currentAnalise.resultado && Object.values(currentAnalise.resultado).some(v => v != null);
+  const hasValoresFinais = currentAnalise.auEstimadoBrutoGramas || currentAnalise.auLiquidoParaClienteGramas;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -181,16 +303,13 @@ export function VisualizarAnaliseModal({
 
         <DialogHeader className="p-6 pb-2 bg-background border-b print:hidden text-center relative">
           <DialogTitle className="flex justify-center items-center gap-2 pt-8 text-2xl">
-            Análise #{analise.numeroAnalise}
-            <ChemicalAnalysisStatusBadge status={analise.status} showText />
+            Análise #{currentAnalise.numeroAnalise}
+            <ChemicalAnalysisStatusBadge status={currentAnalise.status} showText />
           </DialogTitle>
           <DialogDescription className="text-center">
             Detalhes completos da análise, resultados e valores.
           </DialogDescription>
-          <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <X className="h-4 w-4" />
-            <span className="sr-only">Fechar</span>
-          </DialogClose>
+
         </DialogHeader>
 
         <Tabs defaultValue="geral" className="flex flex-col h-full">
@@ -210,11 +329,11 @@ export function VisualizarAnaliseModal({
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                     {/* Row 1 */}
-                    <DetailItem label="Nº Análise" value={analise.numeroAnalise} />
-                    <DetailItem label="Metal" value={analise.metalType || 'AU'} />
+                    <DetailItem label="Nº Análise" value={currentAnalise.numeroAnalise} />
+                    <DetailItem label="Metal" value={currentAnalise.metalType || 'AU'} />
 
                     {/* Row 2 */}
-                    <DetailItem label="Cliente" value={analise.cliente?.name || "N/A"} className="md:col-span-2" />
+                    <DetailItem label="Cliente" value={currentAnalise.cliente?.name || "N/A"} className="md:col-span-2" />
                     
                     {/* Row 3 - Editable Material Description */}
                     <div className="flex flex-col md:col-span-2">
@@ -237,46 +356,79 @@ export function VisualizarAnaliseModal({
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 group">
-                          <p className="text-base font-medium">{analise.descricaoMaterial}</p>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setIsEditingDescription(true)}>
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        </div>
+                                                <p className="text-base font-medium">{currentAnalise.descricaoMaterial}</p>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setIsEditingDescription(true)}>
+                                                  <Pencil className="h-3 w-3" />
+                                                </Button>                        </div>
                       )}
                     </div>
 
                     {/* Row 4 */}
-                    {analise.volumeOuPesoEntrada && (
-                      <DetailItem label="Peso/Volume de Entrada" value={analise.volumeOuPesoEntrada} unit={analise.unidadeEntrada} />
+                    {currentAnalise.volumeOuPesoEntrada != null && (
+                      <DetailItem label="Peso/Volume de Entrada" value={formatDecimal(currentAnalise.volumeOuPesoEntrada, 2)} unit={currentAnalise.unidadeEntrada} />
                     )}
-                    <DetailItem label="Data de Entrada" value={format(new Date(analise.dataEntrada), "dd/MM/yyyy HH:mm")} />
+                    <EditableDateDetailItem
+                      label="Data de Entrada"
+                      value={currentAnalise.dataEntrada ? new Date(currentAnalise.dataEntrada) : undefined}
+                      isEditing={isEditingDataEntrada}
+                      setIsEditing={setIsEditingDataEntrada}
+                      editedValue={editedDataEntrada}
+                      setEditedValue={setEditedDataEntrada as (date: Date | undefined) => void}
+                      isSaving={isSavingDataEntrada}
+                      onSave={() => handleSaveDate('dataEntrada', editedDataEntrada, setIsEditingDataEntrada, setIsSavingDataEntrada)}
+                      onCancel={() => { setIsEditingDataEntrada(false); setEditedDataEntrada(currentAnalise.dataEntrada ? new Date(currentAnalise.dataEntrada) : undefined); }}
+                    />
 
-                    {analise.ordemDeRecuperacaoId && (
+                    {currentAnalise.ordemDeRecuperacaoId && (
                       <DetailItem 
                         label="Ordem de Recuperação" 
                         value={
-                          <Link href={`/recovery-orders/${analise.ordemDeRecuperacaoId}`} className="text-primary hover:underline">
-                            {analise.ordemDeRecuperacaoId}
+                          <Link href={`/recovery-orders/${currentAnalise.ordemDeRecuperacaoId}`} className="text-primary hover:underline">
+                            {currentAnalise.ordemDeRecuperacaoId}
                           </Link>
                         }
                         className="md:col-span-2" 
                       />
                     )}
                     
-                    {analise.dataAnaliseConcluida && (
-                      <DetailItem label="Análise Concluída em" value={format(new Date(analise.dataAnaliseConcluida), "dd/MM/yyyy HH:mm")} />
-                    )}
-                    {analise.dataAprovacaoCliente && (
-                      <DetailItem label="Aprovado Cliente em" value={format(new Date(analise.dataAprovacaoCliente), "dd/MM/yyyy HH:mm")} />
-                    )}
-                    {analise.dataFinalizacaoRecuperacao && (
-                      <DetailItem label="Recuperação Finalizada em" value={format(new Date(analise.dataFinalizacaoRecuperacao), "dd/MM/yyyy HH:mm")} />
-                    )}
+                    <EditableDateDetailItem
+                      label="Análise Concluída em"
+                      value={currentAnalise.dataAnaliseConcluida ? new Date(currentAnalise.dataAnaliseConcluida) : undefined}
+                      isEditing={isEditingDataAnaliseConcluida}
+                      setIsEditing={setIsEditingDataAnaliseConcluida}
+                      editedValue={editedDataAnaliseConcluida}
+                      setEditedValue={setEditedDataAnaliseConcluida as (date: Date | undefined) => void}
+                      isSaving={isSavingDataAnaliseConcluida}
+                      onSave={() => handleSaveDate('dataAnaliseConcluida', editedDataAnaliseConcluida, setIsEditingDataAnaliseConcluida, setIsSavingDataAnaliseConcluida)}
+                      onCancel={() => { setIsEditingDataAnaliseConcluida(false); setEditedDataAnaliseConcluida(currentAnalise.dataAnaliseConcluida ? new Date(currentAnalise.dataAnaliseConcluida) : undefined); }}
+                    />
+                    <EditableDateDetailItem
+                      label="Aprovado Cliente em"
+                      value={currentAnalise.dataAprovacaoCliente ? new Date(currentAnalise.dataAprovacaoCliente) : undefined}
+                      isEditing={isEditingDataAprovacaoCliente}
+                      setIsEditing={setIsEditingDataAprovacaoCliente}
+                      editedValue={editedDataAprovacaoCliente}
+                      setEditedValue={setEditedDataAprovacaoCliente as (date: Date | undefined) => void}
+                      isSaving={isSavingDataAprovacaoCliente}
+                      onSave={() => handleSaveDate('dataAprovacaoCliente', editedDataAprovacaoCliente, setIsEditingDataAprovacaoCliente, setIsSavingDataAprovacaoCliente)}
+                      onCancel={() => { setIsEditingDataAprovacaoCliente(false); setEditedDataAprovacaoCliente(currentAnalise.dataAprovacaoCliente ? new Date(currentAnalise.dataAprovacaoCliente) : undefined); }}
+                    />
+                    <EditableDateDetailItem
+                      label="Recuperação Finalizada em"
+                      value={currentAnalise.dataFinalizacaoRecuperacao ? new Date(currentAnalise.dataFinalizacaoRecuperacao) : undefined}
+                      isEditing={isEditingDataFinalizacaoRecuperacao}
+                      setIsEditing={setIsEditingDataFinalizacaoRecuperacao}
+                      editedValue={editedDataFinalizacaoRecuperacao}
+                      setEditedValue={setEditedDataFinalizacaoRecuperacao as (date: Date | undefined) => void}
+                      isSaving={isSavingDataFinalizacaoRecuperacao}
+                      onSave={() => handleSaveDate('dataFinalizacaoRecuperacao', editedDataFinalizacaoRecuperacao, setIsEditingDataFinalizacaoRecuperacao, setIsSavingDataFinalizacaoRecuperacao)}
+                      onCancel={() => { setIsEditingDataFinalizacaoRecuperacao(false); setEditedDataFinalizacaoRecuperacao(currentAnalise.dataFinalizacaoRecuperacao ? new Date(currentAnalise.dataFinalizacaoRecuperacao) : undefined); }}
+                    />
                   </div>
-                  {analise.observacoes && (
+                  {currentAnalise.observacoes && (
                     <div className="mt-4 pt-4 border-t">
                       <p className="text-sm font-medium text-muted-foreground mb-1">Observações</p>
-                      <p className="text-sm p-3 bg-muted/50 rounded-md border">{analise.observacoes}</p>
+                      <p className="text-sm p-3 bg-muted/50 rounded-md border">{currentAnalise.observacoes}</p>
                     </div>
                   )}
                 </CardContent>
@@ -290,11 +442,11 @@ export function VisualizarAnaliseModal({
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {analise.resultadoAnaliseValor != null && (
-                      <DetailItem label="Resultado Análise" value={analise.resultadoAnaliseValor} unit="%" />
+                    {currentAnalise.resultadoAnaliseValor != null && (
+                      <DetailItem label="Resultado Análise" value={formatDecimal(currentAnalise.resultadoAnaliseValor, 2)} unit="%" />
                     )}
-                    {analise.resultado && Object.entries(analise.resultado).map(([key, value]) => 
-                      (value != null && typeof value !== 'object') && <DetailItem key={key} label={key.toUpperCase()} value={value as React.ReactNode} unit="%" />
+                    {currentAnalise.resultado && Object.entries(currentAnalise.resultado).map(([key, value]) => 
+                      (value != null && typeof value !== 'object') && <DetailItem key={key} label={key.toUpperCase()} value={formatDecimal(value as number, 2)} unit="%" />
                     )}
                   </div>
                 </CardContent>
@@ -307,17 +459,17 @@ export function VisualizarAnaliseModal({
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {analise.auEstimadoBrutoGramas != null && (
-                        <DetailItem label="Au Estimado Bruto" value={analise.auEstimadoBrutoGramas} unit="g" className="text-lg" />
+                      {currentAnalise.auEstimadoBrutoGramas != null && (
+                        <DetailItem label="Au Estimado Bruto" value={formatDecimal(currentAnalise.auEstimadoBrutoGramas, 4)} unit="g" className="text-lg" />
                       )}
-                      {analise.taxaServicoPercentual != null && (
-                        <DetailItem label="% Serviço" value={analise.taxaServicoPercentual} unit="%" />
+                      {currentAnalise.taxaServicoPercentual != null && (
+                        <DetailItem label="% Serviço" value={formatDecimal(currentAnalise.taxaServicoPercentual, 2)} unit="%" />
                       )}
-                      {analise.auEstimadoRecuperavelGramas != null && (
-                        <DetailItem label="Au Estimado Líquido" value={analise.auEstimadoRecuperavelGramas} unit="g" />
+                      {currentAnalise.auEstimadoRecuperavelGramas != null && (
+                        <DetailItem label="Au Estimado Líquido" value={formatDecimal(currentAnalise.auEstimadoRecuperavelGramas, 4)} unit="g" />
                       )}
-                      {analise.auLiquidoParaClienteGramas != null && (
-                        <DetailItem label="Au Líquido para Cliente" value={analise.auLiquidoParaClienteGramas} unit="g" className="text-lg font-bold text-primary" />
+                      {currentAnalise.auLiquidoParaClienteGramas != null && (
+                        <DetailItem label="Au Líquido para Cliente" value={formatDecimal(currentAnalise.auLiquidoParaClienteGramas, 4)} unit="g" className="text-lg font-bold text-primary" />
                       )}
                     </div>
                   </CardContent>
@@ -332,8 +484,8 @@ export function VisualizarAnaliseModal({
                                 <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2"><ImageIcon className="h-5 w-5" />Imagens</CardTitle>
                               </CardHeader>                <CardContent>
                   <div className="space-y-4">
-                    {analise.id ? ( 
-                      <ImageUpload entity={{ type: 'analiseQuimica', id: analise.id }} onUploadSuccess={handleMediaUpdate} />
+                    {currentAnalise.id ? ( 
+                      <ImageUpload entity={{ type: 'analiseQuimica', id: currentAnalise.id }} onUploadSuccess={() => fetchMedia(currentAnalise.id)} />
                     ) : (
                       <p className="text-sm text-muted-foreground">ID da análise não disponível para upload de imagens.</p>
                     )}
@@ -354,11 +506,11 @@ export function VisualizarAnaliseModal({
         <div className="flex justify-end gap-2 p-4 bg-background border-t print:hidden">
           <Button 
             variant="outline" 
-            onClick={() => handleDownloadPdf(analise.id, true)} 
-            disabled={isDownloadingPdf === analise.id}
+            onClick={() => handleDownloadPdf(currentAnalise.id, true)} 
+            disabled={isDownloadingPdf === currentAnalise.id}
           >
             <Printer className="mr-2 h-4 w-4" /> 
-            {isDownloadingPdf === analise.id ? 'Gerando...' : 'Imprimir PDF'}
+            {isDownloadingPdf === currentAnalise.id ? 'Gerando...' : 'Imprimir PDF'}
           </Button>
           <DialogClose asChild>
             <Button variant="ghost">Fechar</Button>

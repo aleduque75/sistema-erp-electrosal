@@ -32,4 +32,19 @@ export class UpdateAnaliseQuimicaDto {
   @IsOptional()
   @IsString()
   observacoes?: string;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  dataAnaliseConcluida?: Date;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  dataAprovacaoCliente?: Date;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  dataFinalizacaoRecuperacao?: Date;
 }

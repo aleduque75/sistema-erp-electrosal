@@ -12,6 +12,10 @@ export interface UpdateAnaliseQuimicaDto {
   volumeOuPesoEntrada?: number;
   unidadeEntrada?: string;
   observacoes?: string | null;
+  dataEntrada?: string | null;
+  dataAnaliseConcluida?: string | null;
+  dataAprovacaoCliente?: string | null;
+  dataFinalizacaoRecuperacao?: string | null;
 }
 
 export interface LancarResultadoDto {

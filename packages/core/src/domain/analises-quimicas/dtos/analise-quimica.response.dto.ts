@@ -7,7 +7,7 @@ export class AnaliseQuimicaResponseDto {
   clienteId!: string | null | undefined;
   metalType!: TipoMetal;
   numeroAnalise!: string;
-  dataEntrada!: Date;
+  dataEntrada!: Date | null;
   descricaoMaterial!: string;
   volumeOuPesoEntrada!: number;
   unidadeEntrada!: string;

@@ -12,10 +12,12 @@ export interface AnaliseQuimicaResumida {
   clienteName: string;
   metalType: string;
   volumeOuPesoEntrada: number;
+  unidadeEntrada: string; // Add this
   resultadoAnaliseValor: number | null;
   auEstimadoBrutoGramas: number | null;
   auLiquidoParaClienteGramas: number | null;
   metalCreditGrams?: number | null;
+  isResidue: boolean; // Add this
 }
 
 export interface RawMaterialUsedResumida {
