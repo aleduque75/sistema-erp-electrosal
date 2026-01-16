@@ -1,6 +1,6 @@
 import { UniqueEntityID } from '../../_shared/domain/unique-entity-id';
 import { AggregateRoot } from "../../_shared/domain/aggregate-root";
-import { StatusAnaliseQuimica } from "../enums/status-analise-quimica.enum";
+import { StatusAnaliseQuimica } from "../enums/status-analise-quimica";
 import { nanoid } from 'nanoid';
 import { TipoMetal } from '../enums/tipo-metal.enum';
 

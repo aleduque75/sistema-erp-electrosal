@@ -20,7 +20,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@sistema-erp-electrosal/core": ["../../packages/core/src"]
+      "@sistema-erp-electrosal/core": ["../../packages/core/src"],
+      "@sistema-erp-electrosal/core/*": ["../../packages/core/src/*"]
     },
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true

@@ -12,7 +12,7 @@ import {
   AnaliseQuimica,
 } from '@sistema-erp-electrosal/core';
 import { RecoveryOrderStatus } from '@sistema-erp-electrosal/core/domain/enums/recovery-order-status.enum';
-import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core/domain/enums/status-analise-quimica.enum';
+import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core/domain/enums/status-analise-quimica';
 
 export interface CancelRecoveryOrderCommand {
   recoveryOrderId: string;

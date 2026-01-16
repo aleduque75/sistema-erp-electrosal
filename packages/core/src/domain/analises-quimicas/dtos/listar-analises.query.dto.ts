@@ -1,5 +1,5 @@
 import { IsOptional, IsUUID, IsEnum, IsString } from 'class-validator';
-import { StatusAnaliseQuimica } from '../../enums/status-analise-quimica.enum';
+import { StatusAnaliseQuimica } from '../../enums/status-analise-quimica';
 import { TipoMetal } from '../../enums/tipo-metal.enum';
 
 export class ListarAnalisesQueryDto {

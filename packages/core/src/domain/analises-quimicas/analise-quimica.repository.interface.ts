@@ -1,5 +1,5 @@
 import { AnaliseQuimica } from "./analise-quimica.entity";
-import { StatusAnaliseQuimica } from "../enums/status-analise-quimica.enum";
+import { StatusAnaliseQuimica } from "../enums/status-analise-quimica";
 
 // Interface para os filtros do método findAll
 export interface FiltrosAnaliseQuimica {

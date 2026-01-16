@@ -10,7 +10,7 @@ import {
   IMetalCreditRepository,
   AnaliseQuimica,
 } from '@sistema-erp-electrosal/core';
-import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core/domain/enums/status-analise-quimica.enum';
+import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core/domain/enums/status-analise-quimica';
 import { PrismaService } from '../../prisma/prisma.service'; // Adjust path as needed
 
 export interface RevertAnaliseQuimicaToPendingApprovalCommand {

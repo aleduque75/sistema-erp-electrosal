@@ -21,7 +21,7 @@ export { ContaCorrenteType } from './domain/enums/conta-corrente-type.enum'; // 
 export { ContaMetalType } from './domain/enums/conta-metal-type.enum'; 
 export { MetalAccountType } from './domain/enums/metal-account-type.enum';
 export { TipoMetal } from './domain/enums/tipo-metal.enum';
-export { StatusAnaliseQuimica } from './domain/enums/status-analise-quimica.enum';
+export { StatusAnaliseQuimica } from './domain/enums/status-analise-quimica';
 export * from './domain/analises-quimicas/analise-quimica.entity';
 export * from './domain/analises-quimicas/dtos/analise-quimica.response.dto';
 export * from './domain/analises-quimicas/dtos/update-analise-quimica.dto';
