@@ -1,9 +1,11 @@
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { StatusAnaliseQuimica } from "@sistema-erp-electrosal/core"; // Importa o valor do Enum
 
 // CORREÇÃO DE TIPAGEM: Usa a sintaxe typeof para garantir que a prop aceita o valor string literal do Enum
 interface Props {
   status: (typeof StatusAnaliseQuimica)[keyof typeof StatusAnaliseQuimica];
+  showText?: boolean;
 }
 
 // CORREÇÃO: O Record map usa a sintaxe typeof para garantir que o tipo da chave seja o valor string literal do Enum
@@ -49,7 +51,7 @@ const statusMap: Record<
   },
 };
 
-export function ChemicalAnalysisStatusBadge({ status }: Props) {
+export function ChemicalAnalysisStatusBadge({ status, showText = false }: Props) {
   // O acesso é seguro porque a chave 'status' é uma string do Enum
   const statusInfo = statusMap[status] as { label: string; className: string } | undefined;
 
@@ -58,11 +60,19 @@ export function ChemicalAnalysisStatusBadge({ status }: Props) {
     return <Badge className="bg-gray-200 text-gray-700">?</Badge>;
   }
 
-  // Renderiza apenas um círculo colorido sem texto
+  if (showText) {
+    return (
+      <Badge className={cn("text-xs font-medium", statusInfo.className)}>
+        {statusInfo.label}
+      </Badge>
+    );
+  }
+
   return (
     <div
       title={statusInfo.label}
-      className={`h-4 w-4 rounded-full ${statusInfo.className}`}
+      
+      className={cn("h-4 w-4 rounded-full", statusInfo.className)}
     />
   );
 }

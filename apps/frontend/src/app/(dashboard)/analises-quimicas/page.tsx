@@ -14,6 +14,7 @@ import { getAnalisesQuimicas, getClients, revertAnaliseQuimicaToPendingApproval,
 import { AnaliseQuimica } from '@/types/analise-quimica';
 import { StatusLegend } from "@/components/analises-quimicas/StatusLegend";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
 import { TipoMetal } from "@/types/tipo-metal";
 import { toast } from "sonner";
@@ -137,19 +138,12 @@ export default function AnalisesQuimicasPage() {
           </div>
           <div className="flex-1 min-w-[200px]">
             <Label>Filtrar por Cliente</Label>
-            <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um cliente..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {clients.map(client => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={[{ value: 'all', label: 'Todos' }, ...clients.map(client => ({ value: client.id, label: client.name }))]}
+              value={clientFilter}
+              onChange={setClientFilter}
+              placeholder="Selecione um cliente..."
+            />
           </div>
           <div className="flex-1 min-w-[200px]">
             <Label>Filtrar por Status</Label>
