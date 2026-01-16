@@ -31,7 +31,8 @@
     "db:backfill-stock-movement-dates": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/backfill-stock-movement-dates.ts",
     "db:import-market-data": "dotenv -e ../../.env -- npx tsx prisma/import-market-data.ts",
     "copy:prisma-engine": "cp ../../node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node ./dist/",
-    "db:export-seed-data": "dotenv -e ../../.env -- ts-node prisma/export-seed-data.ts"
+    "db:export-seed-data": "dotenv -e ../../.env -- ts-node prisma/export-seed-data.ts",
+    "db:investigate-sale": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/investigate-sale.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.5",

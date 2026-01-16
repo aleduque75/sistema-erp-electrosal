@@ -145,11 +145,9 @@ export class CalculateSaleAdjustmentUseCase {
 
     // 3. Calculate Expected Grams (Metal Content) and Total Cost
     let saleExpectedGrams = new Decimal(0);
-    let totalCostBRL = new Decimal(0);
     let itemsLaborGrams = new Decimal(0);
 
     for (const item of sale.saleItems) {
-      // --- Mantenha a lógica de cálculo de `saleExpectedGrams` e `itemsLaborGrams` como está ---
       let itemExpectedGrams = new Decimal(0);
       const calcMethod = item.product.productGroup?.adjustmentCalcMethod;
 
@@ -177,28 +175,39 @@ export class CalculateSaleAdjustmentUseCase {
         const itemLabor = itemExpectedGrams.times(new Decimal(item.laborPercentage).dividedBy(100));
         itemsLaborGrams = itemsLaborGrams.plus(itemLabor);
       }
-      // --- Fim da lógica mantida ---
-
-      // --- NOVA LÓGICA PARA totalCostBRL ---
-      let itemCost = new Decimal(0);
-      const saleItemLots = (item as any).saleItemLots;
-
-      if (saleItemLots && saleItemLots.length > 0) {
-        for (const lot of saleItemLots) {
-          const lotCostPrice = new Decimal(lot.inventoryLot.costPrice || 0);
-          if (lotCostPrice.isZero()) {
-            // Se o custo do lote for zero, usar o custo do item no momento da venda como fallback
-            itemCost = itemCost.plus(new Decimal(item.costPriceAtSale || 0).times(new Decimal(lot.quantity)));
-          } else {
-            const lotCost = lotCostPrice.times(new Decimal(lot.quantity));
-            itemCost = itemCost.plus(lotCost);
-          }
-        }
-      } else {
-        itemCost = new Decimal(item.costPriceAtSale || 0).times(new Decimal(item.quantity));
-      }
-      totalCostBRL = totalCostBRL.plus(itemCost);
     }
+    
+    let totalCostBRL = new Decimal(0);
+    const primaryCalcMethod = sale.saleItems[0]?.product.productGroup?.adjustmentCalcMethod; // Assuming uniform calc method for simplicity
+
+    if (primaryCalcMethod === 'QUANTITY_BASED' && paymentQuotation && !paymentQuotation.isZero()) {
+      // For QUANTITY_BASED, the 'cost' in BRL is the value of the pure metal content at the sale's quotation.
+      totalCostBRL = saleExpectedGrams.times(paymentQuotation);
+    } else {
+      // For COST_BASED (or if quotation is zero), sum up the historical inventory lot costs.
+      // This is the original logic for totalCostBRL
+      for (const item of sale.saleItems) {
+        let itemCost = new Decimal(0);
+        const saleItemLots = (item as any).saleItemLots;
+
+        if (saleItemLots && saleItemLots.length > 0) {
+          for (const lot of saleItemLots) {
+            const lotCostPrice = new Decimal(lot.inventoryLot.costPrice || 0);
+            if (lotCostPrice.isZero()) {
+              // Se o custo do lote for zero, usar o custo do item no momento da venda como fallback
+              itemCost = itemCost.plus(new Decimal(item.costPriceAtSale || 0).times(new Decimal(lot.quantity)));
+            } else {
+              const lotCost = lotCostPrice.times(new Decimal(lot.quantity));
+              itemCost = itemCost.plus(lotCost);
+            }
+          }
+        } else {
+          itemCost = new Decimal(item.costPriceAtSale || 0).times(new Decimal(item.quantity));
+        }
+        totalCostBRL = totalCostBRL.plus(itemCost);
+      }
+    }
+
 
     // 4. Calculate Costs
     let costsInGrams: Decimal | null = null;

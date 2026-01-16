@@ -1,18 +1,21 @@
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { CalculateSaleAdjustmentUseCase } from '../src/sales/use-cases/calculate-sale-adjustment.use-case';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 async function main() {
-  console.log('Iniciando o recálculo de todos os ajustes de vendas...');
+  const saleIdArg = process.argv[2]; // Get sale ID from command line
 
-  // 1. Create a standalone NestJS application context
+  const logMessage = saleIdArg
+    ? `Iniciando o recálculo do ajuste para a venda ID: ${saleIdArg}`
+    : 'Iniciando o recálculo de todos os ajustes de vendas...';
+  console.log(logMessage);
+
   const app = await NestFactory.createApplicationContext(AppModule, {
-    logger: ['error', 'warn', 'log'], // Configure logging as needed
+    logger: ['error', 'warn', 'log'],
   });
 
-  // 2. Get instances of the use case and prisma service from the app context
   const calculateSaleAdjustmentUseCase = app.get(CalculateSaleAdjustmentUseCase);
   const prisma = app.get(PrismaService);
 
@@ -21,14 +24,30 @@ async function main() {
     throw new Error('Nenhuma organização encontrada.');
   }
 
-  const sales = await prisma.sale.findMany({
-    where: {
-      organizationId: organization.id,
-    },
-    select: {
-      id: true,
-    },
-  });
+  let sales: { id: string }[];
+
+  if (saleIdArg) {
+    const sale = await prisma.sale.findUnique({
+      where: { id: saleIdArg, organizationId: organization.id },
+      select: { id: true },
+    });
+    sales = sale ? [sale] : [];
+  } else {
+    sales = await prisma.sale.findMany({
+      where: {
+        organizationId: organization.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
+
+  if (sales.length === 0) {
+    console.log('Nenhuma venda encontrada para recalcular.');
+    await app.close();
+    return;
+  }
 
   console.log(`Encontradas ${sales.length} vendas para recalcular.`);
 

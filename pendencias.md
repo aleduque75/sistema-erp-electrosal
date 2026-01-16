@@ -1,8 +1,16 @@
-analise o pedido de id cecee95b-d081-48ad-b3b6-b3bc3e9bffe4
+temos as seguintas situações de vanda
 
-o prazo de pagamento coloquei 14/28 dias ele criou em sale_installments 2 parcelas, som que no a receber tem somente um lançamento , ficou estranho isso, e en sale_adjustmenst ele fica negativo, não sei se deveria nesse memento, deveria fica zerado, ate ir recebendo não seria
+venda de produto baseada em custo, 
+no caso de Ag 54%, tem que pegar o custo do lote 
+exemplo lote de custo R$ 4.000,00
+vendeu a R$ 5000 , 
+lucro de 1000 pega a cotação do ouro no dia exemplo 770,
+e lucro em au 1.298
 
----
-**Resolvido:** O problema de inconsistência entre `sale_installments` e `accounts_rec` para vendas 'A_PRAZO' foi corrigido em `confirm-sale.use-case.ts`. Para vendas 'A_PRAZO', quaisquer `AccountRec` existentes são agora incondicionalmente excluídos antes da criação de `AccountRec` individuais para cada parcela. As variáveis de cálculo (`finalNetAmount`, `finalGoldPrice`, `finalGoldValue`, `settings`) foram movidas para um escopo superior para resolver problemas de escopo.
+o Ag 54% pode ser tambem feita a reação, mas pode ser do mesmo jeiro o lote pega o vleor de uma data mais proxima e coloxa lá, se for R$ 4000,00 , fica esse valor
 
-**Como testar:** Crie uma nova venda 'A_PRAZO' com parcelas e verifique se um `AccountRec` separado é criado para cada parcela e se o `SaleAdjustment` é calculado corretamente. Devido à impossibilidade de resetar o banco de dados atual, não foi possível revalidar a venda original.
+e Tem
+  do El sal 68 que é mão de obra , vendeu  14,70 gr de sal 68% que equivale a 10 gr au   cotacao au 770 = 7.700,00 com 5 % de mao de obra , 15,435 de Sal 68% e am au 10,50 gr, ai em reais pega a cotação 770 exemplo, ai lucro
+  8;085 e em Reai Lucro de 385 em au 0,5 , e tipo isso de para entender
+
+  isso em sal 68% ja estava sendo feiro

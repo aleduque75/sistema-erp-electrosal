@@ -140,7 +140,8 @@ export function VisualizarAnaliseModal({
   const [editedDataAprovacaoCliente, setEditedDataAprovacaoCliente] = useState<Date | undefined>(undefined);
   const [isSavingDataAprovacaoCliente, setIsSavingDataAprovacaoCliente] = useState(false);
 
-  const [isEditingDataFinalizacaoRecuperacao, setIsEditingDataFinalizacaoRecuperacao] = useState<Date | undefined>(undefined);
+  const [isEditingDataFinalizacaoRecuperacao, setIsEditingDataFinalizacaoRecuperacao] = useState(false);
+  const [editedDataFinalizacaoRecuperacao, setEditedDataFinalizacaoRecuperacao] = useState<Date | undefined>(undefined);
   const [isSavingDataFinalizacaoRecuperacao, setIsSavingDataFinalizacaoRecuperacao] = useState(false);
 
   const fetchAnaliseData = async (analiseId: string) => {
@@ -350,7 +351,7 @@ export function VisualizarAnaliseModal({
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveDescription} disabled={isSavingDescription}>
                             {isSavingDescription ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => { setIsEditingDescription(false); setEditedDescription(analise.descricaoMaterial); }} disabled={isSavingDescription}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => { setIsEditingDescription(false); setEditedDescription(currentAnalise.descricaoMaterial); }} disabled={isSavingDescription}>
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
@@ -452,7 +453,7 @@ export function VisualizarAnaliseModal({
                 </CardContent>
               </Card>
 
-              {(analise.auEstimadoBrutoGramas != null || hasValoresFinais) && (
+              {(currentAnalise.auEstimadoBrutoGramas != null || hasValoresFinais) && (
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2"><DollarSign className="h-5 w-5" />Detalhamento Financeiro</CardTitle>
