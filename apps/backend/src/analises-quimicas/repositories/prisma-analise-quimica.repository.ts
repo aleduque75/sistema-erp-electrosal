@@ -22,7 +22,7 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
   constructor(private prisma: PrismaService) {}
 
   private mapToDomain(
-    dbData: (PrismaAnalise & { cliente?: { name: string } | null }) | null,
+    dbData: (PrismaAnalise & { cliente?: { name: string } | null, recoveryOrderAsResidue?: { id: string } | null }) | null,
   ): AnaliseQuimica | null {
     if (!dbData) return null;
     const { id, cliente, ...props } = dbData;
@@ -30,6 +30,7 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
       {
         ...props,
         cliente: cliente || undefined,
+        recoveryOrderAsResidue: dbData.recoveryOrderAsResidue,
       } as any,
       UniqueEntityID.create(id),
     );
@@ -86,6 +87,11 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
             name: true,
           },
         },
+        recoveryOrderAsResidue: {
+          select: {
+            id: true,
+          }
+        }
       },
     });
 
@@ -108,6 +114,13 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
             numeroAnalise,
           },
         },
+        include: {
+          recoveryOrderAsResidue: {
+            select: {
+              id: true,
+            },
+          },
+        }
       }),
     );
   }
@@ -149,6 +162,13 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     }
     const dbAnalises = await this.prisma.analiseQuimica.findMany({
       where: whereClause,
+      include: {
+        recoveryOrderAsResidue: {
+          select: {
+            id: true,
+          }
+        }
+      },
       orderBy: { dataEntrada: 'asc' },
     });
     return dbAnalises
@@ -183,6 +203,11 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
             name: true,
           },
         },
+        recoveryOrderAsResidue: {
+          select: {
+            id: true,
+          }
+        }
       },
       orderBy: { dataCriacao: 'desc' },
     });
@@ -194,6 +219,7 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
         {
           ...analiseProps,
           cliente: cliente || undefined,
+          recoveryOrderAsResidue: (dbAnalise as any).recoveryOrderAsResidue,
         } as any,
         UniqueEntityID.create(dbAnalise.id),
       );
@@ -205,19 +231,39 @@ export class PrismaAnaliseQuimicaRepository implements IAnaliseQuimicaRepository
     const prisma = tx || this.prisma;
     const data = this.mapToPrismaPayload(analise, organizationId);
     const dbAnalise = await prisma.analiseQuimica.create({ data });
-    return this.mapToDomain(dbAnalise)!;
+
+    // Re-fetch to include relations
+    const newDbAnalise = await prisma.analiseQuimica.findUnique({
+      where: { id: dbAnalise.id },
+      include: {
+        cliente: { select: { name: true } },
+        recoveryOrderAsResidue: { select: { id: true } },
+      }
+    });
+
+    return this.mapToDomain(newDbAnalise)!;
   }
 
   async save(analise: AnaliseQuimica, organizationId: string, tx?: Prisma.TransactionClient): Promise<AnaliseQuimica> {
     const prisma = tx || this.prisma;
     const { id, clienteId, numeroAnalise, ...updatePayload } =
       this.mapToPrismaPayload(analise, organizationId);
-    return this.mapToDomain(
-      await prisma.analiseQuimica.update({
-        where: { id: analise.id.toString() },
-        data: updatePayload,
-      }),
-    )!;
+    
+    await prisma.analiseQuimica.update({
+      where: { id: analise.id.toString() },
+      data: updatePayload,
+    });
+    
+    // Re-fetch to include relations before mapping to domain
+    const updatedDbAnalise = await prisma.analiseQuimica.findUnique({
+      where: { id: analise.id.toString() },
+      include: {
+        cliente: { select: { name: true } },
+        recoveryOrderAsResidue: { select: { id: true } },
+      }
+    });
+
+    return this.mapToDomain(updatedDbAnalise)!;
   }
 
   async delete(id: string): Promise<void> {

@@ -32,8 +32,8 @@ import { ReprovarAnaliseUseCase } from './use-cases/reprovar-analise.use-case';
 import { RefazerAnaliseUseCase } from './use-cases/refazer-analise.use-case';
 import { UpdateAnaliseQuimicaUseCase } from './use-cases/update-analise-quimica.use-case';
 import { AnaliseQuimicaWithClientNameDto } from './dtos/analise-quimica-with-client-name.dto'; // Import the new DTO
-import { RevertAnaliseQuimicaToPendingApprovalUseCase } from './use-cases/revert-analise-quimica-to-pending-approval.use-case'; // Import the new use case
-import { BaixarResiduoUseCase } from './use-cases/baixar-residuo.use-case';
+import { RevertAnaliseQuimicaToPendingApprovalUseCase } from './use-cases/revert-analise-quimica-to-pending-approval.use-case';
+import { WriteOffResidueUseCase } from './use-cases/write-off-residue.use-case';
 
 
 @UseGuards(JwtAuthGuard)
@@ -49,14 +49,13 @@ export class AnalisesQuimicasController {
 			private readonly aprovarAnaliseUseCase: AprovarAnaliseUseCase,
 			private readonly reprovarAnaliseUseCase: ReprovarAnaliseUseCase,
 			private readonly refazerAnaliseUseCase: RefazerAnaliseUseCase,
-			private readonly revertAnaliseQuimicaToPendingApprovalUseCase: RevertAnaliseQuimicaToPendingApprovalUseCase, // Inject the new use case
-			private readonly baixarResiduoUseCase: BaixarResiduoUseCase,
+			private readonly revertAnaliseQuimicaToPendingApprovalUseCase: RevertAnaliseQuimicaToPendingApprovalUseCase,
+			private readonly writeOffResidueUseCase: WriteOffResidueUseCase,
 			private readonly updateAnaliseQuimicaUseCase: UpdateAnaliseQuimicaUseCase,
 		) {}
 
 		@Post()
-		async registrarNovaAnalise(@Body() dto: RegistrarNovaAnaliseDto, @Req() req) {
-			const organizationId = req.user?.orgId;
+		async registrarNovaAnalise(@Body() dto: RegistrarNovaAnaliseDto, @CurrentUser('orgId') organizationId: string) {
 			const command = { dto, organizationId };
 			const analise = await this.registrarNovaAnaliseUseCase.execute(command);
 			return AnaliseQuimicaResponseDto.fromDomain(analise);
@@ -65,11 +64,11 @@ export class AnalisesQuimicasController {
 	@Get()
 	async listarAnalises(
 		@Query() filtros: FiltrosAnaliseQuimica,
-		@Req() req,
+		@CurrentUser('orgId') organizationId: string,
 	): Promise<AnaliseQuimicaResponseDto[]> {
 		const command = {
 			filtros,
-			organizationId: req.user.orgId,
+			organizationId: organizationId,
 		};
 		const analises = await this.listarAnalisesQuimicasUseCase.execute(command);
 		return analises;
@@ -78,10 +77,10 @@ export class AnalisesQuimicasController {
 	@Get(':id')
 	async buscarPorId(
         @Param('id', new ParseUUIDPipe()) id: string,
-        @CurrentUser('orgId') organizationId: string, // Get organizationId from CurrentUser
+        @CurrentUser('orgId') organizationId: string,
     ): Promise<AnaliseQuimicaWithClientNameDto> {
 		const analise = await this.buscarAnalisePorIdUseCase.execute(id, organizationId);
-		return analise; // Return directly as use case already returns DTO
+		return analise;
 	}
 
 	@Patch(':id')
@@ -99,9 +98,8 @@ export class AnalisesQuimicasController {
 	async gerarPdf(
 		@Param('id', new ParseUUIDPipe()) id: string,
 		@Res() res: Response,
-		@Req() req,
+		@CurrentUser('orgId') organizationId: string,
 	) {
-		const organizationId = req.user?.orgId;
 		const pdfBuffer = await this.gerarPdfAnaliseUseCase.execute({
 			analiseId: id,
 			organizationId,
@@ -118,17 +116,15 @@ export class AnalisesQuimicasController {
 		async lancarResultado(
 			@Param('id', new ParseUUIDPipe()) id: string,
 			@Body() dto: LancarResultadoAnaliseDto,
-			@Req() req,
+			@CurrentUser('orgId') organizationId: string,
 		) {
-			const organizationId = req.user?.orgId;
 			const command = { id, dto, organizationId };
 			const analise = await this.lancarResultadoAnaliseUseCase.execute(command);
 			return AnaliseQuimicaResponseDto.fromDomain(analise);
 		}
 
 		@Patch(':id/aprovar-recuperacao')
-		async aprovarRecuperacaoAnalise(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
-			const organizationId = req.user?.orgId;
+		async aprovarRecuperacaoAnalise(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUser('orgId') organizationId: string) {
 			const command = { id, organizationId };
 			const analise =
 				await this.aprovarRecuperacaoAnaliseUseCase.execute(command);
@@ -136,22 +132,19 @@ export class AnalisesQuimicasController {
 		}
 
 		@Patch(':id/aprovar')
-		async aprovarAnalise(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
-			const organizationId = req.user?.orgId;
+		async aprovarAnalise(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUser('orgId') organizationId: string) {
 			const command = { analiseId: id, organizationId };
 			await this.aprovarAnaliseUseCase.execute(command);
 		}
 
 		@Patch(':id/reprovar')
-		async reprovarAnalise(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
-			const organizationId = req.user?.orgId;
+		async reprovarAnalise(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUser('orgId') organizationId: string) {
 			const command = { analiseId: id, organizationId };
 			await this.reprovarAnaliseUseCase.execute(command);
 		}
 
 		@Patch(':id/refazer')
-		async refazerAnalise(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
-			const organizationId = req.user?.orgId;
+		async refazerAnalise(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUser('orgId') organizationId: string) {
 			const command = { analiseId: id, organizationId };
 			await this.refazerAnaliseUseCase.execute(command);
 		}
@@ -159,16 +152,19 @@ export class AnalisesQuimicasController {
 		@Patch(':id/revert-to-pending-approval')
 		async revertToPendingApproval(
 			@Param('id', new ParseUUIDPipe()) id: string,
-			@Req() req,
+			@CurrentUser('orgId') organizationId: string,
 		) {
-			const organizationId = req.user?.orgId;
 			const command = { analiseId: id, organizationId };
 			await this.revertAnaliseQuimicaToPendingApprovalUseCase.execute(command);
 		}
 
-		@Patch(':id/baixar-residuo')
-		async baixarResiduo(@Param('id', new ParseUUIDPipe()) id: string, @Req() req) {
-			const organizationId = req.user?.orgId;
-			await this.baixarResiduoUseCase.execute(id, organizationId);
+		@Post(':id/write-off')
+		@HttpCode(HttpStatus.NO_CONTENT)
+		async writeOffResidue(
+			@Param('id', new ParseUUIDPipe()) id: string,
+			@CurrentUser('orgId') organizationId: string,
+			@CurrentUser('id') userId: string,
+		) {
+			await this.writeOffResidueUseCase.execute(id, organizationId, userId);
 		}
 }

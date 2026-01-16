@@ -93,6 +93,16 @@ export class CreateRecoveryOrderUseCase {
       );
     }
 
+    // New validation: Prevent using an analysis that is already a residue
+    const residueAnalyses = analyses.filter(
+      (analise) => analise.props.recoveryOrderAsResidue != null,
+    );
+    if (residueAnalyses.length > 0) {
+      throw new ConflictException(
+        'Não é possível criar uma ordem de recuperação a partir de uma análise que já é um resíduo.',
+      );
+    }
+
     // Validate that all analyses have the same metalType as the one provided
     const mismatchedMetalTypeAnalyses = analyses.filter(
       (analise) => analise.metalType !== metalType,
@@ -144,7 +154,7 @@ export class CreateRecoveryOrderUseCase {
       for (const analise of analyses) {
         analise.update({
           status: StatusAnaliseQuimica.EM_RECUPERACAO,
-          ordemDeRecuperacaoId: createdRecoveryOrder.id, // <--- ADD THIS LINE
+          ordemDeRecuperacaoId: createdRecoveryOrder.id.toString(),
         });
         await this.analiseRepository.save(analise, organizationId, tx as any);
       }

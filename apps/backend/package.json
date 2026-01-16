@@ -32,7 +32,9 @@
     "db:import-market-data": "dotenv -e ../../.env -- npx tsx prisma/import-market-data.ts",
     "copy:prisma-engine": "cp ../../node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node ./dist/",
     "db:export-seed-data": "dotenv -e ../../.env -- ts-node prisma/export-seed-data.ts",
-    "db:investigate-sale": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/investigate-sale.ts"
+    "db:investigate-sale": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/investigate-sale.ts",
+    "db:find-expense-accounts": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/find-expense-accounts.ts",
+    "db:reset-analise-writeoff": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/reset-analise-writeoff.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.5",

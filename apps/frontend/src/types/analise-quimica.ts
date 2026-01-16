@@ -1,18 +1,10 @@
-// apps/frontend/src/types/analise-quimica.ts (CORRIGIDO)
-
-// Mantemos o import type, mas precisaremos do tipo de valor do Enum para a interface
-import { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
+import type { StatusAnaliseQuimica } from '@sistema-erp-electrosal/core';
 import { TipoMetal } from './tipo-metal';
-
 import { Media } from './media';
 
-// Definindo a interface simplificada do cliente localmente
 export interface ClienteAnalise {
   name: string;
 }
-
-// Criando o tipo de valor literal do Enum (A CORREÇÃO PRINCIPAL)
-type StatusAnaliseQuimicaLiteral = (typeof StatusAnaliseQuimica)[keyof typeof StatusAnaliseQuimica];
 
 export interface AnaliseQuimica {
   id: string;
@@ -20,10 +12,7 @@ export interface AnaliseQuimica {
   dataEntrada: string;
   descricaoMaterial: string;
   metalType?: TipoMetal;
-  
-  // Usando o novo tipo literal
-  status: StatusAnaliseQuimicaLiteral;
-  
+  status: StatusAnaliseQuimica;
   volumeOuPesoEntrada: number;
   unidadeEntrada: string;
   resultadoAnaliseValor?: number;
@@ -36,10 +25,14 @@ export interface AnaliseQuimica {
   taxaServicoEmGramas?: number;
   auLiquidoParaClienteGramas?: number;
   observacoes?: string;
-  
-  cliente?: ClienteAnalise; 
-  
+  cliente?: ClienteAnalise;
   resultado?: any;
   pdfUrl?: string;
-  media?: Media[]; // Adicionado
+  media?: Media[];
+  dataAnaliseConcluida?: string;
+  dataAprovacaoCliente?: string;
+  dataFinalizacaoRecuperacao?: string;
+  ordemDeRecuperacaoId?: string;
+  isWriteOff?: boolean;
+  recoveryOrderAsResidue?: { id: string } | null;
 }

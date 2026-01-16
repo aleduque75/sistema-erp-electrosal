@@ -30,6 +30,7 @@ export interface AnaliseQuimicaProps {
   observacoes: string | null;
   ordemDeRecuperacaoId: string | null;
   isWriteOff?: boolean;
+  recoveryOrderAsResidue?: { id: string } | null;
   dataCriacao: Date;
   dataAtualizacao: Date;
 }

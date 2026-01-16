@@ -70,6 +70,9 @@ export interface SingleMetalReport {
   totalCommissions: number;
   totalCommissionsGrams: number;
 
+  totalTaggedExpensesBRL: number;
+  totalTaggedExpensesGrams: number;
+
   totalPendingAnalysisGrams: number;
   totalPendingAnalysisValue: number;
   

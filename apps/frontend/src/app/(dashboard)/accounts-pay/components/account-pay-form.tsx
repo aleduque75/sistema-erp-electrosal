@@ -28,6 +28,7 @@ interface AccountPay {
   dueDate: string;
   contaContabilId?: string | null;
   fornecedorId?: string | null;
+  recoveryReportPeriod?: string | null;
   isInstallment?: boolean;
   totalInstallments?: number;
   createdAt: string; // Adicionado
@@ -53,7 +54,8 @@ const formSchema = z
     amount: z.coerce.number().positive("O valor deve ser maior que zero."),
     dueDate: z.string().min(1, "A data de vencimento é obrigatória."),
     contaContabilId: z.string().optional().nullable(),
-    fornecedorId: z.string().optional().nullable(), // NOVO CAMPO
+    fornecedorId: z.string().optional().nullable(),
+    recoveryReportPeriod: z.string().optional().nullable(),
     isInstallment: z.boolean().default(false),
     totalInstallments: z.coerce
       .number()
@@ -90,6 +92,7 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
         : new Date().toISOString().split("T")[0],
       contaContabilId: account?.contaContabilId || user?.settings?.defaultDespesaContaId || null,
       fornecedorId: account?.fornecedorId || null,
+      recoveryReportPeriod: account?.recoveryReportPeriod || null,
       isInstallment: account?.isInstallment || false,
       totalInstallments: account?.totalInstallments ?? 2,
       createdAt: account ? new Date(account.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
@@ -213,6 +216,24 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
                 onChange={field.onChange}
                 placeholder="Selecione um fornecedor..."
               />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          name="recoveryReportPeriod"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Período de Custo (Recuperação)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="month"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

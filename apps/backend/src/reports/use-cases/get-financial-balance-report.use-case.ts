@@ -112,7 +112,21 @@ export class GetFinancialBalanceReportUseCase {
        const totalCommissionsBRL = totalRecoveryCommissionsBRL;
        const totalCommissionsGrams = pricePerGram > 0 ? totalCommissionsBRL / pricePerGram : 0;
 
-       // 6. Open Analysis Balance (Saldo em Aberto - Informativo/Pipeline)
+       // 6. Tagged Operational Expenses
+      const periods = this.getYearMonthPeriods(startDate, endDate);
+      const taggedExpenses = await this.prisma.accountPay.findMany({
+        where: {
+          organizationId,
+          recoveryReportPeriod: { in: periods },
+          paid: true, // Only consider paid expenses
+        },
+        select: { amount: true },
+      });
+      const totalTaggedExpensesBRL = taggedExpenses.reduce((acc, exp) => acc + Number(exp.amount), 0);
+      const totalTaggedExpensesGrams = pricePerGram > 0 ? totalTaggedExpensesBRL / pricePerGram : 0;
+
+
+       // 7. Open Analysis Balance (Saldo em Aberto - Informativo/Pipeline)
        // Analyses currently in progress (not finalized, not written off)
        // This is a snapshot of CURRENT open analyses, regardless of creation date? Or created in period?
        // Usually "Saldo" implies current state.
@@ -130,7 +144,7 @@ export class GetFinancialBalanceReportUseCase {
 
        // --- NET RESULT CALCULATION (In Grams) ---
        // Recovered (Real) - Consumed in Reactions - Client Credit (Obligation) - WriteOffs (Loss) - OperationalCosts (Converted)
-       const netResultGrams = totalRecoveredGrams - totalReactionConsumptionGrams - totalClientCreditGrams - totalResidueGrams - totalRawMaterialsGrams - totalCommissionsGrams;
+       const netResultGrams = totalRecoveredGrams - totalReactionConsumptionGrams - totalClientCreditGrams - totalResidueGrams - totalRawMaterialsGrams - totalCommissionsGrams - totalTaggedExpensesGrams;
        const netResultValue = netResultGrams * pricePerGram;
 
        result[metal] = {
@@ -155,6 +169,9 @@ export class GetFinancialBalanceReportUseCase {
         
         totalCommissions: totalCommissionsBRL,
         totalCommissionsGrams,
+
+        totalTaggedExpensesBRL,
+        totalTaggedExpensesGrams,
         
         totalPendingAnalysisGrams,
         totalPendingAnalysisValue,
@@ -165,5 +182,19 @@ export class GetFinancialBalanceReportUseCase {
     }
 
     return result;
+  }
+
+  private getYearMonthPeriods(startDate: Date, endDate: Date): string[] {
+    const periods: string[] = [];
+    let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+    while (currentDate <= endDate) {
+      const year = currentDate.getFullYear();
+      const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+      periods.push(`${year}-${month}`);
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    return periods;
   }
 }

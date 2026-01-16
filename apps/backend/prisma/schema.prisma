@@ -391,6 +391,7 @@ model AccountPay {
   purchaseOrderId   String?
   fornecedorId      String?
   originalAccountId String?
+  recoveryReportPeriod String?          // e.g., "YYYY-MM"
   contaContabil     ContaContabil? @relation(fields: [contaContabilId], references: [id])
   organization      Organization   @relation(fields: [organizationId], references: [id])
   transacao         Transacao?     @relation(fields: [transacaoId], references: [id])

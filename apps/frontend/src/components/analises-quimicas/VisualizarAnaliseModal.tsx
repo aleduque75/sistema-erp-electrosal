@@ -143,6 +143,24 @@ export function VisualizarAnaliseModal({
   const [isEditingDataFinalizacaoRecuperacao, setIsEditingDataFinalizacaoRecuperacao] = useState(false);
   const [editedDataFinalizacaoRecuperacao, setEditedDataFinalizacaoRecuperacao] = useState<Date | undefined>(undefined);
   const [isSavingDataFinalizacaoRecuperacao, setIsSavingDataFinalizacaoRecuperacao] = useState(false);
+  const [isWritingOff, setIsWritingOff] = useState(false);
+
+  const handleWriteOff = async () => {
+    if (!currentAnalise) return;
+    setIsWritingOff(true);
+    try {
+      await api.post(`/analises-quimicas/${currentAnalise.id}/write-off`);
+      toast.success("Análise de resíduo baixada como perda com sucesso!");
+      await fetchAnaliseData(currentAnalise.id); // Re-fetch data
+      onUpdate?.(); // Update the main list
+    } catch (error: any) {
+      console.error("Erro ao dar baixa no resíduo:", error);
+      const errorMessage = error.response?.data?.message || "Erro desconhecido ao dar baixa no resíduo.";
+      toast.error(errorMessage);
+    } finally {
+      setIsWritingOff(false);
+    }
+  };
 
   const fetchAnaliseData = async (analiseId: string) => {
     setIsFetchingAnalise(true);
@@ -310,7 +328,6 @@ export function VisualizarAnaliseModal({
           <DialogDescription className="text-center">
             Detalhes completos da análise, resultados e valores.
           </DialogDescription>
-
         </DialogHeader>
 
         <Tabs defaultValue="geral" className="flex flex-col h-full">
@@ -505,6 +522,16 @@ export function VisualizarAnaliseModal({
         </Tabs>
 
         <div className="flex justify-end gap-2 p-4 bg-background border-t print:hidden">
+          {currentAnalise && !currentAnalise.isWriteOff && currentAnalise.recoveryOrderAsResidue && (
+              <Button 
+                variant="destructive"
+                onClick={handleWriteOff}
+                disabled={isWritingOff}
+              >
+                {isWritingOff ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DollarSign className="mr-2 h-4 w-4" />}
+                Lançar como Perda
+              </Button>
+          )}
           <Button 
             variant="outline" 
             onClick={() => handleDownloadPdf(currentAnalise.id, true)} 
