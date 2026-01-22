@@ -115,15 +115,24 @@ export class GerarPdfRecoveryOrderUseCase {
     );
 
     const imagesBase64 = await Promise.all(
-      (recoveryOrder.images || []).map(image => this.getImageAsBase64(image.path))
+      (recoveryOrder.images || []).map((image) =>
+        this.getImageAsBase64(image.path),
+      ),
     );
 
-    const templateData = {
+    const templateData: any = {
       ...recoveryOrder.toObject(),
       dataEmissaoPdf: new Date(),
       status: recoveryOrder.status.replace(/_/g, ' '),
-      imagesBase64: imagesBase64.filter(img => img !== null),
+      imagesBase64: imagesBase64.filter((img) => img !== null),
     };
+
+    templateData.totalCreditoClienteGramas = (
+      templateData.analisesEnvolvidas || []
+    ).reduce(
+      (acc, analise) => acc + (analise.auLiquidoParaClienteGramas || 0),
+      0,
+    );
 
     const template = Handlebars.compile(htmlComLogo);
     const htmlContent = template(templateData);

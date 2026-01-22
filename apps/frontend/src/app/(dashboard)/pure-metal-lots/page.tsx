@@ -34,17 +34,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Package, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Eye, Package, Edit, Trash2 } from 'lucide-react';
 import { PureMetalLotDetailsDialog } from './components/pure-metal-lot-details-dialog';
-
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import api from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/ui/data-table';
@@ -79,6 +85,7 @@ export default function PureMetalLotsPage() {
   const [selectedLotForDetails, setSelectedLotForDetails] = useState<PureMetalLot | null>(null);
   const [hideZeroedLots, setHideZeroedLots] = useState(true);
   const [metalTypeFilter, setMetalTypeFilter] = useState<string | 'all'>('all');
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<string | 'all'>('all');
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const router = useRouter();
 
@@ -111,6 +118,7 @@ export default function PureMetalLotsPage() {
       const data = await getPureMetalLots({
         hideZeroed: hideZeroedLots,
         metalType: metalTypeFilter,
+        sourceType: sourceTypeFilter,
       });
       setPureMetalLots(data);
     } catch (error) {
@@ -124,7 +132,7 @@ export default function PureMetalLotsPage() {
   useEffect(() => {
     fetchPureMetalLots();
     fetchClients();
-  }, [hideZeroedLots, metalTypeFilter]);
+  }, [hideZeroedLots, metalTypeFilter, sourceTypeFilter]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -277,48 +285,24 @@ export default function PureMetalLotsPage() {
   if (loading) return <div>Carregando...</div>;
 
   return (
-    <div className="max-w-7xl mx-auto py-8 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Lotes de Metal Puro</h1>
-          <p className="text-muted-foreground">Gerencie o estoque de metais puros e adiantamentos.</p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-           {/* Filters */}
-           <div className="flex items-center space-x-2 bg-muted/50 p-2 rounded-lg">
-            <Checkbox
-              id="hide-zeroed"
-              checked={hideZeroedLots}
-              onCheckedChange={(checked) => setHideZeroedLots(checked as boolean)}
-            />
-            <Label htmlFor="hide-zeroed" className="text-sm whitespace-nowrap cursor-pointer">Ocultar zerados</Label>
+    <div className="space-y-6">
+       <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Lotes de Metal Puro</h1>
+            <p className="text-muted-foreground">Gerencie o estoque de metais puros e adiantamentos.</p>
           </div>
-          
-          <Select value={metalTypeFilter} onValueChange={setMetalTypeFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Filtrar por metal" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Metais</SelectItem>
-              <SelectItem value="AU">Ouro (AU)</SelectItem>
-              <SelectItem value="AG">Prata (AG)</SelectItem>
-              <SelectItem value="RH">Ródio (RH)</SelectItem>
-            </SelectContent>
-          </Select>
-
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditingLot(null); form.reset(); }} className="gap-2">
                 <Package className="w-4 h-4" /> Novo Lote
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[625px]">
             <DialogHeader>
               <DialogTitle>{editingLot ? "Editar Lote de Metal Puro" : "Novo Lote de Metal Puro"}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="entryDate"
@@ -332,70 +316,7 @@ export default function PureMetalLotsPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="sourceType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Origem</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a origem" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="ADIANTAMENTO_CLIENTE">Adiantamento Cliente</SelectItem>
-                          <SelectItem value="COMPRA">Compra</SelectItem>
-                          <SelectItem value="RECUPERACAO">Recuperação</SelectItem>
-                          <SelectItem value="OUTROS">Outros</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {sourceType === 'ADIANTAMENTO_CLIENTE' ? (
-                  <FormField
-                    control={form.control}
-                    name="clientId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cliente</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o cliente" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {clients.map((client) => (
-                              <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="sourceId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ID de Origem (Opcional)</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                <FormField
+                 <FormField
                   control={form.control}
                   name="metalType"
                   render={({ field }) => (
@@ -419,7 +340,7 @@ export default function PureMetalLotsPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
+                 <FormField
                   control={form.control}
                   name="initialGrams"
                   render={({ field }) => (
@@ -447,9 +368,71 @@ export default function PureMetalLotsPage() {
                 />
                 <FormField
                   control={form.control}
+                  name="sourceType"
+                  render={({ field }) => (
+                    <FormItem className="col-span-1 md:col-span-2">
+                      <FormLabel>Tipo de Origem</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a origem" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ADIANTAMENTO_CLIENTE">Adiantamento Cliente</SelectItem>
+                          <SelectItem value="COMPRA">Compra</SelectItem>
+                          <SelectItem value="RECUPERACAO">Recuperação</SelectItem>
+                          <SelectItem value="OUTROS">Outros</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {sourceType === 'ADIANTAMENTO_CLIENTE' ? (
+                  <FormField
+                    control={form.control}
+                    name="clientId"
+                    render={({ field }) => (
+                      <FormItem className="col-span-1 md:col-span-2">
+                        <FormLabel>Cliente</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o cliente" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {clients.map((client) => (
+                              <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="sourceId"
+                    render={({ field }) => (
+                      <FormItem className="col-span-1 md:col-span-2">
+                        <FormLabel>ID de Origem (Opcional)</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Ex: ID da Compra, ID da Recuperação" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                 <FormField
+                  control={form.control}
                   name="notes"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="col-span-1 md:col-span-2">
                       <FormLabel>Observações (Opcional)</FormLabel>
                       <FormControl>
                         <Input {...field} />
@@ -458,17 +441,70 @@ export default function PureMetalLotsPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit">Salvar</Button>
+                <div className="col-span-1 md:col-span-2 flex justify-end">
+                  <Button type="submit">Salvar</Button>
+                </div>
               </form>
             </Form>
           </DialogContent>
           </Dialog>
         </div>
-      </div>
 
-      <div className="rounded-md border">
-        <DataTable columns={columns} data={pureMetalLots} />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtros</CardTitle>
+          <CardDescription>Refine os lotes de metal puro exibidos.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hide-zeroed"
+                checked={hideZeroedLots}
+                onCheckedChange={(checked) => setHideZeroedLots(checked as boolean)}
+              />
+              <Label htmlFor="hide-zeroed" className="text-sm font-medium cursor-pointer">
+                Ocultar lotes zerados
+              </Label>
+            </div>
+            
+            <Select value={metalTypeFilter} onValueChange={setMetalTypeFilter}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filtrar por metal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Metais</SelectItem>
+                <SelectItem value="AU">Ouro (AU)</SelectItem>
+                <SelectItem value="AG">Prata (AG)</SelectItem>
+                <SelectItem value="RH">Ródio (RH)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={sourceTypeFilter} onValueChange={setSourceTypeFilter}>
+                <SelectTrigger className="w-full md:w-[220px]">
+                    <SelectValue placeholder="Filtrar por tipo de origem" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todas as Origens</SelectItem>
+                    <SelectItem value="ADIANTAMENTO_CLIENTE">Adiantamento Cliente</SelectItem>
+                    <SelectItem value="COMPRA">Compra</SelectItem>
+                    <SelectItem value="RECUPERACAO">Recuperação</SelectItem>
+                    <SelectItem value="OUTROS">Outros</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+         <CardHeader>
+          <CardTitle>Lotes</CardTitle>
+          <CardDescription>Lista de todos os lotes de metal puro cadastrados.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DataTable columns={columns} data={pureMetalLots} />
+        </CardContent>
+      </Card>
 
       <PureMetalLotDetailsDialog
         lot={selectedLotForDetails}

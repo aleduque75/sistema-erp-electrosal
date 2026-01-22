@@ -368,7 +368,12 @@ export function RecoveryOrderDetailsModal({ isOpen, onOpenChange, recoveryOrder:
               <CardTitle className="text-sm font-semibold">Imagens</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <ImageUpload entity={{ type: 'recoveryOrder', id: currentRecoveryOrder.id }} onUploadSuccess={() => fetchMedia(currentRecoveryOrder.id)} />
+              <ImageUpload 
+                entity={{ type: 'recoveryOrder', id: currentRecoveryOrder.id }} 
+                onMediaUploadSuccess={(newMedia) => {
+                  fetchMedia(currentRecoveryOrder.id);
+                }} 
+              />
               {isLoadingMedia ? (
                 <p>Carregando imagens...</p>
               ) : media.length > 0 ? (

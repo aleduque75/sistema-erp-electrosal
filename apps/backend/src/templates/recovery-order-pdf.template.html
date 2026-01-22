@@ -123,6 +123,7 @@
                             <th>Entrada</th>
                             <th>Resultado</th>
                             <th>Au Bruto (g)</th>
+                            <th>Crédito Cliente (g)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -133,9 +134,16 @@
                             <td>{{formatarNumero this.volumeOuPesoEntrada 2}}</td>
                             <td>{{formatarNumero this.resultadoAnaliseValor 2}}</td>
                             <td>{{formatarNumero this.auEstimadoBrutoGramas 4}}</td>
+                            <td>{{formatarNumero this.auLiquidoParaClienteGramas 4}}</td>
                         </tr>
                         {{/each}}
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5" style="text-align: right; font-weight: bold; border-top: 2px solid #333;">Total Crédito Cliente</td>
+                            <td style="font-weight: bold; border-top: 2px solid #333;">{{formatarNumero totalCreditoClienteGramas 4}} g</td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </section>
@@ -143,10 +151,10 @@
         {{#if imagesBase64.length}}
         <section class="content-section" style="page-break-before: always;">
             <div class="section-title">Imagens Anexadas</div>
-            <div style="padding: 12px; text-align: center;">
+            <div style="padding: 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
                 {{#each imagesBase64}}
-                <div style="margin-bottom: 20px;">
-                    <img src="{{this}}" style="max-width: 100%; height: auto; border: 1px solid #ddd;" />
+                <div style="page-break-inside: avoid; border: 1px solid #ddd; padding: 5px; text-align: center;">
+                    <img src="{{this}}" style="max-height: 400px; max-width: 100%;" />
                 </div>
                 {{/each}}
             </div>
