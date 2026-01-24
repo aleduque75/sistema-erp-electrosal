@@ -1,13 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, LogLevel } from '@nestjs/common';
 import { config } from 'dotenv';
 import { Decimal } from 'decimal.js';
 
 config();
 
-// BigInt and Decimal serialization
+// BigInt and Decimal serialization - Mantido para compatibilidade com o Prisma
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
@@ -16,14 +16,15 @@ config();
   return this.toString();
 };
 
-import { LogLevel } from '@nestjs/common'; 
-
 async function bootstrap() {
-  process.env.TZ = 'UTC'; // Garante que o Node.js use UTC
+  process.env.TZ = 'UTC';
+
   const app = await NestFactory.create(AppModule, {
-    logger: ['log', 'error', 'warn', 'debug'] as LogLevel[], 
+    // Debug ativado para vermos exatamente o que acontece nas rotas
+    logger: ['log', 'error', 'warn', 'debug', 'verbose'] as LogLevel[],
   });
 
+  // Prefixo global DEVE vir antes do Swagger
   app.setGlobalPrefix('api');
 
   app.useGlobalPipes(
@@ -37,34 +38,17 @@ async function bootstrap() {
     }),
   );
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('API Sistema de Beleza')
-    .setDescription(
-      'Documentação completa da API para o sistema de gestão de beleza.',
-    )
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
-
-  // --- 👇 SOLUÇÃO DE CORS DEFINITIVA APLICADA AQUI 👇 ---
-
+  // --- CONFIGURAÇÃO DE CORS AJUSTADA ---
+  // Liberamos especificamente o tráfego que vem do Docker Gateway (172.x.x.x)
   app.enableCors({
-    origin: function (
-      origin: string | undefined,
-      callback: (err: Error | null, allow?: boolean) => void
-    ): void {
-      // Permite requisições sem 'origin' (Postman) ou de localhost e IPs de rede privada
-      const isAllowed =
+    origin: (origin, callback) => {
+      if (
         !origin ||
-        (typeof origin === 'string' &&
-          (origin.startsWith('http://localhost') ||
-            origin.startsWith('http://192.168.') ||
-            origin.startsWith('http://10.')));
-
-      if (isAllowed) {
+        origin.startsWith('http://localhost') ||
+        origin.startsWith('http://127.0.0.1') ||
+        origin.match(/^http:\/\/172\.\d+\.\d+\.\d+/) || // Permite IPs da rede Docker
+        origin.match(/^http:\/\/192\.168\./)
+      ) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -73,19 +57,27 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
-  // ----------------------------------------------------
 
-  app.enableShutdownHooks(); // Adicionado para lidar com o desligamento de forma elegante
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('API Electrosal Bot')
+    .setDescription('Integração entre ERP Electrosal e Evolution API.')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
+
+  app.enableShutdownHooks();
 
   const port = process.env.PORT || 3002;
+
+  // '0.0.0.0' é fundamental para o Docker conseguir enxergar o host
   await app.listen(port, '0.0.0.0');
 
-  console.log(
-    `Application successfully started on port ${port}`,
-  );
-  console.log(
-    `Swagger documentation is available at: ${await app.getUrl()}/api/docs`,
-  );
+  const url = await app.getUrl();
+  console.log(`🚀 Back-end rodando em: ${url}`);
+  console.log(`📄 Swagger: ${url}/api/docs`);
 }
 
 bootstrap();

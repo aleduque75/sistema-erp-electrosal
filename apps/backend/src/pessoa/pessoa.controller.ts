@@ -17,7 +17,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt')) // Reabilitado
 @Controller('pessoas')
 export class PessoaController {
   constructor(private readonly pessoaService: PessoaService) {}

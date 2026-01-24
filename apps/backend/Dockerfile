@@ -1,14 +1,11 @@
 # apps/backend/Dockerfile
 
 # Fase 1: Builder (onde o código é compilado e dependências instaladas)
-FROM node:20-alpine AS builder
+FROM node:20 AS builder
 WORKDIR /app
 
 # Instalar pnpm globalmente para usar no build
 RUN npm install -g pnpm@9.0.6
-
-# Instalar openssl para o Prisma funcionar corretamente em Alpine
-RUN apk add --no-cache openssl
 
 # Copiar arquivos de manifesto para cache de dependências
 COPY package.json pnpm-lock.yaml ./
@@ -22,12 +19,8 @@ COPY . .
 # Instalar todas as dependências do monorepo
 RUN pnpm install --frozen-lockfile
 
-# Gerar o cliente Prisma (necessário para a compilação do NestJS)
-RUN DATABASE_URL="postgresql://aleduque:testpassword123@db:5432/sistema_beleza?schema=public" pnpm prisma generate --schema ./apps/backend/prisma/schema.prisma
-
 # Construir o backend NestJS
 RUN pnpm --filter backend build
-
 # Compilar o script de seed para JavaScript puro
 RUN npx tsc --project apps/backend/tsconfig.seed.json
 
@@ -101,5 +94,4 @@ COPY --from=builder /app/apps/backend/dist/prisma/seed.js ./dist/prisma/seed.js
 EXPOSE 3001
 
 # Definir o comando de inicialização
-# A DATABASE_URL é injetada aqui para garantir que o Node a veja em runtime
-CMD ["sh", "-c", "DATABASE_URL=\"postgresql://aleduque:testpassword123@db:5432/sistema_beleza?schema=public\" node dist/main"]
+CMD ["sh", "-c", "pnpm prisma generate --schema ./prisma/schema.prisma && node dist/main"]

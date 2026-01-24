@@ -1,50 +1,40 @@
+Exatamente como eu suspeitava, Alexandre. O seu arquivo .dump é, na verdade, um arquivo de texto puro com comandos SQL (gerado pelo pg_dump padrão), e não um arquivo binário compactado. Por isso o pg_restore reclamou.
+
+Para restaurar esse tipo de arquivo, usamos o psql diretamente.
+🛠️ Comando de Restauração (Versão SQL)
+
+Rode este comando no seu terminal do Linux Mint:
+
+cat apps/backend/backups/backup_2026-01-23T17-30-41-701Z.dump | docker exec -i sistema-electrosal-db psql -U aleduque -d sistema_electrosal_dev
+
+🔍 O que esse comando faz:
+
+    cat: Lê o conteúdo do seu arquivo SQL.
+
+    docker exec -i: Abre o canal de entrada do container do banco ERP.
+
+    psql: Executa cada linha do arquivo (CREATE TABLE, INSERT, etc.) dentro do seu banco de dados.
+
+    ⚠️ O que você pode ver no terminal:
+
+Como o banco de dados foi recriado recentemente, talvez você veja algumas mensagens de erro como:
+
+    ERROR: relation "exemplo" already exists (Se o Prisma já tiver criado a tabela).
+
+    NOTICE: table "exemplo" does not exist, skipping (Se o backup tentar deletar algo antes de criar).
+
+Não se assuste: Se a maioria das mensagens for INSERT 0 1, CREATE TABLE ou ALTER TABLE, a restauração está funcionando perfeitamente.
 
 
-id	7e94781a-6db9-4da6-bd45-e2ec32e363c3
-nome	CAIXA ITAU
-numeroConta	CAIXA ITAU
-agencia	legacy
-moeda	BRL
-createdAt	2025-10-28 15:13:42.095
-updatedAt	2025-12-15 15:32:48.759
-deletedAt	
-organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
-limite	0.00
-initialBalanceBRL	0.00
-initialBalanceGold	0.0000
-type	BANCO
-contaContabilId	31c7e3b1-d767-402d-bb47-d62bcf2c71f4
-isActive	true
+✅ Como confirmar se deu certo?
 
-id	b78bd0d6-758a-4468-992c-e821347f02bc
-nome	CAIXA BANCOS
-numeroConta	CAIXA BANCOS
-agencia	legacy
-moeda	BRL
-createdAt	2025-10-28 15:13:42.026
-updatedAt	2025-12-15 15:32:25.103
-deletedAt	
-organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
-limite	0.00
-initialBalanceBRL	9539.92
-initialBalanceGold	0.0000
-type	BANCO
-contaContabilId	31c7e3b1-d767-402d-bb47-d62bcf2c71f4
-isActive	true
+Após o comando terminar, você pode verificar se os dados voltaram com um comando rápido:
+Bash
 
+docker exec -it sistema-electrosal-db psql -U aleduque -d sistema_electrosal_dev -c "\dt"
 
-id	ad06430a-88c2-41c7-9236-6dea0598bd7d
-nome	BSA
-numeroConta	BSA
-agencia	legacy
-moeda	BRL
-createdAt	2025-10-28 15:13:42.033
-updatedAt	2026-01-21 15:04:57.272
-deletedAt	
-organizationId	2a5bb448-056b-4b87-b02f-fec691dd658d
-limite	0.00
-initialBalanceBRL	-130000.00
-initialBalanceGold	627.3300
-type	FORNECEDOR_METAL
-contaContabilId	067732ec-2ebf-4600-a298-3c73f280ff20
-isActive	true
+(Isso vai listar todas as tabelas que foram restauradas no seu banco).
+
+O comando rodou até o fim ou parou em algum erro de "Permission Denied"?
+
+Assim que os dados estiverem lá, você quer que eu te ajude a rodar o npx prisma generate para garantir que o seu NestJS reconheça tudo o que foi restaurado?

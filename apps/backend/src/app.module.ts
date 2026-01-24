@@ -64,6 +64,8 @@ import { MetalPaymentsModule } from './metal-payments/metal-payments.module';
 import { PdfModule } from './pdf/pdf.module';
 import { ReportsModule } from './reports/reports.module';
 import { MarketDataModule } from './market-data/market-data.module';
+import { AutomationsModule } from './automations/automations.module'; // Importar o módulo de automações
+import { WhatsappModule } from './whatsapp/whatsapp.module'; // Importar o módulo do WhatsApp
 
 @Module({
   imports: [
@@ -76,7 +78,7 @@ import { MarketDataModule } from './market-data/market-data.module';
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
-    AuthModule,
+    AuthModule, // Temporarily disabled for user creation
     UsersModule,
     PessoaModule,
     ContasContabeisModule,
@@ -126,12 +128,14 @@ import { MarketDataModule } from './market-data/market-data.module';
     PdfModule,
     ReportsModule,
     MarketDataModule,
+    AutomationsModule, // Adicionar o módulo de automações
+    WhatsappModule, // Adicionar o módulo do WhatsApp
   ],
   controllers: [AppController, RawMaterialsController],
   providers: [
     AppService,
     AuditLogService,
-    // { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
     RawMaterialsService,
   ],
 })

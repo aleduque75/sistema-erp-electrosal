@@ -1,4 +1,5 @@
 services:
+  # --- Banco de Dados do ERP (Electrosal) ---
   db:
     image: postgres:16
     container_name: sistema-electrosal-db
@@ -8,20 +9,105 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-electrosal123}
       POSTGRES_DB: ${DB_NAME:-sistema_electrosal_dev}
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data # PROTEGIDO (EXTERNO)
     ports:
-      - "5435:5432" # Expõe a porta para o seu localhost
+      - "5435:5432"
+    networks:
+      - electrosal_net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # --- Automação n8n ---
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    volumes:
+      - ./n8n-data:/home/node/.n8n
+    environment:
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+      - N8N_EXTERNAL_URL=https://n8n.electrosal.com.br
     networks:
-      - app-net
+      - electrosal_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # --- Evolution API (WhatsApp) ---
+  evolution_api:
+    image: atendai/evolution-api:latest
+    container_name: evolution_api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTHENTICATION_TYPE=apikey
+      - AUTHENTICATION_API_KEY=085492EC4E97-408A-9EBC-40A63394B6E5
+      
+      # Banco de Dados (Evolution)
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://postgres:pass_ev@evolution_db:5432/evolution_api
+      
+      # --- SOLUÇÃO REDIS (DESATIVADO PARA ESTABILIDADE) ---
+      # Usaremos o Postgres para gerenciar as sessões e evitar o erro "disconnected"
+      - REDIS_ENABLED=false
+      
+      # --- PERSISTÊNCIA NO POSTGRES ---
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=true
+      - DATABASE_SAVE_MESSAGE_CONN=true
+      - DATABASE_SAVE_DATA_CONTACTS=true
+      - DATABASE_SAVE_DATA_CHATS=true
+      
+      # --- WEBHOOK GLOBAL ---
+      # Envia mensagens para o NestJS no host (Linux Mint)
+      - WEBHOOK_GLOBAL_ENABLED=true
+      - WEBHOOK_GLOBAL_URL=http://host.docker.internal:3002/api/whatsapp/webhook
+      - WEBHOOK_GLOBAL_MESSAGES_UPSERT=true
+      - WEBHOOK_GLOBAL_WEB_VERSION=true
+      - CACHE_REDIS_ENABLED=false
+      - CACHE_LOCAL_ENABLED=true
+      - CACHE_TYPE=local
+
+      
+    networks:
+      - electrosal_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      evolution_db:
+        condition: service_healthy
+
+  # --- Banco de Dados Exclusivo (Evolution) ---
+  evolution_db:
+    image: postgres:15
+    container_name: evolution_postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=pass_ev
+      - POSTGRES_DB=evolution_api
+    volumes:
+      - evolution_postgres_data:/var/lib/postgresql/data
+    networks:
+      - electrosal_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d evolution_api"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 networks:
-  app-net:
+  electrosal_net:
     driver: bridge
 
 volumes:
-  db_data: {}
+  # BLOQUEADO: Docker não apaga esse volume com 'down -v'
+  db_data:
+    external: true
+  evolution_postgres_data: {}

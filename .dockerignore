@@ -1,6 +1,8 @@
 
-# Ignorar dependências do Node
+# Ignorar dependências do Node, com exceção do cliente Prisma
 node_modules
+!node_modules/.prisma/client
+!node_modules/@prisma/client
 
 # Ignorar logs
 npm-debug.log
