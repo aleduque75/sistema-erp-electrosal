@@ -55,6 +55,7 @@ model Organization {
   saleAdjustments         SaleAdjustment[]
   transacoes              Transacao[]
   menuItems               MenuItem[]
+  // appearanceSettings    AppearanceSettings?
 }
 
 model User {
@@ -605,10 +606,8 @@ model LandingPage {
   updatedAt       DateTime      @updatedAt
   logoImageId     String?
   logoText        String?
-  organizationId  String?
-  customThemeName String?
-  logoImage       Media?        @relation(fields: [logoImageId], references: [id])
-  Organization    Organization? @relation(fields: [organizationId], references: [id])
+  logoImage      Media?        @relation(fields: [logoImageId], references: [id])
+  // organization    Organization? @relation(fields: [organizationId], references: [id])
   sections        Section[]
 }
 
@@ -641,6 +640,7 @@ model Media {
   transacaoId        String?
   chemicalReactionId String?
   landingPageLogos   LandingPage[]
+  appearanceSettingsLogo AppearanceSettings[] @relation("AppearanceLogo")
   // Não tem mais organizationSidebarLogo
   analiseQuimica     AnaliseQuimica?     @relation(fields: [analiseQuimicaId], references: [id])
   chemicalReaction   chemical_reactions? @relation(fields: [chemicalReactionId], references: [id])
@@ -1261,3 +1261,18 @@ model MenuItem {
 
   @@unique([organizationId, title, parentId])
 }
+
+
+model AppearanceSettings {
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  themeName      String?
+  customTheme    Json?
+  logoImageId    String?
+  logoText       String?
+  logoImage      Media?       @relation("AppearanceLogo", fields: [logoImageId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+

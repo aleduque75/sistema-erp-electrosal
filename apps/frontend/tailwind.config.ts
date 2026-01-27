@@ -28,6 +28,10 @@ const config = {
       },
       colors: {
         // Shadcn/ui colors
+        "navbar-background": "hsl(var(--navbar-background))",
+        "hero-background": "hsl(var(--hero-background))",
+        "features-background": "hsl(var(--features-background))",
+
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',

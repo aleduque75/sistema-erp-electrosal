@@ -17,7 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SaleAdjustmentCalcMethod } from '@prisma/client';
+
+// Enum local para uso no frontend (deve ser igual ao do backend/prisma)
+export enum SaleAdjustmentCalcMethod {
+  QUANTITY_BASED = 'QUANTITY_BASED',
+  COST_BASED = 'COST_BASED',
+}
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'O nome deve ter pelo menos 2 caracteres.' }),

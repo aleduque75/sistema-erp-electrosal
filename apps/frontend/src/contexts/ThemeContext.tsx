@@ -73,19 +73,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       root.classList.remove('dark');
     }
 
-    // Se o tema atual não for 'light' ou 'dark' (ou seja, um tema customizado como 'fuchsia-light'),
-    // aplica as variáveis CSS. Caso contrário, o Tailwind CSS cuidará das cores padrão.
+    // Sempre aplica as variáveis CSS do tema selecionado, inclusive para 'light' e 'dark'
+    const currentThemeData = themes[theme] || themes['light'];
+    Object.entries(currentThemeData.colors).forEach(([name, value]) => {
+      root.style.setProperty(`--${name}`, value);
+    });
+    // Adiciona uma classe específica para temas customizados (opcional)
     if (!['light', 'dark'].includes(theme)) {
-      const currentThemeData = themes[theme] || themes['light'];
-      Object.entries(currentThemeData.colors).forEach(([name, value]) => {
-        root.style.setProperty(`--${name}`, value);
-      });
-      root.classList.add(`theme-${theme}`); // Adiciona uma classe específica para temas customizados
+      root.classList.add(`theme-${theme}`);
     } else {
-      // Limpa as variáveis CSS customizadas se estivermos nos temas 'light' ou 'dark' padrão
-      Object.keys(themes['light'].colors).forEach(name => {
-        root.style.removeProperty(`--${name}`);
-      });
+      root.classList.remove(`theme-${theme}`);
     }
 
   }, [theme]);

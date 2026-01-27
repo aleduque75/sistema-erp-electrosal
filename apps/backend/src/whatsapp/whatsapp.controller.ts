@@ -9,7 +9,7 @@ export class WhatsappController {
   @Public()
   @Post('webhook')
   @HttpCode(200)
-  handleWebhook(@Body() body: any) {
-    void this.whatsappService.handleIncomingMessage(body);
+  async handleWebhook(@Body() body: any) {
+    await this.whatsappService.handleIncomingMessage(body);
   }
 }

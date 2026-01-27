@@ -1,3 +1,4 @@
+
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
@@ -45,20 +46,45 @@ export class WhatsappService {
   // Estado da conversa por usuário
   private conversationState: Record<string, any> = {};
 
+  private processedMessageIds = new Set<string>();
+
   async handleIncomingMessage(body: WhatsAppWebhookPayload): Promise<void> {
     this.logger.log('--- WHATSAPP WEBHOOK RECEBIDO ---');
     this.logger.log(JSON.stringify(body, null, 2));
 
-  // Condição de guarda para garantir que estamos lidando com uma mensagem de texto de entrada
-  if (body.event !== 'messages.upsert' || !body.data) {
+    // Condição de guarda para garantir que estamos lidando com uma mensagem de texto de entrada
+    if (
+      body.event !== 'messages.upsert' ||
+      !body.data ||
+      !body.data.key ||
+      !body.data.key.id
+    ) {
       this.logger.log(
         'Webhook ignorado: não é uma mensagem de usuário ou evento irrelevante.',
       );
       return;
     }
 
+    const messageId = body.data.key.id;
+    if (this.processedMessageIds.has(messageId)) {
+      this.logger.log(
+        `Webhook ignorado: Mensagem com ID ${messageId} já foi processada.`,
+      );
+      return;
+    }
+    this.processedMessageIds.add(messageId);
+
+    // Limpa o cache de IDs de mensagens antigas para evitar consumo de memória
+    // (Ex: remove IDs mais velhos que 5 minutos)
+    setTimeout(() => {
+      this.processedMessageIds.delete(messageId);
+    }, 5 * 60 * 1000);
+
     const messageData = body.data as MessageUpsertData;
-    const message = messageData.message;
+
+  const message = messageData.message;
+  // Log detalhado do remoteJid recebido
+  this.logger.log(`[DEBUG] remoteJid recebido: ${messageData.key.remoteJid}`);
 
     if (
       !message ||
@@ -73,10 +99,18 @@ export class WhatsappService {
       message.extendedTextMessage?.text ||
       ''
     ).trim();
-    const remoteJid = messageData.key.remoteJid;
+    let remoteJid = messageData.key.remoteJid;
+
+    if (remoteJid.endsWith('@lid')) {
+        this.logger.log(`[DEBUG] remoteJid é um LID. Usando sender: ${body.sender}`);
+        remoteJid = body.sender;
+    }
 
     // Ignora JIDs que não são de usuários (ex: @lid, @broadcast)
-    if (!remoteJid.endsWith('@s.whatsapp.net')) {
+    if (
+      !remoteJid.endsWith('@s.whatsapp.net') &&
+      !remoteJid.endsWith('@c.us')
+    ) {
       this.logger.log(`Webhook ignorado: JID inválido para interação (${remoteJid}).`);
       return;
     }
