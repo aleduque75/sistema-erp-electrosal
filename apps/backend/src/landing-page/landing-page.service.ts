@@ -30,7 +30,6 @@ export class LandingPageService {
             name: 'default',
             logoText: 'Sistema Electrosal - Erp',
             logoImageId: null,
-            customThemeName: null, // Changed from customTheme to customThemeName
             sections: {
               create: [
                 {
@@ -149,7 +148,6 @@ export class LandingPageService {
     }[],
     logoText?: string | null,
     logoImageId?: string | null,
-    customThemeName?: string | null, // Changed from customTheme to customThemeName
   ): Promise<LandingPageWithRelations> { // Updated return type
     const landingPage = await this.prisma.landingPage.findUnique({
       where: { name: 'default' },
@@ -167,9 +165,7 @@ export class LandingPageService {
         where: { id: landingPage.id },
         data: {
           logoText: logoText,
-          logoImageId: logoImageId,
-          customThemeName: customThemeName, // Changed from customTheme to customThemeName
-        },
+          logoImageId: logoImageId,        },
       });
 
       // Deleta seções que não estão mais presentes

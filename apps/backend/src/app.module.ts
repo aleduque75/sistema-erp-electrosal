@@ -69,6 +69,7 @@ import { AutomationsModule } from './automations/automations.module'; // Importa
 import { WhatsappModule } from './whatsapp/whatsapp.module'; // Importar o módulo do WhatsApp
 import { TutorialsModule } from './tutorials/tutorials.module';
 import { MenuModule } from './menu/menu.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -140,6 +141,7 @@ import { MenuModule } from './menu/menu.module';
     WhatsappModule,
     TutorialsModule,
     MenuModule,
+    TasksModule,
   ],
   controllers: [AppController, RawMaterialsController],
   providers: [

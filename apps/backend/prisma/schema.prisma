@@ -55,7 +55,8 @@ model Organization {
   saleAdjustments         SaleAdjustment[]
   transacoes              Transacao[]
   menuItems               MenuItem[]
-  // appearanceSettings    AppearanceSettings?
+  tasks                   Task[]
+  appearanceSettings      AppearanceSettings?      @relation("AppearanceToOrganization")
 }
 
 model User {
@@ -71,6 +72,7 @@ model User {
   organizationId String
   organization   Organization  @relation(fields: [organizationId], references: [id])
   settings       UserSettings?
+  tasks          Task[]
 }
 
 model UserSettings {
@@ -600,15 +602,16 @@ model XmlImportLog {
 }
 
 model LandingPage {
-  id              String        @id @default(uuid())
-  name            String        @unique @default("default")
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  logoImageId     String?
-  logoText        String?
+  id             String        @id @default(uuid())
+  name           String        @unique @default("default")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  logoImageId    String?
+  logoText       String?
+  organizationId String?
   logoImage      Media?        @relation(fields: [logoImageId], references: [id])
-  // organization    Organization? @relation(fields: [organizationId], references: [id])
-  sections        Section[]
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  sections       Section[]
 }
 
 model Section {
@@ -625,28 +628,28 @@ model Section {
 }
 
 model Media {
-  id                 String              @id @default(uuid())
-  filename           String              @unique
-  mimetype           String
-  size               Int
-  path               String              @unique
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  organizationId     String?
-  height             Int?
-  width              Int?
-  recoveryOrderId    String?
-  analiseQuimicaId   String?
-  transacaoId        String?
-  chemicalReactionId String?
-  landingPageLogos   LandingPage[]
+  id                     String               @id @default(uuid())
+  filename               String               @unique
+  mimetype               String
+  size                   Int
+  path                   String               @unique
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  organizationId         String?
+  height                 Int?
+  width                  Int?
+  recoveryOrderId        String?
+  analiseQuimicaId       String?
+  transacaoId            String?
+  chemicalReactionId     String?
+  landingPageLogos       LandingPage[]
   appearanceSettingsLogo AppearanceSettings[] @relation("AppearanceLogo")
   // Não tem mais organizationSidebarLogo
-  analiseQuimica     AnaliseQuimica?     @relation(fields: [analiseQuimicaId], references: [id])
-  chemicalReaction   chemical_reactions? @relation(fields: [chemicalReactionId], references: [id])
-  organization       Organization?       @relation(fields: [organizationId], references: [id])
-  recoveryOrder      RecoveryOrder?      @relation(fields: [recoveryOrderId], references: [id])
-  transacao          Transacao?          @relation("TransacaoToMedia", fields: [transacaoId], references: [id])
+  analiseQuimica         AnaliseQuimica?      @relation(fields: [analiseQuimicaId], references: [id])
+  chemicalReaction       chemical_reactions?  @relation(fields: [chemicalReactionId], references: [id])
+  organization           Organization?        @relation(fields: [organizationId], references: [id])
+  recoveryOrder          RecoveryOrder?       @relation(fields: [recoveryOrderId], references: [id])
+  transacao              Transacao?           @relation("TransacaoToMedia", fields: [transacaoId], references: [id])
 }
 
 model CreditCardFee {
@@ -1245,30 +1248,30 @@ model Tutorial {
 }
 
 model MenuItem {
-  id             String    @id @default(uuid())
+  id             String       @id @default(uuid())
   title          String
   href           String
   icon           String?
   order          Int
   disabled       Boolean?
   parentId       String?
-  parent         MenuItem? @relation("SubMenuItems", fields: [parentId], references: [id])
-  subItems       MenuItem[] @relation("SubMenuItems")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  parent         MenuItem?    @relation("SubMenuItems", fields: [parentId], references: [id])
+  subItems       MenuItem[]   @relation("SubMenuItems")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, title, parentId])
 }
 
-
 model AppearanceSettings {
   id             String       @id @default(uuid())
   organizationId String       @unique
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation("AppearanceToOrganization", fields: [organizationId], references: [id])
   themeName      String?
   customTheme    Json?
+  sidebarTheme   Json?
   logoImageId    String?
   logoText       String?
   logoImage      Media?       @relation("AppearanceLogo", fields: [logoImageId], references: [id])
@@ -1276,3 +1279,30 @@ model AppearanceSettings {
   updatedAt      DateTime     @updatedAt
 }
 
+model Task {
+  id             String       @id @default(uuid())
+  title          String
+  status         TaskStatus   @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdById    String
+  createdBy      User         @relation(fields: [createdById], references: [id])
+
+  @@map("tasks")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}

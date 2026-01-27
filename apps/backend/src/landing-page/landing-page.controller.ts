@@ -23,12 +23,12 @@ export class LandingPageController {
   @UseGuards(AuthGuard('jwt'))
   @Patch()
   update(@Body() updateLandingPageDto: UpdateLandingPageDto) {
-    const { sections, logoText, logoImageId, customThemeName } = updateLandingPageDto; // Extrai os novos campos
+    const { sections, logoText, logoImageId } = updateLandingPageDto; // Extrai os novos campos
 
     const sectionsToUpdate = sections.map(section => ({
       ...section,
       content: JSON.parse(JSON.stringify(section.content)),
     }));
-    return this.landingPageService.update(sectionsToUpdate, logoText, logoImageId, customThemeName); // Passa os novos campos
+    return this.landingPageService.update(sectionsToUpdate, logoText, logoImageId); // Passa os novos campos
   }
 }

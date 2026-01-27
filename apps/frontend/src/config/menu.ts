@@ -39,6 +39,7 @@ export interface NavItem {
 
 export const menuConfig: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { title: 'Tarefas', href: '/protected/dashboard/tasks', icon: ListChecks },
   {
     title: 'Cadastros',
     href: '#',
