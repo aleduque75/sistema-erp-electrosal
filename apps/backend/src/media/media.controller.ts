@@ -13,7 +13,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MediaService } from './media.service';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { extname, join } from 'path';
 import { MediaResponseDto } from './dtos/media.response.dto';
 import { AuthGuard } from '@nestjs/passport';
 

@@ -22,7 +22,7 @@ interface ReportData {
 export function RecoveryReport() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setIsPageLoading] = useState(false);
 
   const handleGenerateReport = async () => {
     if (!dateRange?.from || !dateRange?.to) {
@@ -30,7 +30,7 @@ export function RecoveryReport() {
       return;
     }
 
-    setIsLoading(true);
+    setIsPageLoading(true);
     try {
       const orders = await getRecoveryOrders({
         startDate: dateRange.from.toISOString(),
@@ -59,7 +59,7 @@ export function RecoveryReport() {
     } catch (error) {
       toast.error("Erro ao gerar o relatório.");
     } finally {
-      setIsLoading(false);
+      setIsPageLoading(false);
     }
   };
 
@@ -71,8 +71,8 @@ export function RecoveryReport() {
       <CardContent>
         <div className="flex gap-4 items-center mb-4">
           <DateRangePicker date={dateRange} onDateChange={setDateRange} />
-          <Button onClick={handleGenerateReport} disabled={isLoading}>
-            {isLoading ? "Gerando..." : "Gerar Relatório"}
+          <Button onClick={handleGenerateReport} disabled={loading}>
+            {loading ? "Gerando..." : "Gerar Relatório"}
           </Button>
         </div>
 

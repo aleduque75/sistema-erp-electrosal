@@ -88,7 +88,7 @@ interface PeriodDetails {
 export function TotalSalesChart() {
   // Component State
   const [data, setData] = useState<FinancialSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setIsPageLoading] = useState(true);
   const [showSales, setShowSales] = useState(true);
   const [showExpenses, setShowExpenses] = useState(false);
   const [showProfit, setShowProfit] = useState(false);
@@ -103,7 +103,7 @@ export function TotalSalesChart() {
 
   useEffect(() => {
     const fetchFinancialSummary = async () => {
-      setIsLoading(true);
+      setIsPageLoading(true);
       try {
         const response = await api.get("/dashboard/financial-summary-by-period");
         const summary: FinancialSummary = response.data;
@@ -122,7 +122,7 @@ export function TotalSalesChart() {
       } catch (error) {
         toast.error("Falha ao carregar o resumo financeiro por período.");
       } finally {
-        setIsLoading(false);
+        setIsPageLoading(false);
       }
     };
     fetchFinancialSummary();
@@ -241,7 +241,7 @@ export function TotalSalesChart() {
   const profitTotal = useMemo(() => selectedPeriodDetails?.sales.reduce((sum, item) => sum + Number(item.profitGold), 0) || 0, [selectedPeriodDetails]);
   const expensesTotal = useMemo(() => selectedPeriodDetails?.expenses.reduce((sum, item) => sum + Number(item.goldAmount), 0) || 0, [selectedPeriodDetails]);
 
-  if (isLoading) return <Card><CardHeader><CardTitle>Resumo Financeiro (Au)</CardTitle></CardHeader><CardContent className="flex items-center justify-center h-[350px]"><p>Carregando...</p></CardContent></Card>;
+  if (loading) return <Card><CardHeader><CardTitle>Resumo Financeiro (Au)</CardTitle></CardHeader><CardContent className="flex items-center justify-center h-[350px]"><p>Carregando...</p></CardContent></Card>;
   if (!filteredData) return <Card><CardHeader><CardTitle>Resumo Financeiro (Au)</CardTitle></CardHeader><CardContent><p>Nenhum dado disponível.</p></CardContent></Card>;
 
   return (

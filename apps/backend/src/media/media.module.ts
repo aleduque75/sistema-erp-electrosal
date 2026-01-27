@@ -6,7 +6,8 @@ import { MulterModule } from '@nestjs/platform-express';
 import * as path from 'path';
 import { PrismaMediaRepository } from './repositories/prisma-media.repository';
 import * as fs from 'fs';
-import { ServeStaticModule } from '@nestjs/serve-static'; // Importar ServeStaticModule
+// Removed: import { ServeStaticModule } from '@nestjs/serve-static'; // Removed ServeStaticModule import
+import { PublicMediaController } from './public-media.controller'; // Import PublicMediaController
 
 const mediaPath = path.join(process.cwd(), 'uploads');
 
@@ -21,10 +22,7 @@ if (!fs.existsSync(mediaPath)) {
     MulterModule.register({
       dest: mediaPath, // Diretório onde os arquivos serão salvos
     }),
-    ServeStaticModule.forRoot({
-      rootPath: mediaPath,
-      serveRoot: '/media', // Servir arquivos estáticos sob a rota /media
-    }),
+    // Removed: ServeStaticModule.forRoot // Removed ServeStaticModule configuration
   ],
   providers: [
     MediaService,
@@ -33,7 +31,7 @@ if (!fs.existsSync(mediaPath)) {
       useClass: PrismaMediaRepository,
     },
   ],
-  controllers: [MediaController],
+  controllers: [MediaController, PublicMediaController], // Add PublicMediaController here
   exports: [MediaService, 'IMediaRepository'], // Exportar se outros módulos precisarem acessar o MediaService
 })
 export class MediaModule {}

@@ -48,7 +48,7 @@ export function LotSelectionModal({
 }: LotSelectionModalProps) {
   const [availableLots, setAvailableLots] = useState<InventoryLot[]>([]);
   const [selectedLots, setSelectedLots] = useState<Map<string, number>>(new Map());
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setIsPageLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && product) {
@@ -63,7 +63,7 @@ export function LotSelectionModal({
   }, [isOpen, product, existingLots]);
 
   const fetchAvailableLots = async (productId: string) => {
-    setIsLoading(true);
+    setIsPageLoading(true);
     try {
       const response = await api.get(`/products/${productId}`);
       const productData: Product = response.data;
@@ -75,7 +75,7 @@ export function LotSelectionModal({
       toast.error('Falha ao buscar lotes disponíveis.');
       console.error(error);
     } finally {
-      setIsLoading(false);
+      setIsPageLoading(false);
     }
   };
 

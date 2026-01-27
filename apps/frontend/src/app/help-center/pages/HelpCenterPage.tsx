@@ -75,7 +75,7 @@ export const HelpCenterPage: React.FC = () => {
         </select>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <p>Carregando...</p>
       ) : (
         <ReactMarkdown

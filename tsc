@@ -1,0 +1,117 @@
+
+
+> backend@0.0.1 start:dev /home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend
+> pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts
+
+/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+src/whatsapp/whatsapp.service.ts:128:86 - error TS18047: 'org' is possibly 'null'.
+
+128         contas = await this.prisma.contaCorrente.findMany({ where: { organizationId: org.id, isActive: true } });
+                                                                                         ~~~
+src/whatsapp/whatsapp.service.ts:260:3 - error TS1128: Declaration or statement expected.
+
+260   private async handleDespesa(remoteJid: string, messageText: string): Promise<void> {
+      ~~~~~~~
+src/whatsapp/whatsapp.service.ts:380:1 - error TS1128: Declaration or statement expected.
+
+380 }
+    ~
+
+    at createTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859:12)
+    at reportTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:863:19)
+    at getOutput (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1077:36)
+    at Object.compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1433:41)
+    at Module.m._compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1617:30)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Object.require.extensions.<computed> [as .ts] (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1621:12)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Function.Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19) {
+  diagnosticCodes: [ 18047, 1128, 1128 ]
+}
+/home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  backend@0.0.1 start:dev: `pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts`
+Exit status 1
+
+> @sistema-erp-electrosal/core@1.0.0 build /home/aleduque/Documentos/cursos/sistema-erp-electrosal/packages/core
+> tsc && tsc-alias -p tsconfig.json
+
+
+> backend@0.0.1 start:dev /home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend
+> pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts
+
+/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+src/whatsapp/whatsapp.service.ts:128:86 - error TS18047: 'org' is possibly 'null'.
+
+128         contas = await this.prisma.contaCorrente.findMany({ where: { organizationId: org.id, isActive: true } });
+                                                                                         ~~~
+src/whatsapp/whatsapp.service.ts:260:3 - error TS1128: Declaration or statement expected.
+
+260   private async handleDespesa(remoteJid: string, messageText: string): Promise<void> {
+      ~~~~~~~
+src/whatsapp/whatsapp.service.ts:380:1 - error TS1128: Declaration or statement expected.
+
+380 }
+    ~
+
+    at createTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859:12)
+    at reportTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:863:19)
+    at getOutput (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1077:36)
+    at Object.compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1433:41)
+    at Module.m._compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1617:30)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Object.require.extensions.<computed> [as .ts] (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1621:12)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Function.Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19) {
+  diagnosticCodes: [ 18047, 1128, 1128 ]
+}
+/home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  backend@0.0.1 start:dev: `pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts`
+Exit status 1
+
+> @sistema-erp-electrosal/core@1.0.0 build /home/aleduque/Documentos/cursos/sistema-erp-electrosal/packages/core
+> tsc && tsc-alias -p tsconfig.json
+
+
+> backend@0.0.1 start:dev /home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend
+> pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts
+
+/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+src/whatsapp/whatsapp.service.ts:128:86 - error TS18047: 'org' is possibly 'null'.
+
+128         contas = await this.prisma.contaCorrente.findMany({ where: { organizationId: org.id, isActive: true } });
+                                                                                         ~~~
+src/whatsapp/whatsapp.service.ts:260:3 - error TS1128: Declaration or statement expected.
+
+260   private async handleDespesa(remoteJid: string, messageText: string): Promise<void> {
+      ~~~~~~~
+src/whatsapp/whatsapp.service.ts:380:1 - error TS1128: Declaration or statement expected.
+
+380 }
+    ~
+
+    at createTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859:12)
+    at reportTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:863:19)
+    at getOutput (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1077:36)
+    at Object.compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1433:41)
+    at Module.m._compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1617:30)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Object.require.extensions.<computed> [as .ts] (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1621:12)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Function.Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19) {
+  diagnosticCodes: [ 18047, 1128, 1128 ]
+}
+/home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  backend@0.0.1 start:dev: `pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts`
+Exit status 1

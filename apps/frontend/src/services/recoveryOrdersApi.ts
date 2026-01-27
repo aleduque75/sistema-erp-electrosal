@@ -47,3 +47,9 @@ export const getRecoveryOrderById = async (id: string): Promise<RecoveryOrder> =
   const response = await apiClient.get(`/recovery-orders/${id}`);
   return response.data;
 };
+
+// Add the missing updateRecoveryOrder function
+export const updateRecoveryOrder = async (id: string, data: Partial<RecoveryOrder>): Promise<RecoveryOrder> => {
+  const response = await apiClient.patch(`/recovery-orders/${id}`, data);
+  return response.data;
+};

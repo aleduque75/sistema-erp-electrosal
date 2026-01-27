@@ -51,7 +51,7 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
           {value.map((id) => (
             <div key={id} className="relative w-24 h-24 rounded-md overflow-hidden">
               <Image
-                src={`${api.defaults.baseURL}/media/${id}`}
+                src={`/api/public-media/${id}`}
                 alt="Preview"
                 layout="fill"
                 objectFit="cover"
@@ -71,10 +71,10 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
       return (
         <div className="relative w-32 h-32 rounded-md overflow-hidden mt-2">
           <Image
-            src={`${api.defaults.baseURL}/media/${value}`}
-            alt="Preview"
-            layout="fill"
-            objectFit="cover"
+                src={`/api/public-media/${value}`}
+                alt="Preview"
+                layout="fill"
+                objectFit="cover"
           />
           <button
             type="button"

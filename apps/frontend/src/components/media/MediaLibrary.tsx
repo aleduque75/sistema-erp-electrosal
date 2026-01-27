@@ -28,12 +28,12 @@ interface MediaLibraryProps {
 
 export function MediaLibrary({ onSelect, selectedMediaId }: MediaLibraryProps) {
   const [mediaFiles, setMediaFiles] = useState<Media[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setIsPageLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
 
   const fetchMedia = async () => {
-    setIsLoading(true);
+    setIsPageLoading(true);
     try {
       const response = await api.get("/media");
       setMediaFiles(response.data);
@@ -41,7 +41,7 @@ export function MediaLibrary({ onSelect, selectedMediaId }: MediaLibraryProps) {
       toast.error("Falha ao carregar mídias.");
       console.error("Failed to fetch media:", err);
     } finally {
-      setIsLoading(false);
+      setIsPageLoading(false);
     }
   };
 
@@ -118,7 +118,7 @@ export function MediaLibrary({ onSelect, selectedMediaId }: MediaLibraryProps) {
           {/* Galeria de Mídias */}
           <Card className="w-full md:w-2/3 flex flex-col p-4">
             <CardTitle className="mb-4">Mídias Existentes</CardTitle>
-            {isLoading ? (
+            {loading ? (
               <p className="text-center text-muted-foreground">Carregando mídias...</p>
             ) : (
               <ScrollArea className="flex-grow h-full">
@@ -126,7 +126,14 @@ export function MediaLibrary({ onSelect, selectedMediaId }: MediaLibraryProps) {
                   {mediaFiles.length === 0 ? (
                     <p className="col-span-full text-center text-muted-foreground">Nenhuma mídia encontrada.</p>
                   ) : (
-                    mediaFiles.map((media) => (
+                    mediaFiles
+                      .filter(media => 
+                        !media.recoveryOrderId && 
+                        !media.analiseQuimicaId && 
+                        !media.transacaoId && 
+                        !media.chemicalReactionId
+                      )
+                      .map((media) => (
                       <div
                         key={media.id}
                         className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 ${
@@ -135,7 +142,7 @@ export function MediaLibrary({ onSelect, selectedMediaId }: MediaLibraryProps) {
                         onClick={() => onSelect(media.id)}
                       >
                         <Image
-                          src={`${api.defaults.baseURL}/media/${media.id}`}
+                          src={`/api/public-media/${media.id}`}
                           alt={media.filename}
                           width={200}
                           height={200}

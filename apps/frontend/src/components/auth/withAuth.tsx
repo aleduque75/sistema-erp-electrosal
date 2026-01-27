@@ -9,17 +9,17 @@ export default function withAuth<P extends object>(
   WrappedComponent: React.ComponentType<P>
 ) {
   const AuthComponent = (props: P) => {
-    const { user, loading } = useAuth();
+    const { user, isLoading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-      if (!loading && !user) {
+      if (!isLoading && !user) {
         toast.error("Você precisa estar logado para acessar esta página.");
         router.replace('/'); // Redireciona para a landing page
       }
-    }, [user, loading, router]);
+    }, [user, isLoading, router]);
 
-    if (loading || !user) {
+    if (isLoading || !user) {
       // Você pode renderizar um spinner de carregamento aqui
       return <div>Carregando...</div>;
     }

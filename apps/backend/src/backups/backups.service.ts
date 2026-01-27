@@ -33,7 +33,7 @@ export class BackupsService {
     const filename = `backup_${timestamp}.dump`;
     const backupPath = path.join(this.backupDir, filename);
 
-    const command = `docker-compose exec -T ${this.dbService} pg_dump -U ${this.dbUser} -d ${this.dbName} > ${backupPath}`;
+    const command = `docker compose exec -T ${this.dbService} pg_dump -U ${this.dbUser} -d ${this.dbName} > ${backupPath}`;
 
     this.logger.log(`Creating backup: ${filename}`);
     try {
@@ -76,11 +76,11 @@ export class BackupsService {
       throw new NotFoundException(`Arquivo de backup '${filename}' não encontrado.`);
     }
 
-    const terminateConnectionsCommand = `docker-compose exec -T ${this.dbService} psql -U ${this.dbUser} -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '${this.dbName}' AND pid <> pg_backend_pid();"`;
-    const dropDbCommand = `docker-compose exec -T ${this.dbService} dropdb -U ${this.dbUser} ${this.dbName}`;
-    const createDbCommand = `docker-compose exec -T ${this.dbService} createdb -U ${this.dbUser} ${this.dbName}`;
+    const terminateConnectionsCommand = `docker compose exec -T ${this.dbService} psql -U ${this.dbUser} -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '${this.dbName}' AND pid <> pg_backend_pid();"`;
+    const dropDbCommand = `docker compose exec -T ${this.dbService} dropdb -U ${this.dbUser} ${this.dbName}`;
+    const createDbCommand = `docker compose exec -T ${this.dbService} createdb -U ${this.dbUser} ${this.dbName}`;
     // Get container ID dynamically
-    const containerId = execSync(`docker-compose ps -q ${this.dbService}`).toString().trim();
+    const containerId = execSync(`docker compose ps -q ${this.dbService}`).toString().trim();
     if (!containerId) {
       throw new InternalServerErrorException(`Could not find container ID for service ${this.dbService}. Is the database service running?`);
     }
@@ -91,7 +91,7 @@ export class BackupsService {
     execSync(copyCommand);
 
     // Restore from within the container
-    const restoreCommand = `docker-compose exec -T ${this.dbService} bash -c "set -e && psql -v ON_ERROR_STOP=1 -U ${this.dbUser} -d ${this.dbName} -f ${containerBackupPath} 2>&1"`;
+    const restoreCommand = `docker compose exec -T ${this.dbService} bash -c "set -e && psql -v ON_ERROR_STOP=1 -U ${this.dbUser} -d ${this.dbName} -f ${containerBackupPath} 2>&1"`;
 
     this.logger.log(`Restoring backup: ${filename}`);
     try {

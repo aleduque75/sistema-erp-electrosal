@@ -4,6 +4,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe, LogLevel } from '@nestjs/common';
 import { config } from 'dotenv';
 import { Decimal } from 'decimal.js';
+import * as express from 'express';
+import { join } from 'path';
 
 config();
 
@@ -25,7 +27,12 @@ async function bootstrap() {
   });
 
   // Prefixo global DEVE vir antes do Swagger
+
   app.setGlobalPrefix('api');
+
+  // Increase payload limit for file uploads and large JSON requests
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -1,5 +1,6 @@
 import "@/lib/reflect-metadata";
 import "./globals.css";
+import "@fontsource/outfit"; // Import Outfit font
 import { AuthProvider } from "../contexts/AuthContext";
 import { ThemeProvider } from "../contexts/ThemeContext"; // Corrigido para usar o nosso ThemeProvider
 import { Toaster } from "sonner";
@@ -8,7 +9,11 @@ import { QueryProvider } from "@/components/providers/query-provider";
 export const metadata = {
   title: 'Sistema Electrosal',
   description: 'Sistema de gestão para Galvanicas',
-  viewport: 'width=device-width, initial-scale=1',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({

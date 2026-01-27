@@ -1,104 +1,76 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import api from '../lib/api';
-import { toast } from 'sonner';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
+import api from '@/lib/api';
+
+interface AuthUser {
+  sub: string;
+  email: string;
+  orgId: string;
+  permissions: string[];
+  name?: string; // Adiciona name como opcional
+}
 
 interface AuthContextType {
-  user: any;
-  login: (accessToken: string) => void;
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  hasPermission: (permission: string) => boolean;
+  login: (accessToken: string) => void; // Added login function
   logout: () => void;
-  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const publicPaths = ['/', '/register', '/login'];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const pathname = usePathname();
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setIsPageLoading] = useState(true);
+  const isAuthenticated = !!user;
+
+  const loadUser = async () => {
+    setIsPageLoading(true); // Set loading to true when starting to load user
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      try {
+        const response = await api.get('/auth/me');
+        setUser(response.data);
+      } catch (error) {
+        console.error('Falha ao buscar o usuário:', error);
+        localStorage.removeItem('accessToken');
+        setUser(null);
+      }
+    }
+    setIsPageLoading(false); // Set loading to false after user is loaded or failed
+  };
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      const accessToken = localStorage.getItem('accessToken');
-
-      if (accessToken) {
-        try {
-          const response = await api.get('/users/profile', {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-            },
-          });
-
-          if (response.status === 200) {
-            setUser(response.data);
-          } else {
-            localStorage.removeItem('accessToken');
-            setUser(null);
-            if (!publicPaths.includes(pathname ?? "")) {
-              toast.error("Sua sessão expirou. Por favor, faça login novamente.");
-              router.push('/');
-            }
-          }
-        } catch (error) {
-          console.error('Failed to fetch profile:', error);
-          localStorage.removeItem('accessToken');
-          setUser(null);
-          if (!publicPaths.includes(pathname ?? "")) {
-            toast.error("Sua sessão expirou. Por favor, faça login novamente.");
-            router.push('/');
-          }
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-  }, [pathname]); // Dependência de pathname para re-executar se a rota mudar
+    loadUser();
+  }, []);
 
   const login = (accessToken: string) => {
     localStorage.setItem('accessToken', accessToken);
-    // Após o login, re-inicializa a autenticação para buscar o perfil
-    setLoading(true); // Define loading como true para mostrar feedback
-    const initializeAuthAfterLogin = async () => {
-      try {
-        const response = await api.get('/users/profile', {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        });
-        if (response.status === 200) {
-          setUser(response.data);
-        } else {
-          localStorage.removeItem('accessToken');
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('Failed to fetch profile after login:', error);
-        localStorage.removeItem('accessToken');
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    initializeAuthAfterLogin();
+    loadUser(); // Load user after successful login
+  };
+
+  const hasPermission = (permission: string) => {
+    if (!user || !Array.isArray(user.permissions)) return false; // Verificação de segurança
+    return user.permissions.includes(permission);
   };
 
   const logout = () => {
     localStorage.removeItem('accessToken');
     setUser(null);
-    router.push('/');
+    window.location.href = '/logout';
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading: loading, hasPermission, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -106,8 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
+  // console.log('useAuth called, context:', context);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
   return context;
 }

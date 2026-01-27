@@ -17,16 +17,11 @@ export class PrismaService
         },
       },
     });
-    console.log(
-      '[DEBUG PRISMA] PrismaService inicializado. DATABASE_URL:',
-      this.configService.get<string>('DATABASE_URL'),
-    );
   }
 
   async onModuleInit() {
     // O $connect é um método herdado do PrismaClient, acessível via 'this'
     await this.$connect();
-    console.log('[DEBUG PRISMA] PrismaService conectado.');
   }
 
   async onModuleDestroy() {

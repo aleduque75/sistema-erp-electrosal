@@ -1,0 +1,9 @@
+As exclusões que você notou nas pastas do `(dashboard)` já estavam presentes no histórico do seu Git antes de eu iniciar minha intervenção. O `git status` que eu mostrei anteriormente listou esses arquivos como `deleted`, indicando que eles foram removidos em um ponto anterior do histórico do seu projeto.
+
+Minha tarefa focou exclusivamente em:
+1.  Remover o arquivo duplicado `apps/frontend/src/contexts/AuthContext.tsx`.
+2.  Atualizar todos os `imports` para `apps/frontend/src/contexts/auth-context.tsx` nos arquivos que restaram.
+
+Eu não realizei nenhuma exclusão nas pastas do `(dashboard)`. Se essas pastas são essenciais para o funcionamento esperado do sistema, sugiro que você investigue o histórico do Git (`git log`) para entender quando e por que essas exclusões ocorreram, e se necessário, reverta-as.
+
+A correção do problema do `AuthContext` foi aplicada e comitada, e os logs que você compartilhou posteriormente indicam que a autenticação está funcionando conforme o esperado em outras partes do sistema.

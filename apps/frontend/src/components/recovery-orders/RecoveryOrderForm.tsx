@@ -28,7 +28,7 @@ interface RecoveryOrderFormProps {
   isLoading?: boolean;
 }
 
-export function RecoveryOrderForm({ onSubmit, initialValues, isLoading }: RecoveryOrderFormProps) {
+export function RecoveryOrderForm({ onSubmit, initialValues, loading }: RecoveryOrderFormProps) {
   const form = useForm<RecoveryOrderFormValues>({
     resolver: zodResolver(schema),
     defaultValues: initialValues || { status: 'PENDENTE', dataInicio: new Date().toISOString().slice(0,10) },

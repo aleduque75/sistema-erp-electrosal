@@ -41,7 +41,7 @@ export function DataTable<TData, TValue>({
   data,
   filterColumnId,
   filterPlaceholder,
-  isLoading = false,
+  loading = false,
   renderSubComponent, // NOVO
   getRowCanExpand, // NOVO
   rowSelection,
@@ -109,7 +109,7 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {loading ? (
               <TableRow>
                 <TableCell
                   colSpan={columns.length}

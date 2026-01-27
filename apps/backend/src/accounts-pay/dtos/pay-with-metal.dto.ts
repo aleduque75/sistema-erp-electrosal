@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsBoolean, IsOptional, Min, IsDate } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsBoolean, IsOptional, Min, IsDate, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class PayWithMetalDto {
@@ -22,4 +22,8 @@ export class PayWithMetalDto {
   @IsOptional()
   @Type(() => Date)
   paidAt?: Date;
+
+  @IsUUID()
+  @IsOptional()
+  contaContabilId?: string;
 }

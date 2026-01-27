@@ -16,7 +16,7 @@ const formatCurrency = (value: number) => new Intl.NumberFormat("pt-BR", { style
 
 export function CategoryChart() {
   const [data, setData] = useState<ChartData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setIsPageLoading] = useState(true);
 
   useEffect(() => {
     const fetchChartData = async () => {
@@ -44,7 +44,7 @@ export function CategoryChart() {
       } catch (error) {
         toast.error("Erro ao carregar dados do gráfico.");
       } finally {
-        setIsLoading(false);
+        setIsPageLoading(false);
       }
     };
     fetchChartData();

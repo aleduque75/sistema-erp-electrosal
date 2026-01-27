@@ -50,7 +50,7 @@ export function TransferModal({ isOpen, onClose, onSave }: TransferModalProps) {
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [contasContabeis, setContasContabeis] = useState<ContaContabil[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setIsPageLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -102,7 +102,7 @@ export function TransferModal({ isOpen, onClose, onSave }: TransferModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsPageLoading(true);
     try {
       await api.post("/transacoes/transfer", {
         sourceAccountId,
@@ -127,7 +127,7 @@ export function TransferModal({ isOpen, onClose, onSave }: TransferModalProps) {
     } catch (err) {
       toast.error("Falha ao realizar transferência.");
     } finally {
-      setIsLoading(false);
+      setIsPageLoading(false);
     }
   };
 
@@ -250,8 +250,8 @@ export function TransferModal({ isOpen, onClose, onSave }: TransferModalProps) {
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Realizar Transferência
             </Button>
           </DialogFooter>

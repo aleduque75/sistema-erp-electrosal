@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
@@ -66,9 +67,15 @@ import { ReportsModule } from './reports/reports.module';
 import { MarketDataModule } from './market-data/market-data.module';
 import { AutomationsModule } from './automations/automations.module'; // Importar o módulo de automações
 import { WhatsappModule } from './whatsapp/whatsapp.module'; // Importar o módulo do WhatsApp
+import { TutorialsModule } from './tutorials/tutorials.module';
+import { MenuModule } from './menu/menu.module';
 
 @Module({
   imports: [
+    CacheModule.register({
+      isGlobal: true, // Torna o cache disponível globalmente
+      ttl: 60, // Tempo de vida do cache em segundos (ex: 60 segundos)
+    }),
     ConfigModule.forRoot({
       isGlobal: true, // Torna as variáveis de ambiente disponíveis globalmente
     }),
@@ -78,7 +85,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module'; // Importar o módu
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
-    AuthModule, // Temporarily disabled for user creation
+    AuthModule,
     UsersModule,
     PessoaModule,
     ContasContabeisModule,
@@ -109,6 +116,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module'; // Importar o módu
     RecuperacoesModule,
     RecoveryOrdersModule,
     MetalAccountsModule,
+    MetalReceivablesModule,
     QuotationsModule,
     QuotationImportsModule,
     ProductGroupsModule,
@@ -128,8 +136,10 @@ import { WhatsappModule } from './whatsapp/whatsapp.module'; // Importar o módu
     PdfModule,
     ReportsModule,
     MarketDataModule,
-    AutomationsModule, // Adicionar o módulo de automações
-    WhatsappModule, // Adicionar o módulo do WhatsApp
+    AutomationsModule,
+    WhatsappModule,
+    TutorialsModule,
+    MenuModule,
   ],
   controllers: [AppController, RawMaterialsController],
   providers: [

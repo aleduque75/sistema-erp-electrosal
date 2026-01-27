@@ -5,6 +5,41 @@ const nextConfig = {
   
     transpilePackages: ['@sistema-erp-electrosal/core'],
     
+  reactStrictMode: true,
+  swcMinify: true,
+
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `http://localhost:3002/api/:path*`,
+      },
+      {
+        source: '/reports/:path*',
+        destination: `http://localhost:3002/reports/:path*`,
+      },
+      {
+        source: '/uploads/:path*',
+        destination: 'http://localhost:3002/uploads/:path*',
+      },
+    ];
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3002',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3002',
+        pathname: '/api/public-media/**', // Nova regra para public-media
+      },
+    ],
+  },
   webpack: (config, { isServer }) => {
     // Adiciona uma regra para SVG
     config.module.rules.push({
@@ -22,85 +57,6 @@ const nextConfig = {
       };
     }
     return config;
-  },
-
-  reactStrictMode: true,
-  swcMinify: true,
-
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `http://localhost:3002/api/:path*`,
-      },
-      {
-        source: '/reports/:path*',
-        destination: `http://localhost:3002/reports/:path*`,
-      },
-    ];
-  },
-
-  images: {
-    dangerouslyAllowSVG: true, // Permite o uso de SVG
-    contentDispositionType: 'attachment', // Garante que o navegador não tente baixar o SVG
-    remotePatterns: [
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '3002',
-        pathname: '/api/media/**',
-      },
-      {
-        protocol: 'http',
-        hostname: '192.168.15.6',
-        port: '3002',
-        pathname: '/api/media/**',
-      },
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '3002',
-        pathname: '/api/media/**',
-      },
-      {
-        protocol: 'http',
-        hostname: '192.168.15.6',
-        port: '3002',
-        pathname: '/api/media/**',
-      },
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '3002',
-        pathname: '/uploads/**',
-      },
-      {
-        protocol: 'http',
-        hostname: '192.168.15.6',
-        port: '3002',
-        pathname: '/uploads/**',
-      },
-
-      {
-        protocol: 'http',
-        hostname: '192.168.15.6',
-        port: '3002',
-        pathname: '/uploads/**',
-      },
-      {
-        protocol: 'http',
-        hostname: '192.168.15.6',
-        port: '3002',
-        pathname: '/api/uploads/**',
-      },
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '3002',
-        pathname: '/api/uploads/**',
-      },
-      
-    ],
   },
 };
 

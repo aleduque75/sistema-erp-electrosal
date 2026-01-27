@@ -56,6 +56,10 @@ export class PayAccountDto {
   @IsNotEmpty()
   contaCorrenteId: string;
 
+  @IsUUID()
+  @IsOptional()
+  contaContabilId?: string;
+
   @IsDate()
   @IsOptional()
   @Type(() => Date)

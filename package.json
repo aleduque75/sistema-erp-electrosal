@@ -5,7 +5,7 @@
   "packageManager": "pnpm@9.0.6",
   "scripts": {
     "build": "turbo run build",
-    "dev": "pnpm --filter @sistema-erp-electrosal/core build && dotenv -e .env -- pnpm --filter backend start:dev & pnpm --filter frontend dev",
+    "dev": "pnpm --filter @sistema-erp-electrosal/core build && dotenv -e .env -- pnpm --filter backend start:dev & node scripts/wait-for-port.js && pnpm --filter frontend dev",
     "test": "jest",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

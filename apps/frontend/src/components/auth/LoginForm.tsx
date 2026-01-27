@@ -35,11 +35,11 @@ interface LoginFormProps {
 export function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const { login } = useAuth();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setIsPageLoading] = useState(false);
   const form = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
 
   const onSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true);
+    setIsPageLoading(true);
     try {
       const response = await api.post("/auth/login", {
         email: data.email,
@@ -56,7 +56,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
       console.error("Falha no login:", error);
       toast.error("Falha no login. Verifique suas credenciais.");
     } finally {
-      setIsLoading(false);
+      setIsPageLoading(false);
     }
   };
 
@@ -90,8 +90,8 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
           )}
         />
         <DialogFooter>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Entrando..." : "Entrar"}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
           </Button>
         </DialogFooter>
       </form>

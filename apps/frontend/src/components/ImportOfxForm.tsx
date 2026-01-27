@@ -140,8 +140,8 @@ export function ImportOfxForm() {
               }
             />
           </div>
-          <Button type="submit" disabled={isUploading} className="w-full">
-            {isUploading ? "Importando..." : "Importar"}
+          <Button type="submit" disabled={isUpisLoading} className="w-full">
+            {isUpisLoading ? "Importando..." : "Importar"}
           </Button>
         </form>
       </CardContent>

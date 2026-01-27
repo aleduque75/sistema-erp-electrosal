@@ -12,10 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { ImageGallery } from "@/components/shared/ImageGallery";
-import { AddRawMaterialModal } from '@/app/(dashboard)/recovery-orders/[id]/add-raw-material-modal';
+import { AddRawMaterialModal } from '@/app/(protected)/(dashboard)/recovery-orders/[id]/add-raw-material-modal';
 import { ApplyRecoveryOrderCommissionModal } from './ApplyRecoveryOrderCommissionModal';
 import { EditableDateDetailItem } from './EditableDateDetailItem';
 
+import api from '@/lib/api'; // Import the api instance
 import { getMediaForRecoveryOrder } from "@/services/mediaApi";
 import { getRecoveryOrderById, updateRecoveryOrder } from '@/services/recoveryOrdersApi';
 import { Media } from "@/types/media";
@@ -78,6 +79,7 @@ export function RecoveryOrderDetailsModal({ isOpen, onOpenChange, recoveryOrder:
   const [isCommissionModalOpen, setIsCommissionModalOpen] = useState(false);
   const [media, setMedia] = useState<Media[]>([]);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false); // State for PDF generation
 
   // Editable date states
   const [isEditingDataInicio, setIsEditingDataInicio] = useState(false);
@@ -171,6 +173,24 @@ export function RecoveryOrderDetailsModal({ isOpen, onOpenChange, recoveryOrder:
     }
   };
 
+  const handleGeneratePdf = async () => {
+    if (!currentRecoveryOrder) return;
+    setIsGeneratingPdf(true);
+    try {
+      const response = await api.get(`/pdf/recovery-order/${currentRecoveryOrder.id}`, {
+        responseType: 'blob',
+      });
+      const file = new Blob([response.data], { type: 'application/pdf' });
+      const fileURL = URL.createObjectURL(file);
+      window.open(fileURL, '_blank');
+    } catch (error) {
+      toast.error("Erro ao gerar PDF.");
+      console.error("Erro ao gerar PDF:", error);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
 
   if (!currentRecoveryOrder) {
     if (isFetchingOrder) {
@@ -202,8 +222,10 @@ export function RecoveryOrderDetailsModal({ isOpen, onOpenChange, recoveryOrder:
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => window.open(`/api/pdf/recovery-order/${currentRecoveryOrder.id}`, '_blank')}
+              onClick={handleGeneratePdf}
+              disabled={isGeneratingPdf}
             >
+              {isGeneratingPdf && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Gerar PDF
             </Button>
           </div>

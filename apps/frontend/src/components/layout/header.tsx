@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { MainMenu } from "./main-menu";
 import { MobileMenu } from "./mobile-menu";
 import { UserNav } from "./user-nav";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { useSidebar } from "@/context/sidebar-context"; // Import useSidebar hook
+import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react"; // Import icons
 
 
 import { API_BASE_URL } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 
 
 interface HeaderProps {
@@ -23,6 +25,8 @@ interface HeaderProps {
 }
 
 export function Header({ logoText, logoImage }: HeaderProps) {
+  const { toggleSidebar, toggleMobileSidebar, isExpanded } = useSidebar();
+
   // --- Lógica de Renderização do Logotipo ---
   const renderLogo = () => {
     // Caso 1: Tem imagem
@@ -72,27 +76,43 @@ export function Header({ logoText, logoImage }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
-        <div className="mr-4 flex items-center flex-grow lg:flex-grow-0"> {/* Logo - ocupa espaço em telas pequenas, mas não em grandes */}
+        {/* Mobile menu toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden mr-2"
+          onClick={toggleMobileSidebar}
+        >
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Toggle Mobile Menu</span>
+        </Button>
+
+        {/* Desktop sidebar toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden lg:flex mr-2"
+          onClick={toggleSidebar}
+        >
+          {isExpanded ? (
+            <PanelLeftClose className="h-5 w-5" />
+          ) : (
+            <PanelLeftOpen className="h-5 w-5" />
+          )}
+          <span className="sr-only">Toggle Sidebar</span>
+        </Button>
+
+        <div className="mr-4 flex items-center flex-grow">
           <Link href="/dashboard" className="flex items-center space-x-2">
             {renderLogo()}
           </Link>
-        </div>
-
-        {/* Menu Desktop */}
-        <div className="hidden lg:flex"> {/* Garante que o MainMenu seja visível apenas em telas grandes */}
-          <MainMenu />
         </div>
 
         {/* Itens da Direita */}
         <div className="flex items-center justify-end space-x-2">
           <ThemeSwitcher />
           <div className="hidden lg:flex">
-            {" "}
-            <UserNav />{" "}
-          </div>
-          <div className="lg:hidden"> {/* MobileMenu visível em mobile e tablet */}
-            {" "}
-            <MobileMenu />{" "}
+            <UserNav />
           </div>
         </div>
       </div>

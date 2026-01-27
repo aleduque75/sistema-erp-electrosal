@@ -14,7 +14,7 @@ import {
 import { LoginForm } from "@/components/auth/LoginForm";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useState } from "react";
-import { API_BASE_URL } from "@/lib/api";
+import api, { API_BASE_URL } from "@/lib/api"; // Added 'api' import
 
 
 interface PublicNavbarProps {
@@ -42,7 +42,7 @@ export function PublicNavbar({ logoText, logoImage }: PublicNavbarProps) {
         logoImage.height &&
         Math.abs(logoImage.width / logoImage.height - 1) < 0.1;
       const showTextWithImage = isSquare;
-      const imageSrc = `${API_BASE_URL}${logoImage.path}`;
+      const imageSrc = `/api/public-media/${logoImage.id}`;
 
       return (
         <>

@@ -48,14 +48,14 @@ interface ProcessedData {
 
 export function QuotationChart() {
   const [data, setData] = useState<ProcessedData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setIsPageLoading] = useState(true);
   const [selectedMetal, setSelectedMetal] = useState<"BOTH" | "GOLD" | "SILVER">(
     "GOLD"
   );
 
   useEffect(() => {
     const fetchQuotations = async () => {
-      setIsLoading(true);
+      setIsPageLoading(true);
       try {
         const response = await api.get("/quotations");
         const rawQuotations: RawQuotation[] = response.data;
@@ -100,14 +100,14 @@ export function QuotationChart() {
         toast.error("Falha ao carregar dados de cotação.");
         console.error("Erro ao carregar cotações:", error);
       } finally {
-        setIsLoading(false);
+        setIsPageLoading(false);
       }
     };
 
     fetchQuotations();
   }, []);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <Card>
         <CardHeader>

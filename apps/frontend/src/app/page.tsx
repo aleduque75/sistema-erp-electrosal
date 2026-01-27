@@ -15,7 +15,7 @@ import { FeaturesSection } from "@/components/landing-page/FeaturesSection";
 // Componente Principal da Página
 export default function HomePage() {
   const [landingPageData, setLandingPageData] = useState<LandingPageData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setIsPageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,13 +38,13 @@ export default function HomePage() {
         setError("Falha ao carregar o conteúdo da página.");
         toast.error("Falha ao carregar o conteúdo da página.");
       } finally {
-        setIsLoading(false);
+        setIsPageLoading(false);
       }
     };
     fetchLandingPageData();
   }, []);
 
-  if (isLoading) {
+  if (loading) {
     return <p className="text-center p-10">Carregando página...</p>;
   }
 

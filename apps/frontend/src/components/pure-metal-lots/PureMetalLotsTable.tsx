@@ -28,13 +28,13 @@ import { Badge } from "@/components/ui/badge";
 
 export function PureMetalLotsTable() {
   const [pureMetalLots, setPureMetalLots] = useState<PureMetalLot[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setIsPageLoading] = useState(true);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedLot, setSelectedLot] = useState<PureMetalLot | null>(null);
 
   const fetchPureMetalLots = async () => {
-    setIsLoading(true);
+    setIsPageLoading(true);
     try {
       const data = await getPureMetalLots();
       setPureMetalLots(data);
@@ -42,7 +42,7 @@ export function PureMetalLotsTable() {
       toast.error("Erro ao carregar lotes de metal puro.");
       console.error("Erro ao buscar lotes de metal puro:", error);
     } finally {
-      setIsLoading(false);
+      setIsPageLoading(false);
     }
   };
 

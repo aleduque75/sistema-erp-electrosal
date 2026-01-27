@@ -24,6 +24,24 @@ export class AccountsPayService {
     private pureMetalLotsService: PureMetalLotsService,
   ) {}
 
+  // Este método é para o WhatsApp, mais genérico
+  async findMany(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.AccountPayWhereUniqueInput;
+    where?: Prisma.AccountPayWhereInput;
+    orderBy?: Prisma.AccountPayOrderByWithRelationInput;
+  }): Promise<AccountPay[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.accountPay.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+    });
+  }
+
   async bulkCreateFromTransactions(
     organizationId: string,
     transactionIds: string[],
@@ -133,8 +151,9 @@ export class AccountsPayService {
         organizationId,
       },
     });
-  } // <-- Chave de fechamento do método 'create' estava faltando
+  }
 
+  // Este método é para a API REST, mais completo
   async findAll(
     organizationId: string,
     startDate?: Date,
@@ -273,7 +292,7 @@ export class AccountsPayService {
           data: {
             organizationId,
             contaCorrenteId: data.contaCorrenteId,
-            contaContabilId: accountToPay.contaContabilId || settings.defaultCaixaContaId,
+            contaContabilId: data.contaContabilId || accountToPay.contaContabilId || settings.defaultCaixaContaId,
             tipo: TipoTransacaoPrisma.DEBITO,
             descricao: `Pagamento parcial de: ${accountToPay.description}`,
             valor: paidAmount,
@@ -325,7 +344,7 @@ export class AccountsPayService {
         data: {
           organizationId,
           contaCorrenteId: data.contaCorrenteId,
-          contaContabilId: settings.defaultCaixaContaId!,
+          contaContabilId: data.contaContabilId || accountToPay.contaContabilId || settings.defaultCaixaContaId,
           tipo: TipoTransacaoPrisma.DEBITO,
           descricao: `Pagamento de: ${accountToPay.description}`,
           valor: paidAmount,
@@ -434,7 +453,7 @@ export class AccountsPayService {
             const newTransaction = await tx.transacao.create({
               data: {
                 organizationId,
-                contaContabilId: accountToPay.contaContabilId || settings.defaultCaixaContaId,
+                contaContabilId: data.contaContabilId || accountToPay.contaContabilId || settings.defaultCaixaContaId,
                 tipo: TipoTransacaoPrisma.DEBITO,
                 descricao: `Pagamento parcial com ${pureMetalLot.metalType} de: ${accountToPay.description}`,
                 valor: paidInBRL,
@@ -478,7 +497,7 @@ export class AccountsPayService {
         const newTransaction = await tx.transacao.create({
             data: {
               organizationId,
-              contaContabilId: settings.defaultCaixaContaId!,
+              contaContabilId: data.contaContabilId || accountToPay.contaContabilId || settings.defaultCaixaContaId,
               tipo: TipoTransacaoPrisma.DEBITO,
               descricao: `Pagamento com ${pureMetalLot.metalType} de: ${accountToPay.description}`,
               valor: paidInBRL,
