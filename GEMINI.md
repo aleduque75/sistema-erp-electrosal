@@ -1,204 +1,58 @@
-### Acesso ao Banco de Dados (psql)
-
-Para consultas diretas ao banco de dados via `psql`, utilize o seguinte comando, substituindo o comando SQL conforme necessário:
-
-```bash
-psql "postgresql://aleduque:electrosal123@localhost:5435/sistema_electrosal_dev" -c "SEU_COMANDO_SQL_AQUI;"
-```
-
-**Observação:**
-*   **Host:** `localhost`
-*   **Porta:** `5435`
-*   **Usuário:** `aleduque`
-*   **Senha:** `electrosal123`
-*   **Banco de Dados:** `sistema_electrosal_dev`
-
-Certifique-se de que o Docker Compose está em execução (`docker-compose ps`) e que o serviço do banco de dados está "Up (healthy)".
-
-# Tutorial de Configuração e Teste da Evolution API
-
-Este tutorial documenta os passos para configurar, resolver problemas e testar a Evolution API em um ambiente Docker isolado.
-
-## 1. Estrutura de Arquivos
-
-Para uma melhor organização, separamos a configuração do Docker em dois ambientes distintos:
-
--   `docker-compose.yml`: Para os serviços principais da aplicação (banco de dados, n8n, etc.).
--   `docker-compose.evolution.yml`: Exclusivamente para a `evolution-api` e seu banco de dados `postgres`.
-
-### `docker-compose.evolution.yml`
-
-Este arquivo define os serviços para a API.
-
-```yaml
-version: '3.8'
-
-services:
-  evolution_api:
-    image: atendai/evolution-api:latest
-    container_name: evolution_api
-    restart: always
-    ports:
-      - "8080:8080"
-    environment:
-      - DATABASE_CONNECTION_URI=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - API_KEY=${EVOLUTION_API_KEY}
-      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
-      - TYPE=local
-    depends_on:
-      - postgres
-    volumes:
-      - ./evolution_instances:/app/instances
-      - ./evolution_store:/app/store
-    networks:
-      - evolution_net
-
-  postgres:
-    image: postgres:15
-    container_name: evolution_postgres
-    restart: always
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    ports:
-      - "5433:5432"
-    volumes:
-      - evolution_postgres_data:/var/lib/postgresql/data
-    networks:
-      - evolution_net
-
-volumes:
-  evolution_postgres_data:
-
-networks:
-  evolution_net:
-    driver: bridge
-```
-
-### `.env.evolution`
-
-Criamos um arquivo de ambiente dedicado para as variáveis da Evolution API.
-
-**Importante:** Se sua chave de API (`EVOLUTION_API_KEY`) contiver o caractere `$`, ele precisa ser escapado com um `$` adicional para que o Docker Compose o interprete corretamente. Por exemplo, `minha@senha$` se torna `minha@senha$$`.
-
-```env
-# Variáveis de ambiente para a Evolution API
-POSTGRES_DB=evolution_db
-POSTGRES_USER=evolution_user
-POSTGRES_PASSWORD=evolution_pass
-EVOLUTION_API_KEY=MelhorFilmeMatrixAinda@$$
-```
-
-## 2. Comandos do Docker
-
-### Iniciando o Ambiente
-
-Para iniciar os serviços da Evolution API, use o seguinte comando. Ele especifica o arquivo de compose e o arquivo de ambiente a serem utilizados:
-
-```bash
-docker-compose -f docker-compose.evolution.yml --env-file .env.evolution up -d
-```
-
-### Resolvendo Problemas Comuns
-
-Se encontrar erros de autenticação com o banco de dados (`P1010: User ... was denied access`), pode ser necessário limpar o volume de dados persistente do Postgres para forçar uma reinicialização limpa.
-
-**Atenção:** Este comando apagará permanentemente os dados do banco de dados da Evolution API.
-
-```bash
-# 1. Pare os serviços
-docker-compose -f docker-compose.evolution.yml down
-
-# 2. Remova o volume do banco de dados
-docker volume rm sistema-erp-electrosal_evolution_postgres_data
-
-# 3. Inicie os serviços novamente
-docker-compose -f docker-compose.evolution.yml --env-file .env.evolution up -d
-```
-
-## 3. Testando a API
-
-Após iniciar os serviços e conectar sua instância do WhatsApp (ex: `electrosal-bot`), você pode testar o envio de mensagens com o `curl`.
-
-### Comando `curl` para Enviar Mensagem de Texto
-
-O corpo da requisição (`-d`) deve ser um JSON simples contendo o número do destinatário e o texto da mensagem.
-
-```bash
-curl -X POST \
-  'http://localhost:8080/message/sendText/electrosal-bot' \
-  -H 'Content-Type: application/json' \
-  -H 'apikey: SuaApiKeyAqui' \
-  -d '{
-    "number": "55119XXXXXXXX",
-    "text": "Olá! Isto é uma mensagem de teste. 🚀"
-  }'
-```
-
-Substitua `electrosal-bot` pelo nome da sua instância, `SuaApiKeyAqui` pela sua chave (sem o `$$` de escape) e `55119XXXXXXXX` pelo número de destino.
-
-### Resposta de Sucesso
-
-Uma resposta bem-sucedida se parecerá com isto, indicando que a mensagem foi enfileirada para envio:
-
-```json
-{
-  "key": {
-    "remoteJid": "55119XXXXXXXX@s.whatsapp.net",
-    "fromMe": true,
-    "id": "3EB0271589D235C2AEED0D195932E3B22BCF3F61"
-  },
-  "pushName": "",
-  "status": "PENDING",
-  "message": {
-    "conversation": "Olá! Isto é uma mensagem de teste. 🚀"
-  },
-  "contextInfo": null,
-  "messageType": "conversation",
-  "messageTimestamp": 1769445791,
-  "instanceId": "642c0e3f-5c26-4976-95d5-05aeccd24a8d",
-  "source": "unknown"
-}
-```
-
----
-
-## A Saga da Depuração do Webhook (Como Fizemos Funcionar)
-
-Esta seção documenta a complexa jornada de depuração para fazer o webhook da Evolution API se comunicar com o backend NestJS.
-
-### 1. O Problema Inicial: O Silêncio no Console
-
-*   **Sintoma:** Após implementar o comando `/contas a pagar` no `WhatsappService`, enviamos mensagens para o bot, mas absolutamente nada era registrado no console do backend.
-*   **Conclusão:** A requisição de webhook da Evolution API não estava chegando ao nosso backend.
-
-### 2. Investigação Nível 1: A URL do Webhook
-
-Analisamos o arquivo `.env.evolution` e a configuração do backend em `main.ts` para encontrar divergências na `WEBHOOK_GLOBAL_URL`.
-
-*   **Problema A (IP):** A URL apontava para um IP interno do Docker (`172.20.0.1`), que o container não pode usar para alcançar a máquina host.
-    *   **Solução:** Encontramos o IP da sua máquina na rede local (`192.168.1.160`) e o utilizamos.
-*   **Problema B (Porta):** A URL apontava para a porta `3001`, mas o `main.ts` revelou que o backend estava, na verdade, rodando na porta `3002`.
-    *   **Solução:** Corrigimos a porta na URL para `3002`.
-*   **Problema C (Prefixo da API):** A URL não continha o prefixo global `/api` que estava configurado no `main.ts` (`app.setGlobalPrefix('api')`).
-    *   **Solução:** Adicionamos `/api` ao caminho, resultando na URL final e correta: `http://192.168.1.160:3002/api/whatsapp/webhook`.
-
-### 3. Investigação Nível 2: O Bloqueio de Rede
-
-*   **Sintoma:** Mesmo com a URL 100% correta, o console continuava em silêncio. A suspeita recaiu sobre um firewall.
-*   **Diagnóstico:** Entramos no shell do container da `evolution-api` (`docker exec -it evolution_api /bin/sh`) e tentamos nos conectar manualmente ao backend usando `wget`.
-*   **Resultado:** O comando `wget -S -O - http://192.168.1.160:3002/api/whatsapp/webhook` retornou um erro `404 Not Found`.
-*   **Conclusão:** **Sucesso!** O erro 404 provou que a conexão de rede estava **funcionando**. O container conseguia chegar ao backend, que respondia "Não encontrado" porque o `wget` faz uma requisição `GET` e o endpoint espera uma `POST`. O problema não era um firewall.
-
-### 4. Investigação Nível 3: A Autenticação e Configuração
-
-*   **Sintoma:** A conexão de rede funciona, mas o código do controller ainda não é executado.
-*   **Diagnóstico:** O problema estava na validação da chave de API (`apikey`). O backend (que roda com `pnpm dev`) lê as variáveis do arquivo `.env` na raiz do projeto, não do `.env.evolution`. O arquivo `.env` estava com o valor errado para a variável `EVOLUTION_INSTANCE_TOKEN`.
-*   **Solução:** Corrigimos o arquivo `.env` principal para conter o `EVOLUTION_INSTANCE_TOKEN` correto, que é usado para validar os webhooks recebidos, e também o `EVOLUTION_API_KEY` correto, que o `WhatsappService` usa para enviar mensagens de volta.
-
-### 5. Situação Atual: O Último Obstáculo
-
-*   **Sintoma:** Mesmo com tudo aparentemente correto, o console ainda não mostra os logs de "Webhook recebido".
-*   **Hipótese Final:** Algo no próprio framework NestJS (possivelmente o `ValidationPipe` global ou a configuração de `CORS`) está rejeitando a requisição `POST` da Evolution API *antes* mesmo de chegar à primeira linha de código do nosso método no controller.
-*   **Próximo Passo:** Simplificar radicalmente o endpoint do webhook no `whatsapp.controller.ts` para aceitar qualquer requisição, apenas para forçar o aparecimento de um log e confirmar a hipótese.
+1 # Visão Geral do Projeto e Base de Conhecimento
+2
+3 Bem-vindo ao guia do sistema Electrosal! Este documento serve como um ponto de partida rápido para entender o projeto e navegar pela sua documentação mais detalhada.
+4
+5 ---
+6
+7 ## 🚀 Status Atual do Projeto (via Gemini CLI)
+8
+9 Para uma visão atualizada do que está sendo trabalhado, o que já foi feito e o que está por vir, consulte as seções específicas na [Base de
+Conhecimento](#base-de-conhecimento-do-projeto).
+10
+11 ---
+12
+13 ## 🛠️ Contexto de Desenvolvimento e Operação (via Gemini CLI)
+14
+15 Para informações sobre como configurar o ambiente, acessar serviços ou resolver problemas comuns, consulte os documentos detalhados na [Base de
+Conhecimento](#base-de-conhecimento-do-projeto).
+16
+17 ---
+18
+19 # Base de Conhecimento do Projeto
+20
+21 Esta seção contém links para a documentação detalhada do projeto, organizada por temas. Você pode acessar e, com a devida permissão e funcionalidades do frontend, editar
+esses documentos diretamente.
+22
+23 ---
+24
+25 ## 📚 Temas Gerais e Decisões de Design
+26
+27 _ [**Temas Criados**](docs/01_temas_criados.md): Visão geral de decisões de arquitetura, padrões e convenções de projeto.
+28 _ [**Funcionalidades Finalizadas**](docs/02_funcionalidades_finalizadas.md): Descrição das funcionalidades já implementadas e em produção.
+29 _ [**Funcionalidades em Andamento**](docs/03_funcionalidades_em_andamento.md): Detalhes sobre o que está ativamente em desenvolvimento.
+30 _ [**Funcionalidades a Fazer**](docs/04_funcionalidades_a_fazer.md): O roadmap futuro e o backlog de funcionalidades planejadas.
+31
+32 ---
+33
+34 ## 💡 Tutoriais e Dicas de Desenvolvimento
+35
+36 _ [**Acesso ao Banco de Dados (psql)**](docs/tutoriais/acesso_banco_de_dados.md): Guia rápido para acessar e interagir com o banco de dados de desenvolvimento via `psql
+37
+38 ---
+39
+40 ## 🔗 Guias de Integração
+41
+42 _ [**Guia de Integração e Depuração da Evolution API**](docs/integracoes/evolution_api_guide.md): Documentação completa sobre a configuração, uso e depuração da
+integração com a Evolution API.
+43
+44 ---
+45
+46 **Observação para o Gemini CLI:**
+47
+48 Quando precisar de informações sobre o projeto, utilize os documentos na pasta `docs/`. Você pode listar os arquivos em `docs/` e seus subdiretórios com:
+49 `curl http://localhost:3002/api/knowledge-base`
+50 E ler o conteúdo de um arquivo específico com:
+51 `curl http://localhost:3002/api/knowledge-base/nome_do_arquivo.md`
+52
+53 Para atualizar um arquivo:
+54 `curl -X PUT -H "Content-Type: application/json" -d '{"content": "Novo conteúdo aqui"}' http://localhost:3002/api/knowledge-base/nome_do_arquivo.md`
