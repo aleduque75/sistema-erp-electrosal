@@ -10,14 +10,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private usersService: UsersService,
     private configService: ConfigService,
   ) {
-    const secret = configService.get<string>('JWT_SECRET'); // Define a variável aqui
+    const secret = configService.get<string>('JWT_SECRET');
     if (!secret) {
-      throw new Error('JWT_SECRET não foi definido nas variáveis de ambiente');
+      throw new Error('JWT_SECRET não definido no .env');
     }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: secret, // Usa a variável aqui
+      secretOrKey: secret,
     });
   }
 
@@ -25,15 +25,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const user = await this.usersService.findByIdAndOrganization(
       payload.sub,
       payload.orgId,
-      { settings: true }, // MODIFICAÇÃO AQUI
+      { settings: true },
     );
+    console.log('[Auth Debug] JWTStrategy user found in DB:', user);
     if (!user) {
       throw new UnauthorizedException();
     }
-    // AQUI ESTÁ A CORREÇÃO:
-    // Retornamos um objeto que inclui tanto os dados do usuário do banco
-    // quanto o orgId que veio no payload do token.
-    // Isso garante que o decorador @CurrentUser('orgId') funcione.
     return { ...user, orgId: payload.orgId };
   }
 }

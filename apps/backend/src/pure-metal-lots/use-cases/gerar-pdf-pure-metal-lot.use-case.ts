@@ -63,6 +63,10 @@ export class GerarPdfPureMetalLotUseCase {
       };
       return mapa[tipo] || tipo;
     });
+
+    Handlebars.registerHelper('eq', function (arg1, arg2) {
+      return (arg1 == arg2);
+    });
   }
 
   private async getImageAsBase64(filePath: string): Promise<string | null> {
@@ -168,6 +172,8 @@ export class GerarPdfPureMetalLotUseCase {
       movements,
       dataEmissaoPdf: new Date(),
     };
+
+    this.logger.debug(`Template Data for PDF: ${JSON.stringify(templateData, null, 2)}`); // Debug log
 
     const template = Handlebars.compile(htmlComLogo);
     const htmlContent = template(templateData);

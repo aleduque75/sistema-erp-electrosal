@@ -1,48 +1,84 @@
-// apps/backend/src/settings/settings.controller.ts
-import { Controller, Get, Body, Patch, UseGuards, Request, Post } from '@nestjs/common'; // Adicionar Post
+import { Controller, Get, Body, Put, UseGuards, Request, Post, Param, Delete } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { UpdateSettingDto } from './dto/update-setting.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UpdateOrganizationSettingDto } from './dto/update-organization-setting.dto';
-import { ExportSeedDataUseCase } from './use-cases/export-seed-data.use-case'; // Importar o use case
+import { UpdateAppearanceSettingsDto } from '../organization/dto/update-appearance-settings.dto';
+import { CreateThemePresetDto } from './dto/create-theme-preset.dto';
+import { UpdateThemePresetDto } from './dto/update-theme-preset.dto';
 
-@UseGuards(AuthGuard('jwt'))
+import { Public } from '../auth/decorators/public.decorator';
+
 @Controller('settings')
 export class SettingsController {
-  constructor(
-    private readonly settingsService: SettingsService,
-    private readonly exportSeedDataUseCase: ExportSeedDataUseCase, // Injetar o use case
-  ) {}
+  constructor(private readonly settingsService: SettingsService) {}
 
+  @UseGuards(AuthGuard('jwt'))
   @Get()
   findOne(@Request() req) {
     return this.settingsService.findOne(req.user.id);
   }
 
-  @Patch()
+  // Atualiza preferência do usuário (Light/Dark/System)
+  @UseGuards(AuthGuard('jwt'))
+  @Put()
   update(@Request() req, @Body() updateSettingDto: UpdateSettingDto) {
     return this.settingsService.update(req.user.id, updateSettingDto);
   }
 
-  @Get('organization')
-  getOrganizationSettings(@CurrentUser('orgId') organizationId: string) {
-    return this.settingsService.getOrganizationSettings(organizationId);
+  // Busca cores da organização
+  @Public()
+  @Get('appearance')
+  getAppearanceSettings(@CurrentUser('orgId') organizationId?: string) {
+    return this.settingsService.getAppearanceSettings(organizationId);
   }
 
-  @Patch('organization')
-  updateOrganizationSettings(
+  // Salva o JSON estruturado { light: {}, dark: {} }
+  @UseGuards(AuthGuard('jwt'))
+  @Put('appearance')
+  updateAppearanceSettings(
     @CurrentUser('orgId') organizationId: string,
-    @Body() updateDto: UpdateOrganizationSettingDto,
+    @Body() dto: UpdateAppearanceSettingsDto,
   ) {
-    return this.settingsService.updateOrganizationSettings(
-      organizationId,
-      updateDto.absorbCreditCardFee,
-    );
+    return this.settingsService.updateAppearanceSettings(organizationId, dto);
   }
 
-  @Post('export-seed-data')
-  async exportSeedData() {
-    return this.exportSeedDataUseCase.execute();
+  // --- Theme Presets ---
+  @Post('themes')
+  createThemePreset(
+    @CurrentUser('orgId') organizationId: string,
+    @Body() createThemePresetDto: CreateThemePresetDto,
+  ) {
+    return this.settingsService.createThemePreset(organizationId, createThemePresetDto);
+  }
+
+  @Get('themes')
+  findAllThemePresets(@CurrentUser('orgId') organizationId: string) {
+    return this.settingsService.findAllThemePresets(organizationId);
+  }
+
+  @Get('themes/:id')
+  findOneThemePreset(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.settingsService.findOneThemePreset(organizationId, id);
+  }
+
+  @Put('themes/:id')
+  updateThemePreset(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+    @Body() updateThemePresetDto: UpdateThemePresetDto,
+  ) {
+    return this.settingsService.updateThemePreset(organizationId, id, updateThemePresetDto);
+  }
+
+  @Delete('themes/:id')
+  removeThemePreset(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.settingsService.removeThemePreset(organizationId, id);
   }
 }

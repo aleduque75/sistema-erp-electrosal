@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { UpdateAppearanceSettingsDto } from './dto/update-appearance-settings.dto';
 
 @Injectable()
 export class OrganizationService {
@@ -10,7 +11,7 @@ export class OrganizationService {
     const organization = await this.prisma.organization.findUnique({
       where: { id },
       include: {
-        sidebarLogoImage: true,
+        appearanceSettings: true,
       },
     });
     if (!organization) {
@@ -26,6 +27,22 @@ export class OrganizationService {
     return this.prisma.organization.update({
       where: { id },
       data: updateOrganizationDto,
+    });
+  }
+
+  async updateAppearanceSettings(
+    orgId: string,
+    updateAppearanceDto: UpdateAppearanceSettingsDto,
+  ) {
+    return this.prisma.appearanceSettings.upsert({
+      where: { organizationId: orgId },
+      update: {
+        customTheme: updateAppearanceDto.customTheme,
+      },
+      create: {
+        organizationId: orgId,
+        customTheme: updateAppearanceDto.customTheme,
+      },
     });
   }
 }

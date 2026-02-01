@@ -6,6 +6,10 @@ export class CreateTaskDto {
   @IsNotEmpty()
   title: string;
 
+  @IsString()
+  @IsOptional()
+  observation?: string;
+
   @IsEnum(TaskPriority)
   @IsOptional()
   priority?: TaskPriority;

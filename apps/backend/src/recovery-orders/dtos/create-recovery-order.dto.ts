@@ -1,4 +1,4 @@
-import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, IsEnum, IsNumber, ValidateNested } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, IsEnum, IsNumber, ValidateNested, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TipoMetal } from '@sistema-erp-electrosal/core';
 
@@ -54,4 +54,8 @@ export class CreateRecoveryOrderDto {
   @ValidateNested({ each: true })
   @Type(() => RawMaterialItemDto)
   rawMaterials?: RawMaterialItemDto[];
+
+  @IsOptional()
+  @IsBoolean()
+  allowResidueAnalyses?: boolean; // Adicionado para permitir análises de resíduo
 }

@@ -1,5 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
+  output          = "../src/generated/client"
   previewFeatures = []
   binaryTargets   = ["native", "debian-openssl-3.0.x"]
 }
@@ -15,8 +16,10 @@ model Organization {
   absorbCreditCardFee     Boolean                  @default(false)
   creditCardReceiveDays   Int?                     @default(30)
   accountsRec             AccountRec[]
+  appearanceSettings      AppearanceSettings?      @relation("AppearanceToOrganization")
   landingPages            LandingPage[]
   media                   Media[]
+  menuItems               MenuItem[]
   products                Product[]
   sales                   Sale[]
   stockMovements          StockMovement[]
@@ -53,10 +56,10 @@ model Organization {
   recoveryOrders          RecoveryOrder[]
   recuperacoes            Recuperacao[]
   saleAdjustments         SaleAdjustment[]
-  transacoes              Transacao[]
-  menuItems               MenuItem[]
   tasks                   Task[]
-  appearanceSettings      AppearanceSettings?      @relation("AppearanceToOrganization")
+  transacoes              Transacao[]
+  whatsAppRoutines        WhatsAppRoutine[]
+  themePresets            ThemePreset[]
 }
 
 model User {
@@ -64,28 +67,29 @@ model User {
   email          String        @unique
   password       String
   name           String?
-  pessoaId       String?       @unique // Adicionar esta linha
-  pessoa         Pessoa?       @relation("UserToPessoa", fields: [pessoaId], references: [id]) // Adicionar esta linha
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  role           Role          @default(USER)
   organizationId String
+  pessoaId       String?       @unique
+  role           Role          @default(USER)
   organization   Organization  @relation(fields: [organizationId], references: [id])
+  pessoa         Pessoa?       @relation("UserToPessoa", fields: [pessoaId], references: [id])
   settings       UserSettings?
   tasks          Task[]
 }
 
 model UserSettings {
-  id                          String  @id @default(cuid())
-  user                        User    @relation(fields: [userId], references: [id])
+  id                          String  @id @default(uuid())
   userId                      String  @unique
-  defaultReceitaContaId       String?
+  theme                       String  @default("system")
+  language                    String  @default("pt-BR")
   defaultCaixaContaId         String?
   defaultDespesaContaId       String?
+  defaultReceitaContaId       String?
+  metalCreditPayableAccountId String?
   metalStockAccountId         String?
   productionCostAccountId     String?
-  metalCreditPayableAccountId String?
-  // Adicione aqui outras configurações específicas do usuário
+  user                        User    @relation(fields: [userId], references: [id])
 }
 
 model Pessoa {
@@ -112,6 +116,7 @@ model Pessoa {
   externalId                  String?           @unique
   sales                       Sale[]            @relation("ClientSales")
   salespersonSales            Sale[]            @relation("SalespersonSales")
+  user                        User?             @relation("UserToPessoa")
   analisesQuimicasComoCliente AnaliseQuimica[]  @relation("PessoaAnalisesQuimicas")
   client                      Client?
   fornecedor                  Fornecedor?
@@ -121,7 +126,6 @@ model Pessoa {
   metalReceivables            MetalReceivable[]
   organization                Organization      @relation(fields: [organizationId], references: [id])
   recoveryOrdersAsSalesperson RecoveryOrder[]   @relation("SalespersonRecoveryOrders")
-  user                        User?             @relation("UserToPessoa") // Adicionar esta linha
 
   @@map("pessoas")
 }
@@ -494,12 +498,14 @@ model ContaCorrente {
   type               ContaCorrenteType @default(BANCO)
   contaContabilId    String?
   isActive           Boolean           @default(true)
+  nick               String?
   accountsRec        AccountRec[]
   contaContabil      ContaContabil?    @relation(fields: [contaContabilId], references: [id])
   organization       Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   transacoes         Transacao[]
 
   @@unique([organizationId, numeroConta])
+  @@unique([organizationId, nick])
   @@map("contas_correntes")
 }
 
@@ -642,9 +648,8 @@ model Media {
   analiseQuimicaId       String?
   transacaoId            String?
   chemicalReactionId     String?
-  landingPageLogos       LandingPage[]
   appearanceSettingsLogo AppearanceSettings[] @relation("AppearanceLogo")
-  // Não tem mais organizationSidebarLogo
+  landingPageLogos       LandingPage[]
   analiseQuimica         AnaliseQuimica?      @relation(fields: [analiseQuimicaId], references: [id])
   chemicalReaction       chemical_reactions?  @relation(fields: [chemicalReactionId], references: [id])
   organization           Organization?        @relation(fields: [organizationId], references: [id])
@@ -1071,6 +1076,94 @@ model MarketData {
   @@map("market_data")
 }
 
+model WhatsAppRoutine {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String
+  trigger        String
+  description    String?
+  isActive       Boolean      @default(true)
+  steps          Json
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, trigger])
+  @@map("whatsapp_routines")
+}
+
+model MenuItem {
+  id             String       @id @default(uuid())
+  title          String
+  href           String
+  icon           String?
+  order          Int
+  parentId       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  disabled       Boolean?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  parent         MenuItem?    @relation("SubMenuItems", fields: [parentId], references: [id])
+  subItems       MenuItem[]   @relation("SubMenuItems")
+
+  @@unique([organizationId, title, parentId])
+}
+
+model AppearanceSettings {
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  themeName      String?
+  sidebarTheme   Json?
+  logoImageId    String?
+  logoText       String?
+  logoImage      Media?       @relation("AppearanceLogo", fields: [logoImageId], references: [id])
+  customTheme    Json? // <--- TENHA CERTEZA QUE ESTÁ ASSIM
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation("AppearanceToOrganization", fields: [organizationId], references: [id])
+}
+
+model Task {
+  id             String       @id @default(uuid())
+  title          String
+  status         TaskStatus   @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  createdById    String
+  observation    String?
+  createdBy      User         @relation(fields: [createdById], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("tasks")
+}
+
+model Tutorial {
+  id        String   @id
+  title     String
+  slug      String   @unique
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model ThemePreset {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String
+  presetData     Json         // Armazenará o objeto { light: { colors: {...} }, dark: { colors: {...} } }
+  isDefault      Boolean      @default(false) // Pode ter presets padrão
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, name])
+  @@map("theme_presets")
+}
+
 enum TransacaoStatus {
   ATIVA
   AJUSTADA
@@ -1236,62 +1329,6 @@ enum MetalCreditStatus {
   PARTIALLY_PAID
   PAID
   CANCELED
-}
-
-model Tutorial {
-  id        String   @id @default(cuid())
-  title     String
-  slug      String   @unique
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model MenuItem {
-  id             String       @id @default(uuid())
-  title          String
-  href           String
-  icon           String?
-  order          Int
-  disabled       Boolean?
-  parentId       String?
-  parent         MenuItem?    @relation("SubMenuItems", fields: [parentId], references: [id])
-  subItems       MenuItem[]   @relation("SubMenuItems")
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  @@unique([organizationId, title, parentId])
-}
-
-model AppearanceSettings {
-  id             String       @id @default(uuid())
-  organizationId String       @unique
-  organization   Organization @relation("AppearanceToOrganization", fields: [organizationId], references: [id])
-  themeName      String?
-  customTheme    Json?
-  sidebarTheme   Json?
-  logoImageId    String?
-  logoText       String?
-  logoImage      Media?       @relation("AppearanceLogo", fields: [logoImageId], references: [id])
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-}
-
-model Task {
-  id             String       @id @default(uuid())
-  title          String
-  status         TaskStatus   @default(TODO)
-  priority       TaskPriority @default(MEDIUM)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  createdById    String
-  createdBy      User         @relation(fields: [createdById], references: [id])
-
-  @@map("tasks")
 }
 
 enum TaskStatus {

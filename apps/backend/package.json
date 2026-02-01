@@ -9,7 +9,7 @@
     "build": "nest build",
     "format": "prettier --write \"**/*.ts\"",
     "start": "nest start",
-    "start:dev": "pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts",
+    "start:dev": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -35,7 +35,8 @@
     "db:investigate-sale": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/investigate-sale.ts",
     "db:find-expense-accounts": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/find-expense-accounts.ts",
     "db:reset-analise-writeoff": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/reset-analise-writeoff.ts",
-    "db:seed-menu": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/seed_menu_items.ts"
+    "db:seed-menu": "dotenv -e ../../.env -- ts-node -r tsconfig-paths/register prisma/seed_menu_items.ts",
+    "db:seed-theme-presets": "dotenv -e ../../.env -- ts-node prisma/seed-theme-presets.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

@@ -2,6 +2,34 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, TipoMetal } from '@prisma/client';
 
+export const pureMetalLotWithRelationsInclude = {
+  sale: {
+    include: {
+      pessoa: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  },
+  chemicalReactions: {
+    include: {
+      chemicalReaction: {
+        select: {
+          reactionNumber: true,
+          notes: true,
+          id: true,
+          outputProductGrams: true,
+        },
+      },
+    },
+  },
+}; // Removed satisfies Prisma.pure_metal_lotsInclude
+
+export type PureMetalLotWithRelations = Prisma.pure_metal_lotsGetPayload<{
+  include: typeof pureMetalLotWithRelationsInclude;
+}>;
+
 @Injectable()
 export class PureMetalLotsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -24,55 +52,14 @@ export class PureMetalLotsRepository {
     return this.prisma.pure_metal_lots.findMany({
       where,
       orderBy: { entryDate: 'desc' },
-      include: {
-        sale: {
-          include: {
-            pessoa: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-        chemicalReactions: {
-          include: {
-            chemicalReaction: {
-              select: {
-                reactionNumber: true,
-                notes: true,
-              },
-            },
-          },
-        },
-      },
+      include: pureMetalLotWithRelationsInclude,
     });
   }
 
   findOne(id: string, organizationId: string) {
     return this.prisma.pure_metal_lots.findUnique({
       where: { id, organizationId },
-      include: {
-        sale: {
-          include: {
-            pessoa: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-        chemicalReactions: {
-          include: {
-            chemicalReaction: {
-              select: {
-                id: true,
-                reactionNumber: true,
-                outputProductGrams: true,
-              },
-            },
-          },
-        },
-      },
+      include: pureMetalLotWithRelationsInclude,
     });
   }
 

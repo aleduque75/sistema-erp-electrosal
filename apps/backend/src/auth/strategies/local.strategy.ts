@@ -25,6 +25,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     }
 
     const { password: _, ...result } = user;
+    console.log('[Auth Debug] LocalStrategy user object:', result);
     return result;
   }
 }

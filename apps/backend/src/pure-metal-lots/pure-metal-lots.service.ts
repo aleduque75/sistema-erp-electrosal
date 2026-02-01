@@ -3,8 +3,33 @@ import { CreatePureMetalLotDto } from './dto/create-pure-metal-lot.dto';
 import { UpdatePureMetalLotDto } from './dto/update-pure-metal-lot.dto';
 import { PureMetalLotsRepository } from './pure-metal-lots.repository';
 import { EntityCounterService } from '../common/services/entity-counter.service';
-import { EntityType, TipoMetal } from '@prisma/client';
+import { EntityType, TipoMetal, Prisma } from '@prisma/client'; // Adicionado Prisma
 import { PrismaService } from '../prisma/prisma.service';
+
+// Define o tipo para PureMetalLot com as relações incluídas pelo findOne do repositório
+const pureMetalLotIncludeArgs = {
+  sale: {
+    include: {
+      pessoa: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  },
+  chemicalReactions: {
+    include: {
+      chemicalReaction: {
+        select: {
+          id: true,
+          reactionNumber: true,
+          outputProductGrams: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.pure_metal_lotsInclude; // Use satisfies to ensure it matches Prisma's expectations
+
 
 @Injectable()
 export class PureMetalLotsService {

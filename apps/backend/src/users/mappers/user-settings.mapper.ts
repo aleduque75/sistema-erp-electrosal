@@ -1,32 +1,44 @@
-import { UserSettings, UniqueEntityID } from '@sistema-erp-electrosal/core';
 import { UserSettings as PrismaUserSettings } from '@prisma/client';
+import { UserSettings } from '@sistema-erp-electrosal/core';
 
 export class UserSettingsMapper {
+  /**
+   * Converte o objeto cru do Prisma (Banco de Dados) para a Entidade de Domínio (Core).
+   * Use este método quando buscar dados do banco.
+   */
   static toDomain(raw: PrismaUserSettings): UserSettings {
     return UserSettings.create(
       {
         userId: raw.userId,
-        defaultReceitaContaId: raw.defaultReceitaContaId ?? undefined,
-        defaultCaixaContaId: raw.defaultCaixaContaId ?? undefined,
-        defaultDespesaContaId: raw.defaultDespesaContaId ?? undefined,
-        metalStockAccountId: raw.metalStockAccountId ?? undefined,
-        productionCostAccountId: raw.productionCostAccountId ?? undefined,
-        metalCreditPayableAccountId: raw.metalCreditPayableAccountId ?? undefined,
+        theme: raw.theme, // <-- Vincula o novo campo de tema
+        language: raw.language, // <-- Vincula o novo campo de idioma
+        defaultCaixaContaId: raw.defaultCaixaContaId,
+        defaultDespesaContaId: raw.defaultDespesaContaId,
+        defaultReceitaContaId: raw.defaultReceitaContaId,
+        metalStockAccountId: raw.metalStockAccountId,
+        productionCostAccountId: raw.productionCostAccountId,
+        metalCreditPayableAccountId: raw.metalCreditPayableAccountId,
       },
-      raw.id ? UniqueEntityID.create(raw.id) : undefined,
+      raw.id, // Mantém o ID original do banco na entidade
     );
   }
 
-  static toPersistence(userSettings: UserSettings): PrismaUserSettings {
+  /**
+   * Converte a Entidade de Domínio para o formato que o Prisma entende.
+   * Use este método ao salvar ou atualizar no banco.
+   */
+  static toPersistence(userSettings: UserSettings): any {
     return {
-      id: userSettings.id.toString(),
+      id: userSettings.id,
       userId: userSettings.userId,
-      defaultReceitaContaId: userSettings.defaultReceitaContaId ?? null,
-      defaultCaixaContaId: userSettings.defaultCaixaContaId ?? null,
-      defaultDespesaContaId: userSettings.defaultDespesaContaId ?? null,
-      metalStockAccountId: userSettings.metalStockAccountId ?? null,
-      productionCostAccountId: userSettings.productionCostAccountId ?? null,
-      metalCreditPayableAccountId: userSettings.metalCreditPayableAccountId ?? null,
-    } as PrismaUserSettings; // Cast to PrismaUserSettings to satisfy type checking
+      theme: userSettings.theme, // <-- Prepara para salvar
+      language: userSettings.language,
+      defaultCaixaContaId: userSettings.defaultCaixaContaId,
+      defaultDespesaContaId: userSettings.defaultDespesaContaId,
+      defaultReceitaContaId: userSettings.defaultReceitaContaId,
+      metalStockAccountId: userSettings.metalStockAccountId,
+      productionCostAccountId: userSettings.productionCostAccountId,
+      metalCreditPayableAccountId: userSettings.metalCreditPayableAccountId,
+    };
   }
 }

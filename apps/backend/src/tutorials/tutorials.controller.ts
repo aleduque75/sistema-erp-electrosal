@@ -1,3 +1,4 @@
+/*
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { TutorialsService } from './tutorials.service';
 import { CreateTutorialDto } from './dto/create-tutorial.dto';
@@ -37,3 +38,4 @@ export class TutorialsController {
     return this.tutorialsService.remove(id);
   }
 }
+*/

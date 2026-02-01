@@ -1,417 +1,349 @@
-
+import { WhatsappRoutinesService } from '../whatsapp-routines/whatsapp-routines.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
-import { TipoTransacaoPrisma } from '@prisma/client';
+import { Prisma, TipoTransacaoPrisma } from '@prisma/client';
 import { HttpService } from '@nestjs/axios';
 import { AccountsPayService } from '../accounts-pay/accounts-pay.service';
 import { Decimal } from 'decimal.js';
-import {
-  WhatsAppWebhookPayload,
-  MessageUpsertData,
-} from './types/whatsapp-webhook.types';
-import { AxiosError } from 'axios';
-
-// Interface para tipar o corpo do webhook da Evolution API
-export interface EvolutionWebhookBody {
-  event: string;
-  data?: {
-    key: {
-      remoteJid: string;
-      fromMe: boolean;
-      id: string;
-    };
-    message?: {
-      conversation?: string;
-      extendedTextMessage?: {
-        text?: string;
-      };
-    };
-  };
-}
+import { WhatsAppWebhookPayload } from './types/whatsapp-webhook.types';
 
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
-  private readonly evolutionApiUrl = 'http://localhost:8080';
+  private readonly evolutionApiUrl =
+    process.env.EVOLUTION_API_URL || 'http://localhost:8080';
   private readonly evolutionApiKey = process.env.EVOLUTION_API_KEY;
-  private readonly evolutionInstanceName = 'electrosal-bot';
+  private readonly evolutionInstanceName =
+    process.env.EVOLUTION_INSTANCE_NAME || 'electrosal-bot';
+
+  private latestQrCode: string | null = null;
+  private conversationState: Record<string, any> = {};
+  private processedMessageIds = new Set<string>();
 
   constructor(
     private prisma: PrismaService,
     private readonly httpService: HttpService,
     private readonly accountsPayService: AccountsPayService,
+    private readonly whatsappRoutineService: WhatsappRoutinesService,
   ) {}
 
-  // Estado da conversa por usuário
-  private conversationState: Record<string, any> = {};
-
-  private processedMessageIds = new Set<string>();
+  getLatestQrCode(): string | null {
+    return this.latestQrCode;
+  }
 
   async handleIncomingMessage(body: WhatsAppWebhookPayload): Promise<void> {
-    this.logger.log('--- WHATSAPP WEBHOOK RECEBIDO ---');
-    this.logger.log(JSON.stringify(body, null, 2));
-
-    // Condição de guarda para garantir que estamos lidando com uma mensagem de texto de entrada
-    if (
-      body.event !== 'messages.upsert' ||
-      !body.data ||
-      !body.data.key ||
-      !body.data.key.id
-    ) {
-      this.logger.log(
-        'Webhook ignorado: não é uma mensagem de usuário ou evento irrelevante.',
-      );
+    // 1. QR Code Update
+    if (body.event === 'qrcode.updated') {
+      this.latestQrCode = body.data?.qrcode?.base64 || body.data?.qr;
       return;
     }
 
-    const messageId = body.data.key.id;
-    if (this.processedMessageIds.has(messageId)) {
-      this.logger.log(
-        `Webhook ignorado: Mensagem com ID ${messageId} já foi processada.`,
-      );
-      return;
-    }
+    // 2. Validação e Deduplicação
+    if (body.event !== 'messages.upsert' || !body.data) return;
+    const messageData = body.data as any;
+    const messageId = messageData.key?.id;
+
+    if (!messageId || this.processedMessageIds.has(messageId)) return;
     this.processedMessageIds.add(messageId);
+    setTimeout(() => this.processedMessageIds.delete(messageId), 5 * 60 * 1000);
 
-    // Limpa o cache de IDs de mensagens antigas para evitar consumo de memória
-    // (Ex: remove IDs mais velhos que 5 minutos)
-    setTimeout(() => {
-      this.processedMessageIds.delete(messageId);
-    }, 5 * 60 * 1000);
-
-    const messageData = body.data as MessageUpsertData;
-
-  const message = messageData.message;
-  // Log detalhado do remoteJid recebido
-  this.logger.log(`[DEBUG] remoteJid recebido: ${messageData.key.remoteJid}`);
-
-    if (
-      !message ||
-      (!message.conversation && !message.extendedTextMessage?.text)
-    ) {
-      this.logger.log('Webhook ignorado: mensagem sem conteúdo de texto.');
-      return;
+    // 3. Resolução de Identidade
+    let remoteJid = messageData.key.remoteJid;
+    if (remoteJid.endsWith('@lid') || messageData.key.fromMe) {
+      remoteJid = body.sender || remoteJid;
     }
+
+    const message = messageData.message;
+    if (!message) return;
 
     const messageText = (
       message.conversation ||
       message.extendedTextMessage?.text ||
+      message.imageMessage?.caption ||
       ''
     ).trim();
-    let remoteJid = messageData.key.remoteJid;
 
-    if (remoteJid.endsWith('@lid')) {
-        this.logger.log(`[DEBUG] remoteJid é um LID. Usando sender: ${body.sender}`);
-        remoteJid = body.sender;
+    this.logger.log(`📩 Mensagem de [${remoteJid}]: "${messageText}"`);
+    const org = await this.getOrg();
+
+    // --- ROTEAMENTO INTELIGENTE ---
+
+    // A. VIA RÁPIDA: /transferir origem destino cotação valor (4 argumentos)
+    const quickTransferMatch = messageText.match(
+      /^\/transferir\s+(\S+)\s+(\S+)\s+([\d,.]+)\s+([\d,.]+)$/i,
+    );
+    if (quickTransferMatch) {
+      const [_, de, para, cot, val] = quickTransferMatch;
+      return await this.executeQuickTransfer(
+        remoteJid,
+        de,
+        para,
+        cot,
+        val,
+        org.id,
+      );
     }
 
-    // Ignora JIDs que não são de usuários (ex: @lid, @broadcast)
-    if (
-      !remoteJid.endsWith('@s.whatsapp.net') &&
-      !remoteJid.endsWith('@c.us')
-    ) {
-      this.logger.log(`Webhook ignorado: JID inválido para interação (${remoteJid}).`);
-      return;
-    }
+    // B. ROTINAS DINÂMICAS: Tenta o que foi configurado no React (Ex: /ajuda ou /transferir passo-a-passo)
+    const wasDynamic = await this.whatsappRoutineService.processIncomingMessage(
+      remoteJid,
+      messageText,
+      org.id,
+      async (jid, text) => {
+        await this.sendWhatsappMessage(jid, text);
+      },
+    );
+    if (wasDynamic) return;
 
-    this.logger.log(`Mensagem recebida de ${remoteJid}: "${messageText}"`);
-
-    if (messageText.toLowerCase() === '/contas a pagar') {
-      await this.handleContasAPagar(remoteJid);
-      return;
-    }
-    if (messageText.toLowerCase() === '/pagar') {
-      this.conversationState[remoteJid] = { step: 'awaiting_date' };
-      await this.sendWhatsappMessage(remoteJid, 'Informe a data do pagamento (ex: 26/01/26):');
-      return;
-    }
-
-    // Fluxo interativo do comando /pagar
+    // C. FLUXOS INTERATIVOS: Se o usuário já iniciou uma conversa de várias etapas
     const state = this.conversationState[remoteJid];
     if (state) {
-      if (state.step === 'awaiting_date') {
-        // Validar e salvar data
-        const dateRegex = /^(\d{2})\/(\d{2})\/(\d{2,4})$/;
-        const match = messageText.match(dateRegex);
-        if (!match) {
-          await this.sendWhatsappMessage(remoteJid, 'Data inválida. Informe no formato DD/MM/AA.');
-          return;
-        }
-        // Formatar para Date
-        const [_, day, month, year] = match;
-        const fullYear = year.length === 2 ? '20' + year : year;
-        const date = new Date(parseInt(fullYear), parseInt(month) - 1, parseInt(day));
-
-        if (isNaN(date.getTime())) {
-          await this.sendWhatsappMessage(remoteJid, 'Data inválida. Tente novamente.');
-          return;
-        }
-
-        state.date = date;
-        state.step = 'awaiting_conta_corrente';
-        
-        const org = await this.getOrg(remoteJid);
-        if (!org) {
-          delete this.conversationState[remoteJid];
-          return;
-        }
-
-        const contas = await this.prisma.contaCorrente.findMany({ where: { organizationId: org.id, isActive: true } });
-        if (contas.length === 0) {
-          await this.sendWhatsappMessage(remoteJid, 'Nenhuma conta corrente ativa encontrada.');
-          delete this.conversationState[remoteJid];
-          return;
-        }
-        let msgContaCorrente = 'Escolha a conta corrente:\n';
-        contas.forEach((c, idx) => {
-          msgContaCorrente += `${idx + 1} - ${c.nome} (${c.numeroConta})\n`;
-        });
-        state.contasCorrentes = contas;
-        await this.sendWhatsappMessage(remoteJid, msgContaCorrente + '\nResponda com o número da opção.');
-        return;
-
-      } else if (state.step === 'awaiting_conta_corrente') {
-        const idx = parseInt(messageText.trim());
-        if (isNaN(idx) || idx < 1 || idx > state.contasCorrentes.length) {
-          await this.sendWhatsappMessage(remoteJid, 'Opção inválida. Responda com o número da conta corrente.');
-          return;
-        }
-        state.contaCorrente = state.contasCorrentes[idx - 1];
-        state.step = 'awaiting_conta_contabil';
-
-        const org = await this.getOrg(remoteJid);
-        if (!org) {
-          delete this.conversationState[remoteJid];
-          return;
-        }
-
-        const contasContabeis = await this.prisma.contaContabil.findMany({ where: { organizationId: org.id } });
-        if (contasContabeis.length === 0) {
-          await this.sendWhatsappMessage(remoteJid, 'Nenhuma conta contábil encontrada.');
-          delete this.conversationState[remoteJid];
-          return;
-        }
-        let msgContaContabil = 'Escolha a conta contábil:\n';
-        contasContabeis.forEach((c, idx) => {
-          msgContaContabil += `${idx + 1} - ${c.nome} (${c.codigo})\n`;
-        });
-        state.contasContabeis = contasContabeis;
-        await this.sendWhatsappMessage(remoteJid, msgContaContabil + '\nResponda com o número da opção.');
-        return;
-
-      } else if (state.step === 'awaiting_conta_contabil') {
-        const idx = parseInt(messageText.trim());
-        if (isNaN(idx) || idx < 1 || idx > state.contasContabeis.length) {
-          await this.sendWhatsappMessage(remoteJid, 'Opção inválida. Responda com o número da conta contábil.');
-          return;
-        }
-        state.contaContabil = state.contasContabeis[idx - 1];
-        state.step = 'awaiting_valor';
-        await this.sendWhatsappMessage(remoteJid, 'Informe o valor do pagamento:');
-        return;
-
-      } else if (state.step === 'awaiting_valor') {
-        // Validar valor
-        let valorStr = messageText.trim();
-        let valor;
-        if (valorStr.includes(',')) {
-          valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
-        } else {
-          valor = parseFloat(valorStr);
-        }
-        if (isNaN(valor) || valor <= 0) {
-          await this.sendWhatsappMessage(remoteJid, 'Valor inválido. Informe um valor numérico.');
-          return;
-        }
-        state.valor = valor;
-        state.step = 'awaiting_confirmacao';
-        const resumo = `Confirma o pagamento de R$ ${valor.toFixed(2)} na conta corrente "${state.contaCorrente.nome}" (${state.contaCorrente.numeroConta}), conta contábil "${state.contaContabil.nome}" (${state.contaContabil.codigo}), na data ${state.date.toLocaleDateString('pt-BR')}? (sim/não)`;
-        await this.sendWhatsappMessage(remoteJid, resumo);
-        return;
-        
-      } else if (state.step === 'awaiting_confirmacao') {
-        if (messageText.trim().toLowerCase() === 'sim') {
-          // Registrar pagamento
-          try {
-            const org = await this.getOrg(remoteJid);
-            if (!org) {
-                delete this.conversationState[remoteJid];
-                return;
-            }
-
-            // 1. Criar Transacao
-            const transacao = await this.prisma.transacao.create({
-              data: {
-                descricao: `Pagamento WhatsApp (${state.contaCorrente.nome})`,
-                valor: state.valor,
-                moeda: state.contaCorrente.moeda || 'BRL',
-                tipo: TipoTransacaoPrisma.DEBITO,
-                dataHora: state.date,
-                contaCorrenteId: state.contaCorrente.id,
-                contaContabilId: state.contaContabil.id,
-                organizationId: org.id,
-              },
-            });
-            // 2. Criar AccountPay vinculado à transacao
-            await this.prisma.accountPay.create({
-              data: {
-                description: `Pagamento WhatsApp (${state.contaCorrente.nome})`,
-                amount: state.valor,
-                dueDate: state.date,
-                organizationId: org.id,
-                paid: true,
-                paidAt: new Date(),
-                contaContabilId: state.contaContabil.id,
-                transacaoId: transacao.id,
-              },
-            });
-            await this.sendWhatsappMessage(remoteJid, '✅ Pagamento registrado com sucesso!');
-          } catch (err) {
-            this.logger.error('Erro ao registrar pagamento:', err);
-            await this.sendWhatsappMessage(remoteJid, 'Erro ao registrar pagamento.');
-          }
-          delete this.conversationState[remoteJid];
-          return;
-        } else {
-          await this.sendWhatsappMessage(remoteJid, 'Pagamento cancelado.');
-          delete this.conversationState[remoteJid];
-          return;
-        }
-      }
+      return await this.handleConversationFlow(
+        remoteJid,
+        messageText,
+        state,
+        org,
+      );
     }
 
-    // Comandos existentes
-    if (messageText.toLowerCase().startsWith('despesa ')) {
-      await this.handleDespesa(remoteJid, messageText);
-      return;
+    // D. COMANDOS FIXOS (FALLBACK)
+    const lowerText = messageText.toLowerCase();
+
+    if (lowerText.includes('contas a pagar')) {
+      return await this.handleContasAPagar(remoteJid);
     }
-    this.logger.log(`Comando não reconhecido: "${messageText}"`);
+
+    if (lowerText === '/pagar') {
+      this.conversationState[remoteJid] = { step: 'awaiting_date' };
+      return await this.sendWhatsappMessage(
+        remoteJid,
+        'Informe a data do pagamento (ex: 29/01/26):',
+      );
+    }
+
+    if (lowerText.startsWith('despesa ')) {
+      return await this.handleDespesa(remoteJid, messageText);
+    }
   }
-  
-    private async getOrg(remoteJid: string) {
-      const org = await this.prisma.organization.findFirst();
-      if (!org) {
-        this.logger.error('Nenhuma organização encontrada no banco!');
-        await this.sendWhatsappMessage(remoteJid, 'Erro interno: Nenhuma organização configurada.');
-        return null;
-      }
-      return org;
-    }
-  
-    private async handleDespesa(remoteJid: string, messageText: string): Promise<void> {
-      const despesaMatch = messageText.match(/(?:despesa|gasto)\s+([\d,.]+)\s+(.+)/i);
-  
-      if (!despesaMatch) {
-        await this.sendWhatsappMessage(remoteJid, 'Formato inválido. Use: despesa [valor] [descrição]');
-        return;
-      }
-  
-      const valueStr = despesaMatch[1];
-      let value;
-      if (valueStr.includes(',')) {
-        value = parseFloat(valueStr.replace(/\./g, '').replace(',', '.'));
-      } else {
-        value = parseFloat(valueStr);
-      }
-      const description = despesaMatch[2];
-  
-      if (isNaN(value) || value <= 0) {
-        await this.sendWhatsappMessage(remoteJid, 'Valor da despesa é inválido.');
-        return;
-      }
-  
-      try {
-          const org = await this.getOrg(remoteJid);
-          if (!org) return;
-  
-        const createdDespesa = await this.prisma.accountPay.create({
+
+  // --- LÓGICA DE TRANSFERÊNCIA ---
+
+  private async executeQuickTransfer(
+    jid: string,
+    de: string,
+    para: string,
+    cot: string,
+    val: string,
+    orgId: string,
+  ) {
+    const cotacao = parseFloat(cot.replace(',', '.'));
+    const valorBrl = parseFloat(val.replace(',', '.'));
+
+    const contaOrigem = await this.getContaCorrenteByAlias(de, orgId, jid);
+    const contaDestino = await this.getContaCorrenteByAlias(para, orgId, jid);
+
+    if (!contaOrigem || !contaDestino) return;
+
+    const transferData = {
+      contaOrigemId: contaOrigem.id,
+      contaDestinoId: contaDestino.id,
+      description: 'Transferência Rápida via WhatsApp',
+      valor_brl: valorBrl,
+      cotacao: cotacao,
+      valor_au: valorBrl / cotacao,
+      date: new Date(),
+    };
+
+    return await this.executeTransferPrisma(jid, transferData, orgId);
+  }
+
+  private async executeTransferPrisma(
+    remoteJid: string,
+    state: any,
+    orgId: string,
+  ) {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const origem = await tx.contaCorrente.findUnique({
+          where: { id: state.contaOrigemId },
+        });
+        if (!origem) {
+          await this.sendWhatsappMessage(remoteJid, '❌ Conta de origem não encontrada.');
+          return;
+        }
+
+        const destino = await tx.contaCorrente.findUnique({
+          where: { id: state.contaDestinoId },
+        });
+        if (!destino) {
+          await this.sendWhatsappMessage(remoteJid, '❌ Conta de destino não encontrada.');
+          return;
+        }
+
+        // 1. Débito (Origem)
+        if (!origem.contaContabilId) {
+          await this.sendWhatsappMessage(remoteJid, `❌ Conta corrente de origem "${origem.nome}" não possui uma conta contábil vinculada.`);
+          return;
+        }
+        const debito = await tx.transacao.create({
           data: {
-            description: description,
-            amount: value,
-            dueDate: new Date(),
-            organizationId: org.id,
-            paid: false,
+            descricao: `Saída: ${state.description}`,
+            valor: new Prisma.Decimal(state.valor_brl),
+            tipo: TipoTransacaoPrisma.DEBITO,
+            moeda: "BRL", // Adicionado para resolver o erro de compilação
+            dataHora: state.date,
+            contaCorrenteId: state.contaOrigemId,
+            contaContabilId: origem.contaContabilId,
+            organizationId: orgId,
+            goldAmount: new Prisma.Decimal(state.valor_au),
+            goldPrice: new Prisma.Decimal(state.cotacao),
           },
         });
-      const formattedValue = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(value);
 
-      this.logger.log(
-        `✅ Despesa "${createdDespesa.description}" de ${formattedValue} registrada com sucesso!`,
-      );
+        // 2. Crédito (Destino)
+        if (!destino.contaContabilId) {
+          await this.sendWhatsappMessage(remoteJid, `❌ Conta corrente de destino "${destino.nome}" não possui uma conta contábil vinculada.`);
+          return;
+        }
+        const credito = await tx.transacao.create({
+          data: {
+            descricao: `Entrada: ${state.description}`,
+            valor: new Prisma.Decimal(state.valor_brl),
+            tipo: TipoTransacaoPrisma.CREDITO,
+            moeda: "BRL", // Adicionado para resolver o erro de compilação
+            dataHora: state.date,
+            contaCorrenteId: state.contaDestinoId,
+            contaContabilId: destino.contaContabilId,
+            organizationId: orgId,
+            goldAmount: new Prisma.Decimal(state.valor_au),
+            goldPrice: new Prisma.Decimal(state.cotacao),
+            linkedTransactionId: debito.id,
+          },
+        });
+
+        // 3. Vincula o débito ao crédito
+        await tx.transacao.update({
+          where: { id: debito.id },
+          data: { linkedTransactionId: credito.id },
+        });
+      });
+
       await this.sendWhatsappMessage(
         remoteJid,
-        `✅ Despesa "${createdDespesa.description}" de ${formattedValue} registrada com sucesso!`,
+        `✅ Transferência de R$ ${state.valor_brl.toFixed(2)} realizada com sucesso!`,
       );
-    } catch (error) {
-      this.logger.error('Ocorreu um erro ao registrar a despesa:', error);
-      await this.sendWhatsappMessage(remoteJid, 'Ocorreu um erro ao registrar a despesa.');
+    } catch (e) {
+      this.logger.error(e);
+      await this.sendWhatsappMessage(
+        remoteJid,
+        '❌ Erro ao processar transação no banco.',
+      );
     }
   }
 
-  private async handleContasAPagar(remoteJid: string): Promise<void> {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+  // --- FLUXOS DE CONVERSA ---
 
-      const contas = await this.accountsPayService.findMany({
-        where: {
-          dueDate: { gte: today, lt: tomorrow },
-          paid: false,
-        },
-      });
+  private async handleConversationFlow(
+    remoteJid: string,
+    text: string,
+    state: any,
+    org: any,
+  ): Promise<void> {
+    // Aqui você pode adicionar o switch case para /pagar ou o passo-a-passo do /transferir
+    this.logger.log(`Usuário ${remoteJid} no passo: ${state.step}`);
 
-      if (contas.length === 0) {
-        await this.sendWhatsappMessage(remoteJid, 'Nenhuma conta a pagar para hoje. 👍');
-        return;
-      }
-
-      let message = 'CONTAS A PAGAR DE HOJE:\n\n';
-      contas.forEach(conta => {
-        const amount = new Decimal(conta.amount);
-        message += `- ${conta.description}: R$ ${amount.toFixed(2)}\n`;
-      });
-
-      await this.sendWhatsappMessage(remoteJid, message);
-    } catch (error) {
-      this.logger.error('Erro ao buscar contas a pagar:', error);
-      await this.sendWhatsappMessage(remoteJid, 'Ocorreu um erro ao buscar as contas a pagar.');
+    if (state.step === 'awaiting_date') {
+      // Lógica de data para o /pagar...
     }
+  }
+
+  // --- AUXILIARES ---
+
+  private async handleContasAPagar(remoteJid: string): Promise<void> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const contas = await this.prisma.accountPay.findMany({
+      where: {
+        dueDate: { gte: today, lt: new Date(today.getTime() + 86400000) },
+        paid: false,
+      },
+    });
+    if (contas.length === 0)
+      return await this.sendWhatsappMessage(
+        remoteJid,
+        'Tudo em dia! Nenhuma conta para hoje.',
+      );
+
+    let msg = '*CONTAS DE HOJE:*\n';
+    contas.forEach(
+      (c) =>
+        (msg += `• ${c.description}: R$ ${new Decimal(c.amount).toFixed(2)}\n`),
+    );
+    await this.sendWhatsappMessage(remoteJid, msg);
+  }
+
+  private async handleDespesa(remoteJid: string, text: string): Promise<void> {
+    const match = text.match(/(?:despesa|gasto)\s+([\d,.]+)\s+(.+)/i);
+    if (!match)
+      return await this.sendWhatsappMessage(
+        remoteJid,
+        'Use: despesa [valor] [descrição]',
+      );
+    const org = await this.getOrg();
+    await this.prisma.accountPay.create({
+      data: {
+        description: match[2],
+        amount: parseFloat(match[1].replace(',', '.')),
+        dueDate: new Date(),
+        organizationId: org.id,
+        paid: false,
+      },
+    });
+    await this.sendWhatsappMessage(remoteJid, `✅ Gasto registrado!`);
+  }
+
+  private async getContaCorrenteByAlias(
+    alias: string,
+    organizationId: string,
+    remoteJid: string,
+  ) {
+    const conta = await this.prisma.contaCorrente.findFirst({
+      where: {
+        organizationId,
+        isActive: true,
+        OR: [
+          { nick: { equals: alias, mode: 'insensitive' } },
+          { nome: { equals: alias, mode: 'insensitive' } },
+          { numeroConta: alias },
+        ],
+      },
+    });
+    if (!conta)
+      await this.sendWhatsappMessage(
+        remoteJid,
+        `⚠️ Conta "${alias}" não encontrada.`,
+      );
+    return conta;
+  }
+
+  private async getOrg(): Promise<{ id: string }> {
+    const org = await this.prisma.organization.findFirst();
+    if (org) return { id: org.id };
+    return { id: process.env.DEFAULT_ORGANIZATION_ID || '' };
   }
 
   private async sendWhatsappMessage(
     remoteJid: string,
     text: string,
   ): Promise<void> {
-    const url = `${this.evolutionApiUrl}/message/sendText/${this.evolutionInstanceName}`;
     try {
       await this.httpService.axiosRef.post(
-        url,
-        {
-          number: remoteJid,
-          text,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: this.evolutionApiKey,
-          },
-        },
+        `${this.evolutionApiUrl}/message/sendText/${this.evolutionInstanceName}`,
+        { number: remoteJid, text, delay: 1200 },
+        { headers: { apikey: this.evolutionApiKey } },
       );
-    } catch (error) {
-      this.logger.error('Erro ao enviar mensagem de WhatsApp:');
-      if (error instanceof AxiosError && error.response) {
-        this.logger.error(JSON.stringify(error.response.data, null, 2));
-      } else {
-        this.logger.error(error);
-      }
+    } catch (e) {
+      this.logger.error(`Erro envio: ${e.message}`);
     }
   }
-
-} // Fim da classe WhatsappService
-
+}

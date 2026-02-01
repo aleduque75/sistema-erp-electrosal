@@ -67,9 +67,12 @@ import { ReportsModule } from './reports/reports.module';
 import { MarketDataModule } from './market-data/market-data.module';
 import { AutomationsModule } from './automations/automations.module'; // Importar o módulo de automações
 import { WhatsappModule } from './whatsapp/whatsapp.module'; // Importar o módulo do WhatsApp
-import { TutorialsModule } from './tutorials/tutorials.module';
+// import { TutorialsModule } from './tutorials/tutorials.module';
 import { MenuModule } from './menu/menu.module';
 import { TasksModule } from './tasks/tasks.module';
+import { WhatsappRoutinesModule } from './whatsapp-routines/whatsapp-routines.module';
+import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module'; // Importar o novo módulo
+import { OrganizationModule } from './organization/organization.module';
 
 @Module({
   imports: [
@@ -139,9 +142,13 @@ import { TasksModule } from './tasks/tasks.module';
     MarketDataModule,
     AutomationsModule,
     WhatsappModule,
-    TutorialsModule,
+    // TutorialsModule,
+    // TutorialsModule, // Comentado temporariamente para resolver erros de compilação
     MenuModule,
     TasksModule,
+    WhatsappRoutinesModule,
+    KnowledgeBaseModule, // Adicionar o novo módulo
+    OrganizationModule,
   ],
   controllers: [AppController, RawMaterialsController],
   providers: [

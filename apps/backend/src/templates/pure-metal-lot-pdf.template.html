@@ -118,9 +118,18 @@
             <tr>
                 <th>Origem:</th>
                 <td>
-                    {{sourceType}}
-                    {{#if originDetails.orderNumber}} - Nº {{originDetails.orderNumber}}{{/if}}
-                    {{#if originDetails.name}} ({{originDetails.name}}){{/if}}
+                    {{#if (eq sourceType 'RECUPERACAO')}}
+                        Recuperação #{{recoveryOrder.orderNumber}}
+                    {{else}}
+                        {{#if originDetails.orderNumber}}
+                            {{sourceType}} - Nº {{originDetails.orderNumber}}
+                            {{#if originDetails.name}} ({{originDetails.name}}){{/if}}
+                        {{else if originDetails.name}}
+                            {{sourceType}} ({{originDetails.name}})
+                        {{else}}
+                            {{sourceType}}
+                        {{/if}}
+                    {{/if}}
                 </td>
             </tr>
             <tr>

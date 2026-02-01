@@ -31,4 +31,22 @@ export interface Message {
   extendedTextMessage?: {
     text: string;
   };
+  imageMessage?: {
+    url?: string;
+    mimetype?: string;
+    caption?: string;
+    fileSha256?: Uint8Array;
+    fileLength?: number;
+    height?: number;
+    width?: number;
+    mediaKey?: Uint8Array;
+    fileEncSha256?: Uint8Array;
+    directPath?: string;
+    jpegThumbnail?: Uint8Array;
+    scansSidecar?: Uint8Array;
+    firstScanSidecar?: Uint8Array;
+    messageContextInfo?: any; // You might want to define a more specific type for this
+    isEphemeral?: boolean;
+    isViewOnce?: boolean;
+  };
 }

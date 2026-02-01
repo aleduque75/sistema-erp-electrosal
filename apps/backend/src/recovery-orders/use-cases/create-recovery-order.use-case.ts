@@ -29,6 +29,7 @@ export interface CreateRecoveryOrderCommand {
   commissionPercentage?: number;
   commissionAmount?: number;
   rawMaterials?: { rawMaterialId: string; quantity: number }[];
+  allowResidueAnalyses?: boolean; // Adicionado para permitir análises de resíduo em certos casos
 }
 
 @Injectable()
@@ -94,13 +95,16 @@ export class CreateRecoveryOrderUseCase {
     }
 
     // New validation: Prevent using an analysis that is already a residue
-    const residueAnalyses = analyses.filter(
-      (analise) => analise.props.recoveryOrderAsResidue != null,
-    );
-    if (residueAnalyses.length > 0) {
-      throw new ConflictException(
-        'Não é possível criar uma ordem de recuperação a partir de uma análise que já é um resíduo.',
+    // This validation is skipped if allowResidueAnalyses is true in the command
+    if (!command.allowResidueAnalyses) {
+      const residueAnalyses = analyses.filter(
+        (analise) => analise.props.recoveryOrderAsResidue != null,
       );
+      if (residueAnalyses.length > 0) {
+        throw new ConflictException(
+          'Não é possível criar uma ordem de recuperação a partir de uma análise que já é um resíduo.',
+        );
+      }
     }
 
     // Validate that all analyses have the same metalType as the one provided

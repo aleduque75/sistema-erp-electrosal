@@ -34,6 +34,7 @@
       "@nestjs/mapped-types": ["./node_modules/@nestjs/mapped-types"],
       "bcryptjs": ["./node_modules/bcryptjs"],
       "@shared/*": ["../../packages/core/dist/_shared/*"],
+      "@prisma/client": ["./src/generated/client"], // Adicionado para resolver o Prisma Client
       "@/*": ["src/*"]
     },
     "incremental": true,
@@ -45,5 +46,5 @@
     "noFallthroughCasesInSwitch": false
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "prisma/**/*.ts", "src/types/**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "src/json-imports/preprocess-sales.ts"]
+  "exclude": ["node_modules", "dist", "src/json-imports/preprocess-sales.ts", "src/_tutorials"]
 }
