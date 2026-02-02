@@ -15,20 +15,23 @@ RUN pnpm --filter backend prisma generate
 RUN pnpm --filter backend build
 RUN npx tsc --project apps/backend/tsconfig.seed.json
 
-# Fase 2: Runner (Imagem leve para rodar)
+# Fase 2: Runner (Imagem final)
 FROM node:20-slim
 WORKDIR /app
 ENV NODE_ENV=production
 
 RUN npm install -g pnpm@9.0.6
 
-# Copia os manifestos para instalar apenas o necessário
+# Copia os manifestos para a instalação
 COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
 COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
 
-# Instala apenas dependências de produção para o backend e suas dependências internas
+# Instala dependências de produção
 RUN pnpm install --production --frozen-lockfile --filter backend...
+
+# --- FORÇA A INSTALAÇÃO DOS MÓDULOS FALTANTES ---
+RUN pnpm add @nestjs/core @nestjs/common @nestjs/platform-express reflect-metadata rxjs
 
 # Dependências para Puppeteer (PDFs)
 RUN apt-get update && apt-get install -y \
@@ -39,15 +42,13 @@ RUN apt-get update && apt-get install -y \
     libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 \
     libxtst6 lsb-release wget xdg-utils && rm -rf /var/lib/apt/lists/*
 
-# Copia os arquivos compilados (Dist)
+# Copia os arquivos compilados
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/packages/core/dist ./packages/core/dist
 COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
 
 EXPOSE 3001
-
-# Define o diretório de execução para o backend
 WORKDIR /app/apps/backend
 
 # Inicia gerando o Prisma e rodando o main.js
-CMD ["sh", "-c", "pnpm prisma generate && node dist/main"]
+CMD ["sh", "-c", "npx prisma generate && node dist/main"]
