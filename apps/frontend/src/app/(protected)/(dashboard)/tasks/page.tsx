@@ -46,6 +46,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner"; // Importar toast diretamente do sonner
 import api from "@/lib/api"; // Import the configured axios instance
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd"; // Importar dnd
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
 type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
@@ -55,6 +56,7 @@ interface Task {
   title: string;
   status: TaskStatus;
   priority: TaskPriority;
+  observation?: string; // Novo campo
   createdAt: string;
   updatedAt: string;
   createdById: string;
@@ -74,8 +76,54 @@ export default function TasksPage() {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newPriority, setNewPriority] = useState<TaskPriority>("MEDIUM");
+  const [newObservation, setNewObservation] = useState(""); // Novo estado para o modal de adição
   const [editStatus, setEditStatus] = useState<TaskStatus>("TODO");
   const [editPriority, setEditPriority] = useState<TaskPriority>("MEDIUM");
+  const [editObservation, setEditObservation] = useState(""); // Novo estado
+
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) {
+      return;
+    }
+
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    // Lógica para reordenar tarefas dentro da mesma coluna (ainda não implementado)
+    // Lógica para mover tarefas entre colunas e atualizar o status
+    console.log("Task moved:", draggableId, "from", source.droppableId, "to", destination.droppableId);
+
+    // Atualiza o estado local das tarefas imediatamente para feedback visual
+    setTasks((prevTasks) => {
+      const updatedTasks = Array.from(prevTasks);
+      const taskToMove = updatedTasks.find(task => task.id === draggableId);
+
+      if (!taskToMove) {
+        return prevTasks;
+      }
+
+      const oldStatus = source.droppableId as TaskStatus;
+      const newStatus = destination.droppableId as TaskStatus;
+
+      if (oldStatus === newStatus) {
+        // Reordenação dentro da mesma coluna (ainda não implementado)
+        // ...
+      } else {
+        // Mover entre colunas
+        taskToMove.status = newStatus;
+      }
+      return updatedTasks;
+    });
+
+    // Chama a API para atualizar o status no backend
+    updateTaskStatusInBackend(draggableId, destination.droppableId as TaskStatus);
+  };
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -99,13 +147,19 @@ export default function TasksPage() {
 
   const handleAddTask = async () => {
     try {
-      await api.post("/tasks", { title: newTitle, priority: newPriority });
+      await api.post("/tasks", {
+        title: newTitle,
+        priority: newPriority,
+        observation: newObservation, // Adicionado
+      });
       toast.success("Tarefa adicionada com sucesso.", {
         title: "Sucesso",
       });
       setIsAddModalOpen(false);
       setNewTitle("");
-          } catch (err: any) {
+      setNewObservation(""); // Resetar o campo
+      fetchTasks(); // Adicionado
+    } catch (err: any) {
             toast.error(err.message?.toString() || 'Ocorreu um erro desconhecido.', {
               title: "Erro",
             });
@@ -117,11 +171,13 @@ export default function TasksPage() {
       await api.patch(`/tasks/${currentTask.id}`, {
         status: editStatus,
         priority: editPriority,
+        observation: editObservation, // Adicionado
       });
       toast.success("Tarefa atualizada com sucesso.", {
         title: "Sucesso",
       });
       setIsEditModalOpen(false);
+      fetchTasks(); // Adicionado
     } catch (err: any) {
       toast.error(err.message?.toString() || 'Ocorreu um erro desconhecido.', {
         title: "Erro",
@@ -141,6 +197,21 @@ export default function TasksPage() {
       toast.error(err.message?.toString() || 'Ocorreu um erro desconhecido.', {
         title: "Erro",
       });
+    }
+  };
+
+  const updateTaskStatusInBackend = async (taskId: string, newStatus: TaskStatus) => {
+    try {
+      await api.patch(`/tasks/${taskId}`, { status: newStatus });
+      toast.success("Status da tarefa atualizado com sucesso.", {
+        title: "Sucesso",
+      });
+      fetchTasks(); // Adicionado para reordenar a UI caso o status mude
+    } catch (err: any) {
+      toast.error(err.message?.toString() || 'Ocorreu um erro desconhecido.', {
+        title: "Erro",
+      });
+      fetchTasks();
     }
   };
 
@@ -209,68 +280,88 @@ export default function TasksPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Prioridade</TableHead>
-                    <TableHead>Criado Por</TableHead>
-                    <TableHead>
-                      <span className="sr-only">Ações</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tasks.map((task) => (
-                    <TableRow key={task.id}>
-                      <TableCell className="font-medium">{task.id.substring(0, 8)}</TableCell>
-                      <TableCell>{task.title}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getStatusBadgeClass(task.status)}>
-                          {task.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={getPriorityBadgeClass(task.priority)}>
-                          {task.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{task.createdBy?.name || task.createdBy?.email || 'Desconhecido'}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              aria-haspopup="true"
-                              size="icon"
-                              variant="ghost"
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {["TODO", "IN_PROGRESS", "DONE"].map((statusKey) => {
+                    const status = statusKey as TaskStatus;
+                    return (
+                      <div key={status} className="flex flex-col gap-2">
+                        <h2 className="text-lg font-semibold">{status.replace('_', ' ')}</h2>
+                        <Droppable droppableId={status}>
+                          {(provided) => (
+                            <div
+                              {...provided.droppableProps}
+                              ref={provided.innerRef}
+                              className="bg-card p-2 rounded-md min-h-[200px]"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Toggle menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setCurrentTask(task);
-                                setEditStatus(task.status);
-                                setEditPriority(task.priority);
-                                setIsEditModalOpen(true);
-                              }}
-                            >
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteTask(task.id)}>
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                              {tasks
+                                .filter((task) => task.status === status)
+                                .map((task, index) => (
+                                  <Draggable key={task.id} draggableId={task.id} index={index}>
+                                    {(provided) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        className="mb-2"
+                                      >
+                                        <Card className="shadow-md">
+                                          <CardHeader className="p-3 pb-1">
+                                            <CardTitle className="text-sm">
+                                              {task.title}
+                                            </CardTitle>
+                                            <CardDescription className="text-xs">
+                                              #{task.id.substring(0, 8)} - {task.createdBy?.name || 'Desconhecido'}
+                                            </CardDescription>
+                                          </CardHeader>
+                                          <CardContent className="p-3 pt-0 flex justify-between items-center text-xs">
+                                            <Badge variant="secondary" className={getPriorityBadgeClass(task.priority)}>
+                                              {task.priority}
+                                            </Badge>
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button
+                                                  aria-haspopup="true"
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-6 w-6"
+                                                >
+                                                  <MoreHorizontal className="h-3 w-3" />
+                                                  <span className="sr-only">Toggle menu</span>
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end" className="bg-card text-foreground">
+                                                <DropdownMenuItem
+                                                  onClick={() => {
+                                                    setCurrentTask(task);
+                                                    setEditStatus(task.status);
+                                                    setEditPriority(task.priority);
+                                                    setEditObservation(task.observation || ""); // Adicionado
+                                                    setIsEditModalOpen(true);
+                                                  }}
+                                                >
+                                                  Editar
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDeleteTask(task.id)}>
+                                                  Excluir
+                                                </DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          </CardContent>
+                                        </Card>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </div>
+                    );
+                  })}
+                </div>
+              </DragDropContext>
             </CardContent>
           </Card>
         </main>
@@ -278,7 +369,7 @@ export default function TasksPage() {
 
       {/* Add Task Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent>
+        <DialogContent className="bg-card text-foreground">
           <DialogHeader>
             <DialogTitle>Adicionar Nova Tarefa</DialogTitle>
             <DialogDescription>
@@ -308,13 +399,25 @@ export default function TasksPage() {
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Selecione a Prioridade" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-card text-foreground">
                   <SelectItem value="LOW">Baixa</SelectItem>
                   <SelectItem value="MEDIUM">Média</SelectItem>
                   <SelectItem value="HIGH">Alta</SelectItem>
                   <SelectItem value="URGENT">Urgente</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            {/* Adicionando o campo de observações */}
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="observation" className="text-right">
+                Observações
+              </Label>
+              <textarea
+                id="observation"
+                value={newObservation}
+                onChange={(e) => setNewObservation(e.target.value)}
+                className="col-span-3 border p-2 rounded-md min-h-[80px] bg-card text-foreground"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -328,7 +431,7 @@ export default function TasksPage() {
 
       {/* Edit Task Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent>
+        <DialogContent className="bg-card text-foreground">
           <DialogHeader>
             <DialogTitle>Editar Tarefa</DialogTitle>
             <DialogDescription>
@@ -358,13 +461,14 @@ export default function TasksPage() {
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Selecione o Status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-card text-foreground">
                   <SelectItem value="TODO">A Fazer</SelectItem>
                   <SelectItem value="IN_PROGRESS">Em Progresso</SelectItem>
                   <SelectItem value="DONE">Concluído</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {/* Adicionando o campo de prioridade novamente */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-priority" className="text-right">
                 Prioridade
@@ -376,13 +480,26 @@ export default function TasksPage() {
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Selecione a Prioridade" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-card text-foreground">
                   <SelectItem value="LOW">Baixa</SelectItem>
                   <SelectItem value="MEDIUM">Média</SelectItem>
                   <SelectItem value="HIGH">Alta</SelectItem>
                   <SelectItem value="URGENT">Urgente</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Adicionando o campo de observações */}
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="edit-observation" className="text-right">
+                Observações
+              </Label>
+              <textarea
+                id="edit-observation"
+                value={editObservation}
+                onChange={(e) => setEditObservation(e.target.value)}
+                className="col-span-3 border p-2 rounded-md min-h-[80px] bg-card text-foreground"
+              />
             </div>
           </div>
           <DialogFooter>

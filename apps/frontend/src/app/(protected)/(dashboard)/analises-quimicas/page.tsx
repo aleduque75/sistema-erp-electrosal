@@ -117,7 +117,7 @@ export default function AnalisesQuimicasPage() {
         <h1 className="text-2xl font-bold">Análises Químicas</h1>
       </div>
 
-      <Card>
+      <Card className="card-custom shadow-sm">
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
@@ -170,7 +170,7 @@ export default function AnalisesQuimicasPage() {
 
       <div className="space-y-6">
         <StatusLegend className="mb-6" />
-        <Card>
+        <Card className="card-custom shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Lista de Análises</CardTitle>

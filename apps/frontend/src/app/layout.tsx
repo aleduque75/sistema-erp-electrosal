@@ -1,20 +1,10 @@
 import "@/lib/reflect-metadata";
 import "./globals.css";
-import "@fontsource/outfit"; // Import Outfit font
+import "@fontsource/outfit";
 import { AuthProvider } from "../contexts/AuthContext";
-import { ThemeProvider } from "../contexts/ThemeContext"; // Corrigido para usar o nosso ThemeProvider
+import { ThemeProvider } from "@/components/providers/custom-theme-provider";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/components/providers/query-provider";
-
-export const metadata = {
-  title: 'Sistema Electrosal',
-  description: 'Sistema de gestão para Galvanicas',
-};
-
-export const viewport = {
-  width: 'device-width',
-  initialScale: 1,
-};
 
 export default function RootLayout({
   children,
@@ -23,14 +13,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body>
-        <ThemeProvider>
+      <body className="font-outfit antialiased bg-background text-foreground">
+        <AuthProvider>
           <QueryProvider>
-            <AuthProvider>
-              <main className="flex-1 p-4">{children}</main>
-            </AuthProvider>
+            <ThemeProvider>
+              <main className="min-h-screen flex flex-col">{children}</main>
+            </ThemeProvider>
           </QueryProvider>
-        </ThemeProvider>
+        </AuthProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>

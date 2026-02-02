@@ -56,7 +56,7 @@ const metalCreditPaymentSchema = z.object({
 });
 
 const metalPaymentSchema = z.object({
-  metalType: z.enum(['AU', 'AG', 'RH'], { errorMap: () => ({ message: "O tipo de metal é obrigatório." }) }),
+  metalType: z.enum(['AU', 'AG', 'RH'], { message: "O tipo de metal é obrigatório." }),
   amountInGrams: z.coerce.number().min(0.000001, "A quantidade em gramas é obrigatória."),
   purity: z.coerce.number().min(0.01, "A pureza é obrigatória."),
   receivedAt: z.string().optional(),

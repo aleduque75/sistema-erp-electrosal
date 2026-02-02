@@ -64,7 +64,7 @@ export function RecoveryReport() {
   };
 
   return (
-    <Card>
+    <Card className="card-custom shadow-sm">
       <CardHeader>
         <CardTitle>Relatório de Recuperação</CardTitle>
       </CardHeader>
@@ -78,7 +78,7 @@ export function RecoveryReport() {
 
         {reportData && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card>
+            <Card className="card-custom shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Total Recuperado (g)</CardTitle>
               </CardHeader>
@@ -86,7 +86,7 @@ export function RecoveryReport() {
                 <div className="text-2xl font-bold">{reportData.totalRecuperado.toFixed(2)}</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="card-custom shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Total Pago a Clientes (g)</CardTitle>
               </CardHeader>
@@ -94,7 +94,7 @@ export function RecoveryReport() {
                 <div className="text-2xl font-bold">{reportData.totalPagoCliente.toFixed(2)}</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="card-custom shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Gasto com Materiais (g)</CardTitle>
               </CardHeader>
@@ -102,7 +102,7 @@ export function RecoveryReport() {
                 <div className="text-2xl font-bold">{reportData.totalGastoMaterial.toFixed(2)}</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="card-custom shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Comissões (R$)</CardTitle>
               </CardHeader>
@@ -110,7 +110,7 @@ export function RecoveryReport() {
                 <div className="text-2xl font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(reportData.totalComissao)}</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="card-custom shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">A Recuperar (Resíduo) (g)</CardTitle>
               </CardHeader>
@@ -118,7 +118,7 @@ export function RecoveryReport() {
                 <div className="text-2xl font-bold">{reportData.totalARecuperar.toFixed(2)}</div>
               </CardContent>
             </Card>
-            <Card className="col-span-2 md:col-span-1 bg-green-200 border border-green-400 text-green-800 dark:text-green-900">
+            <Card className="card-custom shadow-sm col-span-2 md:col-span-1 bg-success border-success text-success-foreground">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Lucro (g)</CardTitle>
               </CardHeader>

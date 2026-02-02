@@ -4,148 +4,164 @@
 
 @layer base {
   :root {
-    /* Color variables from template */
-    --color-brand-25: #f2f7ff;
-    --color-brand-50: #ecf3ff;
-    --color-brand-100: #dde9ff;
-    --color-brand-200: #c2d6ff;
-    --color-brand-300: #9cb9ff;
-    --color-brand-400: #7592ff;
-    --color-brand-500: #465fff;
-    --color-brand-600: #3641f5;
-    --color-brand-700: #2a31d8;
-    --color-brand-800: #252dae;
-    --color-brand-900: #262e89;
-    --color-brand-950: #161950;
-    --color-gray-25: #fcfcfd;
-    --color-gray-50: #f9fafb;
-    --color-gray-100: #f2f4f7;
-    --color-gray-200: #e4e7ec;
-    --color-gray-300: #d0d5dd;
-    --color-gray-400: #98a2b3;
-    --color-gray-500: #667085;
-    --color-gray-600: #475467;
-    --color-gray-700: #344054;
-    --color-gray-800: #1d2939;
-    --color-gray-900: #101828;
-    --color-gray-950: #0c111d;
-    --color-gray-dark: #1a2231;
-    --color-white: #ffffff;
+    /* TEXTOS */
+    --foreground: 222 47% 11%;
+    --muted-foreground: 215 16% 47%;
+
+    /* ESTRUTURA */
+    --background: 0 0% 100%;
+    --card: 0 0% 100%;
+    --card-border: 214 32% 91%;
+    --card-border-opacity: 1;
+    --card-radius: 12px;
+    --border: 214 32% 91%;
+
+    /* INPUTS (Onde estava o erro) */
+    --input: 210 40% 98%;
+    --input-foreground: 222 47% 11%;
+    --ring: 221 83% 70%; /* Ring color for dark mode */
+
+    /* BOTÕES */
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 221 83% 45%;
+    --cancel: 215 16% 47%;
+    --cancel-hover: 215 16% 40%; /* Darker hover for cancel button */
+    --cancel-foreground: 0 0% 100%;
+    --button-radius: 8px;
+
+    /* MENU */
+    --menu-background: 0 0% 100%;
+    --menu-text: 215 25% 27%;
+    --menu-bg-hover: 210 40% 96%;
+    --menu-selected-background: 221 83% 95%;
+    --menu-selected-text: 221 83% 45%;
+    --menu-border: 214 32% 91%;
+    --menu-border-opacity: 1;
+    --menu-item-radius: 8px;
+
+    /* BADGES */
+    --badge-background: 221 83% 53%;
+    --badge-text: 0 0% 100%;
+    --border-opacity: 1; /* Adicionado */
+
+    /* TABELAS */
+    --tableHeaderBackground: 210 40% 96%; /* Cinza bem claro para cabeçalhos */
+    --tableHeaderForeground: 215 25% 27%; /* Texto escuro para contraste */
+    --tableRowHover: 210 40% 98%; /* Um pouco mais escuro no hover */
+    --tableBorder: 214 32% 91%; /* Mesma cor da borda do card */
+
+    /* POPOVER (Dropdowns, Tooltips, etc.) */
+    --popover: var(--card);
+    --popover-foreground: var(--foreground);
   }
-  .dark {
-    /* Dark mode color variables if they are different */
-    /* For now, assuming the color names are handled by tailwind.config.ts */
-  }
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground font-outfit;
-  }
-  /* Template base styles */
-  /* Removido seletor global de border-color para não sobrescrever o tema */
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
-    cursor: pointer;
-  }
-}
+
+      .dark {
+        /* TEXTOS DARK */
+        --foreground: 210 40% 98%;
+        --muted-foreground: 215 20% 65%;
+  
+        /* ESTRUTURA DARK */
+        --background: 222 47% 11%;
+        --card: 222 47% 12%;
+        --card-border: 217 33% 25%;
+  
+        --border: 217 33% 17%;
+        --border-opacity: 1; /* Adicionado para garantir solidez por padrão */
+  
+        /* INPUTS DARK (Correção do branco no branco) */
+        --input: 217 33% 18%;
+        --input-foreground: 210 40% 98%;
+  
+        /* BOTÕES DARK (Adicionado/Ajustado) */
+        --primary: 221 83% 60%; /* Lighter primary for dark mode contrast */
+        --primary-foreground: 0 0% 100%;
+        --primary-hover: 221 83% 70%; /* Lighter hover for dark mode */
+        --cancel: 215 16% 55%; /* Lighter cancel for dark mode contrast */
+        --cancel-hover: 215 16% 65%; /* Lighter hover for dark mode */
+        --cancel-foreground: 0 0% 100%;
+        --ring: 221 83% 70%; /* Ring color for dark mode */
+  
+        /* MENU DARK */
+        --menu-background: 222 47% 11%;
+        --menu-text: 210 40% 98%;
+        --menu-border: 217 33% 17%;
+        --menu-border-opacity: 0.5; /* Adicionado */
+  
+        /* BADGES DARK */
+        --badge-background: 221 83% 60%; /* Consistent with primary in dark mode */
+        --badge-text: 0 0% 100%;
+
+        /* TABELAS DARK */
+        --tableHeaderBackground: 222 47% 15%; /* Um pouco mais claro que o card */
+        --tableHeaderForeground: 210 40% 98%; /* Texto claro */
+        --tableRowHover: 222 47% 18%; /* Um pouco mais claro no hover */
+        --tableBorder: 217 33% 25%; /* Mesma cor da borda do card */
+
+        /* POPOVER DARK */
+        --popover: var(--card);
+        --popover-foreground: var(--foreground);
+      }}
 
 @layer components {
-  .btn-primary {
-    @apply bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
-  }
-  .btn-secondary {
-    @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/90 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2;
-  }
-  .btn-danger {
-    @apply bg-destructive text-destructive-foreground px-4 py-2 rounded-md hover:bg-destructive/90 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2;
-  }
-  .card {
-    @apply bg-card text-card-foreground shadow-md rounded-lg p-6;
-  }
-  .table-auto {
-    @apply w-full text-left border-collapse;
-  }
-  .table-auto th,
-  .table-auto td {
-    @apply px-4 py-2 border-b border-border;
-  }
-  .table-auto th {
-    @apply bg-muted text-muted-foreground font-semibold;
+  /* Força todos os inputs do sistema a obedecerem as variáveis */
+  input,
+  textarea,
+  select {
+    background-color: hsl(var(--input)) !important;
+    color: hsl(var(--input-foreground)) !important;
   }
 
-  [data-radix-navigation-menu-viewport] {
-    left: 50% !important;
-    transform: translateX(-50%) !important;
+  /* Cards com borda controlada */
+  .card-custom {
+    background-color: hsl(var(--card));
+    border-radius: var(--card-radius);
   }
 
-  /* Template menu utility classes */
-  .menu-item {
-  @apply relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-sm border border-border;
+  .button-radius-custom {
+    border-radius: var(--button-radius);
   }
 
-  .menu-item-active {
-  @apply bg-brand-50 text-brand-500 dark:bg-card dark:text-brand-400;
+  .badge-custom {
+    background-color: hsl(var(--badge-background)) !important;
+    color: hsl(var(--badge-text)) !important;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 800;
+    border-radius: 99px;
   }
 
-  .menu-item-inactive {
-    @apply text-gray-700 hover:bg-gray-100 group-hover:text-gray-700 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-gray-300;
+  /* Estilos para Tabelas */
+  .table {
+    @apply w-full caption-bottom text-sm;
+    border: 1px solid hsl(var(--tableBorder));
+    border-radius: var(--card-radius); /* Usar o mesmo radius do card */
   }
-
-  .menu-item-icon {
-    @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400;
+  .table-header {
+    @apply [&_tr]:border-b;
   }
-
-  .menu-item-icon-active {
-    @apply text-brand-500 dark:text-brand-400;
+  .table-body {
+    @apply [&_tr:last-child]:border-0;
   }
-
-  .menu-item-icon-inactive {
-    @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
+  .table-footer {
+    @apply bg-primary text-primary-foreground font-medium;
   }
-
-  .menu-item-arrow {
-    @apply relative;
+  .table-row {
+    border-bottom: 1px solid hsl(var(--tableBorder));
   }
-
-  .menu-item-arrow-active {
-    @apply rotate-180 text-brand-500 dark:text-brand-400;
+  /* Remove a borda padrão e aplica a cor da variável */
+  .table-row:not([data-state=selected]):hover {
+    background-color: hsl(var(--tableRowHover));
   }
-
-  .menu-item-arrow-inactive {
-    @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
+  .table-head {
+    @apply h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px];
+    background-color: hsl(var(--tableHeaderBackground));
+    color: hsl(var(--tableHeaderForeground));
   }
-
-  .menu-dropdown-item {
-    @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium;
+  .table-cell {
+    @apply p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px];
   }
-
-  .menu-dropdown-item-active {
-    @apply bg-brand-50 text-brand-500 dark:text-brand-400; /* Removed dark:bg-brand-500/[0.12] */
-  }
-
-  .menu-dropdown-item-inactive {
-    @apply text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5;
-  }
-
-  .menu-dropdown-badge {
-    @apply block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase text-brand-500 dark:text-brand-400;
-  }
-
-  .menu-dropdown-badge-active {
-    @apply bg-brand-100; /* Removed dark:bg-brand-500/20 */
-  }
-
-  .menu-dropdown-badge-inactive {
-    @apply bg-brand-50 group-hover:bg-brand-100; /* Removed dark:bg-brand-500/15 dark:group-hover:bg-brand-500/20 */
-  }
-
-  .no-scrollbar {
-    /* Chrome, Safari and Opera */
-    &::-webkit-scrollbar {
-      display: none;
-    }
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+  .table-caption {
+    @apply mt-4 text-sm text-muted-foreground;
   }
 }

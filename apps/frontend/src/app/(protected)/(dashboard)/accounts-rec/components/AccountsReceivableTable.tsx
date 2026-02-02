@@ -36,10 +36,22 @@ export function AccountsReceivableTable({ accountsRec }: AccountsReceivableTable
     let sortableItems = [...accountsRec];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
+        const valA = a[sortConfig.key];
+        const valB = b[sortConfig.key];
+
+        // Handle null/undefined values by placing them at the end (or beginning, depending on direction)
+        if (valA === null || valA === undefined) return sortConfig.direction === 'ascending' ? 1 : -1;
+        if (valB === null || valB === undefined) return sortConfig.direction === 'ascending' ? -1 : 1;
+
+        // Type-aware comparison
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return sortConfig.direction === 'ascending' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        // For numbers, booleans, or mixed types where direct comparison is generally fine
+        if (valA < valB) {
           return sortConfig.direction === 'ascending' ? -1 : 1;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
+        if (valA > valB) {
           return sortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;

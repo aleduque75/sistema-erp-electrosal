@@ -1,48 +1,51 @@
 services:
-  # --- Banco de Dados do ERP (Electrosal) ---
-  db:
-    image: postgres:16
-    container_name: sistema-electrosal-db
-    restart: always
+  # --- Backend NestJS ---
+  erp-backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: erp_backend
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER:-aleduque}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-electrosal123}
-      POSTGRES_DB: ${DB_NAME:-sistema_electrosal_dev}
-    volumes:
-      - db_data:/var/lib/postgresql/data # PROTEGIDO (EXTERNO)
-    ports:
-      - "5435:5432"
+      # Usando o nome do container do banco 'postgres_db' na rede interna
+      DATABASE_URL: "postgresql://admin:Kapm306066858@@postgres_db:5432/erp_electrosal?schema=public"
+      NODE_ENV: production
+      PORT: 3001
     networks:
-      - electrosal_net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - apps_network
+
+  # --- Frontend Next.js ---
+  erp-frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    container_name: erp_frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.electrosal.com.br
+      - NODE_ENV=production
+    networks:
+      - apps_network
 
   # --- Automação n8n ---
   n8n:
     image: n8nio/n8n
     container_name: n8n
     restart: always
-    ports:
-      - "5678:5678"
-    volumes:
-      - ./n8n-data:/home/node/.n8n
     environment:
       - GENERIC_TIMEZONE=America/Sao_Paulo
       - N8N_EXTERNAL_URL=https://n8n.electrosal.com.br
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres_db
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=erp_electrosal
+      - DB_POSTGRESDB_USER=admin
+      - DB_POSTGRESDB_PASSWORD=Kapm306066858@@
+    volumes:
+      - ./n8n-data:/home/node/.n8n
     networks:
-      - electrosal_net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - apps_network
 
 networks:
-  electrosal_net:
-    driver: bridge
-
-volumes:
-  # BLOQUEADO: Docker não apaga esse volume com 'down -v'
-  db_data:
+  apps_network:
     external: true
-  evolution_postgres_data: {}

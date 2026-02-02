@@ -1,0 +1,170 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { themes } from "@frontend/config/themes"
+import { useTheme } from "@frontend/contexts/ThemeContext"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@frontend/components/ui/card"
+import { Label } from "@frontend/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@frontend/components/ui/radio-group"
+import { hslToHex, hexToHsl } from "@frontend/lib/colors"
+import { Button } from "@frontend/components/ui/button"
+import { useToast } from "@frontend/components/ui/use-toast"
+import api from "@frontend/lib/api"
+
+export default function AppearanceSettingsPage() {
+  const { setTheme, theme } = useTheme()
+  const [customTheme, setCustomTheme] = useState<any>(null)
+  const { toast } = useToast()
+
+  const parseHsl = (hsl: string) => {
+    const [h, s, l] = hsl.replace(/%/g, "").split(" ").map(parseFloat)
+    return { h, s, l }
+  }
+
+  const handleSave = async () => {
+    try {
+      await api.put("/organization/appearance", { customTheme })
+      toast({
+        title: "Tema salvo com sucesso!",
+        description: "Suas alterações de aparência foram salvas.",
+      })
+    } catch (error) {
+      toast({
+        title: "Erro ao salvar o tema",
+        description: "Ocorreu um erro ao salvar suas alterações de aparência.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleColorChange = (colorName: string, newColor: string) => {
+    const [h, s, l] = hexToHsl(newColor)
+    const newHsl = `${h.toFixed(0)} ${s.toFixed(1)}% ${l.toFixed(1)}%`
+
+    setCustomTheme((prevTheme: any) => ({
+      ...prevTheme,
+      colors: {
+        ...prevTheme.colors,
+        [colorName]: newHsl,
+      },
+    }))
+  }
+
+  useEffect(() => {
+    const currentThemeObject = Object.values(themes).find(
+      (t) => t.name.toLowerCase().replace(" (padrão)", "").replace(" ", "-") === theme
+    )
+    if (currentThemeObject) {
+      setCustomTheme(currentThemeObject)
+    }
+  }, [theme])
+
+  useEffect(() => {
+    if (customTheme) {
+      for (const [key, value] of Object.entries(customTheme.colors)) {
+        document.documentElement.style.setProperty(`--${key}`, value as string)
+      }
+    }
+  }, [customTheme])
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">Aparência</h3>
+        <p className="text-sm text-muted-foreground">
+          Personalize a aparência do sistema. Altere o tema e as cores.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tema</CardTitle>
+          <CardDescription>
+            Selecione o tema para o painel de controle.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup
+            value={theme}
+            onValueChange={setTheme}
+            className="grid max-w-md grid-cols-2 gap-8 pt-2"
+          >
+            {Object.values(themes).map((theme) => (
+              <RadioGroupItem
+                key={theme.name}
+                value={theme.name.toLowerCase().replace(" (padrão)", "").replace(" ", "-")}
+                className="sr-only"
+                id={theme.name}
+              />
+              <Label
+                htmlFor={theme.name}
+                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary"
+              >
+                <span
+                  style={
+                    {
+                      "--theme-primary": `hsl(${theme.colors.primary})`,
+                    } as React.CSSProperties
+                  }
+                  className="flex items-center space-x-2"
+                >
+                  <div className="w-8 h-4 rounded-full bg-[--theme-primary]" />
+                  <span>{theme.name}</span>
+                </span>
+              </Label>
+            ))}
+          </RadioGroup>
+        </CardContent>
+      </Card>
+
+      {customTheme && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Editor de Cores</CardTitle>
+            <CardDescription>
+              Ajuste as cores do tema. As alterações são aplicadas em tempo real.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {Object.entries(customTheme.colors).map(([name, value]) => {
+              const { h, s, l } = parseHsl(value as string)
+              const hexValue = hslToHex(h, s, l)
+              return (
+                <div key={name} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div
+                      className="w-8 h-8 rounded-full border"
+                      style={{ backgroundColor: `hsl(${value})` }}
+                    />
+                    <div>
+                      <p className="font-medium capitalize">{name.replace("-", " ")}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {value as string}
+                      </p>
+                    </div>
+                  </div>
+                  <input
+                    type="color"
+                    value={hexValue}
+                    onChange={(e) => handleColorChange(name, e.target.value)}
+                    className="w-8 h-8 cursor-pointer"
+                  />
+                </div>
+              )
+            })}
+          </CardContent>
+          <CardFooter>
+            <Button onClick={handleSave}>Salvar Alterações</Button>
+          </CardFooter>
+        </Card>
+      )}
+    </div>
+  )
+}

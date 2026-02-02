@@ -1,117 +1,544 @@
 
 
 > backend@0.0.1 start:dev /home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend
-> pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts
+> dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts
 
-/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859
-    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
-           ^
-TSError: ⨯ Unable to compile TypeScript:
-src/whatsapp/whatsapp.service.ts:128:86 - error TS18047: 'org' is possibly 'null'.
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [NestFactory] Starting Nest application...
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] PassportModule dependencies initialized +33ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] MulterModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] RawMaterialsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ConfigHostModule dependencies initialized +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] HttpModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] DiscoveryModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] KnowledgeBaseModule dependencies initialized +12ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] CacheModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ConfigModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ConfigModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ServeStaticModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ScheduleModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] PrismaModule dependencies initialized +3ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] CommonModule dependencies initialized +3ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] RecuperacoesModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] JwtModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] AuditLogsModule dependencies initialized +3ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] DataCorrectionModule dependencies initialized +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] PdfImportModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] MenuModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] BackupsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] PdfModule dependencies initialized +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] UsersModule dependencies initialized +4ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] QuotationsModule dependencies initialized +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] WhatsappModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] CreditCardBillsModule dependencies initialized +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ProductGroupsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] CreditCardTransactionsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] PessoaModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ContasContabeisModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] SettingsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] XmlImportLogsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] CreditCardsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] DashboardModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] BankStatementImportsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ClientImportsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] LandingPageModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] CreditCardFeesModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] PaymentTermsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] QuotationImportsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] LaborCostTableEntriesModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] SaleAdjustmentsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] MetalDepositsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] StockStatementModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] MarketDataModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] TasksModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] OrganizationModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] SalesMovementImportModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] MediaModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] CreditCardForecastModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] StockModule dependencies initialized +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] WhatsappRoutinesModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ContasCorrentesModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ProductsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] PureMetalLotMovementsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ReportsModule dependencies initialized +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] TransacoesModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] PurchaseOrdersModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] MetalAccountsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] AuthModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] PureMetalLotsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] MetalReceivablesModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] AnalisesQuimicasModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] AutomationsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] AccountsPayModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] JsonImportsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] MetalPaymentsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] MetalCreditsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] AccountsRecModule dependencies initialized +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] ChemicalReactionsModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] RecoveryOrdersModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] SalesModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [InstanceLoader] AppModule dependencies initialized +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] AppController {/api}: +63ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api, GET} route +3ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/test-route, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] RawMaterialsController {/api/raw-materials}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/raw-materials, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/raw-materials, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/raw-materials/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/raw-materials/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/raw-materials/:id, DELETE} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] AuthController {/api/auth}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/auth/register, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/auth/login, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/auth/me, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] UsersController {/api/users}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/users/profile, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/users, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/users, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/users/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/users/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] PessoaController {/api/pessoas}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pessoas, POST} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pessoas, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pessoas/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pessoas/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pessoas/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] ContasContabeisController {/api/contas-contabeis}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-contabeis, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-contabeis, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-contabeis/proximo-codigo, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-contabeis/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-contabeis/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-contabeis/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] ContasCorrentesController {/api/contas-correntes}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-correntes, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-correntes, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-correntes/:id/extrato, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-correntes/:id/extrato/pdf, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-correntes/extrato/pdf/selected, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-correntes/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-correntes/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-correntes/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/contas-correntes/:id/adjust-residue, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] TransacoesController {/api/transacoes}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes/transfer, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes/bulk-create, POST} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes/bulk-update, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes/unlinked/all, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes/:id/adjust, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes/:id/link-account, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes/bulk-update-conta-contabil, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/transacoes/:id, DELETE} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] MediaController {/api/media}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/media/upload, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/media/analise-quimica/:analiseQuimicaId, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/media/recovery-order/:recoveryOrderId, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/media/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/media, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] PublicMediaController {/api/public-media}: +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/public-media/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] SalesController {/api/sales}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/recalculate-adjustment, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/apply-commission, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/backfill-installments, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/bulk-confirm, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/backfill-adjustments, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/backfill-quotations, POST} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/diagnose/:orderNumber, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/items/:id/link-lots, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/by-order-number/:orderNumber/transactions, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/next-order-number, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/check-order-number/:orderNumber, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/pdf, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/financials, PATCH} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/observation, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/confirm, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/release-to-pcp, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/separate, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/finalize, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/edit, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:id/revert, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales/:saleId/installments/:installmentId/receive, PATCH} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] SettingsController {/api/settings}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/settings, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/settings, PUT} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/settings/appearance, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/settings/appearance, PUT} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/settings/themes, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/settings/themes, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/settings/themes/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/settings/themes/:id, PUT} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/settings/themes/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] ProductsController {/api/products}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/products/import-xml/analyze, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/products/import-xml, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/products, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/products, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/products/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/products/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/products/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/products/product-groups/debug, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/products/fix-reaction-group, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] XmlImportLogsController {/api/xml-import-logs}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/xml-import-logs, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/xml-import-logs, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/xml-import-logs/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/xml-import-logs/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/xml-import-logs/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] QuotationsController {/api/quotations}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/quotations, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/quotations, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/quotations/by-date, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/quotations/latest, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/quotations/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/quotations/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/quotations/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] MetalAccountsController {/api/metal-accounts}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-accounts, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-accounts, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-accounts/:id, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-accounts/entries, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-accounts/:id/entries, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-accounts/transfer-from-supplier-account-to-pure-metal-lots, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] PureMetalLotsController {/api/pure-metal-lots}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lots, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lots, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lots/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lots/:id/pdf, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lots/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lots/:id, DELETE} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] CreditCardsController {/api/credit-cards}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-cards, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-cards, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-cards/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-cards/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-cards/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] CreditCardTransactionsController {/api/credit-card-transactions}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-transactions, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-transactions, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-transactions/:id, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-transactions/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-transactions/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] CreditCardBillsController {/api/credit-card-bills}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-bills/from-transactions, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-bills, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-bills/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-bills/:id/pay, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] DashboardController {/api/dashboard}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/dashboard/summary, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/dashboard/accounts-pay-status, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/dashboard/cash-flow-summary, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/dashboard/third-party-loans-summary, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/dashboard/gold-balance, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/dashboard/financial-summary-by-period, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/dashboard/transactions-by-period, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/dashboard/financial-summary-pdf, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] AccountsRecController {/api/accounts-rec}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec/:id, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec/:id/hybrid-receive, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec/:id/receive, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec/:id/pay-with-metal-credit, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec/:id/pay-with-metal, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec/:id/pay-with-metal-credit-multiple, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec/:id/pay-with-metal-multiple, PATCH} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec/:id/force-finalize, PATCH} route +2ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-rec/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] AccountsPayController {/api/accounts-pay}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-pay, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-pay/bulk-create-from-transactions, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-pay, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-pay/summary/by-category, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-pay/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-pay/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-pay/:id/pay, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-pay/:id/pay-with-metal, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-pay/:id/split, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/accounts-pay/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] BankStatementImportsController {/api/bank-statement-imports}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/bank-statement-imports/preview-ofx, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] ClientImportsController {/api/client-imports}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/client-imports/preview-google-csv, POST} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/client-imports/import-google-csv, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] AuditLogsController {/api/audit-logs}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/audit-logs, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] LandingPageController {/api/landing-page}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/landing-page, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/landing-page/editor, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/landing-page, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] BackupsController {/api/backups}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/backups/create, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/backups, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/backups/restore, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] CreditCardFeesController {/api/credit-card-fees}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-fees, POST} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-fees, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-fees/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] CreditCardForecastController {/api/credit-card-forecast}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/credit-card-forecast, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] PaymentTermsController {/api/payment-terms}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/payment-terms, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/payment-terms, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/payment-terms/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/payment-terms/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/payment-terms/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] PdfImportController {/api/pdf-import}: +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pdf-import/statement, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pdf-import/check-duplicates, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pdf-import/import-transactions, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] JsonImportsController {/api/json-imports}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/json-imports/contas, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/json-imports/sales-finance, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/json-imports/delete-all-sales, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/json-imports/companies, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/json-imports/reset-and-seed, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/json-imports/products, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/json-imports/link-sales-receivables, POST} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/json-imports/full-legacy-import, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/json-imports/audit-import-files, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] SalesMovementImportController {/api/sales-movement-import}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sales-movement-import/upload, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] PurchaseOrdersController {/api/purchase-orders}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/purchase-orders/metal-purchase, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/purchase-orders, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/purchase-orders, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/purchase-orders/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/purchase-orders/:id, PATCH} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/purchase-orders/:id/receive, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/purchase-orders/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] AnalisesQuimicasController {/api/analises-quimicas}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas/:id/pdf, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas/:id/resultado, PATCH} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas/:id/aprovar-recuperacao, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas/:id/aprovar, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas/:id/reprovar, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas/:id/refazer, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas/:id/revert-to-pending-approval, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/analises-quimicas/:id/write-off, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] MetalCreditsController {/api/metal-credits}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-credits/:id/pdf, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-credits/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-credits/pay-with-cash, POST} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-credits/pay-with-client-credit, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-credits, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-credits/client/:clientId, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] RecoveryOrdersController {/api/recovery-orders}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders/:id/apply-commission, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders/:id/pdf, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders/:id/raw-materials, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders/:id/start, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders/:id/update-purity, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders/:id/finalize, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders/:id/cancel, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/recovery-orders/:id/image, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] MetalReceivablesController {/api/metal-receivables}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-receivables, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] QuotationImportsController {/api/quotation-imports}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/quotation-imports, POST} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] ProductGroupsController {/api/product-groups}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/product-groups, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/product-groups, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/product-groups/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/product-groups/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/product-groups/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] ChemicalReactionsController {/api/chemical-reactions}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/:id/pdf, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/:id/lots, PUT} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/:id/associate-image, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/:id/raw-materials, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/:id/pure-metal-lots, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/:id/pure-metal-lots/:pureMetalLotId, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/:id/complete-production, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/:id/adjust-purity, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/chemical-reactions/leftovers/available, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] LaborCostTableEntriesController {/api/labor-cost-table-entries}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/labor-cost-table-entries, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] StockController {/api/stock}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/stock/adjust, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] SaleAdjustmentsController {/api/sale-adjustments}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sale-adjustments, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sale-adjustments/backfill-receivables, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sale-adjustments/backfill-transactions, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/sale-adjustments/reconcile-legacy-sales, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] MetalDepositsController {/api/metal-deposits}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-deposits, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] DataCorrectionController {/api/data-correction}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/data-correction/fix-metal-credit-payment, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] StockStatementController {/api/stock-statement}: +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/stock-statement, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] PureMetalLotMovementsController {/api/pure-metal-lot-movements}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lot-movements, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lot-movements, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lot-movements/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lot-movements/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pure-metal-lot-movements/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] MetalPaymentsController {/api/metal-payments}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/metal-payments/pay-client, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] PdfController {/api/pdf}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/pdf/recovery-order/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] ReportsController {/api/reports}: +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/reports/financial-balance, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/reports/accounts-payable, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/reports/accounts-payable/pdf, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/reports/trial-balance, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/reports/trial-balance/pdf, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] MarketDataController {/api/market-data}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/market-data, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/market-data, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/market-data/latest, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/market-data/sync, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/market-data/:date, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/market-data/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/market-data/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] AutomationsController {/api/automations}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/automations/expenses, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] WhatsappController {/api/whatsapp}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/whatsapp/webhook/:event, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/whatsapp/webhook, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/whatsapp/qrcode, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] WhatsappRoutinesController {/api/whatsapp-routines}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/whatsapp-routines, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/whatsapp-routines, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/whatsapp-routines/:id, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/whatsapp-routines/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/whatsapp-routines/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] MenuController {/api/menu}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/menu, POST} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/menu, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/menu/reorder, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/menu/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/menu/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/menu/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] TasksController {/api/tasks}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/tasks, POST} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/tasks, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/tasks/:id, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/tasks/:id, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/tasks/:id, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] KnowledgeBaseController {/api/knowledge-base}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/knowledge-base, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/knowledge-base/*path, GET} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/knowledge-base/*path, PUT} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/knowledge-base/*path, DELETE} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RoutesResolver] OrganizationController {/api/organization}: +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/organization, GET} route +1ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/organization, PATCH} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [RouterExplorer] Mapped {/api/organization/appearance, PUT} route +0ms
+[Nest] 32656  - 01/02/2026, 17:17:33     LOG [NestApplication] Nest application successfully started +540ms
+🚀 Back-end rodando em: http://127.0.0.1:3005
+📄 Swagger: http://127.0.0.1:3005/api/docs
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ValidationPipe, LogLevel } from '@nestjs/common';
+import { config } from 'dotenv';
+import { Decimal } from 'decimal.js';
+import * as express from 'express';
+import { join } from 'path';
 
-128         contas = await this.prisma.contaCorrente.findMany({ where: { organizationId: org.id, isActive: true } });
-                                                                                         ~~~
-src/whatsapp/whatsapp.service.ts:260:3 - error TS1128: Declaration or statement expected.
+config();
 
-260   private async handleDespesa(remoteJid: string, messageText: string): Promise<void> {
-      ~~~~~~~
-src/whatsapp/whatsapp.service.ts:380:1 - error TS1128: Declaration or statement expected.
+// BigInt and Decimal serialization - Mantido para compatibilidade com o Prisma
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
 
-380 }
-    ~
+(Decimal.prototype as any).toJSON = function () {
+  return this.toString();
+};
 
-    at createTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859:12)
-    at reportTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:863:19)
-    at getOutput (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1077:36)
-    at Object.compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1433:41)
-    at Module.m._compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1617:30)
-    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
-    at Object.require.extensions.<computed> [as .ts] (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1621:12)
-    at Module.load (node:internal/modules/cjs/loader:1266:32)
-    at Function.Module._load (node:internal/modules/cjs/loader:1091:12)
-    at Module.require (node:internal/modules/cjs/loader:1289:19) {
-  diagnosticCodes: [ 18047, 1128, 1128 ]
+async function bootstrap() {
+  process.env.TZ = 'UTC';
+
+  const app = await NestFactory.create(AppModule, {
+    // Debug ativado para vermos exatamente o que acontece nas rotas
+    logger: ['log', 'error', 'warn', 'debug', 'verbose'] as LogLevel[],
+  });
+
+  // Prefixo global DEVE vir antes do Swagger
+
+  app.setGlobalPrefix('api');
+
+  // Increase payload limit for file uploads and large JSON requests
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: false,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
+
+  // --- CONFIGURAÇÃO DE CORS AJUSTADA ---
+  // Liberamos especificamente o tráfego que vem do Docker Gateway (172.x.x.x)
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        origin.startsWith('http://localhost') ||
+        origin.startsWith('http://127.0.0.1') ||
+        origin.match(/^http:\/\/172\.\d+\.\d+\.\d+/) || // Permite IPs da rede Docker
+        origin.match(/^http:\/\/192\.168\./)
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('API Electrosal Bot')
+    .setDescription('Integração entre ERP Electrosal e Evolution API.')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
+
+  app.enableShutdownHooks();
+
+  const port = process.env.PORT || 3002;
+
+  // '0.0.0.0' é fundamental para o Docker conseguir enxergar o host
+  await app.listen(process.env.PORT || 3005, '0.0.0.0');
+
+  console.log(
+    `🚀 Back-end rodando em: ${await app.getUrl()}`,
+  );
+  console.log(
+    `📄 Swagger: ${await app.getUrl()}/api/docs`,
+  );
 }
-/home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend:
- ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  backend@0.0.1 start:dev: `pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts`
-Exit status 1
 
-> @sistema-erp-electrosal/core@1.0.0 build /home/aleduque/Documentos/cursos/sistema-erp-electrosal/packages/core
-> tsc && tsc-alias -p tsconfig.json
+bootstrap();
 
-
-> backend@0.0.1 start:dev /home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend
-> pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts
-
-/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859
-    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
-           ^
-TSError: ⨯ Unable to compile TypeScript:
-src/whatsapp/whatsapp.service.ts:128:86 - error TS18047: 'org' is possibly 'null'.
-
-128         contas = await this.prisma.contaCorrente.findMany({ where: { organizationId: org.id, isActive: true } });
-                                                                                         ~~~
-src/whatsapp/whatsapp.service.ts:260:3 - error TS1128: Declaration or statement expected.
-
-260   private async handleDespesa(remoteJid: string, messageText: string): Promise<void> {
-      ~~~~~~~
-src/whatsapp/whatsapp.service.ts:380:1 - error TS1128: Declaration or statement expected.
-
-380 }
-    ~
-
-    at createTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859:12)
-    at reportTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:863:19)
-    at getOutput (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1077:36)
-    at Object.compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1433:41)
-    at Module.m._compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1617:30)
-    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
-    at Object.require.extensions.<computed> [as .ts] (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1621:12)
-    at Module.load (node:internal/modules/cjs/loader:1266:32)
-    at Function.Module._load (node:internal/modules/cjs/loader:1091:12)
-    at Module.require (node:internal/modules/cjs/loader:1289:19) {
-  diagnosticCodes: [ 18047, 1128, 1128 ]
-}
-/home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend:
- ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  backend@0.0.1 start:dev: `pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts`
-Exit status 1
-
-> @sistema-erp-electrosal/core@1.0.0 build /home/aleduque/Documentos/cursos/sistema-erp-electrosal/packages/core
-> tsc && tsc-alias -p tsconfig.json
-
-
-> backend@0.0.1 start:dev /home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend
-> pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts
-
-/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859
-    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
-           ^
-TSError: ⨯ Unable to compile TypeScript:
-src/whatsapp/whatsapp.service.ts:128:86 - error TS18047: 'org' is possibly 'null'.
-
-128         contas = await this.prisma.contaCorrente.findMany({ where: { organizationId: org.id, isActive: true } });
-                                                                                         ~~~
-src/whatsapp/whatsapp.service.ts:260:3 - error TS1128: Declaration or statement expected.
-
-260   private async handleDespesa(remoteJid: string, messageText: string): Promise<void> {
-      ~~~~~~~
-src/whatsapp/whatsapp.service.ts:380:1 - error TS1128: Declaration or statement expected.
-
-380 }
-    ~
-
-    at createTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:859:12)
-    at reportTSError (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:863:19)
-    at getOutput (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1077:36)
-    at Object.compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1433:41)
-    at Module.m._compile (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1617:30)
-    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
-    at Object.require.extensions.<computed> [as .ts] (/home/aleduque/Documentos/cursos/sistema-erp-electrosal/node_modules/.pnpm/ts-node@10.9.2_@swc+core@1.15.10_@swc+helpers@0.5.5__@types+node@22.19.7_typescript@5.9.3/node_modules/ts-node/src/index.ts:1621:12)
-    at Module.load (node:internal/modules/cjs/loader:1266:32)
-    at Function.Module._load (node:internal/modules/cjs/loader:1091:12)
-    at Module.require (node:internal/modules/cjs/loader:1289:19) {
-  diagnosticCodes: [ 18047, 1128, 1128 ]
-}
-/home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend:
- ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  backend@0.0.1 start:dev: `pnpm exec dotenv -e ../../.env -- ts-node -r tsconfig-paths/register src/main.ts`
-Exit status 1

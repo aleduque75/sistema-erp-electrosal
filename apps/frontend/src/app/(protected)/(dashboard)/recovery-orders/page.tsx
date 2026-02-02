@@ -7,6 +7,7 @@ import { RecoveryOrder } from "@/types/recovery-order";
 import { getRecoveryOrders } from "@/services/recoveryOrdersApi";
 import { RecoveryOrdersTable } from "@/components/recovery-orders/RecoveryOrdersTable";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { PlusCircle } from "lucide-react";
 import { CreateRecoveryOrderModal } from "@/components/recovery-orders/CreateRecoveryOrderModal";
 import { ApplyRecoveryOrderCommissionModal } from "@/components/recovery-orders/ApplyRecoveryOrderCommissionModal";
@@ -91,13 +92,21 @@ export default function RecoveryOrdersPage() {
           Criar Nova Ordem
         </Button>
       </div>
-      <RecoveryOrdersTable
-        recoveryOrders={recoveryOrders}
-        isLoading={loading}
-        onRecoveryOrderUpdated={fetchRecoveryOrders}
-        onCancelRecoveryOrder={handleCancelRecoveryOrder} // Pass the new handler
-        onApplyCommission={(order) => setRecoveryOrderToApplyCommission(order)}
-      />
+
+      <Card className="card-custom shadow-sm">
+        <CardHeader>
+          <CardTitle>Lista de Ordens de Recuperação</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RecoveryOrdersTable
+            recoveryOrders={recoveryOrders}
+            isLoading={loading}
+            onRecoveryOrderUpdated={fetchRecoveryOrders}
+            onCancelRecoveryOrder={handleCancelRecoveryOrder}
+            onApplyCommission={(order) => setRecoveryOrderToApplyCommission(order)}
+          />
+        </CardContent>
+      </Card>
       <CreateRecoveryOrderModal
         isOpen={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}

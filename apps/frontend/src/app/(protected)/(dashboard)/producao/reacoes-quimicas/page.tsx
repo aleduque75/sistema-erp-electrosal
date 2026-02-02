@@ -206,7 +206,7 @@ export default function ChemicalReactionsPage() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Abrir menu</span><MoreHorizontal className="h-4 w-4" /></Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="bg-card text-foreground">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => handleOpenDetails(reaction.id)}>
                 <Eye className="mr-2 h-4 w-4" />
@@ -240,7 +240,7 @@ export default function ChemicalReactionsPage() {
       <div className="space-y-6 p-4 md:p-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Produção & Reações</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Produção & Reações</h1>
             <p className="text-muted-foreground">Gerenciamento de reações químicas e produção de sais.</p>
           </div>
           <Link href="/producao/reacoes-quimicas/nova">
@@ -255,44 +255,44 @@ export default function ChemicalReactionsPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="bg-background shadow-sm border-l-4 border-l-blue-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Reações</CardTitle>
+              <CardTitle className="text-sm font-medium text-foreground">Total de Reações</CardTitle>
               <FlaskIcon className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
+              <div className="text-2xl font-bold text-foreground">{stats.total}</div>
               <p className="text-xs text-muted-foreground mt-1">No período filtrado</p>
             </CardContent>
           </Card>
 
           <Card className="bg-background shadow-sm border-l-4 border-l-yellow-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Em Processo</CardTitle>
+              <CardTitle className="text-sm font-medium text-foreground">Em Processo</CardTitle>
               <Activity className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.inProcess}</div>
+              <div className="text-2xl font-bold text-foreground">{stats.inProcess}</div>
               <p className="text-xs text-muted-foreground mt-1">Aguardando finalização</p>
             </CardContent>
           </Card>
 
           <Card className="bg-background shadow-sm border-l-4 border-l-green-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Finalizadas</CardTitle>
+              <CardTitle className="text-sm font-medium text-foreground">Finalizadas</CardTitle>
               <CheckCircle2 className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.completed}</div>
+              <div className="text-2xl font-bold text-foreground">{stats.completed}</div>
               <p className="text-xs text-muted-foreground mt-1">Produção concluída</p>
             </CardContent>
           </Card>
 
           <Card className="bg-background shadow-sm border-l-4 border-l-purple-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Metal Utilizado</CardTitle>
+              <CardTitle className="text-sm font-medium text-foreground">Metal Utilizado</CardTitle>
               <Zap className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalMetalUsed.toFixed(2)} g</div>
+              <div className="text-2xl font-bold text-foreground">{stats.totalMetalUsed.toFixed(2)} g</div>
               <p className="text-xs text-muted-foreground mt-1">Peso acumulado (AU/AG/RH)</p>
             </CardContent>
           </Card>
@@ -302,8 +302,8 @@ export default function ChemicalReactionsPage() {
           <CardHeader className="bg-muted/10">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
-                <CardTitle>Histórico de Reações</CardTitle>
-                <CardDescription>Acompanhe o status e resultados de cada etapa da produção.</CardDescription>
+                <CardTitle className="text-foreground">Histórico de Reações</CardTitle>
+                <CardDescription className="text-muted-foreground">Acompanhe o status e resultados de cada etapa da produção.</CardDescription>
               </div>
               <div className="flex flex-wrap gap-2">
                 <DateRangePicker date={dateRange} onDateChange={setDateRange} />

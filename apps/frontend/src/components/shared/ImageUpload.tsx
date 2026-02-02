@@ -71,11 +71,11 @@ export function ImageUpload({ entity, onMediaUploadSuccess }: ImageUploadProps) 
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        disabled={isUpisLoading}
+        disabled={isUploading}
       />
-      <Button type="button" onClick={handleClick} disabled={isUpisLoading}>
+      <Button type="button" onClick={handleClick} disabled={isUploading}>
         <UploadCloud className="mr-2 h-4 w-4" />
-        {isUpisLoading ? "Enviando..." : "Enviar Imagem"}
+        {isUploading ? "Enviando..." : "Enviar Imagem"}
       </Button>
     </div>
   );

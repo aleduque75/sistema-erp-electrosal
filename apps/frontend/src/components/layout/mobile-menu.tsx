@@ -197,7 +197,7 @@ export function MobileMenu() {
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="left" className="flex flex-col w-[290px] p-0">
+      <SheetContent side="left" className="flex flex-col w-[290px] p-0 lg:hidden">
         <SheetHeader className="text-left flex-shrink-0 border-b p-4">
           <SheetTitle>Navegação</SheetTitle>
         </SheetHeader>

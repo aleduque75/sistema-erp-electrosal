@@ -1,5 +1,18 @@
-import { ReactNode } from 'react'
+"use client";
 
-export default function ProtectedLayout({ children }: { children: ReactNode }) {
-    return <>{children}</>
+import { ThemeProvider } from "@/components/providers/custom-theme-provider";
+import { SidebarProvider } from "@/context/sidebar-context";
+
+export default function ProtectedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <ThemeProvider>
+      <SidebarProvider>
+        {children}
+      </SidebarProvider>
+    </ThemeProvider>
+  );
 }

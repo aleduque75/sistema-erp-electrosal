@@ -91,7 +91,7 @@ export function Header({ logoText, logoImage }: HeaderProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="hidden lg:flex mr-2"
+          className="hidden lg:flex mr-2 text-foreground"
           onClick={toggleSidebar}
         >
           {isExpanded ? (

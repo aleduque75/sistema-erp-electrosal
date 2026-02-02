@@ -1,49 +1,75 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { themes } from '@/config/themes';
+import { themes as defaultThemes } from '@/config/themes';
+import { useAuth } from './AuthContext';
+import api from '@/lib/api';
 
 interface ThemeContextType {
   theme: string;
   setTheme: (themeKey: string) => void;
-  toggleMode: () => void; // Nova função para alternar entre claro/escuro
+  toggleMode: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState('light'); // 'light' ou 'dark' ou 'modern-blue-light' etc.
+  const { user } = useAuth();
+  const [themes, setThemes] = useState(defaultThemes);
+  const [theme, setThemeState] = useState('light');
 
-  // Função para definir o tema, garantindo que o modo (claro/escuro) seja mantido
+  useEffect(() => {
+    async function fetchAndApplyTheme() {
+      if (user) {
+        try {
+          const { data: org } = await api.get('/organization');
+          if (org.appearanceSettings?.customTheme) {
+            const customTheme = org.appearanceSettings.customTheme;
+            setThemes((prevThemes) => ({
+              ...prevThemes,
+              [customTheme.name.toLowerCase().replace(" (padrão)", "").replace(" ", "-")]: customTheme,
+            }));
+          }
+          if (org.appearanceSettings?.themeName) {
+            setThemeState(org.appearanceSettings.themeName);
+            localStorage.setItem('theme', org.appearanceSettings.themeName); // Update localStorage
+          }
+        } catch (error) {
+          console.error("Failed to fetch and apply custom theme:", error);
+        }
+      }
+    }
+
+    fetchAndApplyTheme();
+  }, [user]);
+
   const setTheme = (themeKey: string) => {
-    setThemeState(themeKey);
-    localStorage.setItem('theme', themeKey);
+    const sanitizedThemeKey = themeKey.toLowerCase().replace(" (padrão)", "").replace(/\s+/g, '-');
+    setThemeState(sanitizedThemeKey);
+    localStorage.setItem('theme', sanitizedThemeKey);
   };
 
-  // Função para alternar entre o modo claro e escuro do tema atual
   const toggleMode = () => {
     const currentTheme = theme;
     let newThemeKey = '';
 
     if (currentTheme.includes('dark')) {
       newThemeKey = currentTheme.replace('-dark', '-light');
-      if (!themes[newThemeKey]) { // Fallback se não houver versão light explícita
+      if (!themes[newThemeKey]) {
         newThemeKey = currentTheme.replace('dark', 'light');
       }
     } else {
       newThemeKey = currentTheme.replace('-light', '-dark');
-      if (!themes[newThemeKey]) { // Fallback se não houver versão dark explícita
+      if (!themes[newThemeKey]) {
         newThemeKey = currentTheme.replace('light', 'dark');
       }
     }
 
-    // Se o tema atual for apenas 'light' ou 'dark' (sem sufixo), alternar para o outro
     if (currentTheme === 'light') newThemeKey = 'dark';
     if (currentTheme === 'dark') newThemeKey = 'light';
 
-    // Garante que o newThemeKey exista, senão volta para o padrão
     if (!themes[newThemeKey]) {
-      newThemeKey = 'light'; // Fallback para light se o tema alternado não existir
+      newThemeKey = 'light';
     }
 
     setTheme(newThemeKey);
@@ -51,10 +77,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme');
-    if (storedTheme && themes[storedTheme]) {
+    if (storedTheme) { // Check only if storedTheme exists
       setThemeState(storedTheme);
     } else {
-      // Define um tema padrão se não houver nenhum armazenado
       setThemeState('light');
       localStorage.setItem('theme', 'light');
     }
@@ -63,29 +88,51 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     
-    // Remove todas as classes de tema existentes
-    root.classList.remove(...Object.keys(themes).filter(t => t.includes('-')).map(t => `theme-${t}`));
+    // First, remove all theme-related classes to ensure a clean state
+    // This needs to account for both sanitized and unsanitized theme names that might have been added
+    // dynamically or from initial load.
+    Object.keys(themes).forEach(t => {
+      const sanitizedT = t.toLowerCase().replace(" (padrão)", "").replace(/\s+/g, '-');
+      root.classList.remove(`theme-${sanitizedT}`);
+    });
 
-    // Adiciona a classe 'dark' se o tema atual for escuro
     if (theme.includes('dark')) {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
 
-    // Sempre aplica as variáveis CSS do tema selecionado, inclusive para 'light' e 'dark'
     const currentThemeData = themes[theme] || themes['light'];
+    
+    // Apply default theme colors
     Object.entries(currentThemeData.colors).forEach(([name, value]) => {
       root.style.setProperty(`--${name}`, value);
     });
-    // Adiciona uma classe específica para temas customizados (opcional)
-    if (!['light', 'dark'].includes(theme)) {
-      root.classList.add(`theme-${theme}`);
-    } else {
-      root.classList.remove(`theme-${theme}`);
+
+    // Apply custom colors if they exist in customTheme
+    if (currentThemeData.colors.textColorPrimary) {
+      root.style.setProperty('--text-color-primary', currentThemeData.colors.textColorPrimary);
+    }
+    if (currentThemeData.colors.menuSelectedBackgroundColor) {
+      root.style.setProperty('--menu-selected-bg', currentThemeData.colors.menuSelectedBackgroundColor);
+    }
+    if (currentThemeData.colors.menuSelectedTextColor) {
+      root.style.setProperty('--menu-selected-text', currentThemeData.colors.menuSelectedTextColor);
+    }
+    if (currentThemeData.colors.menuHoverBackgroundColor) {
+      root.style.setProperty('--menu-hover-bg', currentThemeData.colors.menuHoverBackgroundColor);
+    }
+    if (currentThemeData.colors.menuHoverTextColor) {
+      root.style.setProperty('--menu-hover-text', currentThemeData.colors.menuHoverTextColor);
     }
 
-  }, [theme]);
+    // Apply the new theme class after sanitizing
+    if (!['light', 'dark'].includes(theme)) {
+      const sanitizedTheme = theme.toLowerCase().replace(" (padrão)", "").replace(/\s+/g, '-');
+      root.classList.add(`theme-${sanitizedTheme}`);
+    }
+
+  }, [theme, themes]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleMode }}>

@@ -57,10 +57,7 @@ const formSchema = z
     fornecedorId: z.string().optional().nullable(),
     recoveryReportPeriod: z.string().optional().nullable(),
     isInstallment: z.boolean().default(false),
-    totalInstallments: z.coerce
-      .number()
-      .int()
-      .optional(),
+    totalInstallments: z.coerce.number().int().optional(),
     createdAt: z.string().optional(),
   })
   .refine(
@@ -73,7 +70,7 @@ const formSchema = z
     {
       message: "O número de parcelas deve ser 2 ou mais.",
       path: ["totalInstallments"],
-    }
+    },
   );
 
 type FormValues = z.infer<typeof formSchema>;
@@ -90,12 +87,17 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
       dueDate: account
         ? new Date(account.dueDate).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
-      contaContabilId: account?.contaContabilId || user?.settings?.defaultDespesaContaId || null,
+      contaContabilId:
+        account?.contaContabilId ||
+        (user as any)?.settings?.defaultDespesaContaId ||
+        null,
       fornecedorId: account?.fornecedorId || null,
       recoveryReportPeriod: account?.recoveryReportPeriod || null,
       isInstallment: account?.isInstallment || false,
       totalInstallments: account?.totalInstallments ?? 2,
-      createdAt: account ? new Date(account.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      createdAt: account
+        ? new Date(account.createdAt).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
     },
   });
 
@@ -105,7 +107,7 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
     api
       .get("/contas-contabeis?tipo=DESPESA")
       .then((res) => setContasContabeis(res.data));
-    
+
     api
       .get("/pessoas?role=FORNECEDOR")
       .then((res) => setFornecedores(res.data));
@@ -220,7 +222,7 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
             </FormItem>
           )}
         />
-        
+
         <FormField
           name="recoveryReportPeriod"
           control={form.control}
@@ -228,11 +230,7 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
             <FormItem>
               <FormLabel>Período de Custo (Recuperação)</FormLabel>
               <FormControl>
-                <Input 
-                  type="month"
-                  {...field}
-                  value={field.value ?? ""}
-                />
+                <Input type="month" {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -256,46 +254,46 @@ export function AccountPayForm({ account, onSave }: AccountPayFormProps) {
         )}
 
         {/* Só mostra a opção de parcelar ao CRIAR uma nova conta */}
-          <>
+        <>
+          <FormField
+            control={form.control}
+            name="isInstallment"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      if (!checked) {
+                        form.setValue("totalInstallments", undefined);
+                      }
+                    }}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Provisionar em parcelas?</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          {isInstallment && (
             <FormField
               control={form.control}
-              name="isInstallment"
+              name="totalInstallments"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormItem>
+                  <FormLabel>Número de Parcelas</FormLabel>
                   <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={(checked) => {
-                        field.onChange(checked);
-                        if (!checked) {
-                          form.setValue("totalInstallments", undefined);
-                        }
-                      }}
-                    />
+                    <Input type="number" min="2" {...field} />
                   </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Provisionar em parcelas?</FormLabel>
-                  </div>
+                  <FormMessage />
                 </FormItem>
               )}
             />
-
-            {isInstallment && (
-              <FormField
-                control={form.control}
-                name="totalInstallments"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número de Parcelas</FormLabel>
-                    <FormControl>
-                      <Input type="number" min="2" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </>
+          )}
+        </>
 
         <div className="flex justify-end">
           <Button type="submit" disabled={form.formState.isSubmitting}>

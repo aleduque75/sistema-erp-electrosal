@@ -8,6 +8,7 @@ import {
   ReactNode,
 } from 'react';
 import api from '@/lib/api';
+import { UserSettings } from '@sistema-erp-electrosal/core';
 
 interface AuthUser {
   sub: string;
@@ -15,6 +16,7 @@ interface AuthUser {
   orgId: string;
   permissions: string[];
   name?: string; // Adiciona name como opcional
+  settings?: UserSettings | null;
 }
 
 interface AuthContextType {
@@ -22,7 +24,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   hasPermission: (permission: string) => boolean;
-  login: (accessToken: string) => void; // Added login function
+  login: (accessToken: string) => void;
   logout: () => void;
 }
 
@@ -34,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = !!user;
 
   const loadUser = async () => {
-    setIsPageLoading(true); // Set loading to true when starting to load user
+    setIsPageLoading(true);
     const token = localStorage.getItem('accessToken');
     if (token) {
       try {
@@ -46,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       }
     }
-    setIsPageLoading(false); // Set loading to false after user is loaded or failed
+    setIsPageLoading(false);
   };
 
   useEffect(() => {
@@ -55,11 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (accessToken: string) => {
     localStorage.setItem('accessToken', accessToken);
-    loadUser(); // Load user after successful login
+    loadUser();
   };
 
   const hasPermission = (permission: string) => {
-    if (!user || !Array.isArray(user.permissions)) return false; // Verificação de segurança
+    if (!user || !Array.isArray(user.permissions)) return false;
     return user.permissions.includes(permission);
   };
 
@@ -78,7 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  // console.log('useAuth called, context:', context);
   if (context === undefined) {
     throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }

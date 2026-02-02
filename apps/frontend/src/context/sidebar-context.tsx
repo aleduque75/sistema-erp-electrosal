@@ -24,7 +24,7 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true); // Padrão: expandido
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
   const [isHovered, setIsHovered] = useState<boolean>(false);
-  const [sidebarWidth, setSidebarWidth] = useState<number>(290); // Largura padrão para expandido
+  const [sidebarWidth, setSidebarWidth] = useState<number>(280); // Largura padrão para expandido
 
   const toggleSidebar = () => {
     setIsExpanded((prev) => !prev);
@@ -35,13 +35,13 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Atualiza a largura do sidebar quando isExpanded ou isHovered muda
+    // Atualiza a largura do sidebar quando isExpanded ou isMobileOpen muda
     if (isExpanded || isMobileOpen) {
-      setSidebarWidth(290); // Largura expandida
+      setSidebarWidth(280); // Largura expandida
     } else if (isHovered) {
-      setSidebarWidth(290); // Largura expandida no hover
+      setSidebarWidth(280); // Largura expandida no hover
     } else {
-      setSidebarWidth(90); // Largura encolhida
+      setSidebarWidth(80); // Largura encolhida
     }
   }, [isExpanded, isMobileOpen, isHovered]);
 

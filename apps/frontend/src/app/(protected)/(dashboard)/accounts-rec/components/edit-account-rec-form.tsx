@@ -35,7 +35,7 @@ interface EditAccountRecFormProps {
 
 const formSchema = z.object({
   description: z.string().min(1, 'A descrição é obrigatória.'),
-  amount: z.coerce.number().min(0.01, 'O valor deve ser no mínimo R$ 0,01.'),
+  amount: z.number().min(0.01, 'O valor deve ser no mínimo R$ 0,01.'),
   dueDate: z.string().min(1, 'A data de vencimento é obrigatória.'),
 });
 

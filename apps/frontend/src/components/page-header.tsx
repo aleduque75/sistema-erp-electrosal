@@ -50,7 +50,7 @@ function PageHeader({
 }
 
 const pageHeaderHeadingVariants = cva(
-  "text-3xl font-bold tracking-tight",
+  "text-foreground text-3xl font-bold tracking-tight",
   {
     variants: {
       size: {

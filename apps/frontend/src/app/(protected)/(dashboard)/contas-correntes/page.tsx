@@ -182,7 +182,7 @@ export default function ContasCorrentesPage() {
         
         const isNegative = val < 0;
         return (
-          <span className={isNegative ? "text-red-600 font-bold" : "font-medium"}>
+          <span className={isNegative ? "text-red-600 font-bold" : "text-foreground font-medium"}>
             {formatted}
           </span>
         );
@@ -229,9 +229,9 @@ export default function ContasCorrentesPage() {
     },
   ];
 
-  if (isLoading) return <p className="text-center p-10">Carregando...</p>;
+  if (isLoading) return <p className="text-center p-10 text-foreground">Carregando...</p>;
   if (!user)
-    return <p className="text-center p-10">Faça login para continuar.</p>;
+    return <p className="text-center p-10 text-foreground">Faça login para continuar.</p>;
 
   return (
     <>
@@ -247,7 +247,7 @@ export default function ContasCorrentesPage() {
                   checked={showInactive} 
                   onCheckedChange={(checked) => setShowInactive(!!checked)} 
                 />
-                <Label htmlFor="showInactive" className="text-sm cursor-pointer">Mostrar Inativas</Label>
+                <Label htmlFor="showInactive" className="text-sm cursor-pointer text-foreground">Mostrar Inativas</Label>
               </div>
 
               <div className="w-[200px]">
@@ -282,7 +282,7 @@ export default function ContasCorrentesPage() {
         </CardHeader>
         <CardContent>
           {isFetching ? (
-            <p className="text-center p-10">Buscando contas...</p>
+            <p className="text-center p-10 text-foreground">Buscando contas...</p>
           ) : (
             <DataTable
               columns={columns}
