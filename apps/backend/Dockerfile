@@ -14,26 +14,18 @@ RUN npx tsc --project apps/backend/tsconfig.seed.json
 FROM node:20
 WORKDIR /app
 ENV NODE_ENV=production
-
 RUN npm install -g pnpm@9.0.6
 
-# Copiar apenas arquivos necessários
+# Copiar manifestos
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
 COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
 
-# Instalar dependências de produção
 RUN pnpm install --production --frozen-lockfile
 
-# --- CORREÇÃO DEFINITIVA PARA O PRISMA ---
-# Instalamos o prisma CLI globalmente para garantir que o comando funcione
+# CLI do Prisma para gerar o client no runtime
 RUN npm install -g prisma@5.12.1 
-
-# Copiar os compilados e o SCHEMA (fundamental)
-COPY --from=builder /app/apps/backend/dist ./dist
-COPY --from=builder /app/packages/core/dist ./packages/core/dist
-COPY --from=builder /app/apps/backend/prisma ./prisma
 
 # Dependências para Puppeteer (PDFs)
 RUN apt-get update && apt-get install -y \
@@ -44,7 +36,12 @@ RUN apt-get update && apt-get install -y \
     libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 \
     libxtst6 lsb-release wget xdg-utils && rm -rf /var/lib/apt/lists/*
 
+# Copiar artefatos
+COPY --from=builder /app/apps/backend/dist ./dist
+COPY --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --from=builder /app/apps/backend/prisma ./prisma
+
 EXPOSE 3001
 
-# O segredo: Gerar o client no momento que o container sobe
+# O segredo: Gerar o client e iniciar
 CMD ["sh", "-c", "prisma generate --schema ./prisma/schema.prisma && node dist/main"]
