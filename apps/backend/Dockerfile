@@ -35,7 +35,7 @@ RUN pnpm install --production --frozen-lockfile
 # --- CORREÇÃO PARA O PRISMA ---
 # Precisamos copiar o Prisma Client que foi gerado no builder
 # Ele geralmente fica dentro da pasta node_modules do backend
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/apps/backend/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/apps/backend/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Dependências para Puppeteer
