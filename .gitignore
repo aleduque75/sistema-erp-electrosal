@@ -51,3 +51,5 @@ apps/backend/backups/
 # Ignorar package-lock.json se pnpm for o gerenciador de pacotes principal
 package-lock.json
 apps/backend/uploads/
+
+n8n-data/
