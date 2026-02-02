@@ -31,8 +31,7 @@ COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
 RUN pnpm install --production --frozen-lockfile --filter backend...
 
 # --- FORÇA A INSTALAÇÃO DOS MÓDULOS FALTANTES ---
-RUN pnpm add @nestjs/core @nestjs/common @nestjs/platform-express reflect-metadata rxjs
-
+RUN pnpm add -w @nestjs/core @nestjs/common @nestjs/platform-express reflect-metadata rxjs
 # Dependências para Puppeteer (PDFs)
 RUN apt-get update && apt-get install -y \
     ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 \
