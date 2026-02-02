@@ -261,7 +261,7 @@ export default function PdfImportPage() {
             <Select
               value={selectedCreditCardId}
               onValueChange={setSelectedCreditCardId}
-              disabled={isLoading || loadingCreditCards}
+              disabled={loading || loadingCreditCards}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione..." />
@@ -276,8 +276,8 @@ export default function PdfImportPage() {
               </SelectContent>
             </Select>
           </div>
-          <Button type="submit" disabled={isLoading || checkingDuplicates}>
-            {isLoading || checkingDuplicates ? (
+          <Button type="submit" disabled={loading || checkingDuplicates}>
+            {loading || checkingDuplicates ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processando...
               </>

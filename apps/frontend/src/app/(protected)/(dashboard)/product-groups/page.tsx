@@ -117,7 +117,7 @@ export default function ProductGroupsPage() {
           <Button onClick={handleNew}>Novo Grupo</Button>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {loading ? (
             <p>Carregando...</p>
           ) : (
             <Table>

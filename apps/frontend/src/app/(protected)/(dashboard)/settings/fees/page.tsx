@@ -180,7 +180,7 @@ export default function FeesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {loading ? (
                 <TableRow><TableCell colSpan={3} className="text-center">Carregando...</TableCell></TableRow>
               ) : (
                 fees.map(fee => (

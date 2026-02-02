@@ -63,7 +63,7 @@ export default function PaymentTermsPage() {
         </Button>
       </div>
 
-      {isLoading ? (
+      {loading ? (
         <p>Carregando...</p>
       ) : (
         <PaymentTermsTable paymentTerms={paymentTerms} onEdit={handleEdit} />

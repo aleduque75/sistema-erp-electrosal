@@ -54,10 +54,10 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    if (!isLoading && currentUser) {
+    if (!loading && currentUser) {
       fetchUsers();
     }
-  }, [currentUser, isLoading]);
+  }, [currentUser, loading]);
 
   const handleOpenNewModal = () => {
     setUserToEdit(null);
@@ -120,7 +120,7 @@ export default function ProfilePage() {
     },
   ];
 
-  if (isLoading) return <p>Carregando...</p>;
+  if (loading) return <p>Carregando...</p>;
 
   return (
     <div className="space-y-4">
