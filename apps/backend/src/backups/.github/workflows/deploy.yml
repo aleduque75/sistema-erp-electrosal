@@ -1,0 +1,24 @@
+name: Deploy Electrosal ERP
+
+on:
+  push:
+    branches:
+      - main  # O deploy dispara automaticamente quando você der push na branch main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Executar Script de Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "Conectado na VPS! Iniciando script..."
+            cd /root/apps/sistema-erp-electrosal
+            # Executa o script que criamos anteriormente
+            ./deploy.sh
