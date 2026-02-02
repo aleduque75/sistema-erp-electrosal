@@ -11,7 +11,7 @@ export class QuotationsService {
   async create(organizationId: string, createQuotationDto: CreateQuotationDto) {
     const { metal, date, buyPrice, sellPrice, tipoPagamento } = createQuotationDto;
     const utcDate = new Date(date);
-    // Construct a new Date object representing the local date
+    // Cria um objeto de data representando a data local
     const quotationDate = new Date(utcDate.getFullYear(), utcDate.getMonth(), utcDate.getDate());
 
     const existingQuotation = await this.prisma.quotation.findFirst({
@@ -27,8 +27,8 @@ export class QuotationsService {
       return this.prisma.quotation.update({
         where: { id: existingQuotation.id },
         data: {
-          buyPrice: parseFloat(buyPrice),
-          sellPrice: parseFloat(sellPrice),
+          buyPrice: buyPrice, // Removido parseFloat
+          sellPrice: sellPrice, // Removido parseFloat
         },
       });
     } else {
@@ -37,8 +37,8 @@ export class QuotationsService {
           organizationId,
           metal,
           date: quotationDate,
-          buyPrice: parseFloat(buyPrice),
-          sellPrice: parseFloat(sellPrice),
+          buyPrice: buyPrice, // Removido parseFloat
+          sellPrice: sellPrice, // Removido parseFloat
           tipoPagamento,
         },
       });
@@ -74,13 +74,13 @@ export class QuotationsService {
   }
 
   async update(id: string, organizationId: string, updateQuotationDto: UpdateQuotationDto) {
-    // First, verify the quotation belongs to the organization
+    // Verifica se a cotação pertence à organização
     const existingQuotation = await this.prisma.quotation.findUnique({
       where: { id, organizationId },
     });
 
     if (!existingQuotation) {
-      throw new Error('Quotation not found or you do not have permission to update it.');
+      throw new Error('Cotação não encontrada ou você não tem permissão para editá-la.');
     }
 
     const data: Prisma.QuotationUpdateInput = {};
@@ -93,29 +93,28 @@ export class QuotationsService {
       data.date = new Date(utcDate.getFullYear(), utcDate.getMonth(), utcDate.getDate());
     }
     if (updateQuotationDto.buyPrice !== undefined) {
-      data.buyPrice = parseFloat(updateQuotationDto.buyPrice);
+      data.buyPrice = updateQuotationDto.buyPrice; // Removido parseFloat
     }
     if (updateQuotationDto.sellPrice !== undefined) {
-      data.sellPrice = parseFloat(updateQuotationDto.sellPrice);
+      data.sellPrice = updateQuotationDto.sellPrice; // Removido parseFloat
     }
     if (updateQuotationDto.tipoPagamento !== undefined) {
       data.tipoPagamento = updateQuotationDto.tipoPagamento;
     }
 
     return this.prisma.quotation.update({
-      where: { id, organizationId }, // Use composite where
+      where: { id, organizationId },
       data,
     });
   }
 
   async remove(id: string, organizationId: string) {
-     // First, verify the quotation belongs to the organization
     const existingQuotation = await this.prisma.quotation.findUnique({
       where: { id, organizationId },
     });
 
     if (!existingQuotation) {
-      throw new Error('Quotation not found or you do not have permission to delete it.');
+      throw new Error('Cotação não encontrada ou você não tem permissão para excluí-la.');
     }
 
     return this.prisma.quotation.delete({
@@ -129,7 +128,7 @@ export class QuotationsService {
       organizationId,
     };
     if (date) {
-      where.date = { lte: date }; // Latest on or before the provided date
+      where.date = { lte: date };
     }
     return this.prisma.quotation.findFirst({
       where,
