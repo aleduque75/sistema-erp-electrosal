@@ -42,25 +42,25 @@ interface ReceivePaymentFormProps { accountRec: AccountRec; onSave: () => void; 
 // Schemas for individual payment types
 const financialPaymentSchema = z.object({
   contaCorrenteId: z.string().min(1, "A conta é obrigatória."),
-  amount: z.coerce.number().min(0.01, "O valor deve ser no mínimo R$ 0,01."),
-  goldAmount: z.coerce.number().optional(),
+  amount: z.string().transform(Number).pipe(z.number().min(0.01, "O valor deve ser no mínimo R$ 0,01.")),
+  goldAmount: z.string().optional().transform(s => s ? Number(s) : undefined),
   receivedAt: z.string().optional(),
   quotation: z.coerce.number().optional(),
 });
 
 const metalCreditPaymentSchema = z.object({
   metalCreditId: z.string().min(1, "Selecione o crédito de metal."),
-  amountInGrams: z.coerce.number().min(0.000001, "A quantidade em gramas é obrigatória."),
+  amountInGrams: z.string().transform(Number).pipe(z.number().min(0.000001, "A quantidade em gramas é obrigatória.")),
   receivedAt: z.string().optional(),
-  quotation: z.coerce.number().optional(),
+  quotation: z.string().optional().transform(s => s ? Number(s) : undefined),
 });
 
 const metalPaymentSchema = z.object({
   metalType: z.enum(['AU', 'AG', 'RH'], { message: "O tipo de metal é obrigatório." }),
-  amountInGrams: z.coerce.number().min(0.000001, "A quantidade em gramas é obrigatória."),
-  purity: z.coerce.number().min(0.01, "A pureza é obrigatória."),
+  amountInGrams: z.string().transform(Number).pipe(z.number().min(0.000001, "A quantidade em gramas é obrigatória.")),
+  purity: z.string().transform(Number).pipe(z.number().min(0.01, "A pureza é obrigatória.")),
   receivedAt: z.string().optional(),
-  quotation: z.coerce.number().optional(),
+  quotation: z.string().optional().transform(s => s ? Number(s) : undefined),
 });
 
 // Main form schema

@@ -53,3 +53,6 @@ package-lock.json
 apps/backend/uploads/
 
 n8n-data/
+evolution_store/
+# Evolution API instances
+evolution_instances/

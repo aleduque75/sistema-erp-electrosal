@@ -43,7 +43,13 @@ export class SettingsController {
     return this.settingsService.updateAppearanceSettings(organizationId, dto);
   }
 
+  @Get('organization')
+  getOrganizationSettings(@CurrentUser('orgId') organizationId: string) {
+    return this.settingsService.getOrganizationSettings(organizationId);
+  }
+
   // --- Theme Presets ---
+  @UseGuards(AuthGuard('jwt'))
   @Post('themes')
   createThemePreset(
     @CurrentUser('orgId') organizationId: string,
