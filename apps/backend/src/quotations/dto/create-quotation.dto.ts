@@ -1,20 +1,24 @@
-import { IsString, IsDecimal, IsDateString, IsOptional, IsNotEmpty } from 'class-validator';
+import { IsString, IsNumber, IsDateString, IsOptional, IsNotEmpty } from 'class-validator';
+import { Type } from 'class-transformer'; // <--- Importação necessária
 import { TipoMetal } from '@sistema-erp-electrosal/core';
 
 export class CreateQuotationDto {
-  @IsString() // TipoMetal is an enum, but for DTO validation, string is fine
+  @IsString()
   metal: TipoMetal;
 
   @IsDateString()
-  date: string; // Use string for DTO, convert to Date later
+  date: string;
 
-  @IsDecimal({ decimal_digits: '1,4' }) // Allow up to 4 decimal places
-  buyPrice: string; // Use string for DTO, convert to Decimal later
+  // Mudamos de IsDecimal para IsNumber e adicionamos o @Type
+  @IsNumber()
+  @Type(() => Number) 
+  buyPrice: number; // Mudamos de string para number
 
-  @IsDecimal({ decimal_digits: '1,4' }) // Allow up to 4 decimal places
-  sellPrice: string; // Use string for DTO, convert to Decimal later
+  @IsNumber()
+  @Type(() => Number)
+  sellPrice: number; // Mudamos de string para number
 
   @IsOptional()
   @IsString()
-  tipoPagamento?: string; // Renamed from paymentType to match incoming request
+  tipoPagamento?: string;
 }
