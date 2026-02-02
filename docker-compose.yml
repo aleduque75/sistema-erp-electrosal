@@ -1,5 +1,4 @@
 services:
-  # --- Backend NestJS ---
   erp-backend:
     build:
       context: .
@@ -7,14 +6,12 @@ services:
     container_name: erp_backend
     restart: unless-stopped
     environment:
-      # Usando o nome do container do banco 'postgres_db' na rede interna
       DATABASE_URL: "postgresql://admin:Kapm306066858@@postgres_db:5432/erp_electrosal?schema=public"
       NODE_ENV: production
       PORT: 3001
     networks:
       - apps_network
 
-  # --- Frontend Next.js ---
   erp-frontend:
     build:
       context: .
@@ -24,10 +21,10 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=https://api.electrosal.com.br
       - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
     networks:
       - apps_network
 
-  # --- Automação n8n ---
   n8n:
     image: n8nio/n8n
     container_name: n8n

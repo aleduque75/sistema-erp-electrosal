@@ -14,15 +14,14 @@ FROM node:20-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-# O modo standalone do Next.js gera uma estrutura específica.
-# Copiamos a pasta standalone para a raiz do runner.
+# O Next.js standalone precisa dessas três pastas:
 COPY --from=builder /app/apps/frontend/.next/standalone ./
 COPY --from=builder /app/apps/frontend/.next/static ./apps/frontend/.next/static
 COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
 
 EXPOSE 3000
 
-# CORREÇÃO DO CMD: No modo standalone, o ponto de entrada é o server.js
-# dentro da pasta do aplicativo.
+# No modo standalone, o server.js é gerado dentro da pasta do app
 CMD ["node", "apps/frontend/server.js"]

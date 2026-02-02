@@ -2,30 +2,33 @@
 FROM node:20 AS builder
 WORKDIR /app
 RUN npm install -g pnpm@9.0.6
+
+# Copia tudo para o builder
 COPY . .
+
+# Instala todas as dependências (incluindo devDeps para build)
 RUN pnpm install --frozen-lockfile
 
-# Gerar e Buildar
+# Gera o Prisma Client e faz o Build dos pacotes
 RUN pnpm --filter "@sistema-erp-electrosal/core" build
+RUN pnpm --filter backend prisma generate
 RUN pnpm --filter backend build
 RUN npx tsc --project apps/backend/tsconfig.seed.json
 
-# Fase 2: Runner
-FROM node:20
+# Fase 2: Runner (Imagem leve para rodar)
+FROM node:20-slim
 WORKDIR /app
 ENV NODE_ENV=production
+
 RUN npm install -g pnpm@9.0.6
 
-# Copiar manifestos
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
+# Copia os manifestos para instalar apenas o necessário
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
 COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
 
-RUN pnpm install --production --frozen-lockfile
-
-# CLI do Prisma para gerar o client no runtime
-RUN npm install -g prisma@5.12.1 
+# Instala apenas dependências de produção para o backend e suas dependências internas
+RUN pnpm install --production --frozen-lockfile --filter backend...
 
 # Dependências para Puppeteer (PDFs)
 RUN apt-get update && apt-get install -y \
@@ -36,12 +39,15 @@ RUN apt-get update && apt-get install -y \
     libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 \
     libxtst6 lsb-release wget xdg-utils && rm -rf /var/lib/apt/lists/*
 
-# Copiar artefatos
-COPY --from=builder /app/apps/backend/dist ./dist
+# Copia os arquivos compilados (Dist)
+COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/packages/core/dist ./packages/core/dist
-COPY --from=builder /app/apps/backend/prisma ./prisma
+COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
 
 EXPOSE 3001
 
-# O segredo: Gerar o client e iniciar
-CMD ["sh", "-c", "prisma generate --schema ./prisma/schema.prisma && node dist/main"]
+# Define o diretório de execução para o backend
+WORKDIR /app/apps/backend
+
+# Inicia gerando o Prisma e rodando o main.js
+CMD ["sh", "-c", "pnpm prisma generate && node dist/main"]
