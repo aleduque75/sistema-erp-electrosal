@@ -1181,7 +1181,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend/src/generated/client",
+      "value": "/root/apps/sistema-erp-electrosal/apps/backend/src/generated/client",
       "fromEnvVar": null
     },
     "config": {
@@ -1199,12 +1199,11 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/home/aleduque/Documentos/cursos/sistema-erp-electrosal/apps/backend/prisma/schema.prisma",
+    "sourceFilePath": "/root/apps/sistema-erp-electrosal/apps/backend/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../../.env"
+    "rootEnvPath": null
   },
   "relativePath": "../../../prisma",
   "clientVersion": "6.19.2",
@@ -1213,6 +1212,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {

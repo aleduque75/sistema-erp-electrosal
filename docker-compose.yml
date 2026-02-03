@@ -1,48 +1,53 @@
 services:
-  erp-backend:
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
-    container_name: erp_backend
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: "postgresql://admin:Kapm306066858@@postgres_db:5432/erp_electrosal?schema=public"
-      NODE_ENV: production
-      PORT: 3001
-    networks:
-      - apps_network
-
-  erp-frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-    container_name: erp_frontend
-    restart: unless-stopped
-    environment:
-      - NEXT_PUBLIC_API_URL=https://api.electrosal.com.br
-      - NODE_ENV=production
-      - HOSTNAME=0.0.0.0
-    networks:
-      - apps_network
-
-  n8n:
-    image: n8nio/n8n
-    container_name: n8n
+  # --- BANCO DE DADOS (Agora acessível pelo PM2) ---
+  postgres_db:
+    image: postgres:16
+    container_name: erp_postgres
     restart: always
     environment:
-      - GENERIC_TIMEZONE=America/Sao_Paulo
-      - N8N_EXTERNAL_URL=https://n8n.electrosal.com.br
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: Electrosal123
+      POSTGRES_DB: erp_electrosal
+    ports:
+      - "5432:5432" # Libera o banco para o Backend (PM2)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d erp_electrosal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- PROXY (Gerencia seus Domínios e SSL) ---
+  nginx-proxy:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: erp_proxy
+    restart: always
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./npm/data:/data
+      - ./npm/letsencrypt:/etc/letsencrypt
+
+  # --- N8N (Automação Integrada) ---
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: erp_n8n
+    restart: always
+    environment:
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres_db
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_DATABASE=erp_electrosal
       - DB_POSTGRESDB_USER=admin
-      - DB_POSTGRESDB_PASSWORD=Kapm306066858@@
-    volumes:
-      - ./n8n-data:/home/node/.n8n
-    networks:
-      - apps_network
+      - DB_POSTGRESDB_PASSWORD=Electrosal123
+    ports:
+      - "5678:5678"
+    depends_on:
+      postgres_db:
+        condition: service_healthy
 
-networks:
-  apps_network:
-    external: true
+volumes:
+  postgres_data:
