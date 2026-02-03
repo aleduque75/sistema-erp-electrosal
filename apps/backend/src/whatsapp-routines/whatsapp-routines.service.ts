@@ -8,12 +8,14 @@ import { WhatsAppRoutine } from '@prisma/client';
 export class WhatsappRoutinesService {
   private readonly logger = new Logger(WhatsappRoutinesService.name);
 
+  // Mapa em memória para controlar o estado da conversa (Passo atual e dados coletados)
+  private activeStates = new Map<
+    string,
+    { routineId: string; stepIndex: number; data: any }
+  >();
+
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Processa mensagens recebidas verificando se existe uma rotina dinâmica no banco.
-   * Retorna true se uma rotina foi encontrada e processada.
-   */
   async processIncomingMessage(
     remoteJid: string,
     messageText: string,
@@ -22,41 +24,44 @@ export class WhatsappRoutinesService {
   ): Promise<boolean> {
     const trigger = messageText.trim().toLowerCase();
 
-    this.logger.log(
-      `🔍 [DEBUG] Buscando rotina: Org=${organizationId} | Trigger=${trigger}`,
-    );
+    // 1. Verifica se o usuário já está no meio de uma rotina ativa (Estado pendente)
+    const pendingState = this.activeStates.get(remoteJid);
+    let routine: WhatsAppRoutine | null = null;
 
-    // 1. Busca a rotina no banco de dados
-    const routine = await this.prisma.whatsAppRoutine.findFirst({
-      where: {
-        organizationId: organizationId,
-        trigger: { equals: trigger, mode: 'insensitive' },
-        isActive: true,
-      },
-    });
+    if (pendingState) {
+      routine = await this.prisma.whatsAppRoutine.findUnique({
+        where: { id: pendingState.routineId },
+      });
+    }
 
-    // 2. Se não encontrar, avisa no log e retorna false para o bot tentar comandos fixos
+    // 2. Se não houver estado pendente, busca por um novo gatilho
     if (!routine) {
-      this.logger.warn(
-        `⚠️ [DEBUG] Nenhuma rotina ativa encontrada para o gatilho: "${trigger}"`,
-      );
+      routine = await this.prisma.whatsAppRoutine.findFirst({
+        where: {
+          organizationId: organizationId,
+          trigger: { equals: trigger, mode: 'insensitive' },
+          isActive: true,
+        },
+      });
+    }
+
+    if (!routine) {
+      this.logger.warn(`⚠️ Nenhuma rotina encontrada para: "${trigger}"`);
       return false;
     }
 
-    this.logger.log(
-      `🚀 Executando rotina dinâmica: ${routine.name} (${routine.id})`,
-    );
-
     try {
-      // 3. Converte a string JSON do banco em objeto
-      // Nota: No Prisma, se o campo for String, usamos JSON.parse. Se for Json, usamos direto.
       const steps =
         typeof routine.steps === 'string'
           ? JSON.parse(routine.steps)
           : routine.steps;
 
-      // 4. Loop de execução dos passos
-      for (const step of steps) {
+      // Define por onde começar: do início ou do passo após o último set_state
+      const startIndex = pendingState ? pendingState.stepIndex + 1 : 0;
+
+      for (let i = startIndex; i < steps.length; i++) {
+        const step = steps[i];
+
         switch (step.type) {
           case 'text':
             this.logger.debug(
@@ -67,9 +72,27 @@ export class WhatsappRoutinesService {
 
           case 'delay':
             const ms = step.ms || 1000;
-            this.logger.debug(`Aguardando delay de ${ms}ms...`);
             await new Promise((resolve) => setTimeout(resolve, ms));
             break;
+
+          case 'set_state':
+            // SALVA O ESTADO E PARA A EXECUÇÃO: O próximo "Oi" continuará daqui
+            this.logger.log(`📍 Set State: ${step.value} para ${remoteJid}`);
+            this.activeStates.set(remoteJid, {
+              routineId: routine.id,
+              stepIndex: i,
+              data: {
+                ...(pendingState?.data || {}),
+                [step.key || 'last_input']: messageText,
+              },
+            });
+            return true; // Interrompe para aguardar a resposta do usuário
+
+          case 'finish':
+            this.activeStates.delete(remoteJid);
+            if (step.content)
+              await sendWhatsappMessage(remoteJid, step.content);
+            return true;
 
           default:
             this.logger.warn(`Tipo de passo desconhecido: ${step.type}`);
@@ -77,32 +100,26 @@ export class WhatsappRoutinesService {
         }
       }
 
-      return true; // Rotina processada com sucesso
+      // Se chegar ao fim de todos os passos, limpa o estado
+      this.activeStates.delete(remoteJid);
+      return true;
     } catch (err) {
-      this.logger.error(
-        `❌ Erro ao processar passos da rotina "${routine.name}":`,
-        err,
-      );
-      await sendWhatsappMessage(
-        remoteJid,
-        'Ocorreu um erro interno ao processar este comando.',
-      );
-      return true; // Retornamos true para não cair em comandos fixos após um erro real
+      this.logger.error(`❌ Erro na rotina "${routine.name}":`, err);
+      return false;
     }
   }
 
-  // --- MÉTODOS CRUD (MANTIDOS E CORRIGIDOS) ---
+  // --- MÉTODOS CRUD (REVISADOS) ---
 
   async create(
-    createWhatsappRoutineDto: CreateWhatsappRoutineDto,
+    dto: CreateWhatsappRoutineDto,
     organizationId: string,
   ): Promise<WhatsAppRoutine> {
     return this.prisma.whatsAppRoutine.create({
       data: {
-        ...createWhatsappRoutineDto,
+        ...dto,
         organizationId,
-        // Garante que o gatilho seja salvo sempre em minúsculo para facilitar a busca
-        trigger: createWhatsappRoutineDto.trigger.trim().toLowerCase(),
+        trigger: dto.trigger.trim().toLowerCase(),
       },
     });
   }
@@ -118,33 +135,29 @@ export class WhatsappRoutinesService {
     const routine = await this.prisma.whatsAppRoutine.findUnique({
       where: { id },
     });
-
     if (!routine || routine.organizationId !== organizationId) {
-      throw new NotFoundException(`Rotina com ID ${id} não encontrada.`);
+      throw new NotFoundException(`Rotina não encontrada.`);
     }
     return routine;
   }
 
   async update(
     id: string,
-    updateWhatsappRoutineDto: UpdateWhatsappRoutineDto,
+    dto: UpdateWhatsappRoutineDto,
     organizationId: string,
   ): Promise<WhatsAppRoutine> {
-    await this.findOne(id, organizationId); // Verifica se pertence à organização
+    await this.findOne(id, organizationId);
     return this.prisma.whatsAppRoutine.update({
       where: { id },
       data: {
-        ...updateWhatsappRoutineDto,
-        // Atualiza trigger em lowercase se ele for enviado
-        trigger: updateWhatsappRoutineDto.trigger?.trim().toLowerCase(),
+        ...dto,
+        trigger: dto.trigger?.trim().toLowerCase(),
       },
     });
   }
 
   async remove(id: string, organizationId: string): Promise<WhatsAppRoutine> {
     await this.findOne(id, organizationId);
-    return this.prisma.whatsAppRoutine.delete({
-      where: { id },
-    });
+    return this.prisma.whatsAppRoutine.delete({ where: { id } });
   }
 }
