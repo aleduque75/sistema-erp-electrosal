@@ -10,14 +10,23 @@ import { IconMap } from "@/lib/icon-map";
 import api from "@/lib/api";
 import { useSidebar } from "@/context/sidebar-context";
 import { useTheme } from "@/components/providers/custom-theme-provider";
-import { ChevronDown, MoreHorizontal, Sun, Moon } from "lucide-react";
+import { ChevronDown, MoreHorizontal, Sun, Moon, X } from "lucide-react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 export function Sidebar() {
-  const { isExpanded, isHovered, setIsHovered, sidebarWidth } = useSidebar();
+  const {
+    isExpanded,
+    isHovered,
+    setIsHovered,
+    sidebarWidth,
+    isMobileOpen,
+    toggleMobileSidebar,
+  } = useSidebar();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const [items, setItems] = useState<any[]>([]);
   const [openSub, setOpenSub] = useState<string | null>(null);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   useEffect(() => {
     api.get("/menu").then((res) => setItems(res.data.menuItems || []));
@@ -68,7 +77,7 @@ export function Sidebar() {
                     <ChevronDown
                       className={cn(
                         "size-4 transition-transform",
-                        isOpen && "rotate-180",
+                        isOpen && "rotate-180"
                       )}
                     />
                   )}
@@ -94,9 +103,13 @@ export function Sidebar() {
 
   return (
     <aside
-      onMouseEnter={() => !isExpanded && setIsHovered(true)}
-      onMouseLeave={() => !isExpanded && setIsHovered(false)}
-      className="fixed inset-y-0 left-0 z-50 flex flex-col border-r transition-all duration-300"
+      onMouseEnter={() => isDesktop && !isExpanded && setIsHovered(true)}
+      onMouseLeave={() => isDesktop && !isExpanded && setIsHovered(false)}
+      className={cn(
+        "fixed inset-y-0 left-0 z-50 flex flex-col border-r transform transition-transform duration-300 ease-in-out",
+        isMobileOpen ? "translate-x-0" : "-translate-x-full",
+        "md:translate-x-0"
+      )}
       style={{
         width: sidebarWidth + "px",
         backgroundColor: "hsl(var(--menu-background))",
@@ -104,20 +117,31 @@ export function Sidebar() {
       }}
     >
       <div
-        className="h-16 flex items-center px-4 border-b shrink-0"
+        className="h-16 flex items-center justify-between px-4 border-b shrink-0"
         style={{
           borderColor: "hsla(var(--menu-border), var(--menu-border-opacity))",
         }}
       >
-        <Image src="/images/logo.png" alt="Logo" width={32} height={32} />
-        {(isExpanded || isHovered) && (
-          <span
-            className="ml-3 font-black text-lg truncate"
-            style={{ color: "hsl(var(--menu-text))" }}
-          >
-            ELECTROSAL
-          </span>
-        )}
+        <div className="flex items-center">
+          <Image src="/images/logo.png" alt="Logo" width={32} height={32} />
+          {(isExpanded || isHovered) && (
+            <span
+              className="ml-3 font-black text-lg truncate"
+              style={{ color: "hsl(var(--menu-text))" }}
+            >
+              ELECTROSAL
+            </span>
+          )}
+        </div>
+        <button
+            onClick={toggleMobileSidebar}
+            className={cn("p-2 rounded-md md:hidden", {
+                "hidden": !isMobileOpen,
+            })}
+        >
+            <X className="h-6 w-6" />
+            <span className="sr-only">Fechar menu</span>
+        </button>
       </div>
 
       <ScrollArea className="flex-1 py-4">

@@ -1,119 +1,37 @@
 "use client";
-
-import Link from "next/link";
-import Image from "next/image";
-import { MobileMenu } from "./mobile-menu";
+import React from "react";
+import { AlignJustify } from "lucide-react";
+import { useSidebar } from "@/context/sidebar-context";
 import { UserNav } from "./user-nav";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { useSidebar } from "@/context/sidebar-context"; // Import useSidebar hook
-import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react"; // Import icons
+import { NavbarActions } from "./NavbarActions";
 
-
-import { API_BASE_URL } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-
-
-interface HeaderProps {
-  logoText?: string | null;
-  logoImage?: {
-    id: string;
-    path: string;
-    filename: string;
-    width?: number | null;
-    height?: number | null;
-  } | null;
-}
-
-export function Header({ logoText, logoImage }: HeaderProps) {
-  const { toggleSidebar, toggleMobileSidebar, isExpanded } = useSidebar();
-
-  // --- Lógica de Renderização do Logotipo ---
-  const renderLogo = () => {
-    // Caso 1: Tem imagem
-    if (logoImage) {
-      const isSquare =
-        logoImage.width &&
-        logoImage.height &&
-        Math.abs(logoImage.width / logoImage.height - 1) < 0.1;
-      const showTextWithImage = isSquare;
-      const imageSrc = `${API_BASE_URL}${logoImage.path}`;
-
-      return (
-        <>
-          <Image
-            src={imageSrc}
-            alt={logoText || 'Logo'}
-            width={showTextWithImage ? 32 : 160}
-            height={32}
-            className="object-contain"
-          />
-          {showTextWithImage && (
-            <span className="font-bold sm:inline-block">{logoText}</span>
-          )}
-        </>
-      );
-    }
-
-    // Caso 2: Não tem imagem, mas tem texto
-    if (logoText) {
-      return <span className="font-bold sm:inline-block">{logoText}</span>;
-    }
-
-    // Caso 3: Fallback (sem imagem e sem texto do backend)
-    return (
-      <>
-        <Image
-          src="/images/logo.png"
-          alt="Sistema Electrosal Logo"
-          width={160}
-          height={32}
-        />
-        <span className="font-bold sm:inline-block">Sistema Electrosal - Erp</span>
-      </>
-    );
-  };
+export function Header() {
+  const { toggleSidebar, toggleMobileSidebar } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        {/* Mobile menu toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden mr-2"
-          onClick={toggleMobileSidebar}
-        >
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle Mobile Menu</span>
-        </Button>
-
-        {/* Desktop sidebar toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hidden lg:flex mr-2 text-foreground"
-          onClick={toggleSidebar}
-        >
-          {isExpanded ? (
-            <PanelLeftClose className="h-5 w-5" />
-          ) : (
-            <PanelLeftOpen className="h-5 w-5" />
-          )}
-          <span className="sr-only">Toggle Sidebar</span>
-        </Button>
-
-        <div className="mr-4 flex items-center flex-grow">
-          <Link href="/dashboard" className="flex items-center space-x-2">
-            {renderLogo()}
-          </Link>
+    <header className="sticky top-0 z-40 w-full border-b bg-card">
+      <div className="flex items-center justify-between h-16 px-4 md:px-6">
+        <div className="flex items-center">
+          {/* Botão para toggle do sidebar em Desktop */}
+          <button
+            onClick={toggleSidebar}
+            className="hidden md:flex p-2 rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <AlignJustify className="h-6 w-6" />
+            <span className="sr-only">Toggle sidebar</span>
+          </button>
+          {/* Botão para toggle do sidebar em Mobile */}
+          <button
+            onClick={toggleMobileSidebar}
+            className="flex md:hidden p-2 rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <AlignJustify className="h-6 w-6" />
+            <span className="sr-only">Toggle mobile sidebar</span>
+          </button>
         </div>
-
-        {/* Itens da Direita */}
-        <div className="flex items-center justify-end space-x-2">
-          <ThemeSwitcher />
-          <div className="hidden lg:flex">
-            <UserNav />
-          </div>
+        <div className="flex items-center gap-4">
+          <NavbarActions />
+          <UserNav />
         </div>
       </div>
     </header>

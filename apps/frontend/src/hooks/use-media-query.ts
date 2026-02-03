@@ -1,20 +1,39 @@
-// apps/frontend/src/hooks/use-media-query.ts
+"use client";
+
 import { useState, useEffect } from 'react';
 
-export function useMediaQuery(query: string) {
-  const [value, setValue] = useState(false);
+/**
+ * Custom hook for tracking the state of a media query.
+ * @param query The media query string to watch.
+ * @returns `true` if the media query matches, `false` otherwise.
+ */
+export function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
 
   useEffect(() => {
-    function onChange(event: MediaQueryListEvent) {
-      setValue(event.matches);
+    // Ensure this code only runs in the browser
+    if (typeof window === 'undefined') {
+      return;
     }
 
-    const result = window.matchMedia(query);
-    result.addEventListener('change', onChange);
-    setValue(result.matches);
+    const media = window.matchMedia(query);
+    
+    // Set the initial state
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
 
-    return () => result.removeEventListener('change', onChange);
-  }, [query]);
+    // Listener for changes
+    const listener = () => {
+      setMatches(media.matches);
+    };
 
-  return value;
+    // Add event listener
+    media.addEventListener('change', listener);
+
+    // Cleanup on unmount
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+
+  return matches;
 }
