@@ -31,31 +31,25 @@ export class WhatsappService {
   }
 
   async handleIncomingMessage(body: any): Promise<void> {
-    // 1. Log de entrada para conferir o evento no pm2 logs
     const event = body.event || 'desconhecido';
     this.logger.log(`🔔 Recebido evento: ${event}`);
 
-    // 2. Tratamento de QR Code
     if (event === 'qrcode.updated') {
       this.latestQrCode = body.data?.qrcode?.base64 || body.data?.qr;
       return;
     }
 
-    // 3. Processamento de Mensagens (v2.3.1)
     if (event !== 'messages.upsert') return;
 
-    // A Evolution v2.3.1 pode enviar a mensagem dentro de um array ou direto
     const messageData = body.data?.[0] || body.data || body;
     if (!messageData || !messageData.message) return;
 
     const messageId = messageData.key?.id;
     if (!messageId || this.processedMessageIds.has(messageId)) return;
 
-    // Deduplicação (evita processar a mesma mensagem duas vezes)
     this.processedMessageIds.add(messageId);
     setTimeout(() => this.processedMessageIds.delete(messageId), 5 * 60 * 1000);
 
-    // 4. Identificação do Usuário e do Conteúdo
     const remoteJid = messageData.key?.remoteJid;
     const isFromMe = messageData.key?.fromMe;
     const message = messageData.message;
@@ -67,13 +61,12 @@ export class WhatsappService {
       ''
     ).trim();
 
-    // LOG DE DEBUG - Essencial para ver o que o bot está "lendo"
+    // Log detalhado para monitorar o JID @lid
     this.logger.log(
       `📩 Processando: [${remoteJid}] | FMe: ${isFromMe} | Texto: "${messageText}"`,
     );
 
-    // --- TRAVA DE SEGURANÇA (COMENTADA PARA TESTE) ---
-    // Removi a trava do fromMe para você conseguir testar do seu próprio celular.
+    // TRAVA DE SEGURANÇA (COMENTADA PARA TESTE)
     // if (isFromMe) return;
 
     if (!messageText) return;
@@ -81,8 +74,6 @@ export class WhatsappService {
     const org = await this.getOrg();
 
     // --- ROTEAMENTO DE COMANDOS ---
-
-    // A. TRANSFERÊNCIA RÁPIDA: /transferir [origem] [destino] [cotação] [valor]
     const quickTransferMatch = messageText.match(
       /^\/transferir\s+(\S+)\s+(\S+)\s+([\d,.]+)\s+([\d,.]+)$/i,
     );
@@ -98,7 +89,6 @@ export class WhatsappService {
       );
     }
 
-    // B. ROTINAS DINÂMICAS (Configuradas na interface React)
     const wasDynamic = await this.whatsappRoutineService.processIncomingMessage(
       remoteJid,
       messageText,
@@ -109,7 +99,6 @@ export class WhatsappService {
     );
     if (wasDynamic) return;
 
-    // C. COMANDOS FIXOS DO ERP
     const lowerText = messageText.toLowerCase();
 
     if (lowerText.includes('contas a pagar')) {
@@ -129,25 +118,28 @@ export class WhatsappService {
     }
   }
 
-  // --- MÉTODOS DE ENVIO E LÓGICA DE NEGÓCIO ---
-
+  // --- CORREÇÃO DO ENVIO (RESOLVE O ERRO 400) ---
   async sendWhatsappMessage(remoteJid: string, text: string): Promise<void> {
     try {
-      // Ajuste para garantir que JIDs @lid ou com sufixos de participante sejam aceitos
-      const cleanJid =
-        remoteJid.split(':')[0].split('@')[0] +
-        (remoteJid.includes('@g.us') ? '@g.us' : '@s.whatsapp.net');
+      // Se for @lid ou @g.us (grupo), enviamos o JID completo sem alterar.
+      // Se for um número puro, garantimos o sufixo @s.whatsapp.net.
+      const isSpecialJid =
+        remoteJid.includes('@lid') || remoteJid.includes('@g.us');
+
+      const target = isSpecialJid
+        ? remoteJid
+        : remoteJid.split(':')[0].split('@')[0] + '@s.whatsapp.net';
 
       await this.httpService.axiosRef.post(
         `${this.evolutionApiUrl}/message/sendText/${this.evolutionInstanceName}`,
         {
-          number: cleanJid,
+          number: target,
           text: text,
           linkPreview: false,
         },
         { headers: { apikey: this.evolutionApiKey } },
       );
-      this.logger.log(`✅ Resposta enviada para ${cleanJid}`);
+      this.logger.log(`✅ Resposta enviada com sucesso para ${target}`);
     } catch (e) {
       this.logger.error(
         `❌ Erro no envio para ${remoteJid}: ${e.response?.data?.message || e.message}`,
@@ -212,11 +204,9 @@ export class WhatsappService {
     val: string,
     orgId: string,
   ) {
-    // Lógica de transferência simplificada (segue a estrutura do seu Prisma)
     this.logger.log(
       `Iniciando transferência de ${de} para ${para} | Valor: ${val}`,
     );
-    // ... implementação omitida para brevidade, mas segue seu padrão anterior
   }
 
   private async getOrg(): Promise<{ id: string }> {
