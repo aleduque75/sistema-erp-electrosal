@@ -1,107 +1,129 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import Link from 'next/link';
-import api from '@/lib/api';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import Link from "next/link";
+import api from "@/lib/api";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function CreateAccountPayPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [formData, setFormData] = useState({
-    description: '',
-    amount: '',
-    dueDate: '',
+    description: "",
+    amount: "",
+    dueDate: "",
     paid: false,
-    paidAt: '',
+    paidAt: "",
   });
   const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
-    setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-
-    if (!user) {
-      setError('User not authenticated.');
-      return;
-    }
-
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-      setError('Access token not found.');
-      return;
-    }
+    if (!user) return;
 
     try {
-      await api.post('/accounts-pay', {
+      await api.post("/accounts-pay", {
         ...formData,
         amount: parseFloat(formData.amount),
         paidAt: formData.paid ? formData.paidAt : null,
-      }, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
       });
-
-      router.push('/accounts-pay');
+      router.push("/accounts-pay");
     } catch (err: any) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
     }
   };
 
-  if (isLoading) {
-    return <p>Loading...</p>;
-  }
-
-  if (!user) {
-    return <p>Please log in to create accounts payable.</p>;
-  }
+  if (isLoading) return <p className="p-8">Carregando...</p>;
 
   return (
-    <div className="card p-6">
-      <h1 className="text-2xl font-bold mb-4">Create New Account Payable</h1>
-      {error && <p className="text-danger mb-4">{error}</p>}
-      <form onSubmit={handleSubmit} className="w-full max-w-lg">
-        <div className="mb-4">
-          <label htmlFor="description" className="block text-gray-700 text-sm font-bold mb-2">Description:</label>
-          <input type="text" id="description" name="description" value={formData.description} onChange={handleChange} className="w-full" required />
-        </div>
-        <div className="mb-4">
-          <label htmlFor="amount" className="block text-gray-700 text-sm font-bold mb-2">Amount:</label>
-          <input type="number" id="amount" name="amount" value={formData.amount} onChange={handleChange} className="w-full" step="0.01" required />
-        </div>
-        <div className="mb-4">
-          <label htmlFor="dueDate" className="block text-gray-700 text-sm font-bold mb-2">Due Date:</label>
-          <input type="date" id="dueDate" name="dueDate" value={formData.dueDate} onChange={handleChange} className="w-full" required />
-        </div>
-        <div className="mb-4">
-          <label htmlFor="paid" className="block text-gray-700 text-sm font-bold mb-2">
-            <input type="checkbox" id="paid" name="paid" checked={formData.paid} onChange={handleChange} className="mr-2 leading-tight" />
-            <span className="text-sm">Paid</span>
-          </label>
-        </div>
-        {formData.paid && (
-          <div className="mb-4">
-            <label htmlFor="paidAt" className="block text-gray-700 text-sm font-bold mb-2">Paid At:</label>
-            <input type="date" id="paidAt" name="paidAt" value={formData.paidAt} onChange={handleChange} className="w-full" />
-          </div>
-        )}
-        <div className="flex items-center justify-between">
-          <button type="submit" className="btn-primary">
-            Create Account Payable
-          </button>
-          <Link href="/accounts-pay" className="text-primary-600 hover:underline">
-            Cancel
-          </Link>
-        </div>
-      </form>
+    <div className="p-4 md:p-8 flex justify-center">
+      <Card className="w-full max-w-lg">
+        <CardHeader>
+          <CardTitle>Nova Conta a Pagar</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error && <p className="text-destructive mb-4 text-sm">{error}</p>}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição</Label>
+              <Input
+                id="description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="amount">Valor (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                id="amount"
+                value={formData.amount}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dueDate">Data de Vencimento</Label>
+              <Input
+                type="date"
+                id="dueDate"
+                value={formData.dueDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, dueDate: e.target.value })
+                }
+                required
+              />
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="paid"
+                checked={formData.paid}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, paid: !!checked })
+                }
+              />
+              <Label htmlFor="paid">Já está pago?</Label>
+            </div>
+
+            {formData.paid && (
+              <div className="space-y-2">
+                <Label htmlFor="paidAt">Data do Pagamento</Label>
+                <Input
+                  type="date"
+                  id="paidAt"
+                  value={formData.paidAt}
+                  onChange={(e) =>
+                    setFormData({ ...formData, paidAt: e.target.value })
+                  }
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-4">
+              <Button type="submit">Criar Conta</Button>
+              <Link
+                href="/accounts-pay"
+                className="text-sm text-muted-foreground hover:underline"
+              >
+                Cancelar
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
