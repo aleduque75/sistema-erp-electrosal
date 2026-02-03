@@ -111,7 +111,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="max-w-full sm:max-w-lg md:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalhes da Venda #{sale?.orderNumber}</DialogTitle>
         </DialogHeader>

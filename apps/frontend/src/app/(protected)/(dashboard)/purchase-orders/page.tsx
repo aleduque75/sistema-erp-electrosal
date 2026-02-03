@@ -312,7 +312,7 @@ useEffect(() => {
       </Dialog>
 
       <Dialog open={!!orderToView} onOpenChange={(isOpen) => !isOpen && setOrderToView(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-full sm:max-w-lg md:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Pedido de Compra</DialogTitle>
             <DialogDescription>Pedido #{orderToView?.orderNumber}</DialogDescription>

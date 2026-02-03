@@ -56,6 +56,12 @@
     --popover-foreground: var(--foreground);
   }
 
+  @media (max-width: 639px) { /* Targets screens smaller than Tailwind's 'sm' breakpoint */
+    :root {
+      --card-radius: 8px; /* Reduced radius for mobile */
+    }
+  }
+
       .dark {
         /* TEXTOS DARK */
         --foreground: 210 40% 98%;

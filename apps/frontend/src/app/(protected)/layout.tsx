@@ -17,7 +17,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <MainContent>
         <Header />
-        <main className="p-4 md:p-6">{children}</main>
+        <main className="p-2 md:p-6">{children}</main>
       </MainContent>
       {isMobileOpen && !isDesktop && (
         <div
