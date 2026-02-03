@@ -16,49 +16,50 @@ export class WhatsappController {
 
   constructor(private readonly whatsappService: WhatsappService) {}
 
-  // 1. Captura chamadas com sufixo (ex: webhook/messages-upsert)
   @Public()
   @Post('webhook/:event')
   @HttpCode(200)
   async handleWebhooks(@Param('event') event: string, @Body() body: any) {
-    // Normaliza o evento para aceitar com ponto ou traço
-    const normalizedEvent = event.replace('-', '.');
+    const normalizedEvent = event.toLowerCase().replace('-', '.');
     this.logger.log(`📢 Webhook dinâmico [${normalizedEvent}] recebido.`);
 
     if (normalizedEvent === 'messages.upsert') {
-      this.logMessageContent(body); // Loga o texto da mensagem no terminal
+      this.logMessageContent(body);
       await this.whatsappService.handleIncomingMessage(body);
     }
     return { status: 'received', event: normalizedEvent };
   }
 
-  // 2. CAPTURA A ROTA RAIZ (Resolve o 404 da Evolution v2)
   @Public()
   @Post('webhook')
   @HttpCode(200)
   async handleBaseWebhook(@Body() body: any) {
-    const event = body.event || 'unknown';
-    this.logger.log(`📢 Webhook raiz recebido (Evento: ${event})`);
+    // Evolution v2 pode mandar o nome do evento em maiúsculo ou minúsculo
+    const event = (body.event || 'unknown').toLowerCase();
+    this.logger.log(`📢 Webhook raiz recebido (Evento: ${body.event})`);
 
-    // Evolution v2 usa messages.upsert
-    if (event === 'messages.upsert' || event === 'MESSAGES_UPSERT') {
-      this.logMessageContent(body); // Loga o texto da mensagem no terminal
+    if (event === 'messages.upsert') {
+      this.logMessageContent(body);
       await this.whatsappService.handleIncomingMessage(body);
     }
     return { status: 'received' };
   }
 
-  // Função auxiliar para você ver o que está chegando no terminal
   private logMessageContent(body: any) {
     try {
+      // Tenta capturar o texto de diferentes formatos da Evolution API
       const message =
         body.data?.message?.conversation ||
         body.data?.message?.extendedTextMessage?.text ||
-        'Mensagem sem texto (ex: imagem/áudio)';
+        body.data?.message?.imageMessage?.caption ||
+        'Mensagem sem texto ou formato não mapeado';
+
       const sender = body.data?.key?.remoteJid || 'Desconhecido';
-      this.logger.debug(`📩 Conteúdo da Mensagem de [${sender}]: ${message}`);
+
+      // MUDANÇA CRUCIAL: Usando .log em vez de .debug para garantir que apareça no PM2
+      this.logger.log(`📩 CONTEÚDO RECEBIDO de [${sender}]: ${message}`);
     } catch (e) {
-      this.logger.error('❌ Erro ao ler conteúdo da mensagem no log');
+      this.logger.error('❌ Erro ao processar o texto da mensagem para o log');
     }
   }
 
