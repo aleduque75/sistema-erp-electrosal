@@ -21,25 +21,20 @@ export interface GenerateSalePdfCommand {
 export class GenerateSalePdfUseCase {
   private readonly logger = new Logger(GenerateSalePdfUseCase.name);
 
-  constructor(
-    private readonly salesService: SalesService,
-  ) {
+  constructor(private readonly salesService: SalesService) {
     this.registerHandlebarsHelpers();
   }
 
   private registerHandlebarsHelpers() {
-    Handlebars.registerHelper(
-      'formatarNumero',
-      (valor, casasDecimais = 2) => {
-        if (valor === null || valor === undefined || isNaN(Number(valor)))
-          return '0,00';
-        // Check if casasDecimais is actually the options object from Handlebars
-        if (typeof casasDecimais === 'object') {
-            casasDecimais = 2;
-        }
-        return Number(valor).toFixed(casasDecimais).replace('.', ',');
-      },
-    );
+    Handlebars.registerHelper('formatarNumero', (valor, casasDecimais = 2) => {
+      if (valor === null || valor === undefined || isNaN(Number(valor)))
+        return '0,00';
+      // Check if casasDecimais is actually the options object from Handlebars
+      if (typeof casasDecimais === 'object') {
+        casasDecimais = 2;
+      }
+      return Number(valor).toFixed(casasDecimais).replace('.', ',');
+    });
 
     Handlebars.registerHelper('formatarData', (data) => {
       if (!data) return 'N/A';
@@ -53,7 +48,7 @@ export class GenerateSalePdfUseCase {
     });
 
     Handlebars.registerHelper('multiply', (a, b) => {
-        return (Number(a) * Number(b));
+      return Number(a) * Number(b);
     });
   }
 
@@ -77,45 +72,47 @@ export class GenerateSalePdfUseCase {
     const { saleId, organizationId } = command;
 
     const sale = await this.salesService.findOne(organizationId, saleId);
-    
+
     if (!sale) {
-      throw new NotFoundException(
-        `Venda com ID ${saleId} não encontrada.`,
-      );
+      throw new NotFoundException(`Venda com ID ${saleId} não encontrada.`);
     }
 
     // Caminho para o diretório de assets (dist ou src)
-    const baseDir = process.env.NODE_ENV === 'production'
-      ? path.join(process.cwd(), 'dist')
-      : path.join(process.cwd(), 'src');
+    const baseDir =
+      process.env.NODE_ENV === 'production'
+        ? path.join(process.cwd(), 'dist')
+        : path.join(process.cwd(), 'src');
 
     const templatePath = path.join(
       baseDir,
       'templates',
       'sale-pdf.template.html',
     );
-    
+
     let htmlTemplateString;
     try {
-        htmlTemplateString = await fs.readFile(templatePath, 'utf-8');
+      htmlTemplateString = await fs.readFile(templatePath, 'utf-8');
     } catch (error) {
-        // Fallback logic similar to other use cases
-        const devTemplatePath = path.join(process.cwd(), 'src', 'templates', 'sale-pdf.template.html');
-         try {
-            htmlTemplateString = await fs.readFile(devTemplatePath, 'utf-8');
-         } catch(e) {
-             // Try apps/backend/src/templates
-             const monorepoPath = path.join(process.cwd(), 'apps/backend/src/templates/sale-pdf.template.html');
-             htmlTemplateString = await fs.readFile(monorepoPath, 'utf-8');
-         }
+      // Fallback logic similar to other use cases
+      const devTemplatePath = path.join(
+        process.cwd(),
+        'src',
+        'templates',
+        'sale-pdf.template.html',
+      );
+      try {
+        htmlTemplateString = await fs.readFile(devTemplatePath, 'utf-8');
+      } catch (e) {
+        // Try apps/backend/src/templates
+        const monorepoPath = path.join(
+          process.cwd(),
+          'apps/backend/src/templates/sale-pdf.template.html',
+        );
+        htmlTemplateString = await fs.readFile(monorepoPath, 'utf-8');
+      }
     }
-    
-    const logoPath = path.join(
-      baseDir,
-      'assets',
-      'images',
-      'logoAtual.png',
-    );
+
+    const logoPath = path.join(baseDir, 'assets', 'images', 'logoAtual.png');
     const logoBase64 = await this.getImageAsBase64(logoPath);
 
     const htmlComLogo = htmlTemplateString.replace(
@@ -135,7 +132,12 @@ export class GenerateSalePdfUseCase {
     try {
       browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage', // Adicione esta linha para evitar crashes de memória na VPS
+          '--disable-gpu', // Opcional: economiza recursos em servidores sem placa de vídeo
+        ],
       });
       const page = await browser.newPage();
       await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
