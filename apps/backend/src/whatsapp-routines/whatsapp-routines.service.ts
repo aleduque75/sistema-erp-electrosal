@@ -8,7 +8,7 @@ import { WhatsAppRoutine } from '@prisma/client';
 export class WhatsappRoutinesService {
   private readonly logger = new Logger(WhatsappRoutinesService.name);
 
-  // Mapa em memória para controlar o estado da conversa
+  // Usamos o número limpo (ex: 55119...) como chave para não perder o estado se o ID mudar
   private activeStates = new Map<
     string,
     { routineId: string; stepIndex: number; data: any }
@@ -16,18 +16,25 @@ export class WhatsappRoutinesService {
 
   constructor(private prisma: PrismaService) {}
 
+  // Extrai apenas os números do JID (remove @lid, @s.whatsapp, etc)
+  private getCleanId(jid: string): string {
+    return jid.split('@')[0].split(':')[0].replace(/\D/g, '');
+  }
+
   async processIncomingMessage(
     remoteJid: string,
     messageText: string,
     organizationId: string,
     sendWhatsappMessage: (remoteJid: string, text: string) => Promise<void>,
   ): Promise<boolean> {
+    const userId = this.getCleanId(remoteJid); // ID Limpo para o Mapa de estados
     const trigger = messageText.trim().toLowerCase();
-    const pendingState = this.activeStates.get(remoteJid);
+
+    const pendingState = this.activeStates.get(userId);
     let routine: WhatsAppRoutine | null = null;
     let storedData = pendingState?.data || {};
 
-    // 1. Se estivermos numa rotina ativa, a mensagem atual é uma RESPOSTA ao passo anterior
+    // 1. Recupera rotina se houver estado pendente
     if (pendingState) {
       routine = await this.prisma.whatsAppRoutine.findUnique({
         where: { id: pendingState.routineId },
@@ -40,16 +47,17 @@ export class WhatsappRoutinesService {
             : routine.steps;
         const lastStep = steps[pendingState.stepIndex];
 
-        // Captura a resposta do usuário para a chave definida no set_state
         if (lastStep?.type === 'set_state') {
           const key = lastStep.key || 'input';
           storedData[key] = messageText;
-          this.logger.log(`💾 Resposta capturada: ${key} = ${messageText}`);
+          this.logger.log(
+            `💾 [${userId}] Resposta capturada: ${key} = ${messageText}`,
+          );
         }
       }
     }
 
-    // 2. Se não houver rotina ativa ou se ela foi concluída, busca novo gatilho
+    // 2. Busca novo gatilho se não houver rotina ativa
     if (!routine) {
       routine = await this.prisma.whatsAppRoutine.findFirst({
         where: {
@@ -67,8 +75,6 @@ export class WhatsappRoutinesService {
         typeof routine.steps === 'string'
           ? JSON.parse(routine.steps)
           : routine.steps;
-
-      // Começa do início ou do próximo passo após a resposta capturada
       const startIndex = pendingState ? pendingState.stepIndex + 1 : 0;
 
       for (let i = startIndex; i < steps.length; i++) {
@@ -76,14 +82,17 @@ export class WhatsappRoutinesService {
 
         switch (step.type) {
           case 'text':
-            // Substitui variáveis no texto (ex: {{origem}}) se existirem nos dados salvos
             let message = step.content || step.message || '';
+            // Substitui {{variavel}} pelo valor salvo
             Object.keys(storedData).forEach((k) => {
               message = message.replace(
                 new RegExp(`{{${k}}}`, 'g'),
                 storedData[k],
               );
             });
+
+            // IMPORTANTE: Enviamos para o remoteJid original,
+            // mas o WhatsappService deve garantir que vá para o @s.whatsapp.net
             await sendWhatsappMessage(remoteJid, message);
             break;
 
@@ -94,11 +103,10 @@ export class WhatsappRoutinesService {
             break;
 
           case 'set_state':
-            // Aqui paramos e aguardamos a resposta do usuário
             this.logger.log(
-              `📍 Aguardando: ${step.key || 'valor'} para ${remoteJid}`,
+              `📍 [${userId}] Aguardando: ${step.key || 'valor'}`,
             );
-            this.activeStates.set(remoteJid, {
+            this.activeStates.set(userId, {
               routineId: routine.id,
               stepIndex: i,
               data: storedData,
@@ -106,18 +114,14 @@ export class WhatsappRoutinesService {
             return true;
 
           case 'finish':
-            this.activeStates.delete(remoteJid);
+            this.activeStates.delete(userId);
             if (step.content)
               await sendWhatsappMessage(remoteJid, step.content);
             return true;
-
-          default:
-            this.logger.warn(`Tipo de passo desconhecido: ${step.type}`);
-            break;
         }
       }
 
-      this.activeStates.delete(remoteJid);
+      this.activeStates.delete(userId);
       return true;
     } catch (err) {
       this.logger.error(`❌ Erro na rotina "${routine.name}":`, err);
@@ -125,7 +129,7 @@ export class WhatsappRoutinesService {
     }
   }
 
-  // --- MÉTODOS CRUD (MANTIDOS) ---
+  // --- MÉTODOS CRUD MANTIDOS ---
   async create(dto: CreateWhatsappRoutineDto, orgId: string) {
     return this.prisma.whatsAppRoutine.create({
       data: {
