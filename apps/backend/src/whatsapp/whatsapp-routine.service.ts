@@ -79,7 +79,7 @@ export class WhatsappRoutinesService {
   ): Promise<void> {
     this.logger.log(`🚀 Iniciando rotina "${routine.name}" para ${cleanId}`);
 
-    const steps = routine.steps as RoutineStep[];
+    const steps = (routine.steps as unknown) as RoutineStep[];
     if (!steps || steps.length === 0) {
       await sendMessage(remoteJid, '❌ Rotina sem passos configurados.');
       return;
@@ -114,7 +114,7 @@ export class WhatsappRoutinesService {
       return true;
     }
 
-    const steps = routine.steps as RoutineStep[];
+    const steps = (routine.steps as unknown) as RoutineStep[];
     const currentStep = steps[activeState.stepIndex];
 
     if (!currentStep) {
