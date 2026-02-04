@@ -41,10 +41,7 @@ api.interceptors.response.use(
       if (typeof window !== "undefined") {
         toast.error("Sua sessão expirou. Por favor, faça login novamente.");
         localStorage.removeItem("accessToken");
-        // Adicionado redirecionamento explícito para a landing page
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 1500);
+        // Removido o redirecionamento forçado - deixa o AuthContext cuidar disso
       }
     }
     return Promise.reject(error);
