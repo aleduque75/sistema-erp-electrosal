@@ -15,6 +15,7 @@ interface ThemeContextType {
   setTheme: (theme: string) => Promise<void>;
   toggleTheme: () => void;
   updateLiveColors: (colors: any) => void;
+  setCustomTheme: (config: any) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -34,24 +35,32 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateCustomTheme = (config: any) => {
+    setCustomThemeData(config);
+    const currentMode = theme || "light";
+    applyColors(config[currentMode]?.colors);
+  };
+
   useEffect(() => {
     const init = async () => {
       if (user?.settings?.theme) setInternalTheme(user.settings.theme);
       try {
-        const { data } = await api.get("/settings/appearance");
-        if (data?.customTheme) {
-          setCustomThemeData(data.customTheme);
-          const currentMode = user?.settings?.theme || "light";
-          applyColors(data.customTheme[currentMode]?.colors);
-        }
-      } catch (e) {
+                const { data } = await api.get("/settings/appearance");
+                if (data?.customTheme) {
+                  console.log("CustomTheme recebido do backend no ThemeProvider:", data.customTheme); // <-- Garantir que seja exibido
+                  setCustomThemeData(data.customTheme);
+                  const currentMode = user?.settings?.theme || "light";
+                  applyColors(data.customTheme[currentMode]?.colors);
+                } else {
+                  console.log("CustomTheme NÃO recebido do backend no ThemeProvider. Data:", data); // <-- Adicionar para ver quando não há customTheme
+                }      } catch (e) {
         console.warn("Usando fallback de cores");
       } finally {
         setMounted(true);
       }
     };
     init();
-  }, [user]);
+  }, [user, theme]); // Adicionado 'theme' como dependência para garantir que as cores corretas sejam aplicadas na inicialização se o tema mudar enquanto o user não muda.
 
   useEffect(() => {
     if (!mounted) return;
@@ -78,7 +87,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider
-      value={{ theme, setTheme, toggleTheme, updateLiveColors: applyColors }}
+      value={{
+        theme,
+        setTheme,
+        toggleTheme,
+        updateLiveColors: applyColors,
+        setCustomTheme: updateCustomTheme,
+      }}
     >
       <div style={{ visibility: mounted ? "visible" : "hidden" }}>
         {children}

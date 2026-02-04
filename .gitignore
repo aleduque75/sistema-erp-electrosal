@@ -66,3 +66,4 @@ json-imports/
 ofx/
 data/xml/
 
+.aider*

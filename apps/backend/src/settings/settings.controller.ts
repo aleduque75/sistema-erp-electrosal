@@ -27,9 +27,9 @@ export class SettingsController {
   }
 
   // Busca cores da organização
-  @Public()
+  @UseGuards(AuthGuard('jwt')) // Adicionar o guard de autenticação
   @Get('appearance')
-  getAppearanceSettings(@CurrentUser('orgId') organizationId?: string) {
+  getAppearanceSettings(@CurrentUser('orgId') organizationId: string) { // Remover '?' para tornar obrigatório
     return this.settingsService.getAppearanceSettings(organizationId);
   }
 

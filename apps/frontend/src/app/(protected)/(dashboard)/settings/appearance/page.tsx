@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 
 export default function AppearancePage() {
-  const { theme, setTheme, updateLiveColors } = useTheme();
+  const { theme, setTheme, updateLiveColors, setCustomTheme } = useTheme();
   const [config, setConfig] = useState<any>(null);
   const [themePresets, setThemePresets] = useState<any[]>([]);
   const [isSavePresetModalOpen, setIsSavePresetModalOpen] = useState(false); // Novo estado
@@ -173,7 +173,7 @@ export default function AppearancePage() {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       {/* Cabeçalho existente */}
-      <div className="flex justify-between items-center bg-card p-6 rounded-2xl border-2 border-card-border shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-card p-6 rounded-2xl border-2 border-card-border shadow-sm">
         <h1 className="text-3xl font-black italic tracking-tighter text-foreground">
           DESIGN & EXPERIÊNCIA
         </h1>
@@ -183,7 +183,11 @@ export default function AppearancePage() {
           onClick={() =>
             api
               .put("/settings/appearance", { customTheme: config })
-              .then(() => toast.success("Identidade Salva!"))
+              .then(() => {
+                toast.success("Identidade Salva!");
+                console.log("Config enviado para o backend:", config); // <-- Adicionar este log
+                setCustomTheme(config); // Notifica o ThemeProvider sobre a mudança do tema customizado
+              })
           }
         >
           SALVAR TUDO
@@ -202,7 +206,7 @@ export default function AppearancePage() {
             {themePresets.map((preset: any) => (
               <div key={preset.id} className="rounded-md flex justify-between items-center bg-card text-foreground p-4 border border-card-border">
                 <span className="font-semibold text-foreground">{preset.name}</span>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 justify-end">
                   <Button size="sm" onClick={() => applyPreset(preset.presetData)}>
                     Aplicar
                   </Button>
@@ -545,7 +549,7 @@ function ColorRow({ label, m, k, v, onChange }: any) {
     }
   };
   return (
-    <div className="flex items-center justify-between p-1">
+    <div className="flex flex-wrap items-center justify-between gap-2 p-1">
       <span className="text-[11px] font-bold text-foreground">{label}</span>
       <input
         type="color"
@@ -559,7 +563,7 @@ function ColorRow({ label, m, k, v, onChange }: any) {
 
 function InputRow({ label, m, k, v, onChange }: any) {
   return (
-    <div className="flex items-center justify-between p-1">
+    <div className="flex flex-wrap items-center justify-between gap-2 p-1">
       <span className="text-[11px] font-bold text-foreground">{label}</span>
       <input
         type="text"
