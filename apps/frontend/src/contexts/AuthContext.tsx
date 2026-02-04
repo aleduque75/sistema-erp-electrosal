@@ -15,7 +15,7 @@ interface AuthUser {
   email: string;
   orgId: string;
   permissions: string[];
-  name?: string; // Adiciona name como opcional
+  name?: string;
   settings?: UserSettings | null;
 }
 
@@ -33,30 +33,56 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setIsPageLoading] = useState(true);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const isAuthenticated = !!user;
 
   const loadUser = async () => {
+    // Evita múltiplas tentativas simultâneas
+    if (hasAttemptedLoad) {
+      setIsPageLoading(false);
+      return;
+    }
+
     setIsPageLoading(true);
     const token = localStorage.getItem('accessToken');
-    if (token) {
-      try {
-        const response = await api.get('/auth/me');
-        setUser(response.data);
-      } catch (error) {
-        console.error('Falha ao buscar o usuário:', error);
+    
+    if (!token) {
+      setUser(null);
+      setIsPageLoading(false);
+      setHasAttemptedLoad(true);
+      return;
+    }
+
+    try {
+      const response = await api.get('/auth/me');
+      setUser(response.data);
+    } catch (error: any) {
+      console.warn('⚠️ Falha ao buscar o usuário:', error?.response?.status || error?.message);
+      
+      // Se for 401, limpa o token mas NÃO redireciona
+      if (error?.response?.status === 401) {
         localStorage.removeItem('accessToken');
         setUser(null);
+      } else {
+        // Para outros erros, mantém o estado atual
+        console.error('Erro inesperado ao carregar usuário:', error);
       }
+    } finally {
+      setIsPageLoading(false);
+      setHasAttemptedLoad(true);
     }
-    setIsPageLoading(false);
   };
 
   useEffect(() => {
-    loadUser();
-  }, []);
+    // Só carrega uma vez na montagem do componente
+    if (!hasAttemptedLoad) {
+      loadUser();
+    }
+  }, []); // Array vazio - executa apenas uma vez
 
   const login = (accessToken: string) => {
     localStorage.setItem('accessToken', accessToken);
+    setHasAttemptedLoad(false); // Permite nova tentativa após login
     loadUser();
   };
 
@@ -68,11 +94,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('accessToken');
     setUser(null);
+    setHasAttemptedLoad(false);
+    // Redireciona apenas uma vez, sem reload
     window.location.href = '/logout';
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading: loading, hasPermission, login, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isAuthenticated, 
+      isLoading: loading, 
+      hasPermission, 
+      login, 
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );

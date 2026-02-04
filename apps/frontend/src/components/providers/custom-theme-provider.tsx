@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
   ReactNode,
+  useRef,
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
@@ -72,10 +73,11 @@ const DEFAULT_THEME = {
 };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [theme, setInternalTheme] = useState<string>("light");
   const [mounted, setMounted] = useState(false);
   const [customThemeData, setCustomThemeData] = useState<any>(null);
+  const hasLoadedTheme = useRef(false);
 
   const applyColors = (colors: any) => {
     if (!colors || typeof window === "undefined") return;
@@ -93,6 +95,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Aguarda o AuthContext terminar de carregar
+    if (authLoading) return;
+
+    // Só carrega o tema uma vez
+    if (hasLoadedTheme.current) return;
+    hasLoadedTheme.current = true;
+
     const init = async () => {
       // Define o tema do usuário se disponível
       if (user?.settings?.theme) {
@@ -129,7 +138,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       }
     };
     init();
-  }, [user]);
+  }, [authLoading]); // Só depende de authLoading, não de user
 
   useEffect(() => {
     if (!mounted) return;

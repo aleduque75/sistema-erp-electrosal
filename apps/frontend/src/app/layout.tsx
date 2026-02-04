@@ -18,10 +18,10 @@ export default function RootLayout({
           <QueryProvider>
             <ThemeProvider>
               <main className="min-h-screen flex flex-col">{children}</main>
+              <Toaster richColors position="top-right" />
             </ThemeProvider>
           </QueryProvider>
         </AuthProvider>
-        <Toaster richColors position="top-right" />
       </body>
     </html>
   );
