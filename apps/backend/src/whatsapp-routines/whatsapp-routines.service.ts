@@ -43,9 +43,9 @@ export class WhatsappRoutinesService {
             : routine.steps;
         const lastStep = steps[pendingState.stepIndex];
         if (lastStep?.type === 'set_state') {
-          storedData[lastStep.key || 'input'] = messageText;
+          storedData[ (lastStep.key || lastStep.variable || lastStep.varName || 'input') || 'input'] = messageText;
           this.logger.log(
-            `💾 [${userId}] Resposta salva: ${lastStep.key} = ${messageText}`,
+            `💾 [${userId}] Resposta salva: ${ (lastStep.key || lastStep.variable || lastStep.varName || 'input')} = ${messageText}`,
           );
         }
       }
