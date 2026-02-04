@@ -148,17 +148,19 @@ export class WhatsappRoutinesService {
       }
 
       // Tenta buscar o nome da variável em múltiplos campos possíveis
-      const varName = currentStep.variable || currentStep.key || currentStep.name || currentStep.target;
+      // Se nenhum campo existir, usa step_${index} como fallback
+      const varName = 
+        currentStep.variable || 
+        currentStep.key || 
+        currentStep.name || 
+        currentStep.target || 
+        `step_${activeState.stepIndex}`;
       
       this.logger.log(`📝 Salvando resposta: varName="${varName}", valor="${messageText}"`);
 
-      // Armazena o valor
-      if (varName) {
-        activeState.data[varName] = messageText;
-        this.logger.log(`✅ Dados atualizados:`, activeState.data);
-      } else {
-        this.logger.warn('⚠️ Nenhum campo de variável encontrado no step!');
-      }
+      // Armazena o valor (agora sempre terá um nome de variável)
+      activeState.data[varName] = messageText;
+      this.logger.log(`✅ Dados atualizados:`, activeState.data);
 
       // Avança para próximo passo
       activeState.stepIndex++;
@@ -270,20 +272,28 @@ export class WhatsappRoutinesService {
         return;
       }
 
-      // Busca contas correntes pelo nick ou número
+      // Busca contas correntes pelo ID, nick ou nome (busca flexível)
       const contaOrigem = await this.prisma.contaCorrente.findFirst({
         where: {
           organizationId,
-          OR: [{ nick: origem }, { numeroConta: origem }],
           isActive: true,
+          OR: [
+            { id: origem },
+            { nick: origem },
+            { nome: { contains: origem, mode: 'insensitive' } },
+          ],
         },
       });
 
       const contaDestino = await this.prisma.contaCorrente.findFirst({
         where: {
           organizationId,
-          OR: [{ nick: destino }, { numeroConta: destino }],
           isActive: true,
+          OR: [
+            { id: destino },
+            { nick: destino },
+            { nome: { contains: destino, mode: 'insensitive' } },
+          ],
         },
       });
 
