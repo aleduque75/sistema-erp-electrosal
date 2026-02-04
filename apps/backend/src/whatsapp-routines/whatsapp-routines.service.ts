@@ -18,6 +18,10 @@ export class WhatsappRoutinesService {
     return jid.split('@')[0].split(':')[0].replace(/\D/g, '');
   }
 
+  private getStepKey(step: any): string {
+    return step.key || step.variable || step.varName || 'input';
+  }
+
   async processIncomingMessage(
     remoteJid: string,
     messageText: string,
@@ -43,9 +47,10 @@ export class WhatsappRoutinesService {
             : routine.steps;
         const lastStep = steps[pendingState.stepIndex];
         if (lastStep?.type === 'set_state') {
-          storedData[ (lastStep.key || lastStep.variable || lastStep.varName || 'input') || 'input'] = messageText;
+          const stepKey = this.getStepKey(lastStep);
+          storedData[stepKey] = messageText;
           this.logger.log(
-            `💾 [${userId}] Resposta salva: ${ (lastStep.key || lastStep.variable || lastStep.varName || 'input')} = ${messageText}`,
+            `💾 [${userId}] Resposta salva: ${stepKey} = ${messageText}`,
           );
         }
       }
@@ -88,7 +93,8 @@ export class WhatsappRoutinesService {
             break;
 
           case 'set_state':
-            this.logger.log(`📍 [${userId}] Aguardando: ${step.key}`);
+            const stepKey = this.getStepKey(step);
+            this.logger.log(`📍 [${userId}] Aguardando: ${stepKey}`);
             this.activeStates.set(userId, {
               routineId: routine.id,
               stepIndex: i,
