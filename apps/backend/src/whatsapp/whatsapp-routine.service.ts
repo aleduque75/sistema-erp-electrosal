@@ -5,6 +5,9 @@ interface RoutineStep {
   type: 'message' | 'input' | 'action';
   content?: string;
   variable?: string;
+  key?: string;
+  name?: string;
+  target?: string;
   validation?: {
     type: 'number' | 'text' | 'date';
     required?: boolean;
@@ -38,6 +41,12 @@ export class WhatsappRoutinesService {
   ): Promise<boolean> {
     const cleanId = this.getCleanId(remoteJid);
     const lowerText = messageText.toLowerCase().trim();
+
+    // Se a mensagem começa com '/', reseta qualquer estado ativo
+    if (messageText.trim().startsWith('/')) {
+      this.logger.log(`🔄 Comando detectado, resetando estado para ${cleanId}`);
+      this.activeStates.delete(cleanId);
+    }
 
     // Verifica se há estado ativo para este usuário
     const activeState = this.activeStates.get(cleanId);
@@ -117,6 +126,9 @@ export class WhatsappRoutinesService {
     const steps = (routine.steps as unknown) as RoutineStep[];
     const currentStep = steps[activeState.stepIndex];
 
+    // Log de debug para ver o conteúdo do step
+    this.logger.log('CONTEUDO DO STEP:', JSON.stringify(currentStep, null, 2));
+
     if (!currentStep) {
       this.activeStates.delete(cleanId);
       await sendMessage(remoteJid, '✅ Rotina finalizada.');
@@ -135,9 +147,17 @@ export class WhatsappRoutinesService {
         return true;
       }
 
+      // Tenta buscar o nome da variável em múltiplos campos possíveis
+      const varName = currentStep.variable || currentStep.key || currentStep.name || currentStep.target;
+      
+      this.logger.log(`📝 Salvando resposta: varName="${varName}", valor="${messageText}"`);
+
       // Armazena o valor
-      if (currentStep.variable) {
-        activeState.data[currentStep.variable] = messageText;
+      if (varName) {
+        activeState.data[varName] = messageText;
+        this.logger.log(`✅ Dados atualizados:`, activeState.data);
+      } else {
+        this.logger.warn('⚠️ Nenhum campo de variável encontrado no step!');
       }
 
       // Avança para próximo passo
