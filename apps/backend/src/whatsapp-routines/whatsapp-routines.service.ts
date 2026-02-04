@@ -76,8 +76,12 @@ export class WhatsappRoutinesService {
           : routine.steps;
       const startIndex = pendingState ? pendingState.stepIndex + 1 : 0;
 
+      this.logger.log(`🔄 [${userId}] Processando passos a partir do índice: ${startIndex}`);
+
       for (let i = startIndex; i < steps.length; i++) {
         const step = steps[i];
+        this.logger.log(`📋 [${userId}] Executando passo ${i}: ${step.type}`);
+        
         switch (step.type) {
           case 'text':
             let msg = step.content || step.message || '';
@@ -85,16 +89,19 @@ export class WhatsappRoutinesService {
               (k) =>
                 (msg = msg.replace(new RegExp(`{{${k}}}`, 'g'), storedData[k])),
             );
+            this.logger.log(`📤 [${userId}] Enviando mensagem: ${msg}`);
             await sendWhatsappMessage(remoteJid, msg);
             break;
 
           case 'delay':
-            await new Promise((r) => setTimeout(r, step.ms || 1000));
+            const delayMs = step.ms || 1000;
+            this.logger.log(`⏳ [${userId}] Aguardando ${delayMs}ms`);
+            await new Promise((r) => setTimeout(r, delayMs));
             break;
 
           case 'set_state':
             const stepKey = this.getStepKey(step);
-            this.logger.log(`📍 [${userId}] Aguardando: ${stepKey}`);
+            this.logger.log(`📍 [${userId}] Aguardando resposta para: ${stepKey}`);
             this.activeStates.set(userId, {
               routineId: routine.id,
               stepIndex: i,
@@ -103,16 +110,21 @@ export class WhatsappRoutinesService {
             return true;
 
           case 'finish':
+            this.logger.log(`✅ [${userId}] Finalizando rotina`);
             this.activeStates.delete(userId);
-            if (step.content)
+            if (step.content) {
               await sendWhatsappMessage(remoteJid, step.content);
+            }
             return true;
         }
       }
+      
+      this.logger.log(`🏁 [${userId}] Rotina concluída - removendo estado`);
       this.activeStates.delete(userId);
       return true;
     } catch (err) {
-      this.logger.error(`❌ Erro na rotina:`, err);
+      this.logger.error(`❌ [${userId}] Erro na rotina:`, err);
+      this.activeStates.delete(userId);
       return false;
     }
   }
