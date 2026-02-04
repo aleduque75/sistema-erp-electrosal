@@ -61,4 +61,8 @@ evolution_instances/
 apps/backend/prisma.config.ts
 docker-compose.yml
 scripts/wait-for-port.js
+apps/backend/ecosystem.config.js
+json-imports/
+ofx/
+data/xml/
 
