@@ -56,3 +56,9 @@ n8n-data/
 evolution_store/
 # Evolution API instances
 evolution_instances/
+
+# Configurações Locais e Scripts (Não rastrear)
+apps/backend/prisma.config.ts
+docker-compose.yml
+scripts/wait-for-port.js
+
