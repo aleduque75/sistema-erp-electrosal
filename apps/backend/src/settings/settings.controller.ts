@@ -26,10 +26,11 @@ export class SettingsController {
     return this.settingsService.update(req.user.id, updateSettingDto);
   }
 
-  // Busca cores da organização
-  @UseGuards(AuthGuard('jwt')) // Adicionar o guard de autenticação
+  // Busca cores da organização - AGORA PÚBLICO
+  @Public()
   @Get('appearance')
-  getAppearanceSettings(@CurrentUser('orgId') organizationId: string) { // Remover '?' para tornar obrigatório
+  getAppearanceSettings(@CurrentUser('orgId') organizationId?: string) {
+    // Se não houver organizationId (usuário não autenticado), busca a primeira organização
     return this.settingsService.getAppearanceSettings(organizationId);
   }
 
