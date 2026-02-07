@@ -1,0 +1,1 @@
+2026/02/04 15:01:22 [warn] 422#422: *33384 using uninitialized "server" variable while logging request, client: 188.214.122.49, server: bot.electrosal.com.br, request: "GET / HTTP/1.1", host: "bot.electrosal.com.br"

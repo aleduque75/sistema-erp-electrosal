@@ -1,45 +1,9 @@
 {
-  "home": {
-    "heroTitle": "Sua Beleza, Nossas Soluções.",
-    "heroSubtitle": "Gerencie seu negócio de produtos de beleza com eficiência e inteligência. Do estoque ao financeiro, do cliente à venda, tudo em um só lugar.",
-    "getStarted": "Comece Agora",
-    "stockManagementTitle": "Gestão Completa de Estoque",
-    "stockManagementDescription": "Mantenha o controle total dos seus produtos de beleza. Gerencie entradas, saídas e visualize o inventário em tempo real para nunca perder uma venda.",
-    "financialManagementTitle": "Financeiro Descomplicado",
-    "financialManagementDescription": "Controle suas contas a pagar e a receber de forma intuitiva. Tenha uma visão clara da saúde financeira do seu negócio de beleza.",
-    "customerFocusTitle": "Foco no Cliente",
-    "customerFocusDescription": "Crie perfis detalhados de seus clientes, registre preferências e histórico de compras. Ofereça um atendimento personalizado que fideliza.",
-    "callToActionTitle": "Pronto para Transformar seu Negócio?",
-    "callToActionSubtitle": "Junte-se a centenas de empreendedores que estão otimizando suas vendas de produtos de beleza com nossa plataforma.",
-    "signUpFree": "Cadastre-se Gratuitamente"
-  },
-  "navbar": {
-    "home": "Início",
-    "dashboard": "Painel",
-    "registrations": "Cadastros",
-    "clients": "Clientes",
-    "products": "Produtos",
-    "financial": "Financeiro", 
-    "sales": "Vendas",
-    "accountsPayable": "Contas a Pagar",
-    "accountsReceivable": "Contas a Receber",
-    "accountingAccounts": "Contas Contábeis", 
-    "currentAccounts": "Contas Correntes", 
-    "login": "Entrar",
-    "register": "Cadastrar",
-    "logout": "Sair"
-  },
-  "login": {
-    "title": "Entrar",
-    "email": "Email",
-    "password": "Senha",
-    "loginButton": "Entrar"
-  },
   "register": {
-    "title": "Cadastrar",
+    "title": "Registro",
     "name": "Nome",
     "email": "Email",
     "password": "Senha",
-    "registerButton": "Cadastrar"
+    "registerButton": "Registrar"
   }
 }

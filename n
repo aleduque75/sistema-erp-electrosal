@@ -1,0 +1,29 @@
+#!/bin/bash
+
+CONTEXT_FILE="vps_master_context.md"
+
+echo "# 🖥️ RELATÓRIO DE ARQUITETURA TOTAL - VPS" > $CONTEXT_FILE
+echo "Gerado em: $(date)" >> $CONTEXT_FILE
+
+echo -e "\n## 🚀 1. PROCESSOS PM2 (Sistemas em Execução)" >> $CONTEXT_FILE
+pm2 jlist | jq -r 'map({name: .name, status: .pm2_env.status, cpu: .monit.cpu, mem: .monit.memory})' >> $CONTEXT_FILE
+
+echo -e "\n## 🐳 2. DOCKER STACKS E CONTAINERS" >> $CONTEXT_FILE
+docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" >> $CONTEXT_FILE
+
+echo -e "\n## 🌐 3. REDES DOCKER (Comunicação Interna)" >> $CONTEXT_FILE
+docker network ls >> $CONTEXT_FILE
+
+echo -e "\n## 📂 4. ESTRUTURA DE PASTAS E PROJETOS (/home)" >> $CONTEXT_FILE
+# Lista as pastas principais ignorando o que é pesado
+ls -R /home --ignore=node_modules --ignore=.next --ignore=dist -L 2 >> $CONTEXT_FILE
+
+echo -e "\n## 💾 5. USO DE DISCO E PARTIÇÕES" >> $CONTEXT_FILE
+df -h | grep '^/dev/' >> $CONTEXT_FILE
+
+echo -e "\n## 🧪 6. VERSÕES TÉCNICAS" >> $CONTEXT_FILE
+echo "Node: $(node -v)" >> $CONTEXT_FILE
+echo "Docker: $(docker -v)" >> $CONTEXT_FILE
+echo "NPM: $(npm -v)" >> $CONTEXT_FILE
+
+echo "✅ Mapa da VPS gerado em $CONTEXT_FILE"
