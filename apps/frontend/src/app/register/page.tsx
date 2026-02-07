@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
-import translations from "../../../public/locales/pt/common.json";
+import translations from "../../locales/pt/common.json";
 import api from "../../lib/api";
 
 export default function RegisterPage() {
