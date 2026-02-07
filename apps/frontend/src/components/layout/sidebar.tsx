@@ -43,16 +43,10 @@ export function Sidebar() {
       return (
         <li key={item.id} className="px-2 mb-1 list-none">
           <div
-            style={{
-              borderRadius: "var(--menu-item-radius, 8px)",
-              backgroundColor: active
-                ? "hsl(var(--menu-selected-background))"
-                : "transparent",
-              color: active
-                ? "hsl(var(--menu-selected-text))"
-                : "hsl(var(--menu-text))",
-            }}
-            className="flex items-center transition-all duration-200 hover:bg-[hsl(var(--menu-bg-hover))] hover:text-[hsl(var(--menu-text-hover))]"
+            className={cn(
+              "flex items-center transition-all duration-200 rounded-[8px]",
+              active ? "bg-sidebar-selected text-sidebar-selected-foreground" : "bg-transparent text-sidebar-foreground hover:bg-sidebar-hover"
+            )}
           >
             <Link
               href={item.href}
@@ -87,11 +81,7 @@ export function Sidebar() {
           </div>
           {isOpen && item.subItems && (isExpanded || isHovered) && (
             <ul
-              className="mt-1 ml-6 border-l space-y-1"
-              style={{
-                borderColor:
-                  "hsla(var(--menu-border), var(--menu-border-opacity, 1))",
-              }}
+              className="mt-1 ml-6 border-l border-sidebar-border space-y-1"
             >
               {renderItems(item.subItems)}
             </ul>
@@ -106,41 +96,35 @@ export function Sidebar() {
       onMouseEnter={() => isDesktop && !isExpanded && setIsHovered(true)}
       onMouseLeave={() => isDesktop && !isExpanded && setIsHovered(false)}
       className={cn(
-        "fixed inset-y-0 left-0 z-50 flex flex-col border-r transform transition-transform duration-300 ease-in-out",
+        "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-sidebar border-sidebar-border transform transition-transform duration-300 ease-in-out",
         isMobileOpen ? "translate-x-0" : "-translate-x-full",
         "md:translate-x-0"
       )}
       style={{
         width: sidebarWidth + "px",
-        backgroundColor: "hsl(var(--menu-background))",
-        borderRight: `1px solid hsla(var(--menu-border), var(--menu-border-opacity, 1))`,
       }}
     >
       <div
-        className="h-16 flex items-center justify-between px-4 border-b shrink-0"
-        style={{
-          borderColor: "hsla(var(--menu-border), var(--menu-border-opacity))",
-        }}
+        className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border shrink-0"
       >
         <div className="flex items-center">
           <Image src="/images/logo.png" alt="Logo" width={32} height={32} />
           {(isExpanded || isHovered) && (
             <span
-              className="ml-3 font-black text-lg truncate"
-              style={{ color: "hsl(var(--menu-text))" }}
+              className="ml-3 font-black text-lg truncate text-sidebar-foreground"
             >
               ELECTROSAL
             </span>
           )}
         </div>
         <button
-            onClick={toggleMobileSidebar}
-            className={cn("p-2 rounded-md md:hidden", {
-                "hidden": !isMobileOpen,
-            })}
+          onClick={toggleMobileSidebar}
+          className={cn("p-2 rounded-md md:hidden", {
+            "hidden": !isMobileOpen,
+          })}
         >
-            <X className="h-6 w-6" />
-            <span className="sr-only">Fechar menu</span>
+          <X className="h-6 w-6" />
+          <span className="sr-only">Fechar menu</span>
         </button>
       </div>
 
@@ -149,10 +133,7 @@ export function Sidebar() {
       </ScrollArea>
 
       <div
-        className="p-4 border-t"
-        style={{
-          borderColor: "hsla(var(--menu-border), var(--menu-border-opacity))",
-        }}
+        className="p-4 border-t border-sidebar-border"
       >
         <button
           onClick={toggleTheme}

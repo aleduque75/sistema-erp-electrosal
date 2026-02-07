@@ -95,41 +95,35 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Aguarda o AuthContext terminar de carregar
+    // Se ainda está carregando auth, aguarda
     if (authLoading) return;
 
-    // Só carrega o tema uma vez
-    if (hasLoadedTheme.current) return;
-    hasLoadedTheme.current = true;
-
     const init = async () => {
-      // Define o tema do usuário se disponível
+      // Se tiver settings no user, já aplica pra evitar flash
       if (user?.settings?.theme) {
         setInternalTheme(user.settings.theme);
       }
 
       try {
-        const { data } = await api.get("/settings/appearance");
+        // Tenta buscar as configurações da organização
+        // Como o AuthGuard agora suporta opcional, mandamos request sempre.
+        // Se tiver logado, o interceptor põe o token e o backend retorna o tema da org.
+        // Se não, retorna o padrão ou público (se implementado).
+        const { data } = await api.get(`/settings/appearance?t=${Date.now()}`);
+
         if (data?.customTheme) {
-          console.log("✅ CustomTheme recebido do backend:", data.customTheme);
+          console.log("✅ CustomTheme recebido:", data.customTheme);
           setCustomThemeData(data.customTheme);
           const currentMode = user?.settings?.theme || "light";
           applyColors(data.customTheme[currentMode]?.colors);
         } else {
-          console.log("⚠️ CustomTheme não encontrado, usando tema padrão");
+          console.log("⚠️ CustomTheme não encontrado, usando padrão");
           setCustomThemeData(DEFAULT_THEME);
           const currentMode = user?.settings?.theme || "light";
           applyColors(DEFAULT_THEME[currentMode]?.colors);
         }
       } catch (error: any) {
-        // Tratamento específico para erro 401 ou qualquer outro erro
-        if (error?.response?.status === 401) {
-          console.warn("⚠️ Não autenticado, usando tema padrão");
-        } else {
-          console.warn("⚠️ Erro ao buscar configurações de aparência:", error?.message);
-        }
-        
-        // Aplica tema padrão em caso de erro
+        console.warn("⚠️ Erro ao buscar tema (usando padrão):", error?.message);
         setCustomThemeData(DEFAULT_THEME);
         const currentMode = user?.settings?.theme || "light";
         applyColors(DEFAULT_THEME[currentMode]?.colors);
@@ -137,8 +131,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setMounted(true);
       }
     };
+
+    // Sempre tenta iniciar se o authLoading acabou.
+    // A logica dentro do init e do backend vai decidir se retorna o específico ou default.
     init();
-  }, [authLoading]); // Só depende de authLoading, não de user
+
+  }, [authLoading, user]); // Re-executa se authLoading terminar ou user mudar
 
   useEffect(() => {
     if (!mounted) return;

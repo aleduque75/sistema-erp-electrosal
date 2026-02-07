@@ -13,7 +13,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async register(
     registerUserDto: RegisterUserDto,
@@ -27,7 +27,7 @@ export class AuthService {
       throw new BadRequestException('Usuário com este e-mail já existe');
     }
 
-    
+
 
     const hashedPassword = await bcrypt.hash(registerUserDto.password, 10);
     const user = await this.usersService.create({
@@ -56,5 +56,10 @@ export class AuthService {
     };
 
     return { accessToken: this.jwtService.sign(payload) };
+  }
+  async getUserProfile(userId: string, orgId: string) {
+    return this.usersService.findByIdAndOrganization(userId, orgId, {
+      settings: true,
+    });
   }
 }

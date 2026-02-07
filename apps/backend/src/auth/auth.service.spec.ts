@@ -45,42 +45,25 @@ describe('AuthService', () => {
   describe('login', () => {
     it('deve retornar um access token para um login bem-sucedido', async () => {
       // Arrange (Preparação): Definimos o cenário
-      const loginDto = { email: 'test@example.com', password: 'password123' };
       const user = {
         id: 'uuid-123',
         email: 'test@example.com',
-        password: 'hashedpassword',
+        organizationId: 'org-123',
       };
       const token = 'jwt-token-string';
 
-      mockUsersService.findByEmail.mockResolvedValue(user); // Simula que o usuário foi encontrado
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never); // Simula que a senha bate
       mockJwtService.sign.mockReturnValue(token); // Simula a geração do token
 
       // Act (Ação): Executamos o método que queremos testar
-      const result = await service.login(loginDto);
+      const result = await service.login(user);
 
       // Assert (Verificação): Verificamos se o resultado é o esperado
       expect(result).toEqual({ accessToken: token });
-      expect(mockUsersService.findByEmail).toHaveBeenCalledWith(loginDto.email);
-    });
-
-    it('deve lançar UnauthorizedException para credenciais inválidas', async () => {
-      // Arrange
-      const loginDto = { email: 'test@example.com', password: 'wrongpassword' };
-      const user = {
-        id: 'uuid-123',
-        email: 'test@example.com',
-        password: 'hashedpassword',
-      };
-
-      mockUsersService.findByEmail.mockResolvedValue(user);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never); // Simula que a senha NÃO bate
-
-      // Act & Assert: Verificamos se o método lança o erro esperado
-      await expect(service.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      expect(mockJwtService.sign).toHaveBeenCalledWith({
+        email: user.email,
+        sub: user.id,
+        orgId: user.organizationId,
+      });
     });
   });
 });

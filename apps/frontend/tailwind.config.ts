@@ -101,6 +101,14 @@ const config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        sidebar: {
+          DEFAULT: "hsl(var(--menu-background))",
+          foreground: "hsl(var(--menu-text))",
+          hover: "hsl(var(--menu-bg-hover))",
+          selected: "hsl(var(--menu-selected-background))",
+          "selected-foreground": "hsl(var(--menu-selected-text))",
+          border: "hsla(var(--menu-border), var(--menu-border-opacity, 1))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

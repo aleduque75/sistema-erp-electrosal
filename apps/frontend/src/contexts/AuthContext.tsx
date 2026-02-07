@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setIsPageLoading(true);
     const token = localStorage.getItem('accessToken');
-    
+
     if (!token) {
       setUser(null);
       setIsPageLoading(false);
@@ -54,11 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const response = await api.get('/auth/me');
+      // Adicionado timestamp para evitar cache do navegador na busca do usuário
+      const response = await api.get(`/auth/me?t=${Date.now()}`);
       setUser(response.data);
     } catch (error: any) {
       console.warn('⚠️ Falha ao buscar o usuário:', error?.response?.status || error?.message);
-      
+
       // Se for 401, limpa o token mas NÃO redireciona
       if (error?.response?.status === 401) {
         localStorage.removeItem('accessToken');
@@ -100,13 +101,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      isLoading: loading, 
-      hasPermission, 
-      login, 
-      logout 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
+      isLoading: loading,
+      hasPermission,
+      login,
+      logout
     }}>
       {children}
     </AuthContext.Provider>

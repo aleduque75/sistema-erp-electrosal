@@ -1,23 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ClientsController } from './clients.controller';
-import { ClientsService } from './clients.service';
+import { PessoaController } from './pessoa.controller';
+import { PessoaService } from './pessoa.service';
 
-// Mock do serviço que o controller usa
-const mockClientsService = {};
-
-describe('ClientsController', () => {
-  let controller: ClientsController;
+describe('PessoaController', () => {
+  let controller: PessoaController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [ClientsController],
+      controllers: [PessoaController],
       providers: [
-        // Fornece o mock no lugar do serviço real
-        { provide: ClientsService, useValue: mockClientsService },
+        {
+          provide: PessoaService,
+          useValue: {
+            findAll: jest.fn(),
+            findOne: jest.fn(),
+            create: jest.fn(),
+            update: jest.fn(),
+            remove: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
-    controller = module.get<ClientsController>(ClientsController);
+    controller = module.get<PessoaController>(PessoaController);
   });
 
   it('should be defined', () => {

@@ -76,84 +76,85 @@ export default function SalesPage() {
     endDate: '',
     orderNumber: '',
     clientId: '',
-          status: '',
+    status: '',
+  });
+
+  const fetchClients = async () => {
+    try {
+      const response = await api.get('/pessoas?role=CLIENT');
+      const clientOptions = response.data.map((c: any) => ({ value: c.id, label: c.name }));
+      setClients(clientOptions);
+    } catch (err) {
+      toast.error('Falha ao buscar clientes.');
+    }
+  };
+
+  const handleFilterChange = (key: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const fetchSales = async (filterOverride?: typeof filters) => {
+    setIsPageLoading(true);
+    try {
+      const activeFilters = filterOverride ?? filters;
+      const params = new URLSearchParams();
+      if (activeFilters.startDate) params.append('startDate', activeFilters.startDate);
+      if (activeFilters.endDate) params.append('endDate', activeFilters.endDate);
+      if (activeFilters.orderNumber) params.append('orderNumber', activeFilters.orderNumber);
+      if (activeFilters.clientId) params.append('clientId', activeFilters.clientId);
+      if (activeFilters.status) params.append('status', activeFilters.status);
+
+      const response = await api.get(`/sales?${params.toString()}`);
+      setSales(response.data);
+    } catch (err) {
+      toast.error('Falha ao buscar vendas.');
+    } finally {
+      setIsPageLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+    fetchSales(); // Initial fetch
+  }, []);
+
+  const handleFilterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchSales();
+  };
+
+  const handleClearFilters = () => {
+    const initialFilters = {
+      startDate: '',
+      endDate: '',
+      orderNumber: '',
+      clientId: '',
+      status: '',
+    };
+    setFilters(initialFilters);
+    fetchSales(initialFilters);
+  };
+
+  const handleDownloadPdf = async (sale: Sale) => {
+    try {
+      const response = await api.get(`/sales/${sale.id}/pdf`, {
+        responseType: 'blob',
       });
-    
-      const fetchClients = async () => {
-        try {
-          const response = await api.get('/pessoas?role=CLIENT');
-          const clientOptions = response.data.map((c: any) => ({ value: c.id, label: c.name }));
-          setClients(clientOptions);
-        } catch (err) {
-          toast.error('Falha ao buscar clientes.');
-        }
-      };
-    
-      const handleFilterChange = (key: keyof typeof filters, value: string) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
-      };
-    
-      const fetchSales = async (filterOverride?: typeof filters) => {
-        setIsPageLoading(true);
-        try {
-          const activeFilters = filterOverride ?? filters;
-          const params = new URLSearchParams();
-          if (activeFilters.startDate) params.append('startDate', activeFilters.startDate);
-          if (activeFilters.endDate) params.append('endDate', activeFilters.endDate);
-          if (activeFilters.orderNumber) params.append('orderNumber', activeFilters.orderNumber);
-          if (activeFilters.clientId) params.append('clientId', activeFilters.clientId);
-          if (activeFilters.status) params.append('status', activeFilters.status);
-    
-          const response = await api.get(`/sales?${params.toString()}`);
-          setSales(response.data);
-        } catch (err) {
-          toast.error('Falha ao buscar vendas.');
-        } finally {
-          setIsPageLoading(false);
-        }
-      };
-    
-      useEffect(() => {
-        fetchClients();
-        fetchSales(); // Initial fetch
-      }, []);
-    
-      const handleFilterSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        fetchSales();
-      };
-    
-      const handleClearFilters = () => {
-        const initialFilters = {
-          startDate: '',
-          endDate: '',
-          orderNumber: '',
-          clientId: '',
-          status: '',
-        };
-        setFilters(initialFilters);
-        fetchSales(initialFilters);
-      };
-    
-      const handleDownloadPdf = async (sale: Sale) => {
-        try {
-          const response = await api.get(`/sales/${sale.id}/pdf`, {
-            responseType: 'blob',
-          });
-          const url = window.URL.createObjectURL(new Blob([response.data]));
-          const link = document.createElement('a');
-          link.href = url;
-          link.setAttribute('download', `pedido-${sale.orderNumber}.pdf`);
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-        } catch (err) {
-          console.error(err);
-          toast.error('Falha ao baixar PDF do pedido.');
-        }
-      };
-    
-      const handleSaveSuccess = () => {    setIsNewSaleModalOpen(false);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `pedido-${sale.orderNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao baixar PDF do pedido.');
+    }
+  };
+
+  const handleSaveSuccess = () => {
+    setIsNewSaleModalOpen(false);
     fetchSales();
   };
 
@@ -233,13 +234,13 @@ export default function SalesPage() {
 
       const itemsText = sale.saleItems.map(item => {
         // Use 'gr' as unit if stockUnit is 'GRAMS', otherwise use the unit name or 'un'
-        let unit = 'gr'; 
+        let unit = 'gr';
         if (item.product.stockUnit === 'KILOGRAMS') unit = 'kg';
         else if (item.product.stockUnit === 'LITERS') unit = 'L';
         else if (item.product.stockUnit === 'UNITS') unit = 'un';
 
         const goldQty = (item.quantity * (item.product.goldValue || 0));
-        
+
         // Format: 58,8 (using comma for decimals)
         const formattedQty = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(item.quantity);
         const formattedGoldQty = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(goldQty);
@@ -273,7 +274,7 @@ ${itemsText}`;
     try {
       const response = await api.post('/sales/bulk-confirm', { saleIds: selectedSaleIds });
       toast.success(`${response.data.filter(r => r.status === 'success').length} venda(s) confirmada(s) com sucesso.`);
-      
+
       const errors = response.data.filter(r => r.status === 'error');
       if (errors.length > 0) {
         errors.forEach(err => {
@@ -283,7 +284,7 @@ ${itemsText}`;
           toast.error(`Falha ao confirmar venda #${orderNumber}: ${err.message}`);
         });
       }
-      
+
       fetchSales();
       setRowSelection({});
     } catch (err: any) {
@@ -409,7 +410,7 @@ ${itemsText}`;
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                
+
                 <DropdownMenuItem onClick={() => setSelectedSale(sale)}>
                   Ver Detalhes
                 </DropdownMenuItem>
@@ -431,7 +432,7 @@ ${itemsText}`;
                   <Truck className="mr-2 h-4 w-4" />
                   Incluir/Alterar Frete
                 </DropdownMenuItem>
-                
+
                 <DropdownMenuSeparator />
 
                 {/* Ações para PENDENTE */}
@@ -474,7 +475,7 @@ ${itemsText}`;
   ];
 
   return (
-    <div className="space-y-4 p-4 md:p-8">
+    <div className="space-y-4 p-2 md:p-8">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Vendas</h1>
         <div className="flex items-center gap-2">

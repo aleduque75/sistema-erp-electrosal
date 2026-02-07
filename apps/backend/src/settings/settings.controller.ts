@@ -11,7 +11,7 @@ import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(private readonly settingsService: SettingsService) { }
 
   @UseGuards(AuthGuard('jwt'))
   @Get()
@@ -34,7 +34,6 @@ export class SettingsController {
     return this.settingsService.getAppearanceSettings(organizationId);
   }
 
-  // Salva o JSON estruturado { light: {}, dark: {} }
   @UseGuards(AuthGuard('jwt'))
   @Put('appearance')
   updateAppearanceSettings(

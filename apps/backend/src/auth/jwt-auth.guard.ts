@@ -14,15 +14,20 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
+    const request = context.switchToHttp().getRequest<Request>();
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
     if (isPublic) {
+      // Se for público mas tiver header de autorização, deixa o AuthGuard processar para popular o user
+      if (request.headers['authorization']) {
+        return super.canActivate(context);
+      }
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<Request>();
+    // request already declared above
     // Explicitly allow access to public media endpoint
     if (request.url.startsWith('/api/public-media/')) {
       return true;

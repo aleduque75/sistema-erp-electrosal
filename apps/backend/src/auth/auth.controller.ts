@@ -19,7 +19,7 @@ import { JwtAuthGuard } from './jwt-auth.guard'; // Import JwtAuthGuard
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Public() // <-- 2. MARQUE A ROTA COMO PÚBLICA
   @Post('register')
@@ -35,9 +35,12 @@ export class AuthController {
     return this.authService.login(req.user);
   }
 
-  @UseGuards(JwtAuthGuard) // Protect this endpoint with JWT authentication
+  @UseGuards(JwtAuthGuard)
   @Get('me')
-  getMe(@Request() req) {
-    return req.user; // The JwtAuthGuard attaches the user to the request
+  async getMe(@Request() req) {
+    // req.user from JwtStrategy (lightweight) -> Fetch full profile
+    const user = await this.authService.getUserProfile(req.user.sub, req.user.orgId);
+    console.log('[DEBUG] /auth/me returning user:', JSON.stringify(user, null, 2));
+    return user;
   }
 }

@@ -33,7 +33,7 @@ export default function AppearancePage() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const { data: appearanceSettings } = await api.get("/settings/appearance");
+        const { data: appearanceSettings } = await api.get(`/settings/appearance?t=${Date.now()}`);
         // Garante que config sempre tenha a estrutura esperada, incluindo as novas cores da tabela
         const initialConfig = appearanceSettings.customTheme || {
           light: {
@@ -56,15 +56,12 @@ export default function AppearancePage() {
           },
         };
         setConfig(initialConfig);
-        
+
         const { data: presets } = await api.get("/settings/themes");
         setThemePresets(presets);
 
-        // Aplica o tema customizado inicial se existir
-        if (appearanceSettings.customTheme) {
-          const currentMode = theme || "light"; // Use o tema atual do contexto, fallback para light
-          updateLiveColors(appearanceSettings.customTheme[currentMode]?.colors);
-        }
+        // Initial color application is now handled by the [theme, config] effect
+        // config set -> triggers effect -> updateLiveColors
 
       } catch (e) {
         console.error("Erro ao buscar configurações de aparência ou presets:", e);
@@ -72,7 +69,19 @@ export default function AppearancePage() {
       }
     };
     fetchSettings();
-  }, [theme]); // Remover 'config' como dependência, pois ele agora é inicializado com uma estrutura padrão
+  }, []); // ✅ FIX: Execute only once on mount. Changing theme should NOT refetch/overwrite config.
+
+  // ✅ NEW EFFECT: Re-apply pending config colors when theme changes
+  // This ensures that if we switch modes while editing, we see the DRAFT colors, not the saved ones.
+  useEffect(() => {
+    if (config) {
+      const currentMode = theme || "light";
+      const colors = config[currentMode]?.colors;
+      if (colors) {
+        updateLiveColors(colors);
+      }
+    }
+  }, [theme, config]); // Re-run when theme or draft config changes
 
   const update = (mode: string, key: string, val: string) => {
     let final = val;
@@ -95,10 +104,31 @@ export default function AppearancePage() {
   };
 
   const applyPreset = (presetData: any) => {
+    if (!presetData || (!presetData.light && !presetData.dark)) {
+      toast.error("Formato do preset inválido.");
+      return;
+    }
+
     setConfig(presetData);
+
     const currentMode = theme || "light";
-    updateLiveColors(presetData[currentMode]?.colors);
-    toast.success("Tema aplicado com sucesso (não salvo ainda).");
+    let colorsToApply = presetData[currentMode]?.colors;
+
+    // Se o preset não tem cores para o modo atual, tenta o outro modo e troca o tema
+    if (!colorsToApply) {
+      const otherMode = currentMode === 'light' ? 'dark' : 'light';
+      if (presetData[otherMode]?.colors) {
+        colorsToApply = presetData[otherMode].colors;
+        setTheme(otherMode); // Troca o modo visualmente e no estado
+        toast.info(`Tema alterado para ${otherMode === 'light' ? 'Claro' : 'Escuro'} para compatibilidade.`);
+      }
+    }
+
+    colorsToApply = colorsToApply || {};
+    updateLiveColors(colorsToApply);
+    setCustomTheme(presetData);
+
+    toast.success("Tema aplicado! Clique em 'SALVAR TUDO' para persistir.");
   };
 
   const handleSavePreset = async () => {
@@ -180,15 +210,23 @@ export default function AppearancePage() {
         <Button
           size="lg"
           className="font-bold"
-          onClick={() =>
-            api
-              .put("/settings/appearance", { customTheme: config })
+          onClick={() => {
+            // Salva as definições de cores da organização
+            const saveAppearance = api.put("/settings/appearance", { customTheme: config });
+            // Salva a preferência de modo (light/dark) do usuário atual para garantir consistência
+            const saveUserPref = api.put("/settings", { theme: theme });
+
+            Promise.all([saveAppearance, saveUserPref])
               .then(() => {
-                toast.success("Identidade Salva!");
-                console.log("Config enviado para o backend:", config); // <-- Adicionar este log
-                setCustomTheme(config); // Notifica o ThemeProvider sobre a mudança do tema customizado
+                toast.success("Identidade e Preferências Salvas!");
+                console.log("Config enviado:", config, "Tema:", theme);
+                setCustomTheme(config);
               })
-          }
+              .catch((err) => {
+                console.error("Erro ao salvar:", err);
+                toast.error("Erro ao salvar. Verifique se você está logado.");
+              });
+          }}
         >
           SALVAR TUDO
         </Button>
@@ -404,36 +442,36 @@ export default function AppearancePage() {
                 v={config[m].colors.cardBorderOpacity}
                 onChange={update}
               />
-                                <InputRow
-                                  label="Raio (Radius)"
-                                  m={m}
-                                  k="cardRadius"
-                                  v={config[m].colors.cardRadius}
-                                  onChange={update}
-                                />
-                                <hr className="my-2 opacity-20" />
-                                <ColorRow
-                                  label="Borda Padrão"
-                                  m={m}
-                                  k="border"
-                                  v={config[m].colors.border}
-                                  onChange={update}
-                                />
-                                                  <ColorRow
-                                                    label="Borda Input"
-                                                    m={m}
-                                                    k="input"
-                                                    v={config[m].colors.input}
-                                                    onChange={update}
-                                                  />
-                                                  <InputRow
-                                                    label="Opacidade Borda Padrão"
-                                                    m={m}
-                                                    k="borderOpacity"
-                                                    v={config[m].colors.borderOpacity}
-                                                    onChange={update}
-                                                  />
-                                                </Section>            {/* 4. BOTÕES */}
+              <InputRow
+                label="Raio (Radius)"
+                m={m}
+                k="cardRadius"
+                v={config[m].colors.cardRadius}
+                onChange={update}
+              />
+              <hr className="my-2 opacity-20" />
+              <ColorRow
+                label="Borda Padrão"
+                m={m}
+                k="border"
+                v={config[m].colors.border}
+                onChange={update}
+              />
+              <ColorRow
+                label="Borda Input"
+                m={m}
+                k="input"
+                v={config[m].colors.input}
+                onChange={update}
+              />
+              <InputRow
+                label="Opacidade Borda Padrão"
+                m={m}
+                k="borderOpacity"
+                v={config[m].colors.borderOpacity}
+                onChange={update}
+              />
+            </Section>            {/* 4. BOTÕES */}
             <Section title="Botões">
               <ColorRow
                 label="Fundo Principal"

@@ -62,10 +62,9 @@ interface PreviewTransaction {
 interface SelectionState {
   selected: boolean;
   contaContabilId?: string;
-  description?: string; // Guarda a descrição editada
+  description?: string;
 }
 
-// --- NOVAS INTERFACES PARA USER PROFILE E SETTINGS ---
 interface UserSettings {
   id: string;
   defaultReceitaContaId: string | null;
@@ -78,7 +77,6 @@ interface UserProfile {
   email: string;
   settings: UserSettings | null;
 }
-// --------------------------------------------------
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -94,7 +92,7 @@ export function OfxImport() {
 
   const [selectedContaCorrenteId, setSelectedContaCorrenteId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false); // Variável oficial de carregamento
   const [previewData, setPreviewData] = useState<PreviewTransaction[]>([]);
   const [selections, setSelections] = useState<Record<string, SelectionState>>(
     {}
@@ -104,12 +102,10 @@ export function OfxImport() {
   const [newCategoryType, setNewCategoryType] =
     useState<TipoContaContabilPrisma>(TipoContaContabilPrisma.DESPESA);
 
-  // --- BUSCA O PERFIL DO USUÁRIO COM AS CONFIGURAÇÕES ---
   const { data: userProfile, isLoading: isLoadingProfile } = useQuery<UserProfile>({
     queryKey: ["userProfile"],
     queryFn: () => api.get("/users/profile").then((res) => res.data),
   });
-  // -----------------------------------------------------
 
   const fetchContas = async () => {
     try {
@@ -151,7 +147,6 @@ export function OfxImport() {
       const newPreviewData: PreviewTransaction[] = response.data;
       setPreviewData(newPreviewData);
 
-      // --- LÓGICA DE CATEGORIZAÇÃO AUTOMÁTICA ---
       const defaultReceitaId = userProfile?.settings?.defaultReceitaContaId;
       const defaultDespesaId = userProfile?.settings?.defaultDespesaContaId;
 
@@ -163,7 +158,6 @@ export function OfxImport() {
           const accountsToSearch = t.type === 'CREDIT' ? contasDeEntrada : contasDeSaida;
           const defaultId = t.type === 'CREDIT' ? defaultReceitaId : defaultDespesaId;
 
-          // 1. Tenta encontrar um match exato ou parcial
           const foundAccount = accountsToSearch.find(acc => searchDescription.includes(acc.nome.toLowerCase()));
 
           if (foundAccount) {
@@ -181,7 +175,6 @@ export function OfxImport() {
         return acc;
       }, {});
       setSelections(initialSelections);
-      // --------------------------------------------
 
     } catch (err: any) {
       toast.error(
@@ -247,7 +240,6 @@ export function OfxImport() {
     const newSelections = { ...selections };
     newSelections[fitId] = { ...newSelections[fitId], [key]: value };
 
-    // Lógica de preenchimento automático
     if (key === "contaContabilId" && originalDescription) {
       previewData.forEach((t) => {
         if (
@@ -338,8 +330,8 @@ export function OfxImport() {
                 required
               />
             </div>
-            <Button type="submit" disabled={isUpisLoading || isLoadingProfile} className="w-full">
-              {isUpisLoading ? "Analisando..." : "Analisar Arquivo"}
+            <Button type="submit" disabled={isUploading || isLoadingProfile} className="w-full">
+              {isUploading ? "Analisando..." : "Analisar Arquivo"}
             </Button>
           </form>
         </CardContent>
@@ -365,7 +357,7 @@ export function OfxImport() {
                     <Checkbox
                       checked={
                         selectableItemsCount > 0 &&
-                        selectedItemsCount === selectableItemsCount
+                          selectedItemsCount === selectableItemsCount
                           ? true
                           : selectedItemsCount > 0
                             ? "indeterminate"
@@ -484,11 +476,11 @@ export function OfxImport() {
             <Button
               variant="outline"
               onClick={() => setPreviewData([])}
-              disabled={isUpisLoading}
+              disabled={isUploading}
             >
               Cancelar
             </Button>
-            <Button onClick={handleFinalImport} disabled={isUpisLoading}>
+            <Button onClick={handleFinalImport} disabled={isUploading}>
               {isUploading
                 ? "Importando..."
                 : `Importar (${selectedItemsCount}) Selecionados`}

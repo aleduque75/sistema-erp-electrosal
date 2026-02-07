@@ -102,7 +102,7 @@
         --tableHeaderBackground: 222 47% 15%; /* Um pouco mais claro que o card */
         --tableHeaderForeground: 210 40% 98%; /* Texto claro */
         --tableRowHover: 222 47% 18%; /* Um pouco mais claro no hover */
-        --tableBorder: 217 33% 25%; /* Mesma cor da borda do card */
+        --tableBorder: 217 33% 15%; /* Mais escuro para não ofuscar no modo dark */
 
         /* POPOVER DARK */
         --popover: var(--card);

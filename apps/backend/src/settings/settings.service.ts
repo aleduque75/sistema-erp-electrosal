@@ -9,7 +9,7 @@ import { UpdateThemePresetDto } from './dto/update-theme-preset.dto';
 
 @Injectable()
 export class SettingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /**
    * Busca as configurações do usuário. Se não existirem, cria o registro inicial.
@@ -38,9 +38,10 @@ export class SettingsService {
     userId: string,
     updateSettingDto: UpdateSettingDto,
   ): Promise<UserSettings> {
-    const updatedPrismaSettings = await this.prisma.userSettings.update({
+    console.log(`[DEBUG] Updating settings for user ${userId}:`, updateSettingDto);
+    const updatedPrismaSettings = await this.prisma.userSettings.upsert({
       where: { userId },
-      data: {
+      update: {
         theme: updateSettingDto.theme,
         defaultReceitaContaId: updateSettingDto.defaultReceitaContaId,
         defaultCaixaContaId: updateSettingDto.defaultCaixaContaId,
@@ -50,8 +51,13 @@ export class SettingsService {
         metalCreditPayableAccountId:
           updateSettingDto.metalCreditPayableAccountId,
       },
+      create: {
+        userId,
+        theme: updateSettingDto.theme || 'light', // Default to light if not provided
+      },
     });
 
+    console.log('[DEBUG] Updated settings result:', updatedPrismaSettings);
     return UserSettingsMapper.toDomain(updatedPrismaSettings);
   }
 

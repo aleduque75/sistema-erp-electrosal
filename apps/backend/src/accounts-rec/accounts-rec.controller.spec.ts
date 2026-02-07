@@ -1,40 +1,45 @@
-import {
-  Controller,
-  Get,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Request,
-  Query,
-} from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { AccountsRecController } from './accounts-rec.controller';
 import { AccountsRecService } from './accounts-rec.service';
-import { AuthGuard } from '@nestjs/passport';
-// ✅ CORREÇÃO: Importando todas as DTOs do arquivo unificado
-import { ReceivePaymentDto } from './dtos/account-rec.dto';
+import { PayAccountsRecWithMetalCreditUseCase } from './use-cases/pay-accounts-rec-with-metal-credit.use-case';
+import { PayAccountsRecWithMetalUseCase } from './use-cases/pay-accounts-rec-with-metal.use-case';
+import { PayAccountsRecWithMetalCreditMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-credit-multiple.use-case';
+import { PayAccountsRecWithMetalMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-multiple.use-case';
+import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
 
-@UseGuards(AuthGuard('jwt'))
-@Controller('accounts-rec')
-export class AccountsRecController {
-  constructor(private readonly service: AccountsRecService) {}
+describe('AccountsRecController', () => {
+  let controller: AccountsRecController;
+  let service: AccountsRecService;
 
-  @Get()
-  findAll(@Request() req, @Query('search') search?: string) {
-    return this.service.findAll(req.user.id, search);
-  }
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [AccountsRecController],
+      providers: [
+        {
+          provide: AccountsRecService,
+          useValue: {
+            findAll: jest.fn(),
+            findOne: jest.fn(),
+            create: jest.fn(),
+            update: jest.fn(),
+            remove: jest.fn(),
+            receive: jest.fn(),
+            forceFinalize: jest.fn(),
+          },
+        },
+        { provide: PayAccountsRecWithMetalCreditUseCase, useValue: { execute: jest.fn() } },
+        { provide: PayAccountsRecWithMetalUseCase, useValue: { execute: jest.fn() } },
+        { provide: PayAccountsRecWithMetalCreditMultipleUseCase, useValue: { execute: jest.fn() } },
+        { provide: PayAccountsRecWithMetalMultipleUseCase, useValue: { execute: jest.fn() } },
+        { provide: HybridReceiveUseCase, useValue: { execute: jest.fn() } },
+      ],
+    }).compile();
 
-  @Patch(':id/receive')
-  receive(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: ReceivePaymentDto,
-  ) {
-    return this.service.receive(req.user.id, id, dto);
-  }
+    controller = module.get<AccountsRecController>(AccountsRecController);
+    service = module.get<AccountsRecService>(AccountsRecService);
+  });
 
-  @Delete(':id')
-  remove(@Request() req, @Param('id') id: string) {
-    return this.service.remove(req.user.id, id);
-  }
-}
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+});
