@@ -154,10 +154,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = async (t: string) => {
     setInternalTheme(t);
-    try {
-      await api.put("/settings", { theme: t });
-    } catch (error) {
-      console.warn("⚠️ Erro ao salvar preferência de tema:", error);
+    // Only save to API if user is logged in to avoid 401
+    if (user) {
+      try {
+        await api.put("/settings", { theme: t });
+      } catch (error) {
+        console.warn("⚠️ Erro ao salvar preferência de tema:", error);
+      }
     }
   };
 

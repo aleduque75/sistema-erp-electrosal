@@ -1,1 +1,0 @@
-ALTER TYPE "ChemicalReactionStatusPrisma" ADD VALUE 'PENDING_PURITY_ADJUSTMENT';

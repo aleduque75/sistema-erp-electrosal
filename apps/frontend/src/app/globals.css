@@ -6,12 +6,20 @@
   :root {
     /* TEXTOS */
     --foreground: 222 47% 11%;
+    /* Dark blue/black for text */
     --muted-foreground: 215 16% 47%;
+    /* Gray for secondary text */
 
     /* ESTRUTURA */
     --background: 0 0% 100%;
+    /* Pure white background */
     --card: 0 0% 100%;
+    /* White card background */
+    --card-foreground: 222 47% 11%;
+    /* Dark text on cards */
+    /* Added missing variable */
     --card-border: 214 32% 91%;
+    /* Light gray border */
     --card-border-opacity: 1;
     --card-radius: 12px;
     --border: 214 32% 91%;
@@ -19,14 +27,16 @@
     /* INPUTS (Onde estava o erro) */
     --input: 210 40% 98%;
     --input-foreground: 222 47% 11%;
-    --ring: 221 83% 70%; /* Ring color for dark mode */
+    --ring: 221 83% 70%;
+    /* Ring color for dark mode */
 
     /* BOTÕES */
     --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
     --primary-hover: 221 83% 45%;
     --cancel: 215 16% 47%;
-    --cancel-hover: 215 16% 40%; /* Darker hover for cancel button */
+    --cancel-hover: 215 16% 40%;
+    /* Darker hover for cancel button */
     --cancel-foreground: 0 0% 100%;
     --button-radius: 8px;
 
@@ -43,73 +53,97 @@
     /* BADGES */
     --badge-background: 221 83% 53%;
     --badge-text: 0 0% 100%;
-    --border-opacity: 1; /* Adicionado */
+    --border-opacity: 1;
+    /* Adicionado */
 
     /* TABELAS */
-    --tableHeaderBackground: 210 40% 96%; /* Cinza bem claro para cabeçalhos */
-    --tableHeaderForeground: 215 25% 27%; /* Texto escuro para contraste */
-    --tableRowHover: 210 40% 98%; /* Um pouco mais escuro no hover */
-    --tableBorder: 214 32% 91%; /* Mesma cor da borda do card */
+    --tableHeaderBackground: 210 40% 96%;
+    /* Cinza bem claro para cabeçalhos */
+    --tableHeaderForeground: 215 25% 27%;
+    /* Texto escuro para contraste */
+    --tableRowHover: 210 40% 98%;
+    /* Um pouco mais escuro no hover */
+    --tableBorder: 214 32% 91%;
+    /* Mesma cor da borda do card */
 
     /* POPOVER (Dropdowns, Tooltips, etc.) */
     --popover: var(--card);
     --popover-foreground: var(--foreground);
   }
 
-  @media (max-width: 639px) { /* Targets screens smaller than Tailwind's 'sm' breakpoint */
+  @media (max-width: 639px) {
+
+    /* Targets screens smaller than Tailwind's 'sm' breakpoint */
     :root {
-      --card-radius: 8px; /* Reduced radius for mobile */
+      --card-radius: 8px;
+      /* Reduced radius for mobile */
     }
   }
 
-      .dark {
-        /* TEXTOS DARK */
-        --foreground: 210 40% 98%;
-        --muted-foreground: 215 20% 65%;
-  
-        /* ESTRUTURA DARK */
-        --background: 222 47% 11%;
-        --card: 222 47% 12%;
-        --card-border: 217 33% 25%;
-  
-        --border: 217 33% 17%;
-        --border-opacity: 1; /* Adicionado para garantir solidez por padrão */
-  
-        /* INPUTS DARK (Correção do branco no branco) */
-        --input: 217 33% 18%;
-        --input-foreground: 210 40% 98%;
-  
-        /* BOTÕES DARK (Adicionado/Ajustado) */
-        --primary: 221 83% 60%; /* Lighter primary for dark mode contrast */
-        --primary-foreground: 0 0% 100%;
-        --primary-hover: 221 83% 70%; /* Lighter hover for dark mode */
-        --cancel: 215 16% 55%; /* Lighter cancel for dark mode contrast */
-        --cancel-hover: 215 16% 65%; /* Lighter hover for dark mode */
-        --cancel-foreground: 0 0% 100%;
-        --ring: 221 83% 70%; /* Ring color for dark mode */
-  
-        /* MENU DARK */
-        --menu-background: 222 47% 11%;
-        --menu-text: 210 40% 98%;
-        --menu-border: 217 33% 17%;
-        --menu-border-opacity: 0.5; /* Adicionado */
-  
-        /* BADGES DARK */
-        --badge-background: 221 83% 60%; /* Consistent with primary in dark mode */
-        --badge-text: 0 0% 100%;
+  .dark {
+    /* TEXTOS DARK */
+    --foreground: 210 40% 98%;
+    --muted-foreground: 215 20% 65%;
 
-        /* TABELAS DARK */
-        --tableHeaderBackground: 222 47% 15%; /* Um pouco mais claro que o card */
-        --tableHeaderForeground: 210 40% 98%; /* Texto claro */
-        --tableRowHover: 222 47% 18%; /* Um pouco mais claro no hover */
-        --tableBorder: 217 33% 15%; /* Mais escuro para não ofuscar no modo dark */
+    /* ESTRUTURA DARK */
+    --background: 222 47% 11%;
+    --card: 222 47% 12%;
+    --card-foreground: 210 40% 98%;
+    /* Added missing variable */
+    --card-border: 217 33% 25%;
 
-        /* POPOVER DARK */
-        --popover: var(--card);
-        --popover-foreground: var(--foreground);
-      }}
+    --border: 217 33% 17%;
+    --border-opacity: 1;
+    /* Adicionado para garantir solidez por padrão */
+
+    /* INPUTS DARK (Correção do branco no branco) */
+    --input: 217 33% 18%;
+    --input-foreground: 210 40% 98%;
+
+    /* BOTÕES DARK (Adicionado/Ajustado) */
+    --primary: 221 83% 60%;
+    /* Lighter primary for dark mode contrast */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 221 83% 70%;
+    /* Lighter hover for dark mode */
+    --cancel: 215 16% 55%;
+    /* Lighter cancel for dark mode contrast */
+    --cancel-hover: 215 16% 65%;
+    /* Lighter hover for dark mode */
+    --cancel-foreground: 0 0% 100%;
+    --ring: 221 83% 70%;
+    /* Ring color for dark mode */
+
+    /* MENU DARK */
+    --menu-background: 222 47% 11%;
+    --menu-text: 210 40% 98%;
+    --menu-border: 217 33% 17%;
+    --menu-border-opacity: 0.5;
+    /* Adicionado */
+
+    /* BADGES DARK */
+    --badge-background: 221 83% 60%;
+    /* Consistent with primary in dark mode */
+    --badge-text: 0 0% 100%;
+
+    /* TABELAS DARK */
+    --tableHeaderBackground: 222 47% 15%;
+    /* Um pouco mais claro que o card */
+    --tableHeaderForeground: 210 40% 98%;
+    /* Texto claro */
+    --tableRowHover: 222 47% 18%;
+    /* Um pouco mais claro no hover */
+    --tableBorder: 217 33% 15%;
+    /* Mais escuro para não ofuscar no modo dark */
+
+    /* POPOVER DARK */
+    --popover: var(--card);
+    --popover-foreground: var(--foreground);
+  }
+}
 
 @layer components {
+
   /* Força todos os inputs do sistema a obedecerem as variáveis */
   input,
   textarea,
@@ -141,32 +175,41 @@
   .table {
     @apply w-full caption-bottom text-sm;
     border: 1px solid hsl(var(--tableBorder));
-    border-radius: var(--card-radius); /* Usar o mesmo radius do card */
+    border-radius: var(--card-radius);
+    /* Usar o mesmo radius do card */
   }
+
   .table-header {
     @apply [&_tr]:border-b;
   }
+
   .table-body {
     @apply [&_tr:last-child]:border-0;
   }
+
   .table-footer {
     @apply bg-primary text-primary-foreground font-medium;
   }
+
   .table-row {
     border-bottom: 1px solid hsl(var(--tableBorder));
   }
+
   /* Remove a borda padrão e aplica a cor da variável */
   .table-row:not([data-state=selected]):hover {
     background-color: hsl(var(--tableRowHover));
   }
+
   .table-head {
     @apply h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px];
     background-color: hsl(var(--tableHeaderBackground));
     color: hsl(var(--tableHeaderForeground));
   }
+
   .table-cell {
     @apply p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px];
   }
+
   .table-caption {
     @apply mt-4 text-sm text-muted-foreground;
   }

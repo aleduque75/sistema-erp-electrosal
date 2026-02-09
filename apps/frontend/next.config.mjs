@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  
+
   // Ignorar erros de TypeScript para permitir que o build termine no VPS
   typescript: {
     ignoreBuildErrors: true,
   },
-  
+
   // Também é recomendado ignorar o Lint no build de produção para evitar travas
   eslint: {
     ignoreDuringBuilds: true,
@@ -43,7 +43,7 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'api.electrosal.com.br',
-        pathname: '/api/public-media/**',
+        pathname: '/public-media/**', // Changed from /api/public-media to match possible static serve or just covering bases
       },
     ],
   },

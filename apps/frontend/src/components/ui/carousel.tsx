@@ -1,4 +1,4 @@
-"use client" 
+"use client"
 
 import * as React from "react"
 import useEmblaCarousel from "embla-carousel-react" // Importa APENAS o hook
@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 // 1. Inferir os tipos diretamente do hook para evitar conflitos de exportação:
-type UseEmblaCarouselType = ReturnType<typeof useEmblaCarousel>; 
-type EmblaOptionsType = Parameters<typeof useEmblaCarousel>[0]; 
+type UseEmblaCarouselType = ReturnType<typeof useEmblaCarousel>;
+type EmblaOptionsType = Parameters<typeof useEmblaCarousel>[0];
 type EmblaCarouselType = UseEmblaCarouselType[1]; // A instância real da API
 
 // Agora todos os tipos estão resolvidos internamente
@@ -16,14 +16,15 @@ type EmblaCarouselType = UseEmblaCarouselType[1]; // A instância real da API
 // O restante do código usa os tipos corrigidos:
 type CarouselProps = {
   // Usa o tipo inferido
-  opts?: EmblaOptionsType 
+  opts?: EmblaOptionsType
+  plugins?: any[] // Adicionado suporte a plugins
   orientation?: "horizontal" | "vertical"
   setApi?: (api: EmblaCarouselType) => void // Usa o tipo de instância
 } & React.ComponentPropsWithoutRef<"div">
 
 type CarouselContextProps = {
   // 3. CORREÇÃO: O emblaApi real retornado do hook é o EmblaCarouselType
-  emblaApi: EmblaCarouselType | undefined 
+  emblaApi: EmblaCarouselType | undefined
   canScrollPrev: boolean
   canScrollNext: boolean
   scrollPrev: () => void
@@ -50,6 +51,7 @@ const Carousel = React.forwardRef<
   (
     {
       opts,
+      plugins,
       orientation = "horizontal",
       setApi,
       className,
@@ -59,20 +61,23 @@ const Carousel = React.forwardRef<
     ref
   ) => {
     // Uso do tipo opts: EmblaOptionsType
-    const [emblaRef, emblaApi] = useEmblaCarousel({
-      ...opts, 
-      axis: orientation === "horizontal" ? "x" : "y",
-    })
+    const [emblaRef, emblaApi] = useEmblaCarousel(
+      {
+        ...opts,
+        axis: orientation === "horizontal" ? "x" : "y",
+      },
+      plugins
+    )
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
     const [selectedIndex, setSelectedIndex] = React.useState(0)
 
     // CORREÇÃO: Usar 'any' para contornar a falha de tipagem externa
     const onSelect = React.useCallback(
-      (emblaApi: any) => { 
-        setSelectedIndex(emblaApi.selectedScrollSnap()); 
+      (emblaApi: any) => {
+        setSelectedIndex(emblaApi.selectedScrollSnap());
       },
-      [] 
+      []
     );
 
     const scrollPrev = React.useCallback(() => {
@@ -85,7 +90,7 @@ const Carousel = React.forwardRef<
 
     // CORREÇÃO: Usar 'any' para contornar a falha de tipagem externa
     const onInit = React.useCallback(
-      (emblaApi: any) => { 
+      (emblaApi: any) => {
         setCanScrollPrev(emblaApi.canScrollPrev())
         setCanScrollNext(emblaApi.canScrollNext())
       },
@@ -94,7 +99,7 @@ const Carousel = React.forwardRef<
 
     // CORREÇÃO: Usar 'any' para contornar a falha de tipagem externa
     const onReInit = React.useCallback(
-      (emblaApi: any) => { 
+      (emblaApi: any) => {
         setCanScrollPrev(emblaApi.canScrollPrev())
         setCanScrollNext(emblaApi.canScrollNext())
       },
@@ -106,16 +111,16 @@ const Carousel = React.forwardRef<
         return
       }
 
-      emblaApi.on("init", onInit) 
+      emblaApi.on("init", onInit)
       emblaApi.on("select", onSelect)
       emblaApi.on("reInit", onReInit)
-      emblaApi.on("settle", onInit) 
-      
+      emblaApi.on("settle", onInit)
+
       // Passar a instância emblaApi (que é UseEmblaCarouselType | undefined)
       // para inicialização manual.
       if (emblaApi) {
-          onInit(emblaApi);
-          onSelect(emblaApi);
+        onInit(emblaApi);
+        onSelect(emblaApi);
       }
 
       if (setApi) {

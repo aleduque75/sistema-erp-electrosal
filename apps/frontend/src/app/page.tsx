@@ -6,46 +6,40 @@ import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 
-
 // Importações dos novos componentes e tipos de configuração
 import { LandingPageData, SectionConfig, HeroSectionConfig, FeaturesSectionConfig } from "@/config/landing-page";
 import { HeroSection } from "@/components/landing-page/HeroSection";
 import { FeaturesSection } from "@/components/landing-page/FeaturesSection";
 
+
 // Componente Principal da Página
 export default function HomePage() {
   const [landingPageData, setLandingPageData] = useState<LandingPageData | null>(null);
-  const [loading, setIsPageLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchLandingPageData = async () => {
+    async function fetchLandingPageData() {
       try {
-        const response = await api.get("/landing-page");
-        const processedData: LandingPageData = { // Explicitamente tipando
-            ...response.data,
-            logoImage: response.data.logoImage as string | undefined,
-            sections: response.data.sections.map((section: any) => {
-              // section is any here because API returns a generic object
-              return section;
-            }),
-          // Garantir que logoText e logoImage estejam no nível superior
-          logoText: response.data.logoText || undefined,
-        };
-        setLandingPageData(processedData);
-      } catch (err: any) {
+        const response = await api.get('/landing-page');
+        setLandingPageData(response.data);
+      } catch (err) {
         console.error("Failed to fetch landing page data:", err);
-        setError("Falha ao carregar o conteúdo da página.");
-        toast.error("Falha ao carregar o conteúdo da página.");
+        setError("Não foi possível carregar os dados da página inicial.");
+        toast.error("Erro ao carregar a página inicial.");
+        // Opcional: redirecionar para uma página de erro ou mostrar um fallback
+        // router.push('/error');
       } finally {
-        setIsPageLoading(false);
+        setIsLoading(false);
       }
-    };
+    }
+
     fetchLandingPageData();
   }, []);
 
-  if (loading) {
-    return <p className="text-center p-10">Carregando página...</p>;
+  if (isLoading) {
+    return <p className="text-center p-10">Carregando...</p>;
   }
 
   if (error) {
@@ -57,7 +51,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background overflow-x-hidden">
       <PublicNavbar
         logoText={landingPageData.logoText}
         logoImage={landingPageData.logoImage}

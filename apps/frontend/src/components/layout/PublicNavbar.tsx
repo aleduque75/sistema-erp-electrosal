@@ -36,27 +36,29 @@ export function PublicNavbar({ logoText, logoImage }: PublicNavbarProps) {
   // --- Lógica de Renderização do Logotipo ---
   const renderLogo = () => {
     // Caso 1: Tem imagem
+    // Caso 1: Tem imagem
     if (logoImage) {
       const isSquare =
         logoImage.width &&
         logoImage.height &&
         Math.abs(logoImage.width / logoImage.height - 1) < 0.1;
       const showTextWithImage = isSquare;
-      const imageSrc = `/api/public-media/${logoImage.id}`;
+
+      // FIX: Check if it's a local path (starts with /images) or use API URL
+      const imageSrc = logoImage.path?.startsWith('/images/')
+        ? logoImage.path
+        : `/api/public-media/${logoImage.id}`;
 
       return (
-        <>
-          <Image
+        <div className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={imageSrc}
             alt={logoText || 'Logo'}
-            width={showTextWithImage ? 32 : 160}
-            height={32}
-            className="object-contain"
+            className="h-8 w-auto object-contain"
           />
-          {showTextWithImage && (
-            <span className="font-bold text-lg">{logoText}</span>
-          )}
-        </>
+
+        </div>
       );
     }
 
@@ -67,15 +69,18 @@ export function PublicNavbar({ logoText, logoImage }: PublicNavbarProps) {
 
     // Caso 3: Fallback (sem imagem e sem texto do backend)
     return (
-      <>
-        <Image
+      <div className="flex items-center gap-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="/images/logo.png"
           alt="Sistema Electrosal Logo"
-          width={100}
-          height={32}
+          className="h-8 w-auto object-contain"
+          onError={(e) => {
+            // Se falhar, esconde a imagem
+            e.currentTarget.style.display = 'none';
+          }}
         />
-        <span className="font-bold text-lg">Sistema Electrosal</span>
-      </>
+      </div>
     );
   };
 
@@ -98,7 +103,7 @@ export function PublicNavbar({ logoText, logoImage }: PublicNavbarProps) {
           </DialogContent>
         </Dialog>
 
-      
+
       </div>
     </nav>
   );

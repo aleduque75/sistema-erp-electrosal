@@ -1,2 +1,0 @@
-CREATE TYPE "ChemicalReactionStatusPrisma" AS ENUM ('STARTED', 'PROCESSING', 'PENDING_PURITY', 'COMPLETED', 'CANCELED');
-ALTER TABLE "chemical_reactions" ADD COLUMN "status" "ChemicalReactionStatusPrisma" NOT NULL DEFAULT 'STARTED';
