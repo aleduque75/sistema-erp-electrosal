@@ -43,7 +43,7 @@ backend.log
 
 # Ignorar arquivos de backup e migração temporários
 backup.dump
-migration*.sql
+# migration*.sql  ← REMOVIDO! Migrations do Prisma DEVEM ser commitadas
 
 # Ignorar diretório de backups do backend
 apps/backend/backups/
