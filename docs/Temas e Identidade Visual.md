@@ -1,131 +1,86 @@
-🎨 Sistema de Temas e Identidade Visual (ERP Electrosal)
+● Perfeito! Encontrei apenas um comentário que já indicava a correção. Agora vou criar um resumo completo:                                                                       
+                                                                                                                                                                                 
+  ---                                                                                                                                                                            
+  ✅ Padronização Completa de Temas - Resumo das Alterações                                                                                                                      
+                                                                                                                                                                                 
+  1. custom-theme-provider.tsx ✅                                                                                                                                                
 
-Este documento descreve a arquitetura de temas do sistema, permitindo tanto a preferência individual do usuário (Claro/Escuro) quanto a personalização da marca pela organização.
-🏗️ Arquitetura Geral
+  - Alinhado DEFAULT_THEME com globals.css
+    - Removidas variáveis desatualizadas do shadcn
+    - Adicionadas todas as variáveis customizadas do sistema (primary-hover, cancel, menu, badges, tabelas)
+    - Mantida compatibilidade com componentes shadcn (secondary, muted, accent, destructive)
 
+  2. globals.css ✅
 
-O sistema utiliza uma abordagem híbrida:
+  - Adicionadas variáveis shadcn faltantes:
+    - --muted, --secondary, --accent, --destructive (light e dark)
+    - Garantia de compatibilidade total com componentes shadcn/ui
+    - Todas as variáveis HSL padronizadas
 
-    Tailwind CSS (Modo Classe): Para alternância entre light e dark.
+  3. tailwind.config.ts ✅
 
-    Variáveis CSS (Tokens): Para cores dinâmicas da organização injetadas via JavaScript.
+  - Mapeamento completo de variáveis:
+    - primary.hover para var(--primary-hover)
+    - cancel.DEFAULT, cancel.hover, cancel.foreground
+    - badge.DEFAULT, badge.foreground
+    - table.header, table.header-foreground, table.hover, table.border
+    - Todas as cores agora usam hsl(var(--...)) corretamente
 
-    Persistência: PostgreSQL (via Prisma) armazenando preferências em JSON.
+  4. FeaturesSection.tsx ✅
 
-📂 Estrutura de Dados (Prisma)
+  - Removido bg-gray-50 hardcoded
+  - Substituído por bg-muted/30 (variável semântica com opacidade)
+  - Todos os outros elementos já usavam variáveis semânticas
 
-As configurações são divididas em dois modelos:
+  5. HeroSection.tsx ✅
 
-    UserSettings: Preferência individual (light, dark, system).
+  - Já estava correto!
+  - Usa bg-background, text-foreground, text-muted-foreground
+  - Botões usam bg-primary, hover:bg-primary-hover, text-primary-foreground
 
-    AppearanceSettings: Identidade visual da empresa (armazenado como JSON estruturado).
+  6. schema.prisma (Backend) ✅
 
-Snippet de código
+  - Modelo AppearanceSettings perfeito:
+  model AppearanceSettings {
+    id             String       @id @default(uuid())
+    organizationId String       @unique
+    themeName      String?
+    sidebarTheme   Json?
+    logoImageId    String?
+    logoText       String?
+    customTheme    Json? // ✅ PRONTO PARA SALVAR TEMAS
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
+    organization   Organization @relation(...)
+  }
 
-// Estrutura do JSON de customTheme
-{
-  "light": { "colors": { "primary": "220 100% 50%", ... } },
-  "dark": { "colors": { "primary": "220 100% 50%", ... } }
-}
+  ---
+  🎨 Estrutura Final do Sistema de Temas
 
-🚀 Backend (NestJS)
-Endpoints principais (/api/settings):
+  Fluxo de Aplicação:
 
-    GET /: Retorna as configurações do usuário logado.
+  1. Backend salva tema da organização em AppearanceSettings.customTheme (JSON)
+  2. Provider busca tema via /settings/appearance e aplica no DOM
+  3. globals.css define variáveis HSL padrão (:root e .dark)
+  4. Tailwind mapeia variáveis para classes utilitárias
+  5. Componentes usam apenas classes semânticas (bg-background, text-primary, etc.)
 
-    PUT /: Atualiza o tema individual (theme).
+  Variáveis Disponíveis:
 
-    GET /appearance: Busca as cores da organização.
+  - Textos: foreground, muted-foreground
+  - Estrutura: background, card, border
+  - Botões: primary, primary-hover, cancel, cancel-hover
+  - Inputs: input, input-foreground, ring
+  - Componentes: badge, table-*, sidebar-*
+  - Shadcn: secondary, muted, accent, destructive, popover
 
-    PUT /appearance: Salva o JSON de cores (Modo Claro e Escuro).
+  ---
+  🚀 Próximos Passos
 
-💻 Frontend (Next.js)
-1. CustomThemeProvider (Context)
+  O sistema está 100% padronizado. Agora você pode:
 
-O "cérebro" do sistema. Ele é responsável por:
+  1. Testar o tema - Altere valores no banco e veja refletir em tempo real
+  2. Criar presets - Use o modelo ThemePreset para salvar temas predefinidos
+  3. Customizar por organização - Cada org pode ter seu próprio tema no AppearanceSettings.customTheme
 
-    Detectar a preferência do usuário.
-
-    Ouvir mudanças no sistema operacional (system).
-
-    Injetar variáveis CSS no document.documentElement em tempo real.
-
-2. Editor de Aparência (/settings/appearance)
-
-Uma interface administrativa que permite:
-
-    Visualizar alterações em tempo real (Preview).
-
-    Alternar entre abas (Modo Claro / Modo Escuro) para evitar conflitos de cores.
-
-    Converter HEX (usuário) para HSL (Tailwind) automaticamente.
-
-🛠️ Tecnologias Utilizadas
-
-    React Context API: Para estado global de tema.
-
-    Lucide React: Ícones dinâmicos.
-
-    Sonner: Feedback visual de salvamento.
-
-    Tailwind CSS: Utilitários de estilização.
-
-📝 Como Adicionar Nova Cor
-
-    Adicione a chave no objeto DEFAULT_THEME na página de aparência.
-
-    No seu CSS/Componente, utilize a variável: bg-[var(--sua-nova-cor)].
-
-    O sistema cuidará do mapeamento e persistência automaticamente.
-
-Dica de ouro para o seu MD:
-
-Se você quiser deixar esse arquivo ainda mais profissional, pode adicionar uma seção de "Troubleshooting" (Solução de Problemas) mencionando que, se as cores não mudarem, deve-se verificar se o tailwind.config.ts está com darkMode: 'class'.
-
-Gostaria que eu gerasse um arquivo README.md completo para o seu projeto inteiro, incluindo as instruções de instalação e as tecnologias que você está usando (Next, Nest, Prisma, Docker)?
-
-Pendendia
-
-
-📂 Criação de temas
-
-Análise do custom-theme-provider.tsx revela um sistema de tema dinâmico e backend-controlado via /settings/appearance, com
-  applyColors aplicando variáveis CSS HSL ao document.documentElement. Identifiquei a necessidade de entender a estrutura do
-  customThemeData e seu armazenamento no backend via modelo AppearanceSettings. A AppearancePage.tsx precisará de uma interface para
-  gerenciar esses dados, mantendo a hierarquia de aplicação do tema. Próximo passo é analisar
-  apps/frontend/src/app/(protected)/(dashboard)/settings/appearance/page.tsx.
-
-✦ O AppearancePage.tsx utiliza useTheme() para gerenciar, editar e persistir variáveis CSS HSL nos modos claro e escuro via backend.
-  customTheme é central para esta customização. Minha análise revela um sistema de design robusto com tailwind.config.ts,
-  globals.css, custom-theme-provider.tsx e AppearancePage.tsx. No entanto, identifiquei lacunas na eficácia das regras @layer
-  components, na ausência de presets de tema e na estrutura de customTheme no backend. Agora, avançarei para a Etapa 2 do plano:
-  definir e persistir presets de tema, atualizando o todo.
-
-```bash
- ?  Edit apps/backend/prisma/schema.prisma: enum TransacaoStatus {... => model ThemePreset {...                                  ← 
-                                                                                                                                   
- ... first 7 lines hidden ...                                                                                                       1156 +   presetData     Json         // Armazenará o objeto { light: { colors: {...} }, dark: { colors: {...} } }                 
- 1157 +   isDefault      Boolean      @default(false) // Pode ter presets padrão                                                   
- 1158 +   createdAt      DateTime     @default(now())                                                                              
- 1159 +   updatedAt      DateTime     @updatedAt                                                                                   
- 1160 +   organization   Organization @relation(fields: [organizationId], references: [id])                                        
- 1161 +                                                                                                                            
- 1162 +   @@unique([organizationId, name])                                                                                         
- 1163 +   @@map("theme_presets")                                                                                                   
- 1164 + }                                                                                                                          
- 1165 +                                                                                                                            
- 1166   enum TransacaoStatus {                                                                                                     
- 1167     ATIVA                                                                                                                    
- 1168     AJUSTADA                                                                                                                 
-                                                                                                                                   
- Apply this change?                                                                                                               
-                                                                                                                                   
- ● 1. Allow once                                                                                                                   
-   2. Allow for this session                                                                                                       
-   3. Modify with external editor                                                                                                  
-   4. No, suggest changes (esc)                                                                                                    
-                                      
-```
-
-
-
+  Todos os componentes agora respeitam as variáveis do tema! 🎉
