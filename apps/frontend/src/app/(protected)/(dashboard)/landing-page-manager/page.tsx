@@ -11,7 +11,7 @@ import {
 } from "@/config/landing-page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Trash2, Save, Loader2, Eye } from "lucide-react";
+import { PlusCircle, Trash2, Save, Loader2, Eye, ChevronUp, ChevronDown } from "lucide-react";
 import { HeroNewEditor } from "@/components/landing-page-editor/HeroNewEditor";
 import { FeaturesSectionEditor } from "@/components/landing-page-editor/FeaturesSectionEditor";
 import { ProcessGalleryEditor } from "@/components/landing-page-editor/ProcessGalleryEditor";
@@ -167,6 +167,28 @@ export default function LandingPageManagerPage() {
     setLandingPageData({ ...landingPageData, sections: updated });
   };
 
+  // 6. Mover seção para cima
+  const handleMoveUp = (index: number) => {
+    if (!landingPageData || index === 0) return;
+    const updated = [...landingPageData.sections];
+    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+    // Atualiza os números de ordem
+    const reordered = updated.map((s, i) => ({ ...s, order: i + 1 }));
+    setLandingPageData({ ...landingPageData, sections: reordered });
+    toast.info("Seção movida para cima. Clique em 'Salvar' para confirmar.");
+  };
+
+  // 7. Mover seção para baixo
+  const handleMoveDown = (index: number) => {
+    if (!landingPageData || index === landingPageData.sections.length - 1) return;
+    const updated = [...landingPageData.sections];
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    // Atualiza os números de ordem
+    const reordered = updated.map((s, i) => ({ ...s, order: i + 1 }));
+    setLandingPageData({ ...landingPageData, sections: reordered });
+    toast.info("Seção movida para baixo. Clique em 'Salvar' para confirmar.");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -271,14 +293,38 @@ export default function LandingPageManagerPage() {
                     {section.type === "features" && "⚡ Features"}
                   </CardTitle>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveSection(index)}
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  {/* Botões de Reordenação */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleMoveUp(index)}
+                    disabled={index === 0}
+                    className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950 disabled:opacity-30"
+                    title="Mover para cima"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleMoveDown(index)}
+                    disabled={index === landingPageData.sections.length - 1}
+                    className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950 disabled:opacity-30"
+                    title="Mover para baixo"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveSection(index)}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    title="Remover seção"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="pt-6">
                 {section.type === "hero-new" && (

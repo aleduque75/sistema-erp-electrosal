@@ -19,6 +19,10 @@ interface Media {
   size: number;
   path: string; // Ex: /uploads/nome-do-arquivo.jpg
   createdAt: string;
+  recoveryOrderId?: string;
+  analiseQuimicaId?: string;
+  transacaoId?: string;
+  chemicalReactionId?: string;
 }
 
 interface MediaLibraryProps {
