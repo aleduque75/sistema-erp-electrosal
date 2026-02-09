@@ -75,8 +75,13 @@ const config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          hover: "hsl(var(--primary-hover))",
         },
-        cancel: "hsl(var(--cancel))",
+        cancel: {
+          DEFAULT: "hsl(var(--cancel))",
+          hover: "hsl(var(--cancel-hover))",
+          foreground: "hsl(var(--cancel-foreground))",
+        },
         ring: "hsl(var(--ring))",
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -108,6 +113,16 @@ const config = {
           selected: "hsl(var(--menu-selected-background))",
           "selected-foreground": "hsl(var(--menu-selected-text))",
           border: "hsla(var(--menu-border), var(--menu-border-opacity, 1))",
+        },
+        badge: {
+          DEFAULT: "hsl(var(--badge-background))",
+          foreground: "hsl(var(--badge-text))",
+        },
+        table: {
+          header: "hsl(var(--tableHeaderBackground))",
+          "header-foreground": "hsl(var(--tableHeaderForeground))",
+          hover: "hsl(var(--tableRowHover))",
+          border: "hsl(var(--tableBorder))",
         },
       },
       borderRadius: {

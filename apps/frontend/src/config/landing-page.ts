@@ -25,9 +25,47 @@ export type FeaturesSectionConfig = {
   }[];
 };
 
+// Novo Hero com animações e efeitos
+export type HeroNewConfig = {
+  type: "hero-new";
+  logoImage: string; // ID da imagem do logo
+  title: string;
+  subtitle: string;
+  description: string;
+  ctaButtonText: string;
+  ctaButtonLink: string;
+  secondaryButtonText: string;
+  secondaryButtonLink: string;
+  backgroundImage: string; // ID da imagem de fundo
+  stats?: {
+    years: string;
+    pieces: string;
+    satisfaction: string;
+  };
+};
+
+// Galeria de Processos
+export type ProcessGalleryConfig = {
+  type: "process-gallery";
+  title: string;
+  description: string;
+  ctaButtonText: string;
+  ctaButtonLink: string;
+  processes: {
+    image: string; // ID da imagem
+    title: string;
+    description: string;
+    icon: string; // Nome do ícone (Zap, Sparkles, Shield, etc)
+  }[];
+};
+
 // Adicione outros tipos de seção aqui conforme necessário (ex: TestimonialsSectionConfig, ContactSectionConfig)
 
-export type SectionConfig = HeroSectionConfig | FeaturesSectionConfig; // | OutrosTiposDeSecao
+export type SectionConfig =
+  | HeroSectionConfig
+  | FeaturesSectionConfig
+  | HeroNewConfig
+  | ProcessGalleryConfig; // | OutrosTiposDeSecao
 
 interface CustomThemeConfig {
   light?: {

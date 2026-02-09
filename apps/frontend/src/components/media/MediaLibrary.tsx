@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardTitle } from "@/components/ui/card"; // Importação corrigida
 import { toast } from "sonner";
-import api from "@/lib/api";
+import api, { API_BASE_URL } from "@/lib/api";
 import Image from "next/image";
 import { Loader2, UploadCloud, XCircle } from "lucide-react";
 
@@ -142,7 +142,7 @@ export function MediaLibrary({ onSelect, selectedMediaId }: MediaLibraryProps) {
                         onClick={() => onSelect(media.id)}
                       >
                         <Image
-                          src={`/api/public-media/${media.id}`}
+                          src={`${API_BASE_URL}/public-media/${media.id}`}
                           alt={media.filename}
                           width={200}
                           height={200}

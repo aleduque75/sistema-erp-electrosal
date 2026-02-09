@@ -3,61 +3,36 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { LandingPageData, SectionConfig, HeroSectionConfig, FeaturesSectionConfig } from "@/config/landing-page";
+import {
+  LandingPageData,
+  HeroNewConfig,
+  FeaturesSectionConfig,
+  ProcessGalleryConfig,
+} from "@/config/landing-page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Trash2, ArrowUp, ArrowDown, Save, Loader2 } from "lucide-react";
-import { HeroSectionEditor } from "@/components/landing-page-editor/HeroSectionEditor";
+import { PlusCircle, Trash2, Save, Loader2, Eye } from "lucide-react";
+import { HeroNewEditor } from "@/components/landing-page-editor/HeroNewEditor";
 import { FeaturesSectionEditor } from "@/components/landing-page-editor/FeaturesSectionEditor";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { MediaSelector } from "@/components/landing-page-editor/MediaSelector";
-import { useTheme } from "next-themes"; // CORREÇÃO: Importação adicionada
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ProcessGalleryEditor } from "@/components/landing-page-editor/ProcessGalleryEditor";
+import Link from "next/link";
 
-// CORREÇÃO: Força a página a ser dinâmica para evitar erro no build
 export const dynamic = 'force-dynamic';
 
 export default function LandingPageManagerPage() {
-  const { setTheme } = useTheme(); 
   const [landingPageData, setLandingPageData] = useState<LandingPageData | null>(null);
   const [loading, setIsPageLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // ... (restante do código permanece igual)
-  const handleLogoTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!landingPageData) return;
-    setLandingPageData({ ...landingPageData, logoText: e.target.value });
-  };
-
-  const handleLogoImageChange = (imageId: string | string[]) => {
-    if (!landingPageData) return;
-    setLandingPageData({ ...landingPageData, logoImageId: imageId as string });
-  };
-
+  // 1. Carregar dados do Banco
   useEffect(() => {
     const fetchLandingPageData = async () => {
       try {
         const response = await api.get("/landing-page/editor");
-        const processedData = {
-          ...response.data,
-          sections: response.data.sections.map((section: any) => ({
-            ...section,
-            content: section.content || {},
-          })),
-        };
-        setLandingPageData(processedData);
-      } catch (err: any) {
-        console.error("Failed to fetch landing page data:", err);
-        setError("Falha ao carregar o conteúdo da página para edição.");
-        toast.error("Falha ao carregar o conteúdo da página para edição.");
+        setLandingPageData(response.data);
+      } catch (err) {
+        console.error("Erro ao carregar:", err);
+        toast.error("Erro ao carregar dados da página.");
       } finally {
         setIsPageLoading(false);
       }
@@ -65,135 +40,270 @@ export default function LandingPageManagerPage() {
     fetchLandingPageData();
   }, []);
 
-  const handleSectionChange = (index: number, newConfig: SectionConfig) => {
-    if (!landingPageData) return;
-    const updatedSections = [...landingPageData.sections];
-    updatedSections[index] = { ...updatedSections[index], content: newConfig };
-    setLandingPageData({ ...landingPageData, sections: updatedSections });
-  };
-
-  const handleAddSection = (type: "hero" | "features") => {
+  // 2. Adicionar Nova Seção com campos COMPLETOS e CORRETOS
+  const handleAddSection = (type: "hero-new" | "process-gallery" | "features") => {
     if (!landingPageData) return;
 
-    const newSection: LandingPageData["sections"][0] = {
-      order: landingPageData.sections.length + 1,
-      type: type,
-      content: {},
-    };
+    const tempId = `temp-${Date.now()}`;
+    const newOrder = landingPageData.sections.length + 1;
 
-    if (type === "hero") {
-      newSection.content = {
-        type: "hero",
-        title: "Novo Título Hero",
-        description: "Nova Descrição Hero",
-        mainImage: "",
-        sideImages: [],
-        ctaButtonText: "",
-        ctaButtonLink: "",
-        secondaryButtonText: "",
-        secondaryButtonLink: "",
-      } as HeroSectionConfig;
-    } else if (type === "features") {
-      newSection.content = {
+    let defaultContent: HeroNewConfig | ProcessGalleryConfig | FeaturesSectionConfig;
+
+    if (type === "hero-new") {
+      // ✅ TODOS os campos que HeroNew espera
+      defaultContent = {
+        type: "hero-new",
+        logoImage: "", // ID da imagem ou path local
+        title: "Electrosal",
+        subtitle: "Galvanoplastia de Excelência",
+        description: "Transformamos metais em obras-primas através de processos químicos de alta precisão.",
+        ctaButtonText: "Comece Agora",
+        ctaButtonLink: "/entrar",
+        secondaryButtonText: "Ver Nossos Processos",
+        secondaryButtonLink: "#galeria",
+        backgroundImage: "", // ID da imagem ou path local
+        stats: {
+          years: "20+",
+          pieces: "10k+",
+          satisfaction: "99%",
+        },
+      } as HeroNewConfig;
+    } else if (type === "process-gallery") {
+      // ✅ TODOS os campos que ProcessGallery espera
+      defaultContent = {
+        type: "process-gallery",
+        title: "Nossos Processos",
+        description: "Conheça a tecnologia e os processos que fazem da Electrosal referência em galvanoplastia",
+        ctaButtonText: "Entre em Contato",
+        ctaButtonLink: "/entrar",
+        processes: [
+          {
+            image: "", // ID da imagem ou path local
+            title: "Banho Químico de Precisão",
+            description: "Processos controlados com máxima precisão para garantir acabamentos perfeitos e duradouros.",
+            icon: "Zap", // Nome do ícone do lucide-react
+          },
+        ],
+      } as ProcessGalleryConfig;
+    } else {
+      // type === "features"
+      // ✅ TODOS os campos que Features espera
+      defaultContent = {
         type: "features",
-        title: "Novas Funcionalidades",
-        description: "Descrição das novas funcionalidades",
-        items: [{ icon: "", title: "", description: "" }],
+        title: "Recursos Incríveis",
+        description: "Descubra tudo o que podemos fazer por você",
+        items: [
+          {
+            icon: "Zap", // Nome do ícone do lucide-react
+            title: "Rapidez",
+            description: "Processos ágeis e eficientes",
+          },
+        ],
       } as FeaturesSectionConfig;
     }
 
+    const newSection = {
+      id: tempId,
+      order: newOrder,
+      type: type,
+      content: defaultContent,
+    };
+
     setLandingPageData({
       ...landingPageData,
-      sections: [...landingPageData.sections, newSection],
+      sections: [...landingPageData.sections, newSection]
     });
+    toast.success(`Seção ${type} adicionada! Role para baixo para editar.`);
   };
 
-  const handleRemoveSection = (idToRemove: string) => {
-    if (!landingPageData) return;
-    const updatedSections = landingPageData.sections.filter((s) => s.id !== idToRemove);
-    const reorderedSections = updatedSections.map((s, i) => ({ ...s, order: i + 1 }));
-    setLandingPageData({ ...landingPageData, sections: reorderedSections });
-  };
-
-  const handleMoveSection = (index: number, direction: "up" | "down") => {
-    if (!landingPageData) return;
-    const sections = [...landingPageData.sections];
-    const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex >= 0 && newIndex < sections.length) {
-      const [movedSection] = sections.splice(index, 1);
-      sections.splice(newIndex, 0, movedSection);
-      const reorderedSections = sections.map((s, i) => ({ ...s, order: i + 1 }));
-      setLandingPageData({ ...landingPageData, sections: reorderedSections });
-    }
-  };
-
+  // 3. Salvar no Banco
   const handleSave = async () => {
     if (!landingPageData) return;
     setIsSaving(true);
     try {
-      const sectionsToSave = landingPageData.sections.map(s => ({
-        order: s.order,
-        type: s.type,
-        content: s.content,
-        ...(s.id && { id: s.id })
+      const sectionsToSave = landingPageData.sections.map((section) => ({
+        order: section.order,
+        type: section.type,
+        content: section.content,
+        // Só inclui ID se não for temporário
+        ...(section.id && !section.id.startsWith('temp-') ? { id: section.id } : {})
       }));
+
       await api.patch("/landing-page", {
         sections: sectionsToSave,
         logoText: landingPageData.logoText,
         logoImageId: landingPageData.logoImageId,
       });
-      toast.success("Landing Page salva com sucesso!");
+
+      toast.success("✅ Landing Page salva com sucesso!");
+
+      // Recarrega para pegar os IDs reais do banco
+      const response = await api.get("/landing-page/editor");
+      setLandingPageData(response.data);
     } catch (err) {
-      console.error("Failed to save:", err);
-      toast.error("Falha ao salvar a Landing Page.");
+      console.error("Erro ao salvar:", err);
+      toast.error("❌ Erro ao salvar alterações.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (loading) return <p className="text-center p-10">Carregando...</p>;
-  if (error) return <p className="text-center p-10 text-red-500">{error}</p>;
+  // 4. Remover Seção
+  const handleRemoveSection = (index: number) => {
+    if (!landingPageData) return;
+    const updated = [...landingPageData.sections];
+    updated.splice(index, 1);
+    // Reordena as seções
+    const reordered = updated.map((s, i) => ({ ...s, order: i + 1 }));
+    setLandingPageData({ ...landingPageData, sections: reordered });
+    toast.info("Seção removida. Clique em 'Salvar' para confirmar.");
+  };
+
+  // 5. Atualizar conteúdo de uma seção
+  const handleSectionChange = (index: number, newConfig: any) => {
+    if (!landingPageData) return;
+    const updated = [...landingPageData.sections];
+    updated[index].content = newConfig;
+    setLandingPageData({ ...landingPageData, sections: updated });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-muted-foreground">Carregando Editor...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Gerenciar Landing Page</h1>
-      <Card className="mb-6">
-        <CardHeader><CardTitle>Configurações Gerais</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="logo-text">Texto do Logotipo</Label>
-            <Input id="logo-text" value={landingPageData?.logoText || ""} onChange={handleLogoTextChange} />
-          </div>
-          <MediaSelector label="Imagem do Logotipo" value={landingPageData?.logoImageId || ""} onChange={handleLogoImageChange} multiple={false} />
+    <div className="container mx-auto p-4 md:p-6 space-y-6">
+      {/* Header com Título e Ações */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+            Editor da Landing Page
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Gerencie as seções da sua página inicial
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/" target="_blank">
+            <Button variant="outline" size="lg">
+              <Eye className="mr-2 h-4 w-4" />
+              Visualizar
+            </Button>
+          </Link>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            size="lg"
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isSaving ? (
+              <Loader2 className="animate-spin mr-2 h-4 w-4" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Salvar Alterações
+          </Button>
+        </div>
+      </div>
+
+      {/* Toolbar de Ações - Adicionar Seções */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-dashed border-2 border-blue-300 dark:border-blue-700">
+        <CardHeader>
+          <CardTitle className="text-lg">Adicionar Nova Seção</CardTitle>
+        </CardHeader>
+        <CardContent className="flex gap-3 flex-wrap">
+          <Button
+            variant="default"
+            onClick={() => handleAddSection("hero-new")}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Hero Principal
+          </Button>
+          <Button
+            variant="default"
+            onClick={() => handleAddSection("process-gallery")}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Galeria de Processos
+          </Button>
+          <Button
+            variant="default"
+            onClick={() => handleAddSection("features")}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Seção de Features
+          </Button>
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-2 mb-4">
-        <Button onClick={() => handleAddSection("hero")}><PlusCircle className="h-4 w-4 mr-2" /> Hero</Button>
-        <Button onClick={() => handleAddSection("features")}><PlusCircle className="h-4 w-4 mr-2" /> Features</Button>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} Salvar
-        </Button>
-      </div>
-
-      <div className="space-y-6">
-        {landingPageData?.sections.map((section, index) => (
-          <Card key={section.id || index}>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Seção: {section.type} ({section.order})</CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleMoveSection(index, "up")} disabled={index === 0}><ArrowUp className="h-4 w-4" /></Button>
-                <Button variant="outline" size="sm" onClick={() => handleMoveSection(index, "down")} disabled={index === landingPageData.sections.length - 1}><ArrowDown className="h-4 w-4" /></Button>
-                <Button variant="destructive" size="sm" onClick={() => section.id && handleRemoveSection(section.id)}><Trash2 className="h-4 w-4" /></Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {section.type === "hero" && <HeroSectionEditor config={section.content as HeroSectionConfig} onChange={(c) => handleSectionChange(index, c)} />}
-              {section.type === "features" && <FeaturesSectionEditor config={section.content as FeaturesSectionConfig} onChange={(c) => handleSectionChange(index, c)} />}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Lista de Seções Ativas */}
+      {landingPageData?.sections.length === 0 ? (
+        <Card className="p-12 text-center border-dashed border-2">
+          <p className="text-muted-foreground text-lg">
+            Nenhuma seção adicionada ainda. Clique nos botões acima para começar!
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {landingPageData?.sections.map((section, index) => (
+            <Card
+              key={section.id || index}
+              className="border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-shadow"
+            >
+              <CardHeader className="flex flex-row items-center justify-between py-4 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                    {index + 1}
+                  </div>
+                  <CardTitle className="text-base font-mono uppercase text-slate-700 dark:text-slate-300">
+                    {section.type === "hero-new" && "🎨 Hero Principal"}
+                    {section.type === "process-gallery" && "🖼️ Galeria de Processos"}
+                    {section.type === "features" && "⚡ Features"}
+                  </CardTitle>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveSection(index)}
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {section.type === "hero-new" && (
+                  <HeroNewEditor
+                    config={section.content as HeroNewConfig}
+                    onChange={(c) => handleSectionChange(index, c)}
+                  />
+                )}
+                {section.type === "process-gallery" && (
+                  <ProcessGalleryEditor
+                    config={section.content as ProcessGalleryConfig}
+                    onChange={(c) => handleSectionChange(index, c)}
+                  />
+                )}
+                {section.type === "features" && (
+                  <FeaturesSectionEditor
+                    config={section.content as FeaturesSectionConfig}
+                    onChange={(c) => handleSectionChange(index, c)}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

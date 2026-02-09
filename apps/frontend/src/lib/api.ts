@@ -1,10 +1,16 @@
 import axios from "axios";
 import { toast } from "sonner";
 
+// 🌐 Configuração dinâmica de API baseada no ambiente
+// Desenvolvimento: http://localhost:3001
+// Produção: https://api.electrosal.com.br
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://api.electrosal.com.br";
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:3001'
+    : 'https://api.electrosal.com.br');
 
-// ✅ CORREÇÃO FINAL: Garante que a URL base termine com /api
+// ✅ Garante que a URL base termine com /api
 const resolvedBaseURL = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
 
 const api = axios.create({

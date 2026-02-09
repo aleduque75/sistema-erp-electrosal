@@ -24,6 +24,15 @@
     --card-radius: 12px;
     --border: 214 32% 91%;
 
+    /* SHADCN COMPATIBILITY */
+    --muted: 210 40% 96%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
     /* INPUTS (Onde estava o erro) */
     --input: 210 40% 98%;
     --input-foreground: 222 47% 11%;
@@ -95,6 +104,15 @@
     --border: 217 33% 17%;
     --border-opacity: 1;
     /* Adicionado para garantir solidez por padrão */
+
+    /* SHADCN COMPATIBILITY DARK */
+    --muted: 217 33% 17%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
 
     /* INPUTS DARK (Correção do branco no branco) */
     --input: 217 33% 18%;

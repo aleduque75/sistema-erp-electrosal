@@ -5,7 +5,7 @@
 import React from "react";
 import { MediaLibrary } from "@/components/media/MediaLibrary";
 import Image from "next/image";
-import api from "@/lib/api";
+import api, { API_BASE_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { X, Info } from "lucide-react"; // Import Info icon
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"; // Import Popover components
@@ -51,7 +51,7 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
           {value.map((id) => (
             <div key={id} className="relative w-24 h-24 rounded-md overflow-hidden">
               <Image
-                src={`/api/public-media/${id}`}
+                src={`${API_BASE_URL}/public-media/${id}`}
                 alt="Preview"
                 layout="fill"
                 objectFit="cover"
@@ -71,7 +71,7 @@ export const MediaSelector: React.FC<MediaSelectorProps> = ({
       return (
         <div className="relative w-32 h-32 rounded-md overflow-hidden mt-2">
           <Image
-                src={`/api/public-media/${value}`}
+                src={`${API_BASE_URL}/public-media/${value}`}
                 alt="Preview"
                 layout="fill"
                 objectFit="cover"

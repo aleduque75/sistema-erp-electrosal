@@ -22,52 +22,86 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 // Tema padrão de fallback caso o backend não responda
+// ALINHADO COM globals.css
 const DEFAULT_THEME = {
   light: {
     colors: {
+      // TEXTOS
+      foreground: "222 47% 11%",
+      "muted-foreground": "215 16% 47%",
+
+      // ESTRUTURA
       background: "0 0% 100%",
-      foreground: "222.2 84% 4.9%",
       card: "0 0% 100%",
-      "card-foreground": "222.2 84% 4.9%",
+      "card-foreground": "222 47% 11%",
+      "card-border": "214 32% 91%",
+      border: "214 32% 91%",
+
+      // INPUTS
+      input: "210 40% 98%",
+      "input-foreground": "222 47% 11%",
+      ring: "221 83% 70%",
+
+      // BOTÕES
+      primary: "221 83% 53%",
+      "primary-foreground": "0 0% 100%",
+      "primary-hover": "221 83% 45%",
+      cancel: "215 16% 47%",
+      "cancel-hover": "215 16% 40%",
+      "cancel-foreground": "0 0% 100%",
+
+      // POPOVER
       popover: "0 0% 100%",
-      "popover-foreground": "222.2 84% 4.9%",
-      primary: "222.2 47.4% 11.2%",
-      "primary-foreground": "210 40% 98%",
-      secondary: "210 40% 96.1%",
-      "secondary-foreground": "222.2 47.4% 11.2%",
-      muted: "210 40% 96.1%",
-      "muted-foreground": "215.4 16.3% 46.9%",
-      accent: "210 40% 96.1%",
-      "accent-foreground": "222.2 47.4% 11.2%",
-      destructive: "0 84.2% 60.2%",
-      "destructive-foreground": "210 40% 98%",
-      border: "214.3 31.8% 91.4%",
-      input: "214.3 31.8% 91.4%",
-      ring: "222.2 84% 4.9%",
-      radius: "0.5rem",
+      "popover-foreground": "222 47% 11%",
+
+      // SECONDARY, ACCENT, DESTRUCTIVE (mantém compatibilidade shadcn)
+      secondary: "210 40% 96%",
+      "secondary-foreground": "222 47% 11%",
+      muted: "210 40% 96%",
+      accent: "210 40% 96%",
+      "accent-foreground": "222 47% 11%",
+      destructive: "0 84% 60%",
+      "destructive-foreground": "0 0% 100%",
     },
   },
   dark: {
     colors: {
-      background: "222.2 84% 4.9%",
+      // TEXTOS DARK
       foreground: "210 40% 98%",
-      card: "222.2 84% 4.9%",
+      "muted-foreground": "215 20% 65%",
+
+      // ESTRUTURA DARK
+      background: "222 47% 11%",
+      card: "222 47% 12%",
       "card-foreground": "210 40% 98%",
-      popover: "222.2 84% 4.9%",
+      "card-border": "217 33% 25%",
+      border: "217 33% 17%",
+
+      // INPUTS DARK
+      input: "217 33% 18%",
+      "input-foreground": "210 40% 98%",
+      ring: "221 83% 70%",
+
+      // BOTÕES DARK
+      primary: "221 83% 60%",
+      "primary-foreground": "0 0% 100%",
+      "primary-hover": "221 83% 70%",
+      cancel: "215 16% 55%",
+      "cancel-hover": "215 16% 65%",
+      "cancel-foreground": "0 0% 100%",
+
+      // POPOVER DARK
+      popover: "222 47% 12%",
       "popover-foreground": "210 40% 98%",
-      primary: "210 40% 98%",
-      "primary-foreground": "222.2 47.4% 11.2%",
-      secondary: "217.2 32.6% 17.5%",
+
+      // SECONDARY, ACCENT, DESTRUCTIVE (mantém compatibilidade shadcn)
+      secondary: "217 33% 17%",
       "secondary-foreground": "210 40% 98%",
-      muted: "217.2 32.6% 17.5%",
-      "muted-foreground": "215 20.2% 65.1%",
-      accent: "217.2 32.6% 17.5%",
+      muted: "217 33% 17%",
+      accent: "217 33% 17%",
       "accent-foreground": "210 40% 98%",
-      destructive: "0 62.8% 30.6%",
+      destructive: "0 63% 31%",
       "destructive-foreground": "210 40% 98%",
-      border: "217.2 32.6% 17.5%",
-      input: "217.2 32.6% 17.5%",
-      ring: "212.7 26.8% 83.9%",
     },
   },
 };
