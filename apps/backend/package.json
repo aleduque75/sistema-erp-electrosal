@@ -51,7 +51,7 @@
     "@nestjs/schedule": "^6.1.0",
     "@nestjs/serve-static": "^5.0.3",
     "@nestjs/swagger": "^11.2.0",
-    "@prisma/client": "^6.11.0",
+    "@prisma/client": "^6.19.2",
     "@sistema-erp-electrosal/core": "workspace:*",
     "@types/passport-local": "^1.0.38",
     "@types/pdfjs-dist": "^2.10.378",

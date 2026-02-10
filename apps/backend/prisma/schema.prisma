@@ -1,8 +1,7 @@
 generator client {
   provider        = "prisma-client-js"
-  // output          = "../src/generated/client"
-  previewFeatures = []
   binaryTargets   = ["native", "debian-openssl-3.0.x"]
+  previewFeatures = [] 
 }
 
 datasource db {
@@ -283,7 +282,7 @@ model Sale {
   commissionAmount  Decimal?          @db.Decimal(10, 2)
   commissionDetails Json?
   externalId        String?           @unique
-  status            SaleStatus        @default(PENDENTE)
+  status            String?           @default("PENDING")
   shippingCost      Decimal?          @db.Decimal(10, 2)
   readyForPayment   Boolean           @default(false)
   observation       String?

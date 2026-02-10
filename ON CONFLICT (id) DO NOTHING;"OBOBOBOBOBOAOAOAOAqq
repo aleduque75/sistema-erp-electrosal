@@ -1,0 +1,29 @@
+                                          Table "public.pure_metal_lots"
+     Column     |              Type              | Collation | Nullable |                 Default                  
+----------------+--------------------------------+-----------+----------+------------------------------------------
+ id             | text                           |           | not null | 
+ organizationId | text                           |           | not null | 
+ sourceType     | text                           |           | not null | 
+ sourceId       | text                           |           | not null | 
+ metalType      | public."TipoMetal"             |           | not null | 
+ initialGrams   | double precision               |           | not null | 
+ remainingGrams | double precision               |           | not null | 
+ purity         | double precision               |           | not null | 
+ status         | public."PureMetalLotStatus"    |           | not null | 'AVAILABLE'::public."PureMetalLotStatus"
+ entryDate      | timestamp(3) without time zone |           | not null | CURRENT_TIMESTAMP
+ notes          | text                           |           |          | 
+ createdAt      | timestamp(3) without time zone |           | not null | CURRENT_TIMESTAMP
+ updatedAt      | timestamp(3) without time zone |           | not null | 
+ saleId         | text                           |           |          | 
+ lotNumber      | text                           |           |          | 
+ description    | text                           |           |          | 
+Indexes:
+    "pure_metal_lots_pkey" PRIMARY KEY, btree (id)
+    "pure_metal_lots_lotNumber_key" UNIQUE, btree ("lotNumber")
+Foreign-key constraints:
+    "pure_metal_lots_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES public."Organization"(id) ON UPDATE CASCADE ON DELETE RESTRICT
+    "pure_metal_lots_saleId_fkey" FOREIGN KEY ("saleId") REFERENCES public."Sale"(id) ON UPDATE CASCADE ON DELETE SET NULL
+Referenced by:
+    TABLE "public.chemical_reaction_lots" CONSTRAINT "chemical_reaction_lots_pureMetalLotId_fkey" FOREIGN KEY ("pureMetalLotId") REFERENCES public.pure_metal_lots(id) ON UPDATE CASCADE ON DELETE RESTRICT
+    TABLE "public.pure_metal_lot_movements" CONSTRAINT "pure_metal_lot_movements_pureMetalLotId_fkey" FOREIGN KEY ("pureMetalLotId") REFERENCES public.pure_metal_lots(id) ON UPDATE CASCADE ON DELETE RESTRICT
+

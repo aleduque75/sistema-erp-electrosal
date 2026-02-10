@@ -42,3 +42,10 @@
 2026/02/07 09:01:04 [error] 434#434: *237215 open() "/var/www/html/wiki" failed (2: No such file or directory), client: 167.94.138.116, server: localhost-nginx-proxy-manager, request: "GET /wiki HTTP/1.1", host: "76.13.229.204"
 2026/02/07 12:53:52 [alert] 199#199: 512 worker_connections are not enough
 2026/02/07 12:53:52 [error] 198#198: *1335 recv() failed (104: Connection reset by peer) while reading response header from upstream, client: 127.0.0.1, server: localhost-nginx-proxy-manager, request: "GET /favicon.ico HTTP/1.1", upstream: "http://127.0.0.1:80/favicon.ico", host: "76.13.229.204"
+2026/02/09 22:11:12 [error] 196#196: *5 open() "/var/www/html/boaform/admin/formLogin" failed (2: No such file or directory), client: 144.48.134.122, server: localhost-nginx-proxy-manager, request: "GET /boaform/admin/formLogin?username=admin&psd=admin HTTP/1.0"
+2026/02/10 03:45:55 [alert] 299#299: 512 worker_connections are not enough
+2026/02/10 03:45:55 [error] 300#300: *7368 recv() failed (104: Connection reset by peer) while reading response header from upstream, client: 127.0.0.1, server: localhost-nginx-proxy-manager, request: "GET /favicon.ico HTTP/1.1", upstream: "http://127.0.0.1:80/favicon.ico", host: "76.13.229.204", referrer: "http://76.13.229.204/"
+2026/02/10 12:14:53 [error] 300#300: *28376 "/var/www/html/HNAP1/index.html" is not found (2: No such file or directory), client: 115.50.244.179, server: localhost-nginx-proxy-manager, request: "POST /HNAP1/ HTTP/1.0", host: "76.13.229.204:80"
+2026/02/10 19:40:37 [alert] 379#379: 512 worker_connections are not enough
+2026/02/10 19:40:37 [error] 378#378: *41559 recv() failed (104: Connection reset by peer) while reading response header from upstream, client: 127.0.0.1, server: localhost-nginx-proxy-manager, request: "GET /favicon.ico HTTP/1.1", upstream: "http://127.0.0.1:80/favicon.ico", host: "76.13.229.204"
+2026/02/10 19:40:44 [error] 379#379: *41562 open() "/var/www/html/wiki" failed (2: No such file or directory), client: 167.94.138.198, server: localhost-nginx-proxy-manager, request: "GET /wiki HTTP/1.1", host: "76.13.229.204"
