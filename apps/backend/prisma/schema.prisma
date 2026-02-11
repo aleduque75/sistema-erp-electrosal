@@ -1,21 +1,22 @@
 generator client {
   provider        = "prisma-client-js"
   binaryTargets   = ["native", "debian-openssl-3.0.x"]
-  previewFeatures = [] 
+  previewFeatures = ["multiSchema"] 
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["erp"]
 }
 
 model Organization {
-  id                      String                   @id @default(uuid())
+  id                      String                  @id @default(uuid())
   name                    String
-  absorbCreditCardFee     Boolean                  @default(false)
-  creditCardReceiveDays   Int?                     @default(30)
+  absorbCreditCardFee     Boolean                 @default(false)
+  creditCardReceiveDays   Int?                    @default(30)
   accountsRec             AccountRec[]
-  appearanceSettings      AppearanceSettings?      @relation("AppearanceToOrganization")
+  appearanceSettings      AppearanceSettings?     @relation("AppearanceToOrganization")
   landingPages            LandingPage[]
   media                   Media[]
   menuItems               MenuItem[]
@@ -59,6 +60,9 @@ model Organization {
   transacoes              Transacao[]
   whatsAppRoutines        WhatsAppRoutine[]
   themePresets            ThemePreset[]
+
+  @@map("Organization")
+  @@schema("erp")
 }
 
 model User {
@@ -75,6 +79,9 @@ model User {
   pessoa         Pessoa?       @relation("UserToPessoa", fields: [pessoaId], references: [id])
   settings       UserSettings?
   tasks          Task[]
+
+  @@map("User")
+  @@schema("erp")
 }
 
 model UserSettings {
@@ -89,6 +96,9 @@ model UserSettings {
   metalStockAccountId         String?
   productionCostAccountId     String?
   user                        User    @relation(fields: [userId], references: [id])
+
+  @@map("UserSettings")
+  @@schema("erp")
 }
 
 model Pessoa {
@@ -127,6 +137,7 @@ model Pessoa {
   recoveryOrdersAsSalesperson RecoveryOrder[]   @relation("SalespersonRecoveryOrders")
 
   @@map("pessoas")
+  @@schema("erp")
 }
 
 model Client {
@@ -138,6 +149,7 @@ model Client {
   pessoa         Pessoa       @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
 
   @@map("clients")
+  @@schema("erp")
 }
 
 model Fornecedor {
@@ -154,6 +166,7 @@ model Fornecedor {
   transacoes             Transacao[]
 
   @@map("fornecedores")
+  @@schema("erp")
 }
 
 model Funcionario {
@@ -167,29 +180,33 @@ model Funcionario {
   pessoa         Pessoa       @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
 
   @@map("funcionarios")
+  @@schema("erp")
 }
 
 model Product {
-  id                        String               @id @default(uuid())
+  id                        String                @id @default(uuid())
   name                      String
   description               String?
-  price                     Decimal              @db.Decimal(10, 2)
+  price                     Decimal               @db.Decimal(10, 2)
   stock                     Float?
-  createdAt                 DateTime             @default(now())
-  updatedAt                 DateTime             @updatedAt
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
   organizationId            String
-  costPrice                 Decimal?             @db.Decimal(10, 2)
+  costPrice                 Decimal?              @db.Decimal(10, 2)
   productGroupId            String?
   goldValue                 Float?
-  externalId                String?              @unique
-  stockUnit                 StockUnit            @default(GRAMS)
-  organization              Organization         @relation(fields: [organizationId], references: [id])
-  productGroup              ProductGroup?        @relation(fields: [productGroupId], references: [id])
+  externalId                String?               @unique
+  stockUnit                 StockUnit             @default(GRAMS)
+  organization              Organization          @relation(fields: [organizationId], references: [id])
+  productGroup              ProductGroup?         @relation(fields: [productGroupId], references: [id])
   saleItems                 SaleItem[]
   stockMovements            StockMovement[]
   chemicalReactionsAsOutput chemical_reactions[]
   inventoryLots             InventoryLot[]
   purchaseOrderItems        PurchaseOrderItem[]
+
+  @@map("Product")
+  @@schema("erp")
 }
 
 model RawMaterial {
@@ -208,6 +225,7 @@ model RawMaterial {
   rawMaterialsUsed   RawMaterialUsed[]
 
   @@map("raw_materials")
+  @@schema("erp")
 }
 
 model ProductGroup {
@@ -225,6 +243,7 @@ model ProductGroup {
 
   @@unique([organizationId, name])
   @@map("product_groups")
+  @@schema("erp")
 }
 
 model InventoryLot {
@@ -248,6 +267,7 @@ model InventoryLot {
   saleItemLots      SaleItemLot[]
 
   @@map("inventory_lots")
+  @@schema("erp")
 }
 
 model StockMovement {
@@ -262,6 +282,9 @@ model StockMovement {
   inventoryLot   InventoryLot? @relation(fields: [inventoryLotId], references: [id])
   organization   Organization  @relation(fields: [organizationId], references: [id])
   product        Product       @relation(fields: [productId], references: [id])
+
+  @@map("StockMovement")
+  @@schema("erp")
 }
 
 model Sale {
@@ -282,7 +305,7 @@ model Sale {
   commissionAmount  Decimal?          @db.Decimal(10, 2)
   commissionDetails Json?
   externalId        String?           @unique
-  status            String?           @default("PENDING")
+  status            SaleStatus        @default(PENDENTE)
   shippingCost      Decimal?          @db.Decimal(10, 2)
   readyForPayment   Boolean           @default(false)
   observation       String?
@@ -297,6 +320,9 @@ model Sale {
   pureMetalLots     pure_metal_lots[]
   adjustment        SaleAdjustment?
   installments      SaleInstallment[]
+
+  @@map("Sale")
+  @@schema("erp")
 }
 
 model PaymentTerm {
@@ -314,6 +340,7 @@ model PaymentTerm {
 
   @@unique([organizationId, name])
   @@map("payment_terms")
+  @@schema("erp")
 }
 
 model SaleItem {
@@ -330,6 +357,9 @@ model SaleItem {
   product         Product       @relation(fields: [productId], references: [id])
   sale            Sale          @relation(fields: [saleId], references: [id])
   saleItemLots    SaleItemLot[]
+
+  @@map("SaleItem")
+  @@schema("erp")
 }
 
 model SaleItemLot {
@@ -344,6 +374,7 @@ model SaleItemLot {
 
   @@unique([saleItemId, inventoryLotId])
   @@map("sale_item_lots")
+  @@schema("erp")
 }
 
 model SaleInstallment {
@@ -361,6 +392,7 @@ model SaleInstallment {
   sale              Sale                  @relation(fields: [saleId], references: [id])
 
   @@map("sale_installments")
+  @@schema("erp")
 }
 
 model AccountPay {
@@ -393,6 +425,7 @@ model AccountPay {
   transacao            Transacao?     @relation(fields: [transacaoId], references: [id])
 
   @@map("accounts_pay")
+  @@schema("erp")
 }
 
 model AccountRec {
@@ -418,6 +451,9 @@ model AccountRec {
   sale                  Sale?             @relation(fields: [saleId], references: [id])
   saleInstallments      SaleInstallment[]
   transacoes            Transacao[]
+
+  @@map("AccountRec")
+  @@schema("erp")
 }
 
 model MetalReceivable {
@@ -439,6 +475,7 @@ model MetalReceivable {
   sale           Sale                     @relation(fields: [saleId], references: [id])
 
   @@map("metal_receivables")
+  @@schema("erp")
 }
 
 model MetalReceivablePayment {
@@ -455,6 +492,7 @@ model MetalReceivablePayment {
   organization      Organization    @relation(fields: [organizationId], references: [id])
 
   @@map("metal_receivable_payments")
+  @@schema("erp")
 }
 
 model ContaContabil {
@@ -479,6 +517,7 @@ model ContaContabil {
 
   @@unique([organizationId, codigo])
   @@map("contas_contabeis")
+  @@schema("erp")
 }
 
 model ContaCorrente {
@@ -506,6 +545,7 @@ model ContaCorrente {
   @@unique([organizationId, numeroConta])
   @@unique([organizationId, nick])
   @@map("contas_correntes")
+  @@schema("erp")
 }
 
 model Transacao {
@@ -539,6 +579,7 @@ model Transacao {
 
   @@unique([contaCorrenteId, fitId])
   @@map("transacoes")
+  @@schema("erp")
 }
 
 model CreditCard {
@@ -555,6 +596,7 @@ model CreditCard {
   organization           Organization            @relation(fields: [organizationId], references: [id])
 
   @@map("credit_cards")
+  @@schema("erp")
 }
 
 model CreditCardTransaction {
@@ -576,6 +618,7 @@ model CreditCardTransaction {
   creditCard         CreditCard      @relation(fields: [creditCardId], references: [id])
 
   @@map("credit_card_transactions")
+  @@schema("erp")
 }
 
 model CreditCardBill {
@@ -596,6 +639,7 @@ model CreditCardBill {
   transactions   CreditCardTransaction[]
 
   @@map("credit_card_bills")
+  @@schema("erp")
 }
 
 model XmlImportLog {
@@ -604,6 +648,8 @@ model XmlImportLog {
   createdAt      DateTime     @default(now())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@schema("erp")
 }
 
 model LandingPage {
@@ -617,6 +663,9 @@ model LandingPage {
   logoImage      Media?        @relation(fields: [logoImageId], references: [id])
   organization   Organization? @relation(fields: [organizationId], references: [id])
   sections       Section[]
+
+  @@map("LandingPage")
+  @@schema("erp")
 }
 
 model Section {
@@ -630,6 +679,8 @@ model Section {
   landingPage   LandingPage @relation(fields: [landingPageId], references: [id])
 
   @@unique([landingPageId, order])
+  @@map("Section")
+  @@schema("erp")
 }
 
 model Media {
@@ -654,6 +705,9 @@ model Media {
   organization           Organization?        @relation(fields: [organizationId], references: [id])
   recoveryOrder          RecoveryOrder?       @relation(fields: [recoveryOrderId], references: [id])
   transacao              Transacao?           @relation("TransacaoToMedia", fields: [transacaoId], references: [id])
+
+  @@map("Media")
+  @@schema("erp")
 }
 
 model CreditCardFee {
@@ -667,6 +721,7 @@ model CreditCardFee {
 
   @@unique([organizationId, installments])
   @@map("credit_card_fees")
+  @@schema("erp")
 }
 
 model Recuperacao {
@@ -690,6 +745,7 @@ model Recuperacao {
   organization      Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("recuperacoes")
+  @@schema("erp")
 }
 
 model AnaliseQuimica {
@@ -729,6 +785,7 @@ model AnaliseQuimica {
 
   @@unique([organizationId, numeroAnalise])
   @@map("analises_quimicas")
+  @@schema("erp")
 }
 
 model MetalCredit {
@@ -748,6 +805,7 @@ model MetalCredit {
   organization       Organization      @relation(fields: [organizationId], references: [id])
 
   @@map("metal_credits")
+  @@schema("erp")
 }
 
 model PurchaseOrder {
@@ -770,6 +828,7 @@ model PurchaseOrder {
   paymentTerm          PaymentTerm?        @relation(fields: [paymentTermId], references: [id])
 
   @@map("purchase_orders")
+  @@schema("erp")
 }
 
 model PurchaseOrderItem {
@@ -787,6 +846,7 @@ model PurchaseOrderItem {
   rawMaterial     RawMaterial?  @relation(fields: [rawMaterialId], references: [id])
 
   @@map("purchase_order_items")
+  @@schema("erp")
 }
 
 model RecoveryOrder {
@@ -820,6 +880,7 @@ model RecoveryOrder {
 
   @@unique([organizationId, orderNumber])
   @@map("recovery_orders")
+  @@schema("erp")
 }
 
 model RawMaterialUsed {
@@ -839,6 +900,7 @@ model RawMaterialUsed {
   recoveryOrder      RecoveryOrder?      @relation(fields: [recoveryOrderId], references: [id])
 
   @@map("raw_materials_used")
+  @@schema("erp")
 }
 
 model MetalAccount {
@@ -855,6 +917,7 @@ model MetalAccount {
   @@unique([organizationId, personId, type])
   @@index([organizationId])
   @@map("metal_accounts")
+  @@schema("erp")
 }
 
 model MetalAccountEntry {
@@ -870,6 +933,7 @@ model MetalAccountEntry {
   metalAccount   MetalAccount @relation(fields: [metalAccountId], references: [id])
 
   @@map("metal_account_entries")
+  @@schema("erp")
 }
 
 model Quotation {
@@ -886,6 +950,7 @@ model Quotation {
 
   @@unique([organizationId, metal, date, tipoPagamento])
   @@map("quotations")
+  @@schema("erp")
 }
 
 model LaborCostTableEntry {
@@ -901,6 +966,7 @@ model LaborCostTableEntry {
 
   @@unique([organizationId, minGrams])
   @@map("labor_cost_table_entries")
+  @@schema("erp")
 }
 
 model OperationalCost {
@@ -916,6 +982,7 @@ model OperationalCost {
 
   @@unique([organizationId, name])
   @@map("operational_costs")
+  @@schema("erp")
 }
 
 model chemical_reactions {
@@ -949,6 +1016,7 @@ model chemical_reactions {
 
   @@unique([organizationId, reactionNumber])
   @@map("chemical_reactions")
+  @@schema("erp")
 }
 
 model pure_metal_lots {
@@ -972,17 +1040,21 @@ model pure_metal_lots {
   movements         PureMetalLotMovement[]
   Organization      Organization           @relation(fields: [organizationId], references: [id])
   sale              Sale?                  @relation(fields: [saleId], references: [id])
+
+  @@map("pure_metal_lots")
+  @@schema("erp")
 }
 
 model ChemicalReactionLot {
   chemicalReactionId String
-  pureMetalLotId     String
-  gramsToUse         Float
-  chemicalReaction   chemical_reactions @relation(fields: [chemicalReactionId], references: [id])
-  pureMetalLot       pure_metal_lots    @relation(fields: [pureMetalLotId], references: [id])
+  pureMetalLotId      String
+  gramsToUse          Float
+  chemicalReaction    chemical_reactions @relation(fields: [chemicalReactionId], references: [id])
+  pureMetalLot        pure_metal_lots    @relation(fields: [pureMetalLotId], references: [id])
 
   @@id([chemicalReactionId, pureMetalLotId])
   @@map("chemical_reaction_lots")
+  @@schema("erp")
 }
 
 model PureMetalLotMovement {
@@ -999,6 +1071,7 @@ model PureMetalLotMovement {
   pureMetalLot   pure_metal_lots          @relation(fields: [pureMetalLotId], references: [id])
 
   @@map("pure_metal_lot_movements")
+  @@schema("erp")
 }
 
 model ProductionBatchCounter {
@@ -1009,6 +1082,7 @@ model ProductionBatchCounter {
   updatedAt       DateTime @updatedAt
 
   @@map("production_batch_counters")
+  @@schema("erp")
 }
 
 model CrrCounter {
@@ -1019,6 +1093,7 @@ model CrrCounter {
   updatedAt      DateTime @updatedAt
 
   @@map("crr_counters")
+  @@schema("erp")
 }
 
 model EntityCounter {
@@ -1031,6 +1106,7 @@ model EntityCounter {
 
   @@unique([organizationId, entityType])
   @@map("entity_counters")
+  @@schema("erp")
 }
 
 model SaleAdjustment {
@@ -1058,6 +1134,7 @@ model SaleAdjustment {
   sale                   Sale         @relation(fields: [saleId], references: [id])
 
   @@map("sale_adjustments")
+  @@schema("erp")
 }
 
 model MarketData {
@@ -1073,6 +1150,7 @@ model MarketData {
 
   @@unique([organizationId, date])
   @@map("market_data")
+  @@schema("erp")
 }
 
 model WhatsAppRoutine {
@@ -1090,6 +1168,7 @@ model WhatsAppRoutine {
   @@unique([organizationId, name])
   @@unique([organizationId, trigger])
   @@map("whatsapp_routines")
+  @@schema("erp")
 }
 
 model MenuItem {
@@ -1108,6 +1187,8 @@ model MenuItem {
   subItems       MenuItem[]   @relation("SubMenuItems")
 
   @@unique([organizationId, title, parentId])
+  @@map("MenuItem")
+  @@schema("erp")
 }
 
 model AppearanceSettings {
@@ -1118,10 +1199,13 @@ model AppearanceSettings {
   logoImageId    String?
   logoText       String?
   logoImage      Media?       @relation("AppearanceLogo", fields: [logoImageId], references: [id])
-  customTheme    Json? // <--- TENHA CERTEZA QUE ESTÁ ASSIM
+  customTheme    Json? 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   organization   Organization @relation("AppearanceToOrganization", fields: [organizationId], references: [id])
+
+  @@map("AppearanceSettings")
+  @@schema("erp")
 }
 
 model Task {
@@ -1138,6 +1222,7 @@ model Task {
   organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@map("tasks")
+  @@schema("erp")
 }
 
 model Tutorial {
@@ -1147,48 +1232,57 @@ model Tutorial {
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime
+
+  @@map("Tutorial")
+  @@schema("erp")
 }
 
 model ThemePreset {
   id             String       @id @default(uuid())
   organizationId String
   name           String
-  presetData     Json         // Armazenará o objeto { light: { colors: {...} }, dark: { colors: {...} } }
-  isDefault      Boolean      @default(false) // Pode ter presets padrão
+  presetData     Json         
+  isDefault      Boolean      @default(false) 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, name])
   @@map("theme_presets")
+  @@schema("erp")
 }
 
 enum TransacaoStatus {
   ATIVA
   AJUSTADA
   CANCELADA
+  @@schema("erp")
 }
 
 enum PureMetalLotMovementType {
   ENTRY
   EXIT
   ADJUSTMENT
+  @@schema("erp")
 }
 
 enum EntityType {
   RECOVERY_ORDER
   CHEMICAL_REACTION
   PURE_METAL_LOT
+  @@schema("erp")
 }
 
 enum Role {
   USER
   ADMIN
+  @@schema("erp")
 }
 
 enum PessoaType {
   FISICA
   JURIDICA
+  @@schema("erp")
 }
 
 enum SaleInstallmentStatus {
@@ -1196,6 +1290,7 @@ enum SaleInstallmentStatus {
   PAID
   OVERDUE
   PARTIALLY_PAID
+  @@schema("erp")
 }
 
 enum ReceivableStatus {
@@ -1204,6 +1299,7 @@ enum ReceivableStatus {
   ATRASADO
   CANCELADO
   PAGO_PARCIALMENTE
+  @@schema("erp")
 }
 
 enum TipoContaContabilPrisma {
@@ -1212,11 +1308,13 @@ enum TipoContaContabilPrisma {
   PATRIMONIO_LIQUIDO
   RECEITA
   DESPESA
+  @@schema("erp")
 }
 
 enum TipoTransacaoPrisma {
   CREDITO
   DEBITO
+  @@schema("erp")
 }
 
 enum ContaCorrenteType {
@@ -1224,6 +1322,7 @@ enum ContaCorrenteType {
   FORNECEDOR_METAL
   EMPRESTIMO
   CLIENTE
+  @@schema("erp")
 }
 
 enum StatusAnaliseQuimicaPrisma {
@@ -1236,6 +1335,7 @@ enum StatusAnaliseQuimicaPrisma {
   FINALIZADO_RECUPERADO
   CANCELADO
   RESIDUO
+  @@schema("erp")
 }
 
 enum StatusRecuperacaoPrisma {
@@ -1243,12 +1343,14 @@ enum StatusRecuperacaoPrisma {
   EM_ANDAMENTO
   FINALIZADA
   CANCELADA
+  @@schema("erp")
 }
 
 enum PurchaseOrderStatus {
   PENDING
   RECEIVED
   CANCELED
+  @@schema("erp")
 }
 
 enum RecoveryOrderStatusPrisma {
@@ -1258,18 +1360,21 @@ enum RecoveryOrderStatusPrisma {
   CANCELADA
   AGUARDANDO_RESULTADO
   AGUARDANDO_TEOR
+  @@schema("erp")
 }
 
 enum TipoMetal {
   AU
   AG
   RH
+  @@schema("erp")
 }
 
 enum PureMetalLotStatus {
   AVAILABLE
   USED
   PARTIALLY_USED
+  @@schema("erp")
 }
 
 enum ChemicalReactionStatusPrisma {
@@ -1279,11 +1384,13 @@ enum ChemicalReactionStatusPrisma {
   PENDING_PURITY_ADJUSTMENT
   COMPLETED
   CANCELED
+  @@schema("erp")
 }
 
 enum ReactionLeftoverType {
   BASKET
   DISTILLATE
+  @@schema("erp")
 }
 
 enum ContaMetalType {
@@ -1291,6 +1398,7 @@ enum ContaMetalType {
   FORNECEDOR
   INTERNA
   EMPRESTIMO
+  @@schema("erp")
 }
 
 enum SaleStatus {
@@ -1301,11 +1409,13 @@ enum SaleStatus {
   CANCELADO
   SEPARADO
   PAGO_PARCIALMENTE
+  @@schema("erp")
 }
 
 enum SaleAdjustmentCalcMethod {
   QUANTITY_BASED
   COST_BASED
+  @@schema("erp")
 }
 
 enum StockUnit {
@@ -1313,6 +1423,7 @@ enum StockUnit {
   KILOGRAMS
   LITERS
   UNITS
+  @@schema("erp")
 }
 
 enum StockMovementType {
@@ -1321,6 +1432,7 @@ enum StockMovementType {
   SALE
   PURCHASE
   ADJUSTMENT
+  @@schema("erp")
 }
 
 enum MetalCreditStatus {
@@ -1328,12 +1440,14 @@ enum MetalCreditStatus {
   PARTIALLY_PAID
   PAID
   CANCELED
+  @@schema("erp")
 }
 
 enum TaskStatus {
   TODO
   IN_PROGRESS
   DONE
+  @@schema("erp")
 }
 
 enum TaskPriority {
@@ -1341,4 +1455,5 @@ enum TaskPriority {
   MEDIUM
   HIGH
   URGENT
+  @@schema("erp")
 }
