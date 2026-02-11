@@ -6,12 +6,16 @@ module.exports = {
       script: "dist/main.js",
       env: {
         NODE_ENV: "production",
-        DATABASE_URL: "postgresql://admin:Electrosal123@127.0.0.1:5432/erp_electrosal?schema=public",
-        JWT_SECRET: "Electrosal_Secret_Key_2026",
         PORT: 3001,
-        BACKUP_COMMAND: "docker exec erp_postgres",
+        // Corrigido para o schema 'erp' e o IP do Docker
+        DATABASE_URL: "postgresql://admin:Electrosal123@172.17.0.1:5432/erp_electrosal?schema=erp",
+        // ESSENCIAL para o login funcionar:
+        JWT_SECRET: "segredoelectrosal2026", 
+        ALLOWED_ORIGINS: "https://erp.electrosal.com.br,https://electrosal.com.br",
+        
         DATABASE_USER: "admin",
         DATABASE_NAME: "erp_electrosal",
+        BACKUP_COMMAND: "docker exec erp_postgres",
         
         // Configurações da Evolution API
         EVOLUTION_API_URL: "https://wa.electrosal.com.br",
@@ -22,11 +26,13 @@ module.exports = {
     {
       name: "erp-frontend",
       cwd: "/root/apps/sistema-erp-electrosal/apps/frontend",
-      script: "node_modules/next/dist/bin/next",
-      args: "start",
+      // O modo mais estável para rodar o Next.js no PM2:
+      script: "node_modules/.bin/next",
+      args: "start -p 3000",
       env: {
         NODE_ENV: "production",
-        PORT: 3000
+        // Importante para o frontend saber onde bater:
+        NEXT_PUBLIC_API_URL: "https://api.electrosal.com.br"
       }
     }
   ]

@@ -1,0 +1,321 @@
+2026-02-09 22:03:13 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-09 22:03:13 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-09 22:03:13 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-09 22:03:13 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-09 22:03:13 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-09 22:11:21 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:11:21 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:11:22 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-09 22:11:22 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-09 22:11:22 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-09 22:11:22 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-09 22:11:22 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-09 22:11:38 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-09 22:11:38 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-09 22:11:38 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-09 22:11:38 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-09 22:11:38 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-09 22:12:40 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:12:40 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:14:04 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:14:04 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:15:49 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:15:49 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:19:04 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:19:04 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:20:39 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:20:39 +00:00: Error fetching landing page data: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14902:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at afterConnectMultiple (node:net:1689:7)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+2026-02-09 22:25:55 +00:00: Unknown section type: hero
+2026-02-09 22:25:55 +00:00: Unknown section type: hero
+2026-02-09 22:26:51 +00:00:  ⨯ The requested resource isn't a valid image for /images/logo.png received text/html; charset=utf-8
+2026-02-09 22:27:24 +00:00: Unknown section type: hero
+2026-02-09 22:27:24 +00:00: Unknown section type: hero
+2026-02-09 22:27:34 +00:00:  ⨯ The requested resource isn't a valid image for /images/logo.png received text/html; charset=utf-8
+2026-02-09 22:31:48 +00:00:  ⨯ The requested resource isn't a valid image for /images/logo.png received text/html; charset=utf-8
+2026-02-09 22:31:56 +00:00: Unknown section type: hero
+2026-02-09 22:31:56 +00:00: Unknown section type: hero
+2026-02-09 22:32:07 +00:00:  ⨯ The requested resource isn't a valid image for /images/logo.png received text/html; charset=utf-8
+2026-02-09 22:33:16 +00:00:  ⨯ The requested resource isn't a valid image for /images/logo.png received text/html; charset=utf-8
+2026-02-09 22:34:29 +00:00: Unknown section type: hero
+2026-02-09 22:34:29 +00:00: Unknown section type: hero
+2026-02-09 22:40:57 +00:00:  ⨯ The requested resource isn't a valid image for /images/logo.png received text/html; charset=utf-8
+2026-02-09 22:41:06 +00:00: Unknown section type: hero
+2026-02-09 22:41:06 +00:00: Unknown section type: hero
+2026-02-09 23:16:39 +00:00: Unknown section type: hero
+2026-02-09 23:16:39 +00:00: Unknown section type: hero
+2026-02-09 23:22:31 +00:00: Unknown section type: hero
+2026-02-09 23:22:31 +00:00: Unknown section type: hero
+2026-02-09 23:25:51 +00:00: Unknown section type: hero
+2026-02-09 23:25:51 +00:00: Unknown section type: hero
+2026-02-09 23:30:32 +00:00: Unknown section type: hero
+2026-02-09 23:30:32 +00:00: Unknown section type: hero
+2026-02-09 23:31:58 +00:00: Unknown section type: hero
+2026-02-09 23:31:58 +00:00: Unknown section type: hero
+2026-02-09 23:35:46 +00:00: Unknown section type: hero
+2026-02-09 23:35:46 +00:00: Unknown section type: hero
+2026-02-09 23:39:47 +00:00: Unknown section type: hero
+2026-02-09 23:39:47 +00:00: Unknown section type: hero
+2026-02-09 23:46:42 +00:00: Unknown section type: hero
+2026-02-09 23:46:42 +00:00: Unknown section type: hero
+2026-02-09 23:59:41 +00:00: Unknown section type: hero
+2026-02-09 23:59:41 +00:00: Unknown section type: hero
+2026-02-10 00:03:37 +00:00: Unknown section type: hero
+2026-02-10 00:03:37 +00:00: Unknown section type: hero
+2026-02-10 00:05:58 +00:00: Unknown section type: hero
+2026-02-10 00:05:58 +00:00: Unknown section type: hero
+2026-02-10 00:07:06 +00:00: Unknown section type: hero
+2026-02-10 00:07:06 +00:00: Unknown section type: hero
+2026-02-10 00:12:48 +00:00: Unknown section type: hero
+2026-02-10 00:12:48 +00:00: Unknown section type: hero
+2026-02-10 00:17:41 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 00:17:41 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 00:17:43 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 00:17:43 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 00:17:44 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 00:17:44 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 00:18:13 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 00:18:13 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 00:19:19 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:19 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:19 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:20 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:20 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:20 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:20 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:21 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:21 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:21 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:21 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:22 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:22 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:22 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:22 +00:00:  ⨯ Failed to start server
+2026-02-10 00:19:23 +00:00:  ⨯ Failed to start server
+2026-02-10 00:20:06 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 00:20:06 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 00:20:07 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 00:20:07 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 00:20:07 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 00:20:07 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 00:20:08 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 00:20:08 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 00:20:08 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 00:20:08 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 00:20:08 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 00:20:08 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 00:22:08 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:08 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:08 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:08 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:09 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:09 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:09 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:10 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:10 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:10 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:10 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:10 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:11 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:11 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:11 +00:00:  ⨯ Failed to start server
+2026-02-10 00:22:11 +00:00:  ⨯ Failed to start server
+2026-02-10 09:59:34 +00:00: Failed to fetch landing page data: 403 Forbidden
+2026-02-10 09:59:37 +00:00: Failed to fetch landing page data: 403 Forbidden
+2026-02-10 10:23:28 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:23:28 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:23:28 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:23:28 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:23:28 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-10 10:23:30 +00:00: Failed to fetch landing page data: 403 Forbidden
+2026-02-10 10:23:32 +00:00: Failed to proxy https://electrosal.com.br/api/api/api/api/api/api/api/api/api/api/api/api/api/api/landing-page Error: read ECONNRESET
+    at TLSWrap.onStreamRead (node:internal/stream_base_commons:218:20)
+    at TLSWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+  errno: -104,
+  code: 'ECONNRESET',
+  syscall: 'read'
+}
+2026-02-10 10:23:32 +00:00: Error: read ECONNRESET
+    at TLSWrap.onStreamRead (node:internal/stream_base_commons:218:20)
+    at TLSWrap.callbackTrampoline (node:internal/async_hooks:130:17) {
+  errno: -104,
+  code: 'ECONNRESET',
+  syscall: 'read'
+}
+2026-02-10 10:23:32 +00:00: Failed to fetch landing page data: 500 Internal Server Error
+2026-02-10 10:23:34 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:23:34 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:23:34 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-10 10:23:34 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:23:34 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:23:35 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:23:35 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:23:35 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:23:35 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:23:35 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-10 10:23:53 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:23:53 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:23:53 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:23:53 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-10 10:23:53 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:23:56 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:23:56 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:23:56 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-10 10:23:56 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:23:56 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:23:56 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:23:56 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:23:57 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:23:57 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-10 10:23:57 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:23:57 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:23:57 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:24:03 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:24:03 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:24:03 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-10 10:24:03 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:24:03 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:24:07 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:24:07 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:24:07 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:24:07 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:24:07 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-10 10:34:15 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:34:15 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:34:15 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:34:18 +00:00: Failed to fetch landing page data: 403 Forbidden
+2026-02-10 10:34:20 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:34:20 +00:00: Failed to fetch landing page data: 403 Forbidden
+2026-02-10 10:34:24 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:34:24 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:34:24 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:34:25 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:34:25 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:34:25 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:34:46 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-bijou.png received text/html; charset=utf-8
+2026-02-10 10:35:03 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-lab.png received text/html; charset=utf-8
+2026-02-10 10:35:09 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:35:09 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8
+2026-02-10 10:35:09 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:35:13 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-banho.png received text/html; charset=utf-8
+2026-02-10 10:35:13 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/banner-galvano.png received text/html; charset=utf-8
+2026-02-10 10:35:13 +00:00:  ⨯ The requested resource isn't a valid image for /images/landing/logo.png received text/html; charset=utf-8

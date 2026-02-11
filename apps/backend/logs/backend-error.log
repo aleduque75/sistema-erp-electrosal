@@ -1,0 +1,445 @@
+You have triggered an unhandledRejection, you may have forgotten to catch a Promise rejection:
+PrismaClientInitializationError: Can't reach database server at `localhost:5435`
+
+Please make sure your database server is running at `localhost:5435`.
+    at r (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/runtime/library.js:112:2770)
+    at async Proxy.onModuleInit (/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:418:9)
+    at async Promise.all (index 0)
+    at async callModuleInitHook (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:5)
+    at async NestApplication.callInitHook (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application-context.js:252:13)
+    at async NestApplication.init (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application.js:103:9)
+    at async NestApplication.listen (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application.js:175:13)
+    at async bootstrap (/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:34951:5)
+You have triggered an unhandledRejection, you may have forgotten to catch a Promise rejection:
+PrismaClientInitializationError: Can't reach database server at `localhost:5435`
+
+Please make sure your database server is running at `localhost:5435`.
+    at r (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/runtime/library.js:112:2770)
+    at async Proxy.onModuleInit (/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:418:9)
+    at async Promise.all (index 0)
+    at async callModuleInitHook (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:5)
+    at async NestApplication.callInitHook (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application-context.js:252:13)
+    at async NestApplication.init (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application.js:103:9)
+    at async NestApplication.listen (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application.js:175:13)
+    at async bootstrap (/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:34951:5)
+You have triggered an unhandledRejection, you may have forgotten to catch a Promise rejection:
+PrismaClientInitializationError: Can't reach database server at `localhost:5435`
+
+Please make sure your database server is running at `localhost:5435`.
+    at r (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/runtime/library.js:112:2770)
+    at async Proxy.onModuleInit (/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:418:9)
+    at async Promise.all (index 0)
+    at async callModuleInitHook (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:5)
+    at async NestApplication.callInitHook (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application-context.js:252:13)
+    at async NestApplication.init (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application.js:103:9)
+    at async NestApplication.listen (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application.js:175:13)
+    at async bootstrap (/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:34951:5)
+You have triggered an unhandledRejection, you may have forgotten to catch a Promise rejection:
+PrismaClientInitializationError: Can't reach database server at `localhost:5435`
+
+Please make sure your database server is running at `localhost:5435`.
+    at r (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/runtime/library.js:112:2770)
+    at async Proxy.onModuleInit (/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:418:9)
+    at async Promise.all (index 0)
+    at async callModuleInitHook (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:5)
+    at async NestApplication.callInitHook (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application-context.js:252:13)
+    at async NestApplication.init (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application.js:103:9)
+    at async NestApplication.listen (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application.js:175:13)
+    at async bootstrap (/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:34951:5)
+You have triggered an unhandledRejection, you may have forgotten to catch a Promise rejection:
+PrismaClientInitializationError: Can't reach database server at `localhost:5435`
+
+Please make sure your database server is running at `localhost:5435`.
+    at r (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/runtime/library.js:112:2770)
+    at async Proxy.onModuleInit (/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:418:9)
+    at async Promise.all (index 0)
+    at async callModuleInitHook (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/hooks/on-module-init.hook.js:43:5)
+    at async NestApplication.callInitHook (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application-context.js:252:13)
+    at async NestApplication.init (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application.js:103:9)
+    at async NestApplication.listen (/root/apps/sistema-erp-electrosal/node_modules/.pnpm/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/@nestjs/core/nest-application.js:175:13)
+    at async bootstrap (/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:34951:5)
+2026-02-09 22:26:51 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:26:51 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.sale.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13656:30
+
+  13653     where: { organizationId, received: false },
+  13654     _sum: { amount: true },
+  13655 }),
+→ 13656 this.prisma.sale.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.SaleStatus\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async Promise.all (index 3)
+    at async DashboardService.getDashboardSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13643:99[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:26:51 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:26:51 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.transacao.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13716:63
+
+  13713     },
+  13714     _sum: { amount: true },
+  13715 });
+→ 13716 const totalExpenses = await this.prisma.transacao.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoTransacaoPrisma\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getCashFlowSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13716:35[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:26:51 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:26:51 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.transacao.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13745:57
+
+  13742 if (!thirdPartyLoansAccount) {
+  13743     return { totalAmount: 0 };
+  13744 }
+→ 13745 const totalDebits = await this.prisma.transacao.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoTransacaoPrisma\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getThirdPartyLoansSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13745:29[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:26:52 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:26:52 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.sale.findMany()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13765:46
+
+  13762     return { totalAmount: netBalance };
+  13763 }
+  13764 async getFinancialSummaryByPeriod(organizationId) {
+→ 13765     const sales = await this.prisma.sale.findMany(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.SaleStatus\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getFinancialSummaryByPeriod [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13765:23[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:27:34 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:27:34 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.sale.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13656:30
+
+  13653     where: { organizationId, received: false },
+  13654     _sum: { amount: true },
+  13655 }),
+→ 13656 this.prisma.sale.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.SaleStatus\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async Promise.all (index 3)
+    at async DashboardService.getDashboardSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13643:99[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:27:34 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:27:34 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.transacao.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13716:63
+
+  13713     },
+  13714     _sum: { amount: true },
+  13715 });
+→ 13716 const totalExpenses = await this.prisma.transacao.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoTransacaoPrisma\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getCashFlowSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13716:35[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:27:34 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:27:34 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.sale.findMany()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13765:46
+
+  13762     return { totalAmount: netBalance };
+  13763 }
+  13764 async getFinancialSummaryByPeriod(organizationId) {
+→ 13765     const sales = await this.prisma.sale.findMany(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.SaleStatus\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getFinancialSummaryByPeriod [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13765:23[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:27:35 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:27:35 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.transacao.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13745:57
+
+  13742 if (!thirdPartyLoansAccount) {
+  13743     return { totalAmount: 0 };
+  13744 }
+→ 13745 const totalDebits = await this.prisma.transacao.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoTransacaoPrisma\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getThirdPartyLoansSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13745:29[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:29:00 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:29:00 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.transacao.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13716:63
+
+  13713     },
+  13714     _sum: { amount: true },
+  13715 });
+→ 13716 const totalExpenses = await this.prisma.transacao.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoTransacaoPrisma\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getCashFlowSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13716:35[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:29:00 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:29:00 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.sale.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13656:30
+
+  13653     where: { organizationId, received: false },
+  13654     _sum: { amount: true },
+  13655 }),
+→ 13656 this.prisma.sale.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.SaleStatus\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async Promise.all (index 3)
+    at async DashboardService.getDashboardSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13643:99[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:29:00 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:29:00 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.sale.findMany()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13765:46
+
+  13762     return { totalAmount: netBalance };
+  13763 }
+  13764 async getFinancialSummaryByPeriod(organizationId) {
+→ 13765     const sales = await this.prisma.sale.findMany(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.SaleStatus\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getFinancialSummaryByPeriod [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13765:23[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:29:00 +00:00: [31m[Nest] 587949  - [39m02/09/2026, 10:29:00 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.transacao.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13745:57
+
+  13742 if (!thirdPartyLoansAccount) {
+  13743     return { totalAmount: 0 };
+  13744 }
+→ 13745 const totalDebits = await this.prisma.transacao.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoTransacaoPrisma\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getThirdPartyLoansSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13745:29[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:32:07 +00:00: [31m[Nest] 588937  - [39m02/09/2026, 10:32:07 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.quotation.findFirst()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13664:35
+
+  13661     where: { organizationId, remainingQuantity: { gt: 0 } },
+  13662     select: { productId: true, remainingQuantity: true, costPrice: true },
+  13663 }),
+→ 13664 this.prisma.quotation.findFirst(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoMetal\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async Promise.all (index 5)
+    at async DashboardService.getDashboardSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13643:99[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:32:07 +00:00: [31m[Nest] 588937  - [39m02/09/2026, 10:32:07 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.transacao.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13716:63
+
+  13713     },
+  13714     _sum: { amount: true },
+  13715 });
+→ 13716 const totalExpenses = await this.prisma.transacao.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoTransacaoPrisma\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getCashFlowSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13716:35[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:32:07 +00:00: [31m[Nest] 588937  - [39m02/09/2026, 10:32:07 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.transacao.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13745:57
+
+  13742 if (!thirdPartyLoansAccount) {
+  13743     return { totalAmount: 0 };
+  13744 }
+→ 13745 const totalDebits = await this.prisma.transacao.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoTransacaoPrisma\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getThirdPartyLoansSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13745:29[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:32:07 +00:00: [31m[Nest] 588937  - [39m02/09/2026, 10:32:07 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.sale.findMany()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13765:46
+
+  13762     return { totalAmount: netBalance };
+  13763 }
+  13764 async getFinancialSummaryByPeriod(organizationId) {
+→ 13765     const sales = await this.prisma.sale.findMany(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.SaleStatus\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getFinancialSummaryByPeriod [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13765:23[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:33:16 +00:00: [31m[Nest] 588937  - [39m02/09/2026, 10:33:16 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.transacao.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13716:63
+
+  13713     },
+  13714     _sum: { amount: true },
+  13715 });
+→ 13716 const totalExpenses = await this.prisma.transacao.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoTransacaoPrisma\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getCashFlowSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13716:35[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:33:16 +00:00: [31m[Nest] 588937  - [39m02/09/2026, 10:33:16 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.quotation.findFirst()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13664:35
+
+  13661     where: { organizationId, remainingQuantity: { gt: 0 } },
+  13662     select: { productId: true, remainingQuantity: true, costPrice: true },
+  13663 }),
+→ 13664 this.prisma.quotation.findFirst(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoMetal\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async Promise.all (index 5)
+    at async DashboardService.getDashboardSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13643:99[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:33:16 +00:00: [31m[Nest] 588937  - [39m02/09/2026, 10:33:16 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.transacao.aggregate()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13745:57
+
+  13742 if (!thirdPartyLoansAccount) {
+  13743     return { totalAmount: 0 };
+  13744 }
+→ 13745 const totalDebits = await this.prisma.transacao.aggregate(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.TipoTransacaoPrisma\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getThirdPartyLoansSummary [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13745:29[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
+2026-02-09 22:33:16 +00:00: [31m[Nest] 588937  - [39m02/09/2026, 10:33:16 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientUnknownRequestError: 
+Invalid `this.prisma.sale.findMany()` invocation in
+/root/apps/sistema-erp-electrosal/apps/backend/dist/main.js:13765:46
+
+  13762     return { totalAmount: netBalance };
+  13763 }
+  13764 async getFinancialSummaryByPeriod(organizationId) {
+→ 13765     const sales = await this.prisma.sale.findMany(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42704", message: "type \"erp.SaleStatus\" does not exist", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+    at ei.handleRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:7458)
+    at ei.handleAndLogRequestError (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6593)
+    at ei.request (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:121:6300)
+    at async a (/root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/[4m@prisma/client[24m/runtime/library.js:130:9551)
+    at async DashboardService.getFinancialSummaryByPeriod [90m(/root/apps/sistema-erp-electrosal/apps/backend/[39mdist/main.js:13765:23[90m)[39m
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-execution-context.js:46:28
+    at async /root/apps/sistema-erp-electrosal/node_modules/[4m.pnpm[24m/@nestjs+core@11.1.12_@nestjs+common@11.1.12_class-transformer@0.5.1_class-validator@0.14.3_re_sjklv5fps3pi3z7ma3wg3rpqoi/node_modules/[4m@nestjs/core[24m/router/router-proxy.js:9:17 {
+  clientVersion: [32m'6.19.2'[39m
+}
