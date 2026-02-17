@@ -1,7 +1,19 @@
-// apps/backend/src/organization/dto/update-appearance-settings.dto.ts
-import { IsObject } from 'class-validator';
+import { IsObject, IsOptional, IsString } from 'class-validator';
 
 export class UpdateAppearanceSettingsDto {
+  @IsOptional()
+  @IsString()
+  themeName?: string; // 👈 Adicionado
+
+  @IsOptional()
   @IsObject()
-  customTheme: any;
+  sidebarTheme?: any; // 👈 Adicionado
+
+  @IsOptional()
+  @IsObject()
+  customTheme?: any;
+
+  @IsOptional()
+  @IsString()
+  logoId?: string;
 }

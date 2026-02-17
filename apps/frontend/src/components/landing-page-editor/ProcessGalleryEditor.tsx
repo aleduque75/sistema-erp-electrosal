@@ -1,185 +1,95 @@
 "use client";
 
-import React from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ProcessGalleryConfig } from "@/config/landing-page";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Trash2, LayoutGrid, GripVertical } from "lucide-react";
 import { MediaSelector } from "./MediaSelector";
-import { IconPicker } from "./IconPicker";
-import { PlusCircle, Trash2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const processGallerySchema = z.object({
-  title: z.string().min(1, "Título é obrigatório"),
-  description: z.string().min(1, "Descrição é obrigatória"),
-  ctaButtonText: z.string().min(1, "Texto do botão CTA é obrigatório"),
-  ctaButtonLink: z.string().min(1, "Link do botão CTA é obrigatório"),
-  processes: z.array(
-    z.object({
-      image: z.string().optional(),
-      title: z.string().min(1, "Título do processo é obrigatório"),
-      description: z.string().min(1, "Descrição do processo é obrigatória"),
-      icon: z.string().min(1, "Ícone é obrigatório"),
-    })
-  ),
-});
+// ✅ Usando named export para evitar o erro de 'undefined'
+export function ProcessGalleryEditor({ config, onChange }: any) {
+  const processes = Array.isArray(config?.processes) ? config.processes : [];
 
-interface ProcessGalleryEditorProps {
-  config: ProcessGalleryConfig;
-  onChange: (newConfig: ProcessGalleryConfig) => void;
-}
+  const updateProcess = (idx: number, field: string, value: string) => {
+    const updated = [...processes];
+    updated[idx] = { ...updated[idx], [field]: value };
+    onChange({ ...config, processes: updated });
+  };
 
-export const ProcessGalleryEditor: React.FC<ProcessGalleryEditorProps> = ({
-  config,
-  onChange,
-}) => {
-  const form = useForm<ProcessGalleryConfig>({
-    resolver: zodResolver(processGallerySchema),
-    defaultValues: config,
-  });
+  const addProcess = () => {
+    const newProcess = { title: "Nova Etapa", description: "", imageUrl: "" };
+    onChange({ ...config, processes: [...processes, newProcess] });
+  };
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "processes",
-  });
-
-  React.useEffect(() => {
-    const subscription = form.watch((value) => {
-      onChange(value as ProcessGalleryConfig);
-    });
-    return () => subscription.unsubscribe();
-  }, [form, onChange]);
+  const removeProcess = (idx: number) => {
+    onChange({ ...config, processes: processes.filter((_, i) => i !== idx) });
+  };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="gallery-title">Título da Galeria</Label>
+    <div className="space-y-8">
+      <div className="bg-slate-900/40 p-6 rounded-3xl border border-white/10 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <LayoutGrid className="w-5 h-5 text-blue-400" />
+          <h3 className="text-sm font-black uppercase tracking-widest text-white">
+            Configuração da Galeria/Processos
+          </h3>
+        </div>
         <Input
-          id="gallery-title"
-          {...form.register("title")}
-          placeholder="Nossos Processos"
+          className="bg-slate-950 border-white/10 h-12 text-lg font-bold"
+          placeholder="Título da Seção"
+          value={config.title || ""}
+          onChange={(e) => onChange({ ...config, title: e.target.value })}
         />
-        {form.formState.errors.title && (
-          <p className="text-red-500 text-sm">
-            {form.formState.errors.title.message}
-          </p>
-        )}
       </div>
 
-      <div>
-        <Label htmlFor="gallery-description">Descrição</Label>
-        <Textarea
-          id="gallery-description"
-          {...form.register("description")}
-          placeholder="Conheça a tecnologia e os processos..."
-        />
-        {form.formState.errors.description && (
-          <p className="text-red-500 text-sm">
-            {form.formState.errors.description.message}
-          </p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="gallery-cta-text">Texto do Botão CTA</Label>
-          <Input
-            id="gallery-cta-text"
-            {...form.register("ctaButtonText")}
-            placeholder="Entre em Contato"
-          />
-        </div>
-        <div>
-          <Label htmlFor="gallery-cta-link">Link do Botão CTA</Label>
-          <Input
-            id="gallery-cta-link"
-            {...form.register("ctaButtonLink")}
-            placeholder="/entrar"
-          />
-        </div>
-      </div>
-
-      <div className="border-t pt-4 mt-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-semibold">Processos</h3>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() =>
-              append({
-                image: "",
-                title: "Novo Processo",
-                description: "Descrição do processo",
-                icon: "Zap",
-              })
-            }
+      <div className="grid grid-cols-1 gap-6">
+        {processes.map((proc: any, idx: number) => (
+          <div
+            key={idx}
+            className="p-6 border border-white/10 rounded-[2rem] bg-slate-900/20 relative group hover:border-blue-500/30 transition-all shadow-xl"
           >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Adicionar Processo
-          </Button>
-        </div>
-
-        <div className="space-y-4">
-          {fields.map((field, index) => (
-            <Card key={field.id}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm">Processo {index + 1}</CardTitle>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => remove(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <MediaSelector
-                  label="Imagem do Processo"
-                  value={form.watch(`processes.${index}.image`)}
-                  onChange={(id) =>
-                    form.setValue(`processes.${index}.image`, id as string)
-                  }
-                  multiple={false}
-                  sizeRecommendations="Recomendado: 800x600 pixels"
+            <Button
+              variant="destructive"
+              size="icon"
+              className="absolute -top-3 -right-3 h-9 w-9 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+              onClick={() => removeProcess(idx)}
+            >
+              <Trash2 className="h-5 w-5" />
+            </Button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <MediaSelector
+                label="Escolher Foto"
+                value={proc.imageUrl}
+                onChange={(url: string) => updateProcess(idx, "imageUrl", url)}
+              />
+              <div className="md:col-span-2 space-y-4">
+                <Input
+                  placeholder="Título"
+                  className="bg-slate-950 border-white/10"
+                  value={proc.title}
+                  onChange={(e) => updateProcess(idx, "title", e.target.value)}
                 />
-
-                <div>
-                  <Label htmlFor={`process-title-${index}`}>Título</Label>
-                  <Input
-                    id={`process-title-${index}`}
-                    {...form.register(`processes.${index}.title`)}
-                    placeholder="Banho Químico de Precisão"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor={`process-description-${index}`}>
-                    Descrição
-                  </Label>
-                  <Textarea
-                    id={`process-description-${index}`}
-                    {...form.register(`processes.${index}.description`)}
-                    placeholder="Processos controlados com máxima precisão..."
-                  />
-                </div>
-
-                <IconPicker
-                  value={form.watch(`processes.${index}.icon`)}
-                  onChange={(icon) =>
-                    form.setValue(`processes.${index}.icon`, icon)
+                <Textarea
+                  placeholder="Descrição"
+                  className="bg-slate-950 border-white/10 min-h-[80px]"
+                  value={proc.description}
+                  onChange={(e) =>
+                    updateProcess(idx, "description", e.target.value)
                   }
                 />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        <Button
+          variant="outline"
+          className="w-full border-2 border-dashed py-12 rounded-[2rem]"
+          onClick={addProcess}
+        >
+          <Plus className="w-6 h-6 mr-2" /> Adicionar Etapa
+        </Button>
       </div>
     </div>
   );
-};
+}

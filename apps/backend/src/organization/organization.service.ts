@@ -21,9 +21,7 @@ export class OrganizationService {
   }
 
   async update(id: string, updateOrganizationDto: UpdateOrganizationDto) {
-    // Ensure the organization exists
     await this.findOne(id);
-
     return this.prisma.organization.update({
       where: { id },
       data: updateOrganizationDto,
@@ -32,16 +30,23 @@ export class OrganizationService {
 
   async updateAppearanceSettings(
     orgId: string,
-    updateAppearanceDto: UpdateAppearanceSettingsDto,
+    dto: UpdateAppearanceSettingsDto,
   ) {
+    // ✅ Corrigido para salvar todos os campos do DTO
     return this.prisma.appearanceSettings.upsert({
       where: { organizationId: orgId },
       update: {
-        customTheme: updateAppearanceDto.customTheme,
+        themeName: dto.themeName,
+        sidebarTheme: dto.sidebarTheme,
+        customTheme: dto.customTheme,
+        logoId: dto.logoId,
       },
       create: {
         organizationId: orgId,
-        customTheme: updateAppearanceDto.customTheme,
+        themeName: dto.themeName,
+        sidebarTheme: dto.sidebarTheme,
+        customTheme: dto.customTheme,
+        logoId: dto.logoId,
       },
     });
   }

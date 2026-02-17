@@ -6,14 +6,14 @@ import { UserSettings } from '@sistema-erp-electrosal/core';
 import { UserSettingsMapper } from '../users/mappers/user-settings.mapper';
 import { CreateThemePresetDto } from './dto/create-theme-preset.dto';
 import { UpdateThemePresetDto } from './dto/update-theme-preset.dto';
+import { Prisma } from '@prisma/client'; // ✅ Necessário para InputJsonValue
 
 @Injectable()
 export class SettingsService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   /**
    * Busca as configurações do usuário. Se não existirem, cria o registro inicial.
-   * Este é o método que o confirm-sale.use-case.ts está procurando.
    */
   async findOne(userId: string): Promise<UserSettings> {
     let prismaSettings = await this.prisma.userSettings.findUnique({
@@ -21,7 +21,6 @@ export class SettingsService {
     });
 
     if (!prismaSettings) {
-      // Cria uma nova instância de domínio e persiste no banco
       const newSettings = UserSettings.create({ userId });
       prismaSettings = await this.prisma.userSettings.create({
         data: UserSettingsMapper.toPersistence(newSettings),
@@ -32,13 +31,12 @@ export class SettingsService {
   }
 
   /**
-   * Atualiza as configurações de preferência do usuário (incluindo o novo Tema)
+   * Atualiza as configurações de preferência do usuário (Light/Dark no ERP)
    */
   async update(
     userId: string,
     updateSettingDto: UpdateSettingDto,
   ): Promise<UserSettings> {
-    console.log(`[DEBUG] Updating settings for user ${userId}:`, updateSettingDto);
     const updatedPrismaSettings = await this.prisma.userSettings.upsert({
       where: { userId },
       update: {
@@ -53,15 +51,14 @@ export class SettingsService {
       },
       create: {
         userId,
-        theme: updateSettingDto.theme || 'light', // Default to light if not provided
+        theme: updateSettingDto.theme || 'light',
       },
     });
 
-    console.log('[DEBUG] Updated settings result:', updatedPrismaSettings);
     return UserSettingsMapper.toDomain(updatedPrismaSettings);
   }
 
-  // --- CONFIGURAÇÕES DE APARÊNCIA DA ORGANIZAÇÃO (JSON) ---
+  // --- CONFIGURAÇÕES DE APARÊNCIA DA ORGANIZAÇÃO (TEMA CUSTOMIZADO) ---
 
   async getAppearanceSettings(organizationId?: string) {
     let targetOrganizationId = organizationId;
@@ -73,14 +70,14 @@ export class SettingsService {
       if (defaultLandingPage && defaultLandingPage.organizationId) {
         targetOrganizationId = defaultLandingPage.organizationId;
       } else {
-        return null; // No default landing page or it's not linked to an organization
+        return null;
       }
     }
 
     return this.prisma.appearanceSettings.findUnique({
       where: { organizationId: targetOrganizationId },
       include: {
-        logoImage: true, // Inclui a imagem do logo na resposta
+        logo: true,
       },
     });
   }
@@ -89,14 +86,30 @@ export class SettingsService {
     organizationId: string,
     dto: UpdateAppearanceSettingsDto,
   ) {
+    // 🛡️ Log para debug: veja se os campos aparecem no seu terminal
+    console.log(
+      `[SettingsService] Persistindo dados para Org: ${organizationId}`,
+      {
+        themeName: dto.themeName,
+        hasSidebar: !!dto.sidebarTheme,
+        hasCustom: !!dto.customTheme,
+      },
+    );
+
+    // ✅ Forçamos a tipagem JSON para que o Prisma não ignore os objetos
+    const updateData = {
+      themeName: dto.themeName,
+      sidebarTheme: (dto.sidebarTheme || {}) as Prisma.InputJsonValue,
+      customTheme: (dto.customTheme || {}) as Prisma.InputJsonValue,
+      logoId: dto.logoId,
+    };
+
     return this.prisma.appearanceSettings.upsert({
       where: { organizationId },
-      update: {
-        customTheme: dto.customTheme, // Salvando no campo JSON unificado
-      },
+      update: updateData,
       create: {
         organizationId,
-        customTheme: dto.customTheme,
+        ...updateData,
       },
     });
   }
@@ -120,14 +133,14 @@ export class SettingsService {
     });
   }
 
-  // --- Theme Presets ---
-  async createThemePreset(
-    organizationId: string,
-    dto: CreateThemePresetDto,
-  ) {
+  // --- THEME PRESETS ---
+
+  async createThemePreset(organizationId: string, dto: CreateThemePresetDto) {
     return this.prisma.themePreset.create({
       data: {
-        ...dto,
+        name: dto.name,
+        presetData: dto.presetData as Prisma.InputJsonValue,
+        isDefault: dto.isDefault,
         organizationId,
       },
     });
@@ -143,9 +156,7 @@ export class SettingsService {
     const preset = await this.prisma.themePreset.findUnique({
       where: { id, organizationId },
     });
-    if (!preset) {
-      throw new NotFoundException(`ThemePreset with ID ${id} not found.`);
-    }
+    if (!preset) throw new NotFoundException(`Preset ${id} não encontrado.`);
     return preset;
   }
 
@@ -154,25 +165,17 @@ export class SettingsService {
     id: string,
     dto: UpdateThemePresetDto,
   ) {
-    const preset = await this.prisma.themePreset.findUnique({
-      where: { id, organizationId },
-    });
-    if (!preset) {
-      throw new NotFoundException(`ThemePreset with ID ${id} not found.`);
-    }
     return this.prisma.themePreset.update({
       where: { id, organizationId },
-      data: dto,
+      data: {
+        name: dto.name,
+        presetData: dto.presetData as Prisma.InputJsonValue,
+        isDefault: dto.isDefault,
+      },
     });
   }
 
   async removeThemePreset(organizationId: string, id: string) {
-    const preset = await this.prisma.themePreset.findUnique({
-      where: { id, organizationId },
-    });
-    if (!preset) {
-      throw new NotFoundException(`ThemePreset with ID ${id} not found.`);
-    }
     return this.prisma.themePreset.delete({
       where: { id, organizationId },
     });

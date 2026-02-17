@@ -1,4 +1,8 @@
-import { Injectable, ExecutionContext } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from './public.decorator';
@@ -15,24 +19,53 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
+
+    // 1. Permite requisições OPTIONS (CORS Preflight)
+    if (request.method === 'OPTIONS') {
+      return true;
+    }
+
+    // 2. Verifica se a rota foi marcada com @Public()
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
+
+    // 3. Lógica para rotas públicas
     if (isPublic) {
-      // Se for público mas tiver header de autorização, deixa o AuthGuard processar para popular o user
+      // Tenta validar o JWT se o header existir, mas não barra se falhar ou estiver ausente
       if (request.headers['authorization']) {
         return super.canActivate(context);
       }
       return true;
     }
 
-    // request already declared above
-    // Explicitly allow access to public media endpoint
-    if (request.url.startsWith('/api/public-media/')) {
+    // 4. Fallback para media pública (caso não use o decorador)
+    if (
+      request.url.startsWith('/api/public-media/') ||
+      request.url.includes('/api/landing-page/public')
+    ) {
       return true;
     }
 
     return super.canActivate(context);
+  }
+
+  // Sobrescrevemos o handleRequest para evitar que rotas públicas estourem erro 401
+  handleRequest(err, user, info, context: ExecutionContext) {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (isPublic && !user) {
+      return null; // Se for público e o token for inválido, apenas retorna nulo sem dar 401
+    }
+
+    if (err || !user) {
+      throw err || new UnauthorizedException('Sessão inválida ou expirada.');
+    }
+
+    return user;
   }
 }

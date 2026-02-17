@@ -13,13 +13,12 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   async register(
     registerUserDto: RegisterUserDto,
-  ): Promise<{ accessToken: string }> {
-    // A lógica de registro precisará ser ajustada para criar uma organização também,
-    // mas por enquanto, vamos focar no login.
+  ): Promise<{ access_token: string }> {
+    // ✅ Padronizado
     const cleanEmail = registerUserDto.email.toLowerCase().trim();
 
     const existingUser = await this.usersService.findByEmail(cleanEmail);
@@ -27,14 +26,11 @@ export class AuthService {
       throw new BadRequestException('Usuário com este e-mail já existe');
     }
 
-
-
     const hashedPassword = await bcrypt.hash(registerUserDto.password, 10);
     const user = await this.usersService.create({
       email: cleanEmail,
       password: hashedPassword,
       name: registerUserDto.name,
-      // organizationId: '...', // Precisaria do ID da organização
     });
 
     const payload = {
@@ -42,21 +38,23 @@ export class AuthService {
       sub: user.id,
       orgId: user.organizationId,
     };
-    return { accessToken: this.jwtService.sign(payload) };
+
+    // ✅ Retornando access_token (com underline)
+    return { access_token: this.jwtService.sign(payload) };
   }
 
-  async login(user: any): Promise<{ accessToken: string }> {
-    // O 'user' aqui já vem validado pela LocalStrategy
-
-    // 👇 A CORREÇÃO PRINCIPAL ESTÁ AQUI 👇
+  async login(user: any): Promise<{ access_token: string }> {
+    // ✅ Padronizado
     const payload = {
       email: user.email,
       sub: user.id,
-      orgId: user.organizationId, // Adiciona o ID da organização ao token
+      orgId: user.organizationId,
     };
 
-    return { accessToken: this.jwtService.sign(payload) };
+    // ✅ Retornando access_token (com underline)
+    return { access_token: this.jwtService.sign(payload) };
   }
+
   async getUserProfile(userId: string, orgId: string) {
     return this.usersService.findByIdAndOrganization(userId, orgId, {
       settings: true,

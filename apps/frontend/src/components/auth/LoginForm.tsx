@@ -11,7 +11,6 @@ import api from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -20,43 +19,56 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { DialogFooter } from "@/components/ui/dialog"; // Import DialogFooter
+import { DialogFooter } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Por favor, insira um email válido."),
   password: z.string().min(1, "A senha é obrigatória."),
 });
+
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-interface LoginFormProps {
-  onLoginSuccess?: () => void; // Callback para fechar o modal, etc.
-}
-
-export function LoginForm({ onLoginSuccess }: LoginFormProps) {
+export function LoginForm({ onLoginSuccess }: { onLoginSuccess?: () => void }) {
   const { login } = useAuth();
   const router = useRouter();
-  const [loading, setIsPageLoading] = useState(false);
-  const form = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
+  const [loading, setLoading] = useState(false);
+
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
   const onSubmit = async (data: LoginFormValues) => {
-    setIsPageLoading(true);
+    // 🔍 LOG 1: Veja no F12 do Chrome se o e-mail e senha estão certos aqui
+    console.log("1. DADOS ENVIADOS:", data);
+    
+    setLoading(true);
     try {
-      const response = await api.post("/auth/login", {
-        email: data.email,
-        password: data.password,
-      });
+      const response = await api.post("/auth/login", data);
+      
+      // 🔍 LOG 2: Veja se o servidor respondeu com sucesso
+      console.log("2. RESPOSTA SUCESSO:", response.data);
 
-      login(response.data.accessToken);
-      toast.success("Login realizado com sucesso!");
-      if (onLoginSuccess) {
-        onLoginSuccess();
+      const token = response.data.accessToken || response.data.token;
+
+      if (token) {
+        login(token);
+        toast.success("Bem-vindo de volta!");
+        if (onLoginSuccess) onLoginSuccess();
+        
+        // Pequeno refresh para o Chrome "acordar" os cookies/localStorage
+        router.refresh();
+        router.push("/dashboard");
       }
-      router.push("/dashboard"); // Redireciona para o dashboard após o login
-    } catch (error) {
-      console.error("Falha no login:", error);
-      toast.error("Falha no login. Verifique suas credenciais.");
+    } catch (error: any) {
+      // 🔍 LOG 3: Se der erro, o motivo real vai aparecer aqui
+      console.error("3. ERRO NO LOGIN:", error.response?.data || error.message);
+      
+      const msg = error.response?.data?.message || "Erro ao conectar com o servidor.";
+      toast.error(msg);
     } finally {
-      setIsPageLoading(false);
+      setLoading(false);
     }
   };
 
@@ -70,7 +82,8 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="seu@email.com" {...field} />
+                {/* autoComplete="username" ajuda o Chrome a não se confundir */}
+                <Input placeholder="email@exemplo.com" autoComplete="username" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -83,7 +96,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
             <FormItem>
               <FormLabel>Senha</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <Input type="password" placeholder="••••••••" autoComplete="current-password" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -91,7 +104,11 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
         />
         <DialogFooter>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? (
+              <Loader2 className="animate-spin h-4 w-4 mr-2" />
+            ) : (
+              "Entrar"
+            )}
           </Button>
         </DialogFooter>
       </form>

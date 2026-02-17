@@ -2,173 +2,217 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardTitle } from "@/components/ui/card"; // Importação corrigida
+import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import api, { API_BASE_URL } from "@/lib/api";
+import api from "@/lib/api";
 import Image from "next/image";
-import { Loader2, UploadCloud, XCircle } from "lucide-react";
+import { Loader2, UploadCloud, CheckCircle2, Trash2 } from "lucide-react";
 
-interface Media {
-  id: string;
-  filename: string;
-  mimetype: string;
-  size: number;
-  path: string; // Ex: /uploads/nome-do-arquivo.jpg
-  createdAt: string;
-  recoveryOrderId?: string;
-  analiseQuimicaId?: string;
-  transacaoId?: string;
-  chemicalReactionId?: string;
-}
-
-interface MediaLibraryProps {
-  onSelect: (mediaId: string) => void;
-  selectedMediaId?: string;
-}
-
-export function MediaLibrary({ onSelect, selectedMediaId }: MediaLibraryProps) {
-  const [mediaFiles, setMediaFiles] = useState<Media[]>([]);
-  const [loading, setIsPageLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
+export function MediaLibrary({ onSelect, selectedMediaId }: any) {
+  const [mediaFiles, setMediaFiles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [file, setFile] = useState<File | null>(null);
 
+  const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (isDialogOpen) {
+      setLocalSelectedId(selectedMediaId);
+      fetchMedia();
+    }
+  }, [isDialogOpen, selectedMediaId]);
+
   const fetchMedia = async () => {
-    setIsPageLoading(true);
+    setLoading(true);
     try {
       const response = await api.get("/media");
-      setMediaFiles(response.data);
+      const data = Array.isArray(response.data)
+        ? response.data
+        : response.data.medias || [];
+      setMediaFiles(data);
     } catch (err) {
-      toast.error("Falha ao carregar mídias.");
-      console.error("Failed to fetch media:", err);
+      toast.error("Erro ao carregar mídias.");
     } finally {
-      setIsPageLoading(false);
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchMedia();
-  }, []);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setFile(event.target.files[0]);
-    } else {
-      setFile(null);
+  const getMediaUrl = (media: any) => {
+    const mediaId = media?._id?.value;
+    if (mediaId) {
+      return `http://localhost:3001/api/media/public-media/${mediaId}`;
     }
+    return "";
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      toast.info("Selecione um arquivo para upload.");
-      return;
-    }
-
-    setIsUploading(true);
+    if (!file) return;
     const formData = new FormData();
     formData.append("file", file);
-
     try {
-      await api.post("/media/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      toast.success("Upload realizado com sucesso!");
-      setFile(null); // Limpa o arquivo selecionado
-      fetchMedia(); // Recarrega a lista de mídias
+      await api.post("/media/upload", formData);
+      toast.success("Mídia enviada com sucesso!");
+      setFile(null);
+      fetchMedia();
     } catch (err) {
-      toast.error("Falha no upload.");
-      console.error("Upload failed:", err);
-    } finally {
-      setIsUploading(false);
+      toast.error("Falha no upload");
+    }
+  };
+
+  const handleConfirm = () => {
+    if (localSelectedId) {
+      onSelect(localSelectedId);
+    }
+    setIsDialogOpen(false);
+  };
+
+  const handleDelete = async (mediaIdToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (
+      window.confirm(
+        "Tem certeza que deseja excluir esta mídia? Esta ação não pode ser desfeita."
+      )
+    ) {
+      try {
+        await api.delete(`/media/${mediaIdToDelete}`);
+        toast.success("Mídia excluída com sucesso!");
+        if (localSelectedId === mediaIdToDelete) {
+          setLocalSelectedId(null);
+        }
+        fetchMedia();
+      } catch (err) {
+        toast.error("Falha ao excluir a mídia.");
+      }
     }
   };
 
   return (
-    <Dialog>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Selecionar Mídia</Button>
+        <Button variant="outline" className="w-full">
+          {selectedMediaId ? "Alterar Imagem" : "Selecionar Mídia"}
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Biblioteca de Mídias</DialogTitle>
+      <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col border-none shadow-2xl">
+        <DialogHeader className="border-b pb-4">
+          <DialogTitle className="text-2xl font-bold text-gray-800">
+            Biblioteca de Mídias
+          </DialogTitle>
         </DialogHeader>
-        <div className="flex-grow flex flex-col md:flex-row gap-4 overflow-hidden">
-          {/* Área de Upload */}
-          <Card className="w-full md:w-1/3 flex flex-col p-4">
-            <CardTitle className="mb-4">Upload de Arquivo</CardTitle>
-            <div className="grid w-full items-center gap-1.5 mb-4">
-              <Label htmlFor="picture">Arquivo</Label>
-              <Input id="picture" type="file" onChange={handleFileChange} />
-              {file && <p className="text-sm text-muted-foreground">{file.name}</p>}
+
+        <div className="flex gap-4 flex-grow overflow-hidden p-4">
+          <Card className="w-1/3 p-6 flex flex-col gap-4 bg-slate-50/50 border-dashed border-2">
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+                Novo Upload
+              </Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
+                <Input
+                  type="file"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  className="cursor-pointer border-none shadow-none focus-visible:ring-0"
+                  accept="image/*"
+                />
+              </div>
             </div>
-            <Button onClick={handleUpload} disabled={isUploading || !file}>
-              {isUploading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="mr-2 h-4 w-4" /> Fazer Upload
-                </>
-              )}
+
+            <Button
+              className="w-full shadow-md py-6 text-lg"
+              onClick={handleUpload}
+              disabled={!file}
+            >
+              <UploadCloud className="mr-2 h-5 w-5" /> Enviar Agora
             </Button>
+            <p className="text-xs text-gray-500 text-center italic">
+              Dica: Se a imagem não aparecer, verifique se a pasta 'uploads' no
+              backend contém o arquivo físico.
+            </p>
           </Card>
 
-          {/* Galeria de Mídias */}
-          <Card className="w-full md:w-2/3 flex flex-col p-4">
-            <CardTitle className="mb-4">Mídias Existentes</CardTitle>
+          <ScrollArea className="flex-grow rounded-lg border bg-white shadow-inner">
             {loading ? (
-              <p className="text-center text-muted-foreground">Carregando mídias...</p>
+              <div className="flex h-64 items-center justify-center">
+                <div className="text-center space-y-2">
+                  <Loader2 className="animate-spin h-10 w-10 text-blue-600 mx-auto" />
+                  <p className="text-sm text-gray-500 font-medium">
+                    Carregando galeria...
+                  </p>
+                </div>
+              </div>
             ) : (
-              <ScrollArea className="flex-grow h-full">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-                  {mediaFiles.length === 0 ? (
-                    <p className="col-span-full text-center text-muted-foreground">Nenhuma mídia encontrada.</p>
-                  ) : (
-                    mediaFiles
-                      .filter(media => 
-                        !media.recoveryOrderId && 
-                        !media.analiseQuimicaId && 
-                        !media.transacaoId && 
-                        !media.chemicalReactionId
-                      )
-                      .map((media) => (
-                      <div
-                        key={media.id}
-                        className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 ${
-                          selectedMediaId === media.id ? "border-primary" : "border-transparent"
-                        } hover:border-primary transition-all duration-200`}
-                        onClick={() => onSelect(media.id)}
+              <div className="grid grid-cols-3 gap-4 p-4">
+                {mediaFiles.map((media, index) => {
+                  const mediaId = media?._id?.value || null;
+                  const isSelected = localSelectedId === mediaId;
+
+                  return (
+                    <div
+                      key={`${mediaId}-${index}`}
+                      onClick={() => mediaId && setLocalSelectedId(mediaId)}
+                      className={`group relative aspect-square rounded-xl overflow-hidden transition-all duration-200 ${
+                        mediaId ? 'cursor-pointer' : 'cursor-not-allowed'
+                      } ${
+                        isSelected
+                          ? "border-blue-600 ring-4 ring-blue-100 shadow-lg"
+                          : "border-gray-100 hover:border-blue-300 shadow-sm"
+                      }`}
+                    >
+                      <button
+                        onClick={(e) => handleDelete(mediaId!, e)}
+                        className="absolute top-2 right-2 z-10 p-1.5 bg-white/80 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white hover:scale-110"
+                        aria-label="Excluir mídia"
+                        disabled={!mediaId}
                       >
-                        <Image
-                          src={`${API_BASE_URL}/public-media/${media.id}`}
-                          alt={media.filename}
-                          width={200}
-                          height={200}
-                          objectFit="cover"
-                          className="w-full h-32 object-cover"
-                        />
-                        {selectedMediaId === media.id && (
-                          <div className="absolute inset-0 bg-primary/50 flex items-center justify-center">
-                            <XCircle className="h-8 w-8 text-primary-foreground" />
-                          </div>
-                        )}
-                        <p className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 truncate">
-                          {media.filename}
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      <Image
+                        src={getMediaUrl(media)}
+                        alt="media asset"
+                        fill
+                        unoptimized
+                        className="object-cover transition-transform duration-300 group-hover:scale-110"
+                        onError={(e) => {
+                          (e.target as any).src =
+                            "https://placehold.co/400?text=Erro+no+Link";
+                        }}
+                      />
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-blue-600/10 flex items-center justify-center backdrop-blur-[1px]">
+                          <CheckCircle2 className="text-blue-600 bg-white rounded-full h-10 w-10 shadow-xl" />
+                        </div>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-[10px] text-white truncate text-center font-mono">
+                          {media?.props?.filename || "file"}
                         </p>
                       </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
+                    </div>
+                  );
+                })}
+              </div>
             )}
-          </Card>
+          </ScrollArea>
         </div>
+        <DialogFooter className="border-t pt-4">
+          <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirm} disabled={!localSelectedId}>
+            Confirmar Seleção
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

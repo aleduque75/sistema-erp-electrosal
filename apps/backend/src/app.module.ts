@@ -154,7 +154,11 @@ import { OrganizationModule } from './organization/organization.module';
   providers: [
     AppService,
     AuditLogService,
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // Reativamos o Guard global, mas ele vai respeitar o decorador @Public()
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
     RawMaterialsService,
   ],
 })

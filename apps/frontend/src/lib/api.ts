@@ -1,57 +1,66 @@
 import axios from "axios";
 import { toast } from "sonner";
 
-// 🌐 Configuração dinâmica de API baseada no ambiente
-// Desenvolvimento: http://localhost:3001
-// Produção: https://api.electrosal.com.br
+// 🌐 Mantém sua lógica dinâmica de URL (Perfeito para VPS)
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:3001'
-    : 'https://api.electrosal.com.br');
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:3001"
+    : "https://api.electrosal.com.br");
 
-// ✅ Garante que a URL base termine com /api
-const resolvedBaseURL = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
+const resolvedBaseURL = API_BASE_URL.endsWith("/api")
+  ? API_BASE_URL
+  : `${API_BASE_URL}/api`;
 
 const api = axios.create({
   baseURL: resolvedBaseURL,
 });
 
-// Interceptor de Requisição
 api.interceptors.request.use(
   (config) => {
     if (config.headers.skipAuth) {
       delete config.headers.Authorization;
-      delete config.headers.skipAuth; // Clean up the custom header
+      delete config.headers.skipAuth;
       return config;
     }
 
     if (typeof window !== "undefined") {
-      const accessToken = localStorage.getItem("accessToken");
-      if (accessToken) {
-        config.headers.Authorization = `Bearer ${accessToken}`;
+      // ✅ ALTERADO: Mudamos de 'accessToken' para 'token' para alinhar com o novo AuthContext
+      const token = localStorage.getItem("token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error),
 );
 
-// Interceptor de Resposta
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
       if (typeof window !== "undefined") {
-        toast.error("Sua sessão expirou. Por favor, faça login novamente.");
-        localStorage.removeItem("accessToken");
-        // Removido o redirecionamento forçado - deixa o AuthContext cuidar disso
+        // ✅ ALTERADO: Limpa a chave correta 'token'
+        const hasToken = localStorage.getItem("token");
+
+        if (hasToken) {
+          toast.error("Sua sessão expirou. Por favor, faça login novamente.");
+          localStorage.removeItem("token");
+
+          // Limpeza de segurança da chave antiga para não sobrar lixo na VPS
+          localStorage.removeItem("accessToken");
+
+          if (window.location.pathname !== "/login") {
+            setTimeout(() => {
+              window.location.href = "/login";
+            }, 1000);
+          }
+        }
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

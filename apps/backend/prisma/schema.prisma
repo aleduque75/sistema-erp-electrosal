@@ -1,7 +1,7 @@
 generator client {
   provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
   binaryTargets   = ["native", "debian-openssl-3.0.x"]
-  previewFeatures = ["multiSchema"] 
 }
 
 datasource db {
@@ -11,12 +11,12 @@ datasource db {
 }
 
 model Organization {
-  id                      String                  @id @default(uuid())
+  id                      String                   @id @default(uuid())
   name                    String
-  absorbCreditCardFee     Boolean                 @default(false)
-  creditCardReceiveDays   Int?                    @default(30)
+  absorbCreditCardFee     Boolean                  @default(false)
+  creditCardReceiveDays   Int?                     @default(30)
   accountsRec             AccountRec[]
-  appearanceSettings      AppearanceSettings?     @relation("AppearanceToOrganization")
+  appearanceSettings      AppearanceSettings?      @relation("AppearanceToOrganization")
   landingPages            LandingPage[]
   media                   Media[]
   menuItems               MenuItem[]
@@ -57,9 +57,9 @@ model Organization {
   recuperacoes            Recuperacao[]
   saleAdjustments         SaleAdjustment[]
   tasks                   Task[]
+  themePresets            ThemePreset[]
   transacoes              Transacao[]
   whatsAppRoutines        WhatsAppRoutine[]
-  themePresets            ThemePreset[]
 
   @@map("Organization")
   @@schema("erp")
@@ -132,7 +132,7 @@ model Pessoa {
   funcionario                 Funcionario?
   metalAccounts               MetalAccount[]
   metalCredits                MetalCredit[]
-  metalReceivables            MetalReceivable[]
+  metal_receivables           MetalReceivable[]
   organization                Organization      @relation(fields: [organizationId], references: [id])
   recoveryOrdersAsSalesperson RecoveryOrder[]   @relation("SalespersonRecoveryOrders")
 
@@ -184,21 +184,21 @@ model Funcionario {
 }
 
 model Product {
-  id                        String                @id @default(uuid())
+  id                        String               @id @default(uuid())
   name                      String
   description               String?
-  price                     Decimal               @db.Decimal(10, 2)
+  price                     Decimal              @db.Decimal(10, 2)
   stock                     Float?
-  createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime              @updatedAt
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
   organizationId            String
-  costPrice                 Decimal?              @db.Decimal(10, 2)
+  costPrice                 Decimal?             @db.Decimal(10, 2)
   productGroupId            String?
   goldValue                 Float?
-  externalId                String?               @unique
-  stockUnit                 StockUnit             @default(GRAMS)
-  organization              Organization          @relation(fields: [organizationId], references: [id])
-  productGroup              ProductGroup?         @relation(fields: [productGroupId], references: [id])
+  externalId                String?              @unique
+  stockUnit                 StockUnit            @default(GRAMS)
+  organization              Organization         @relation(fields: [organizationId], references: [id])
+  productGroup              ProductGroup?        @relation(fields: [productGroupId], references: [id])
   saleItems                 SaleItem[]
   stockMovements            StockMovement[]
   chemicalReactionsAsOutput chemical_reactions[]
@@ -471,7 +471,7 @@ model MetalReceivable {
   remainingGrams Decimal                  @db.Decimal(10, 4)
   payments       MetalReceivablePayment[]
   organization   Organization             @relation(fields: [organizationId], references: [id])
-  pessoa         Pessoa                   @relation(fields: [pessoaId], references: [id])
+  pessoas        Pessoa                   @relation(fields: [pessoaId], references: [id])
   sale           Sale                     @relation(fields: [saleId], references: [id])
 
   @@map("metal_receivables")
@@ -653,16 +653,17 @@ model XmlImportLog {
 }
 
 model LandingPage {
-  id             String        @id @default(uuid())
-  name           String        @unique @default("default")
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  logoImageId    String?
-  logoText       String?
-  organizationId String?
-  logoImage      Media?        @relation(fields: [logoImageId], references: [id])
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  sections       Section[]
+  id              String        @id @default(uuid())
+  name            String        @unique @default("default")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  logoImageId     String?
+  logoText        String?
+  organizationId  String?
+  themePreference String?       @default("dark")
+  logoImage       Media?        @relation(fields: [logoImageId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  sections        Section[]
 
   @@map("LandingPage")
   @@schema("erp")
@@ -684,13 +685,13 @@ model Section {
 }
 
 model Media {
-  id                     String               @id @default(uuid())
-  filename               String               @unique
+  id                     String              @id @default(uuid())
+  filename               String              @unique
   mimetype               String
   size                   Int
-  path                   String               @unique
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
+  path                   String              @unique
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
   organizationId         String?
   height                 Int?
   width                  Int?
@@ -698,13 +699,13 @@ model Media {
   analiseQuimicaId       String?
   transacaoId            String?
   chemicalReactionId     String?
-  appearanceSettingsLogo AppearanceSettings[] @relation("AppearanceLogo")
+  appearanceSettingsLogo AppearanceSettings? @relation("AppearanceLogo")
   landingPageLogos       LandingPage[]
-  analiseQuimica         AnaliseQuimica?      @relation(fields: [analiseQuimicaId], references: [id])
-  chemicalReaction       chemical_reactions?  @relation(fields: [chemicalReactionId], references: [id])
-  organization           Organization?        @relation(fields: [organizationId], references: [id])
-  recoveryOrder          RecoveryOrder?       @relation(fields: [recoveryOrderId], references: [id])
-  transacao              Transacao?           @relation("TransacaoToMedia", fields: [transacaoId], references: [id])
+  analiseQuimica         AnaliseQuimica?     @relation(fields: [analiseQuimicaId], references: [id])
+  chemicalReaction       chemical_reactions? @relation(fields: [chemicalReactionId], references: [id])
+  organization           Organization?       @relation(fields: [organizationId], references: [id])
+  recoveryOrder          RecoveryOrder?      @relation(fields: [recoveryOrderId], references: [id])
+  transacao              Transacao?          @relation("TransacaoToMedia", fields: [transacaoId], references: [id])
 
   @@map("Media")
   @@schema("erp")
@@ -1047,10 +1048,10 @@ model pure_metal_lots {
 
 model ChemicalReactionLot {
   chemicalReactionId String
-  pureMetalLotId      String
-  gramsToUse          Float
-  chemicalReaction    chemical_reactions @relation(fields: [chemicalReactionId], references: [id])
-  pureMetalLot        pure_metal_lots    @relation(fields: [pureMetalLotId], references: [id])
+  pureMetalLotId     String
+  gramsToUse         Float
+  chemicalReaction   chemical_reactions @relation(fields: [chemicalReactionId], references: [id])
+  pureMetalLot       pure_metal_lots    @relation(fields: [pureMetalLotId], references: [id])
 
   @@id([chemicalReactionId, pureMetalLotId])
   @@map("chemical_reaction_lots")
@@ -1196,12 +1197,11 @@ model AppearanceSettings {
   organizationId String       @unique
   themeName      String?
   sidebarTheme   Json?
-  logoImageId    String?
-  logoText       String?
-  logoImage      Media?       @relation("AppearanceLogo", fields: [logoImageId], references: [id])
-  customTheme    Json? 
+  customTheme    Json?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  logoId         String?      @unique
+  logo           Media?       @relation("AppearanceLogo", fields: [logoId], references: [id])
   organization   Organization @relation("AppearanceToOrganization", fields: [organizationId], references: [id])
 
   @@map("AppearanceSettings")
@@ -1241,8 +1241,8 @@ model ThemePreset {
   id             String       @id @default(uuid())
   organizationId String
   name           String
-  presetData     Json         
-  isDefault      Boolean      @default(false) 
+  presetData     Json
+  isDefault      Boolean      @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -1256,6 +1256,7 @@ enum TransacaoStatus {
   ATIVA
   AJUSTADA
   CANCELADA
+
   @@schema("erp")
 }
 
@@ -1263,6 +1264,7 @@ enum PureMetalLotMovementType {
   ENTRY
   EXIT
   ADJUSTMENT
+
   @@schema("erp")
 }
 
@@ -1270,18 +1272,21 @@ enum EntityType {
   RECOVERY_ORDER
   CHEMICAL_REACTION
   PURE_METAL_LOT
+
   @@schema("erp")
 }
 
 enum Role {
   USER
   ADMIN
+
   @@schema("erp")
 }
 
 enum PessoaType {
   FISICA
   JURIDICA
+
   @@schema("erp")
 }
 
@@ -1290,6 +1295,7 @@ enum SaleInstallmentStatus {
   PAID
   OVERDUE
   PARTIALLY_PAID
+
   @@schema("erp")
 }
 
@@ -1299,6 +1305,7 @@ enum ReceivableStatus {
   ATRASADO
   CANCELADO
   PAGO_PARCIALMENTE
+
   @@schema("erp")
 }
 
@@ -1308,12 +1315,14 @@ enum TipoContaContabilPrisma {
   PATRIMONIO_LIQUIDO
   RECEITA
   DESPESA
+
   @@schema("erp")
 }
 
 enum TipoTransacaoPrisma {
   CREDITO
   DEBITO
+
   @@schema("erp")
 }
 
@@ -1322,6 +1331,7 @@ enum ContaCorrenteType {
   FORNECEDOR_METAL
   EMPRESTIMO
   CLIENTE
+
   @@schema("erp")
 }
 
@@ -1335,6 +1345,7 @@ enum StatusAnaliseQuimicaPrisma {
   FINALIZADO_RECUPERADO
   CANCELADO
   RESIDUO
+
   @@schema("erp")
 }
 
@@ -1343,6 +1354,7 @@ enum StatusRecuperacaoPrisma {
   EM_ANDAMENTO
   FINALIZADA
   CANCELADA
+
   @@schema("erp")
 }
 
@@ -1350,6 +1362,7 @@ enum PurchaseOrderStatus {
   PENDING
   RECEIVED
   CANCELED
+
   @@schema("erp")
 }
 
@@ -1360,6 +1373,7 @@ enum RecoveryOrderStatusPrisma {
   CANCELADA
   AGUARDANDO_RESULTADO
   AGUARDANDO_TEOR
+
   @@schema("erp")
 }
 
@@ -1367,6 +1381,7 @@ enum TipoMetal {
   AU
   AG
   RH
+
   @@schema("erp")
 }
 
@@ -1374,6 +1389,7 @@ enum PureMetalLotStatus {
   AVAILABLE
   USED
   PARTIALLY_USED
+
   @@schema("erp")
 }
 
@@ -1384,12 +1400,14 @@ enum ChemicalReactionStatusPrisma {
   PENDING_PURITY_ADJUSTMENT
   COMPLETED
   CANCELED
+
   @@schema("erp")
 }
 
 enum ReactionLeftoverType {
   BASKET
   DISTILLATE
+
   @@schema("erp")
 }
 
@@ -1398,6 +1416,7 @@ enum ContaMetalType {
   FORNECEDOR
   INTERNA
   EMPRESTIMO
+
   @@schema("erp")
 }
 
@@ -1409,12 +1428,14 @@ enum SaleStatus {
   CANCELADO
   SEPARADO
   PAGO_PARCIALMENTE
+
   @@schema("erp")
 }
 
 enum SaleAdjustmentCalcMethod {
   QUANTITY_BASED
   COST_BASED
+
   @@schema("erp")
 }
 
@@ -1423,6 +1444,7 @@ enum StockUnit {
   KILOGRAMS
   LITERS
   UNITS
+
   @@schema("erp")
 }
 
@@ -1432,6 +1454,7 @@ enum StockMovementType {
   SALE
   PURCHASE
   ADJUSTMENT
+
   @@schema("erp")
 }
 
@@ -1440,6 +1463,7 @@ enum MetalCreditStatus {
   PARTIALLY_PAID
   PAID
   CANCELED
+
   @@schema("erp")
 }
 
@@ -1447,6 +1471,7 @@ enum TaskStatus {
   TODO
   IN_PROGRESS
   DONE
+
   @@schema("erp")
 }
 
@@ -1455,5 +1480,6 @@ enum TaskPriority {
   MEDIUM
   HIGH
   URGENT
+
   @@schema("erp")
 }
