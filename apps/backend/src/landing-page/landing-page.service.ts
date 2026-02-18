@@ -9,25 +9,36 @@ export class LandingPageService {
   async findPublic() {
     return this.prisma.landingPage.findFirst({
       where: { name: 'default' },
-      include: { sections: { orderBy: { order: 'asc' } } }, // 👈 Crucial para o site carregar na ordem
-    });
-  }
-
-  async findOneByOrg(organizationId: string) {
-    return this.prisma.landingPage.findFirst({
-      where: { organizationId },
       include: { sections: { orderBy: { order: 'asc' } } },
     });
   }
 
+  // ✅ ADICIONE ESTE MÉTODO (O que estava faltando)
+  async findOneByOrg(organizationId: string) {
+    const lp = await this.prisma.landingPage.findFirst({
+      where: { organizationId },
+      include: { sections: { orderBy: { order: 'asc' } } },
+    });
+    if (!lp)
+      throw new NotFoundException(
+        'Landing Page não encontrada para esta organização',
+      );
+    return lp;
+  }
+
   async update(organizationId: string, dto: UpdateLandingPageDto) {
-    const lp = await this.prisma.landingPage.findFirst({ where: { organizationId } });
+    const lp = await this.prisma.landingPage.findFirst({
+      where: { organizationId },
+    });
     if (!lp) throw new NotFoundException('Landing Page não encontrada');
 
     return this.prisma.$transaction(async (tx) => {
       await tx.landingPage.update({
         where: { id: lp.id },
-        data: { logoText: dto.logoText, themePreference: 'dark' },
+        data: {
+          logoText: dto.logoText,
+          logoImageId: dto.logoImageId, // Persistindo o logo
+        },
       });
 
       if (dto.sections) {
@@ -37,7 +48,7 @@ export class LandingPageService {
             data: {
               landingPageId: lp.id,
               type: dto.sections[i].type,
-              order: i, // ✅ Usa o índice do array como ordem oficial
+              order: i,
               content: dto.sections[i].content as any,
             },
           });

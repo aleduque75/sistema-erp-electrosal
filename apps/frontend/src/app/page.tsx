@@ -2,19 +2,92 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import api from "@/lib/api";
-import { Loader2, Sparkles, CheckCircle2, ArrowRight } from "lucide-react";
+import {
+  Loader2,
+  ArrowRight,
+  CheckCircle2,
+  Sparkles,
+  Zap,
+  Mail,
+  Phone,
+  User,
+  MessageSquare,
+  Send,
+} from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+
+const titleContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1, delayChildren: 0.2 },
+  },
+};
+const titleWord = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.8, ease: [0.215, 0.61, 0.355, 1] },
+  },
+};
 
 export default function HomePage() {
   const [data, setData] = useState<any>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [activeDialogContent, setActiveDialogContent] = useState<any>(null);
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const getImageUrl = (path: any) => {
-    if (!path || path === "") return "/images/placeholder.png";
+    const DEFAULT =
+      "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?q=80&w=1470&auto=format&fit=crop";
+    if (!path || path === "" || path === "undefined") return DEFAULT;
     if (path.startsWith("http") || path.startsWith("/")) return path;
     return `http://localhost:3001/api/public-media/${path}`;
+  };
+
+  // ✅ MÁSCARA DE TELEFONE (11) 94177-9393
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let v = e.target.value.replace(/\D/g, "");
+    v = v.replace(/^(\={0,2})(\d)/g, "($1$2");
+    v = v.replace(/^(\(\d{2})(\d)/g, "$1) $2");
+    v = v.replace(/(\d{5})(\d)/, "$1-$2");
+    if (v.length > 15) v = v.substring(0, 15);
+    setPhone(v);
+  };
+
+  // ✅ ENVIO PARA O N8N
+  const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    const payload = {
+      nome: formData.get("nome"),
+      whatsapp: phone,
+      mensagem: formData.get("mensagem"),
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      // Substitua pela sua URL do n8n
+      await fetch("https://n8n.suavps.com/webhook/contato-lp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      alert("Enviado com sucesso! A Electrosal entrará em contato.");
+      setIsContactOpen(false);
+    } catch (error) {
+      alert("Erro ao conectar com o servidor. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -22,8 +95,7 @@ export default function HomePage() {
       .get(`/landing-page/public?t=${Date.now()}`, {
         headers: { skipAuth: true },
       })
-      .then((res) => setData(res.data))
-      .catch((err) => console.error("Erro ao carregar:", err));
+      .then((res) => setData(res.data));
   }, []);
 
   const nextSlide = useCallback(() => {
@@ -33,248 +105,310 @@ export default function HomePage() {
       setCurrentSlide((prev) => (prev === total - 1 ? 0 : prev + 1));
   }, [data]);
 
-  // ✅ AUTOPLAY CONTÍNUO (Sem pausa no hover)
   useEffect(() => {
     const hero = data?.sections?.find((s: any) => s.type === "hero-new");
-    const total = hero?.content?.slides?.length || 0;
-
-    if (total <= 1) return;
-
-    timerRef.current = setInterval(nextSlide, 6000);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    if (hero?.content?.slides?.length > 1) {
+      timerRef.current = setInterval(nextSlide, 7000);
+      return () => clearInterval(timerRef.current!);
+    }
   }, [data, nextSlide, currentSlide]);
 
   if (!data)
     return (
-      <div className="h-screen bg-[#020617] flex items-center justify-center text-blue-500">
-        <Loader2 className="animate-spin w-12 h-12" />
+      <div className="h-screen bg-zinc-950 flex flex-col items-center justify-center text-amber-500 font-black italic uppercase tracking-[0.5em]">
+        <Loader2 className="animate-spin mb-4" /> ELECTROSAL
       </div>
     );
 
   return (
-    <main className="dark bg-[#020617] min-h-screen text-slate-100 selection:bg-blue-500/30 font-sans">
+    <main className="bg-zinc-50 min-h-screen text-zinc-900 overflow-x-hidden selection:bg-amber-500 selection:text-white">
+      {/* DIALOG DE CONTATO */}
+      <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
+        <DialogContent className="max-w-[600px] w-[95vw] rounded-[3.5rem] border-none bg-zinc-950 p-12 md:p-16 shadow-2xl">
+          <header className="text-center space-y-4">
+            <div className="w-16 h-16 bg-amber-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-amber-600/20">
+              <Mail className="text-white w-8 h-8" />
+            </div>
+            <DialogTitle className="text-4xl md:text-5xl font-black italic uppercase text-white tracking-tighter leading-none">
+              SOLICITAR <span className="text-amber-500">CONSULTORIA</span>
+            </DialogTitle>
+          </header>
+
+          <form className="space-y-4 mt-10" onSubmit={handleContactSubmit}>
+            <div className="relative group">
+              <User className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-amber-500 w-5 h-5 transition-colors" />
+              <input
+                name="nome"
+                required
+                placeholder="SEU NOME COMPLETO"
+                className="w-full bg-zinc-900 border border-white/5 rounded-2xl py-5 pl-16 pr-6 text-white font-bold italic focus:border-amber-500/50 outline-none transition-all"
+              />
+            </div>
+            <div className="relative group">
+              <Phone className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-amber-500 w-5 h-5 transition-colors" />
+              <input
+                required
+                value={phone}
+                onChange={handlePhoneChange}
+                placeholder="(11) 99999-9999"
+                className="w-full bg-zinc-900 border border-white/5 rounded-2xl py-5 pl-16 pr-6 text-white font-bold italic focus:border-amber-500/50 outline-none transition-all"
+              />
+            </div>
+            <div className="relative group">
+              <MessageSquare className="absolute left-6 top-8 text-zinc-600 group-focus-within:text-amber-500 w-5 h-5 transition-colors" />
+              <textarea
+                name="mensagem"
+                required
+                rows={4}
+                placeholder="DESCREVA SUA NECESSIDADE..."
+                className="w-full bg-zinc-900 border border-white/5 rounded-3xl py-7 pl-16 pr-6 text-white font-bold italic focus:border-amber-500/50 outline-none transition-all resize-none"
+              />
+            </div>
+            <button
+              disabled={loading}
+              className="w-full bg-amber-600 hover:bg-white hover:text-amber-700 text-white py-6 rounded-2xl font-black italic uppercase text-xs tracking-[0.3em] transition-all flex items-center justify-center gap-4"
+            >
+              {loading ? "ENVIANDO..." : "ENVIAR SOLICITAÇÃO"}{" "}
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG DE DETALHES */}
+      <Dialog
+        open={!!activeDialogContent}
+        onOpenChange={(open) => !open && setActiveDialogContent(null)}
+      >
+        <DialogContent className="max-w-[1100px] w-[95vw] h-[90vh] flex flex-col rounded-[3.5rem] border-none bg-zinc-50 p-0 shadow-2xl overflow-hidden">
+          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-amber-600">
+            <div className="relative h-[350px] md:h-[500px] w-full">
+              <img
+                src={getImageUrl(activeDialogContent?.imageUrl)}
+                className="w-full h-full object-cover"
+                alt="Detail"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-950/20 to-transparent" />
+            </div>
+            <div className="p-8 md:p-20 space-y-12">
+              <header>
+                <div className="flex items-center gap-2 mb-4 italic text-amber-600 font-black tracking-widest text-[10px]">
+                  <Sparkles className="w-4 h-4" /> TECNOLOGIA ELECTROSAL
+                </div>
+                <DialogTitle className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter text-zinc-950 leading-[0.85]">
+                  {activeDialogContent?.title}
+                </DialogTitle>
+              </header>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-16 pb-12">
+                <div className="md:col-span-2 text-zinc-700 text-xl md:text-3xl leading-snug font-medium italic tracking-tight">
+                  {activeDialogContent?.modalContent
+                    ?.split("\n")
+                    .map((p: any, i: any) => (
+                      <p key={i} className="mb-8">
+                        {p}
+                      </p>
+                    )) || activeDialogContent?.description}
+                </div>
+                <aside className="sticky top-0 h-fit bg-zinc-900 p-12 rounded-[3.5rem] text-white shadow-2xl border border-amber-500/10">
+                  <h4 className="font-black italic uppercase text-amber-500 text-xs mb-10 tracking-widest text-center">
+                    Destaques
+                  </h4>
+                  <ul className="space-y-6">
+                    {[
+                      "Suporte 35 Anos",
+                      "Zinco de Alta Performance",
+                      "Processos Otimizados",
+                    ].map((i) => (
+                      <li
+                        key={i}
+                        className="flex items-center gap-4 text-sm font-bold italic"
+                      >
+                        <CheckCircle2 className="w-5 h-5 text-amber-500" /> {i}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => {
+                      setActiveDialogContent(null);
+                      setTimeout(() => setIsContactOpen(true), 300);
+                    }}
+                    className="w-full mt-10 bg-amber-600 py-6 rounded-2xl font-black italic uppercase text-[11px] tracking-widest"
+                  >
+                    FALAR COM EQUIPE
+                  </button>
+                </aside>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {data.sections?.map((section: any) => {
-        // --- 1. SEÇÃO: HERO CARROSSEL ---
         if (section.type === "hero-new") {
-          const slides = section.content?.slides || [];
-          const slide = slides[currentSlide];
+          const slide = section.content?.slides?.[currentSlide];
           return (
             <section
               key={section.id}
-              className="relative h-[85vh] md:h-screen w-full overflow-hidden border-b border-white/5"
+              className="relative h-screen w-full bg-zinc-950 overflow-hidden"
             >
-              {/* LOGOTIPO ABSOLUTO (Rola com a página) */}
-              <div className="absolute top-8 md:top-12 left-0 w-full z-[100] flex justify-center pointer-events-none px-6">
-                <motion.div
-                  initial={{ y: -50, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  className="pointer-events-auto"
-                >
-                  {data.logoImageId ? (
-                    <img
-                      src={getImageUrl(data.logoImageId)}
-                      className="h-10 md:h-18 w-auto drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
-                      alt="Logo"
-                    />
-                  ) : (
-                    <span className="text-xl font-black italic tracking-tighter text-white bg-slate-900/50 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md uppercase">
-                      {data.logoText || "ELECTROSAL"}
-                    </span>
-                  )}
-                </motion.div>
+              <div className="absolute top-10 w-full z-50 flex justify-center">
+                <div className="bg-zinc-900/60 backdrop-blur-xl px-10 py-5 rounded-full border border-white/10">
+                  <img
+                    src={getImageUrl(data.logoImageId)}
+                    className="h-10 md:h-16"
+                  />
+                </div>
               </div>
-
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentSlide}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 1.2 }}
                   className="absolute inset-0 flex items-center"
                 >
-                  <div className="absolute inset-0">
-                    <motion.img
-                      initial={{ scale: 1.15 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 6, ease: "linear" }}
-                      src={getImageUrl(slide?.imageUrl)}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-slate-950/80 to-slate-950" />
-                  </div>
-
-                  <div className="w-full px-6 md:px-12 lg:px-24 relative z-20 pt-24 text-center md:text-left">
-                    <div className="max-w-[1400px] mx-auto md:mx-0 space-y-4">
-                      <motion.h1
-                        initial={{ opacity: 0, x: -30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="text-4xl sm:text-7xl md:text-8xl lg:text-[9rem] font-black italic uppercase tracking-tighter leading-[0.85] text-white"
-                      >
-                        {slide?.title}
-                      </motion.h1>
-
-                      {slide?.subtitle && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.5 }}
-                          className="flex items-center justify-center md:justify-start gap-3 text-white/80 font-bold uppercase tracking-[0.4em] text-[10px] md:text-xs italic"
+                  <motion.img
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 10 }}
+                    src={getImageUrl(slide?.imageUrl)}
+                    className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent" />
+                  <div className="relative z-20 px-6 md:px-24">
+                    <motion.div
+                      variants={titleContainer}
+                      initial="hidden"
+                      animate="visible"
+                      className="flex flex-wrap gap-x-[0.3em] max-w-6xl"
+                    >
+                      {slide?.title?.split(" ").map((word: any, i: any) => (
+                        <motion.span
+                          key={i}
+                          variants={titleWord}
+                          className={cn(
+                            "text-6xl md:text-[8.5rem] font-black italic tracking-tighter leading-[0.8] uppercase",
+                            i === 1 ? "text-amber-500" : "text-white",
+                          )}
                         >
-                          <Sparkles className="w-4 h-4" />{" "}
-                          <span>{slide.subtitle}</span>
-                        </motion.div>
-                      )}
-
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 0.6 }}
-                        transition={{ delay: 0.7 }}
-                        className="text-base md:text-xl lg:text-2xl max-w-2xl font-light leading-relaxed pt-4 text-slate-300 mx-auto md:mx-0"
-                      >
-                        {slide?.description}
-                      </motion.p>
-                    </div>
+                          {word}
+                        </motion.span>
+                      ))}
+                    </motion.div>
+                    <button
+                      onClick={() => setActiveDialogContent(slide)}
+                      className="mt-12 bg-amber-600 text-white px-14 py-6 rounded-full font-black italic uppercase flex items-center gap-4"
+                    >
+                      CONSULTORIA <ArrowRight />
+                    </button>
                   </div>
                 </motion.div>
               </AnimatePresence>
-
-              {/* DASHES INDICADORES BRANCOS */}
-              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-40 flex items-end gap-4 md:gap-8">
-                {slides.map((_: any, idx: number) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentSlide(idx)}
-                    className="group flex flex-col items-center gap-2"
-                  >
-                    <span
-                      className={cn(
-                        "text-[10px] font-black italic",
-                        idx === currentSlide ? "text-white" : "text-white/20",
-                      )}
-                    >
-                      0{idx + 1}
-                    </span>
-                    <div
-                      className={cn(
-                        "h-[3px] rounded-full transition-all duration-700 relative overflow-hidden bg-white/10",
-                        idx === currentSlide
-                          ? "w-16 md:w-32"
-                          : "w-8 md:w-12 group-hover:w-16",
-                      )}
-                    >
-                      {idx === currentSlide && (
-                        <motion.div
-                          key={`timer-${currentSlide}`}
-                          initial={{ x: "-100%" }}
-                          animate={{ x: 0 }}
-                          transition={{ duration: 6, ease: "linear" }}
-                          className="absolute inset-0 bg-white/60"
-                        />
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
             </section>
           );
         }
 
-        // --- 2. SEÇÃO: PROCESSOS (2 cols no tablet / 3 cols no largo) ---
         if (section.type === "process-gallery") {
-          const processes = section.content?.processes || [];
           return (
             <section
               key={section.id}
-              className="py-24 md:py-32 bg-slate-950 relative overflow-hidden"
+              className="py-32 bg-zinc-100 px-6 md:px-24"
             >
-              <div className="w-full px-6 md:px-12 lg:px-24">
-                <div className="max-w-[1400px] mx-auto">
-                  <div className="mb-16 border-l-8 border-white/20 pl-6 md:pl-10 text-white">
-                    <h2 className="text-4xl md:text-7xl lg:text-9xl font-black uppercase italic tracking-tighter">
-                      {section.content?.title || "Processos"}
-                    </h2>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8 md:gap-12 lg:gap-16">
-                    {processes.map((item: any, i: number) => (
-                      <motion.div
-                        key={i}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        initial={{ opacity: 0, y: 40 }}
-                        viewport={{ once: true }}
-                        className="group"
-                      >
-                        <div className="relative aspect-[3/4] sm:aspect-[4/5] rounded-[2rem] md:rounded-[3.5rem] overflow-hidden border border-white/5 bg-slate-900 shadow-3xl mb-8">
-                          <img
-                            src={getImageUrl(item.imageUrl)}
-                            className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000"
-                            alt=""
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent opacity-60" />
-                          <div className="absolute bottom-6 left-6 right-6 p-6 rounded-[2rem] bg-slate-900/60 backdrop-blur-xl border border-white/10">
-                            <div className="text-white/40 font-black italic text-[10px] mb-1 uppercase tracking-widest">
-                              Fase 0{i + 1}
-                            </div>
-                            <h3 className="text-lg md:text-2xl font-black uppercase italic text-white tracking-tighter leading-none">
-                              {item.title}
-                            </h3>
-                          </div>
+              <div className="max-w-[1400px] mx-auto">
+                <h2 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter text-zinc-900 mb-20 border-l-[12px] border-amber-600 pl-8">
+                  WORKFLOW
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                  {section.content?.processes?.map((proc: any, i: any) => (
+                    <div
+                      key={i}
+                      className="group cursor-pointer"
+                      onClick={() => setActiveDialogContent(proc)}
+                    >
+                      <div className="aspect-[4/5] rounded-[3rem] overflow-hidden relative shadow-2xl bg-white border border-zinc-200">
+                        <img
+                          src={getImageUrl(proc.imageUrl)}
+                          className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-110 grayscale group-hover:grayscale-0"
+                        />
+                        <div className="absolute inset-0 bg-amber-600/30 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm">
+                          <span className="bg-zinc-900 text-amber-500 px-8 py-3 rounded-full font-black italic text-xs">
+                            DETALHES +
+                          </span>
                         </div>
-                        <p className="text-slate-500 font-medium px-4 text-sm md:text-base leading-relaxed">
-                          {item.description}
-                        </p>
-                      </motion.div>
-                    ))}
-                  </div>
+                      </div>
+                      <h3 className="mt-8 text-3xl font-black italic uppercase text-zinc-900 leading-none">
+                        {proc.title}
+                      </h3>
+                      <p className="mt-2 text-zinc-500 font-bold italic line-clamp-2">
+                        {proc.description}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </section>
           );
         }
 
-        // --- 3. SEÇÃO: DIFERENCIAIS / FEATURES ---
         if (section.type === "features") {
-          const items = section.content?.items || [];
           return (
-            <section key={section.id} className="py-24 bg-[#020617]">
-              <div className="w-full px-6 md:px-12 lg:px-24">
-                <div className="max-w-[1400px] mx-auto">
-                  {section.content?.title && (
-                    <div className="mb-16 border-l-8 border-blue-600/30 pl-6 md:pl-10 text-white">
-                      <h2 className="text-4xl md:text-7xl font-black uppercase italic tracking-tighter">
-                        {section.content.title}
-                      </h2>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
-                    {items.map((feat: any, i: number) => (
+            <section
+              key={section.id}
+              className="py-32 bg-zinc-950 px-6 md:px-24 relative overflow-hidden"
+            >
+              <div className="max-w-[1400px] mx-auto relative z-10">
+                <h2 className="text-5xl md:text-[8rem] font-black italic uppercase tracking-tighter text-white mb-24">
+                  SOLUÇÕES
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                  {section.content?.items?.map((feat: any, i: any) => {
+                    const IconComp = (LucideIcons as any)[feat.icon || "Zap"];
+                    return (
                       <motion.div
                         key={i}
                         whileHover={{ y: -10 }}
-                        className="p-8 md:p-12 rounded-[2.5rem] md:rounded-[4rem] border border-white/5 bg-slate-900/20 backdrop-blur-3xl group transition-all duration-500"
+                        onClick={() => setActiveDialogContent(feat)}
+                        className={cn(
+                          "group cursor-pointer p-12 rounded-[4rem] transition-all duration-500 border border-white/5 bg-zinc-900/40 backdrop-blur-sm hover:border-amber-500/30",
+                          i === 0 || i === 3
+                            ? "md:col-span-7"
+                            : "md:col-span-5",
+                        )}
                       >
-                        <div className="w-12 h-12 md:w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mb-8 shadow-2xl shadow-blue-600/30 group-hover:rotate-6 transition-transform">
-                          <CheckCircle2 className="w-6 h-6 md:w-8 h-8" />
+                        <div className="relative z-20 h-full flex flex-col justify-between">
+                          <div>
+                            <div className="w-16 h-16 bg-amber-600 text-white rounded-2xl flex items-center justify-center mb-10 shadow-xl group-hover:rotate-6 transition-transform">
+                              {IconComp ? (
+                                <IconComp className="w-8 h-8" />
+                              ) : (
+                                <Zap className="w-8 h-8" />
+                              )}
+                            </div>
+                            <h3 className="text-3xl md:text-5xl font-black italic uppercase text-white mb-4 tracking-tighter leading-none">
+                              {feat.title}
+                            </h3>
+                            <p className="text-zinc-400 font-bold text-lg leading-relaxed italic mb-10 line-clamp-3">
+                              {feat.description}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 text-amber-500 font-black italic text-[10px] tracking-[0.2em]">
+                            SAIBA MAIS{" "}
+                            <div className="p-2 bg-amber-600 text-white rounded-full">
+                              <ArrowRight className="w-4 h-4" />
+                            </div>
+                          </div>
                         </div>
-                        <h3 className="text-xl md:text-3xl font-black uppercase italic mb-4 tracking-tighter text-white">
-                          {feat.title}
-                        </h3>
-                        <p className="text-slate-400 text-sm md:text-lg leading-relaxed font-light">
-                          {feat.description}
-                        </p>
+                        <div className="absolute -bottom-10 -right-10 text-amber-500 opacity-0 group-hover:opacity-10 transition-all duration-700 rotate-[20deg] group-hover:rotate-[-10deg]">
+                          {IconComp && <IconComp size={300} strokeWidth={1} />}
+                        </div>
                       </motion.div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>
           );
         }
-
         return null;
       })}
     </main>

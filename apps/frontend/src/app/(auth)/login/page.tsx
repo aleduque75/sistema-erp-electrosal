@@ -88,7 +88,7 @@ export default function LoginPage() {
         localStorage.setItem("token", response.data.access_token);
         toast.success("Login realizado com sucesso!");
         // Redireciona para o editor de landing page
-        router.push("/admin/landing-page-editor");
+        router.push("/dashboard");
       }
     } catch (error: any) {
       console.error("Erro no login:", error);

@@ -31,4 +31,10 @@ export class LandingPageController {
     const organizationId = req.user?.organizationId || req.user?.orgId;
     return this.landingPageService.update(organizationId, updateDto);
   }
+
+  @Get('admin')
+  async findOne(@Req() req: any) {
+    const organizationId = req.user.organizationId;
+    return this.landingPageService.findOneByOrg(organizationId); // Agora o método existe
+  }
 }
