@@ -1,76 +1,101 @@
 import {
   Controller,
+  Get,
+  Param,
+  Res,
+  NotFoundException,
   Post,
   UseInterceptors,
   UploadedFile,
-  Get,
-  UseGuards,
-  Param,
-  Query,
-  Req,
+  BadRequestException,
   Delete,
+  HttpStatus,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Response, Request } from 'express';
+import { join } from 'path';
+import { existsSync } from 'fs';
 import { MediaService } from './media.service';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { MediaResponseDto } from './dtos/media.response.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { Public } from '../auth/decorators/public.decorator';
 
-@UseGuards(AuthGuard('jwt'))
 @Controller('media')
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
+  @Get('/')
+  async findAll() {
+    return this.mediaService.findAll();
+  }
+
   @Post('upload')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          return cb(null, `${randomName}${extname(file.originalname)}`);
-        },
-      }),
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
-    @UploadedFile() file: Express.Multer.File, 
-    @Req() req, 
-    @Query('recoveryOrderId') recoveryOrderId?: string, 
-    @Query('analiseQuimicaId') analiseQuimicaId?: string,
-    @Query('transacaoId') transacaoId?: string, // Adicionar transacaoId
-    @Query('chemicalReactionId') chemicalReactionId?: string,
-  ): Promise<MediaResponseDto> { // Adicionar MediaResponseDto
-    const organizationId = req.user?.orgId;
-    const newMedia = await this.mediaService.create(file, organizationId, recoveryOrderId, analiseQuimicaId, transacaoId, chemicalReactionId); // Passar chemicalReactionId
-    return MediaResponseDto.fromDomain(newMedia); // Usar o DTO
-  }
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Nenhum arquivo enviado.');
+    }
 
-  @Get('analise-quimica/:analiseQuimicaId')
-  async findMediaByAnaliseQuimicaId(@Req() req, @Param('analiseQuimicaId') analiseQuimicaId: string): Promise<MediaResponseDto[]> {
-    const organizationId = req.user?.orgId;
-    const media = await this.mediaService.findByAnaliseQuimicaId(analiseQuimicaId, organizationId);
-    return MediaResponseDto.fromDomainArray(media);
-  }
+    const organizationId =
+      (req.user as any)?.organizationId || (req.user as any)?.orgId;
 
-  @Get('recovery-order/:recoveryOrderId')
-  async findMediaByRecoveryOrderId(@Req() req, @Param('recoveryOrderId') recoveryOrderId: string): Promise<MediaResponseDto[]> {
-    const organizationId = req.user?.orgId;
-    const media = await this.mediaService.findByRecoveryOrderId(recoveryOrderId, organizationId);
-    return MediaResponseDto.fromDomainArray(media);
+    if (!organizationId) {
+      throw new BadRequestException(
+        'Usuário não autenticado ou ID da organização ausente.',
+      );
+    }
+    const media = await this.mediaService.create(file, organizationId);
+    return { message: 'Arquivo enviado com sucesso!', media };
   }
 
   @Delete(':id')
-  async removeMedia(@Param('id') id: string) {
-    return this.mediaService.remove(id);
+  async remove(@Param('id') id: string) {
+    await this.mediaService.remove(id);
+    return { statusCode: HttpStatus.NO_CONTENT, message: 'Mídia removida com sucesso.' };
   }
 
-  @Get()
-  findAll() {
-    return this.mediaService.findAll();
+  @Public()
+  @Get('public-media/:id')
+  async getMedia(@Param('id') id: string, @Res() res: Response) {
+    try {
+      // 1. Validação básica
+      if (!id || id === 'undefined' || id.includes('object')) {
+        return res.status(400).json({ message: 'ID de mídia inválido' });
+      }
+
+      // 2. Busca no Banco
+      const media = await this.mediaService.findOne(id);
+      if (!media) {
+        return res.status(404).json({ message: 'Mídia não encontrada no banco de dados' });
+      }
+
+      // 3. Extração do Filename (ajustado para padrão DDD/Prisma)
+      const filename = (media as any).props?.filename || (media as any).filename;
+      
+      if (!filename) {
+        return res.status(500).json({ message: 'Erro: Nome do arquivo não registrado na mídia' });
+      }
+
+      // 4. Caminho do arquivo (Garante que olha na raiz/uploads)
+      const filePath = join(process.cwd(), 'uploads', filename);
+
+      // 5. Verifica se o arquivo existe fisicamente
+      if (!existsSync(filePath)) {
+        console.error(`[ERRO 404] Arquivo não encontrado no disco: ${filePath}`);
+        return res.status(404).json({ message: 'Arquivo físico não encontrado na pasta uploads' });
+      }
+
+      // 6. Envia o arquivo
+      return res.sendFile(filePath);
+
+    } catch (error) {
+      console.error('[ERRO 500] Falha ao buscar mídia:', error.message);
+      return res.status(500).json({ 
+        message: 'Erro interno ao processar a imagem',
+        error: error.message 
+      });
+    }
   }
 }

@@ -13,8 +13,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog"; // Adicionado
-import { Input } from "@/components/ui/input"; // Adicionado, pois o input do modal de preset usa
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { hexToHsl, hslToHex } from "@/lib/colors";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -23,35 +23,36 @@ export default function AppearancePage() {
   const { theme, setTheme, updateLiveColors, setCustomTheme } = useTheme();
   const [config, setConfig] = useState<any>(null);
   const [themePresets, setThemePresets] = useState<any[]>([]);
-  const [isSavePresetModalOpen, setIsSavePresetModalOpen] = useState(false); // Novo estado
-  const [newPresetName, setNewPresetName] = useState(""); // Novo estado
-  const [isEditPresetModalOpen, setIsEditPresetModalOpen] = useState(false); // Novo estado
-  const [currentEditingPreset, setCurrentEditingPreset] = useState<any>(null); // Novo estado
-  const [editedPresetName, setEditedPresetName] = useState(""); // Novo estado // Novo estado
-
+  const [isSavePresetModalOpen, setIsSavePresetModalOpen] = useState(false);
+  const [newPresetName, setNewPresetName] = useState("");
+  const [isEditPresetModalOpen, setIsEditPresetModalOpen] = useState(false);
+  const [currentEditingPreset, setCurrentEditingPreset] = useState<any>(null);
+  const [editedPresetName, setEditedPresetName] = useState("");
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const { data: appearanceSettings } = await api.get(`/settings/appearance?t=${Date.now()}`);
-        // Garante que config sempre tenha a estrutura esperada, incluindo as novas cores da tabela
-        const initialConfig = appearanceSettings.customTheme || {
+        const { data: appearanceSettings } = await api.get(
+          `/settings/appearance?t=${Date.now()}`,
+        );
+
+        const initialConfig = appearanceSettings?.customTheme || {
           light: {
             colors: {
-              borderOpacity: '1',
-              tableHeaderBackground: '210 40% 96%',
-              tableHeaderForeground: '215 25% 27%',
-              tableRowHover: '210 40% 98%',
-              tableBorder: '214 32% 91%',
+              borderOpacity: "1",
+              tableHeaderBackground: "210 40% 96%",
+              tableHeaderForeground: "215 25% 27%",
+              tableRowHover: "210 40% 98%",
+              tableBorder: "214 32% 91%",
             },
           },
           dark: {
             colors: {
-              borderOpacity: '1',
-              tableHeaderBackground: '222 47% 15%',
-              tableHeaderForeground: '210 40% 98%',
-              tableRowHover: '222 47% 18%',
-              tableBorder: '217 33% 25%',
+              borderOpacity: "1",
+              tableHeaderBackground: "222 47% 15%",
+              tableHeaderForeground: "210 40% 98%",
+              tableRowHover: "222 47% 18%",
+              tableBorder: "217 33% 25%",
             },
           },
         };
@@ -59,20 +60,14 @@ export default function AppearancePage() {
 
         const { data: presets } = await api.get("/settings/themes");
         setThemePresets(presets);
-
-        // Initial color application is now handled by the [theme, config] effect
-        // config set -> triggers effect -> updateLiveColors
-
       } catch (e) {
-        console.error("Erro ao buscar configurações de aparência ou presets:", e);
-        toast.error("Erro ao carregar configurações de tema.");
+        console.error("Erro ao carregar:", e);
+        toast.error("Erro ao carregar configurações.");
       }
     };
     fetchSettings();
-  }, []); // ✅ FIX: Execute only once on mount. Changing theme should NOT refetch/overwrite config.
+  }, []);
 
-  // ✅ NEW EFFECT: Re-apply pending config colors when theme changes
-  // This ensures that if we switch modes while editing, we see the DRAFT colors, not the saved ones.
   useEffect(() => {
     if (config) {
       const currentMode = theme || "light";
@@ -81,7 +76,7 @@ export default function AppearancePage() {
         updateLiveColors(colors);
       }
     }
-  }, [theme, config]); // Re-run when theme or draft config changes
+  }, [theme, config, updateLiveColors]);
 
   const update = (mode: string, key: string, val: string) => {
     let final = val;
@@ -104,105 +99,69 @@ export default function AppearancePage() {
   };
 
   const applyPreset = (presetData: any) => {
-    if (!presetData || (!presetData.light && !presetData.dark)) {
-      toast.error("Formato do preset inválido.");
-      return;
-    }
-
+    if (!presetData) return;
     setConfig(presetData);
-
     const currentMode = theme || "light";
-    let colorsToApply = presetData[currentMode]?.colors;
-
-    // Se o preset não tem cores para o modo atual, tenta o outro modo e troca o tema
-    if (!colorsToApply) {
-      const otherMode = currentMode === 'light' ? 'dark' : 'light';
-      if (presetData[otherMode]?.colors) {
-        colorsToApply = presetData[otherMode].colors;
-        setTheme(otherMode); // Troca o modo visualmente e no estado
-        toast.info(`Tema alterado para ${otherMode === 'light' ? 'Claro' : 'Escuro'} para compatibilidade.`);
-      }
+    if (presetData[currentMode]?.colors) {
+      updateLiveColors(presetData[currentMode].colors);
     }
-
-    colorsToApply = colorsToApply || {};
-    updateLiveColors(colorsToApply);
-    setCustomTheme(presetData);
-
-    toast.success("Tema aplicado! Clique em 'SALVAR TUDO' para persistir.");
+    toast.success("Preset carregado! Salve para aplicar.");
   };
 
   const handleSavePreset = async () => {
-    if (!newPresetName) {
-      toast.error("Por favor, dê um nome ao seu novo tema.");
-      return;
-    }
+    if (!newPresetName) return;
     try {
       await api.post("/settings/themes", {
         name: newPresetName,
         presetData: config,
       });
-      toast.success("Tema salvo como preset!");
+      toast.success("Preset salvo!");
       setIsSavePresetModalOpen(false);
       setNewPresetName("");
-      // Recarregar presets
       const { data: presets } = await api.get("/settings/themes");
       setThemePresets(presets);
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao salvar o tema como preset.");
+      toast.error("Erro ao salvar preset.");
     }
-  };
-
-  const handleEditPreset = (preset: any) => {
-    setCurrentEditingPreset(preset);
-    setEditedPresetName(preset.name);
-    setIsEditPresetModalOpen(true);
   };
 
   const handleUpdatePreset = async () => {
-    if (!currentEditingPreset || !editedPresetName) {
-      toast.error("Nome do tema inválido.");
-      return;
-    }
+    if (!currentEditingPreset || !editedPresetName) return;
     try {
       await api.put(`/settings/themes/${currentEditingPreset.id}`, {
         name: editedPresetName,
-        presetData: currentEditingPreset.presetData, // Manter os dados do tema originais
+        presetData: config, // Salva o estado atual das cores no preset
       });
-      toast.success("Preset de tema atualizado!");
-      setIsEditPresetModalOpen(false);
-      // Recarregar presets
+      toast.success("Preset atualizado!");
+      setIsEditPresetModalOpen(true);
       const { data: presets } = await api.get("/settings/themes");
       setThemePresets(presets);
+      setIsEditPresetModalOpen(false);
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao atualizar o preset de tema.");
+      toast.error("Erro ao atualizar preset.");
     }
   };
 
   const handleDeletePreset = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este preset de tema?")) {
-      return;
-    }
+    if (!confirm("Excluir este preset?")) return;
     try {
       await api.delete(`/settings/themes/${id}`);
-      toast.success("Preset de tema excluído!");
-      // Recarregar presets
-      const { data: presets } = await api.get("/settings/themes");
-      setThemePresets(presets);
+      setThemePresets(themePresets.filter((p) => p.id !== id));
+      toast.success("Excluído!");
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Erro ao excluir o preset de tema.");
+      toast.error("Erro ao excluir.");
     }
   };
 
   if (!config)
     return (
       <div className="p-20 text-center animate-pulse font-black">
-        CARREGANDO ENGINE DE DESIGN...
+        CARREGANDO...
       </div>
     );
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
-      {/* Cabeçalho existente */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-card p-6 rounded-2xl border-2 border-card-border shadow-sm">
         <h1 className="text-3xl font-black italic tracking-tighter text-foreground">
           DESIGN & EXPERIÊNCIA
@@ -211,20 +170,22 @@ export default function AppearancePage() {
           size="lg"
           className="font-bold"
           onClick={() => {
-            // Salva as definições de cores da organização
-            const saveAppearance = api.put("/settings/appearance", { customTheme: config });
-            // Salva a preferência de modo (light/dark) do usuário atual para garantir consistência
+            // ✅ CORREÇÃO: Enviando themeName explicitamente para o backend salvar
+            const saveAppearance = api.put("/settings/appearance", {
+              customTheme: config,
+              themeName: theme, // Envia o modo atual (light/dark)
+            });
+
             const saveUserPref = api.put("/settings", { theme: theme });
 
             Promise.all([saveAppearance, saveUserPref])
               .then(() => {
-                toast.success("Identidade e Preferências Salvas!");
-                console.log("Config enviado:", config, "Tema:", theme);
                 setCustomTheme(config);
+                toast.success("Identidade e Preferências Salvas!");
               })
               .catch((err) => {
                 console.error("Erro ao salvar:", err);
-                toast.error("Erro ao salvar. Verifique se você está logado.");
+                toast.error("Erro ao salvar configurações.");
               });
           }}
         >
@@ -232,7 +193,6 @@ export default function AppearancePage() {
         </Button>
       </div>
 
-      {/* Nova Seção de Presets */}
       <Card className="card-custom shadow-sm">
         <CardHeader className="bg-muted/10 border-b py-3">
           <CardTitle className="text-xs font-black uppercase tracking-widest text-foreground">
@@ -242,23 +202,42 @@ export default function AppearancePage() {
         <CardContent className="space-y-4 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {themePresets.map((preset: any) => (
-              <div key={preset.id} className="rounded-md flex justify-between items-center bg-card text-foreground p-4 border border-card-border">
-                <span className="font-semibold text-foreground">{preset.name}</span>
+              <div
+                key={preset.id}
+                className="rounded-md flex justify-between items-center bg-card text-foreground p-4 border border-card-border"
+              >
+                <span className="font-semibold text-foreground">
+                  {preset.name}
+                </span>
                 <div className="flex flex-wrap gap-2 justify-end">
-                  <Button size="sm" onClick={() => applyPreset(preset.presetData)}>
+                  <Button
+                    size="sm"
+                    onClick={() => applyPreset(preset.presetData)}
+                  >
                     Aplicar
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleEditPreset(preset)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setCurrentEditingPreset(preset);
+                      setEditedPresetName(preset.name);
+                      setIsEditPresetModalOpen(true);
+                    }}
+                  >
                     Editar
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDeletePreset(preset.id)}>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleDeletePreset(preset.id)}
+                  >
                     Excluir
                   </Button>
                 </div>
               </div>
             ))}
           </div>
-          {/* Adicionar um botão para salvar o tema atual como novo preset */}
           <div className="flex justify-end">
             <Button size="sm" onClick={() => setIsSavePresetModalOpen(true)}>
               Salvar Tema Atual como Novo
@@ -267,42 +246,61 @@ export default function AppearancePage() {
         </CardContent>
       </Card>
 
-      {/* Modals para gerenciar presets */}
-      {/* Modal de Salvar Preset (já existe) */}
-      <Dialog open={isSavePresetModalOpen} onOpenChange={setIsSavePresetModalOpen}>
+      {/* Modals */}
+      <Dialog
+        open={isSavePresetModalOpen}
+        onOpenChange={setIsSavePresetModalOpen}
+      >
         <DialogContent className="bg-card text-foreground">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Salvar Tema como Preset</DialogTitle>
+            <DialogTitle>Salvar Preset</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <Label htmlFor="preset-name" className="text-foreground">Nome do Tema</Label>
-            <Input id="preset-name" value={newPresetName} onChange={(e) => setNewPresetName(e.target.value)} />
+            <Label>Nome do Tema</Label>
+            <Input
+              value={newPresetName}
+              onChange={(e) => setNewPresetName(e.target.value)}
+            />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSavePresetModalOpen(false)}>Cancelar</Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsSavePresetModalOpen(false)}
+            >
+              Cancelar
+            </Button>
             <Button onClick={handleSavePreset}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Editar Preset */}
-      <Dialog open={isEditPresetModalOpen} onOpenChange={setIsEditPresetModalOpen}>
+      <Dialog
+        open={isEditPresetModalOpen}
+        onOpenChange={setIsEditPresetModalOpen}
+      >
         <DialogContent className="bg-card text-foreground">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Editar Nome do Preset</DialogTitle>
+            <DialogTitle>Editar Nome</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <Label htmlFor="edit-preset-name" className="text-foreground">Nome do Tema</Label>
-            <Input id="edit-preset-name" value={editedPresetName} onChange={(e) => setEditedPresetName(e.target.value)} />
+            <Label>Nome do Tema</Label>
+            <Input
+              value={editedPresetName}
+              onChange={(e) => setEditedPresetName(e.target.value)}
+            />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditPresetModalOpen(false)}>Cancelar</Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditPresetModalOpen(false)}
+            >
+              Cancelar
+            </Button>
             <Button onClick={handleUpdatePreset}>Atualizar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Resto da página (abas de light/dark mode) */}
       <Tabs value={theme} onValueChange={(v: any) => setTheme(v)}>
         <TabsList className="w-full h-12 mb-8">
           <TabsTrigger value="light" className="flex-1 font-bold">
@@ -319,7 +317,6 @@ export default function AppearancePage() {
             value={m}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
           >
-            {/* 1. TEXTOS E INPUTS */}
             <Section title="Tipografia e Campos">
               <ColorRow
                 label="Texto Principal"
@@ -352,7 +349,6 @@ export default function AppearancePage() {
               />
             </Section>
 
-            {/* 2. MENU E SIDEBAR */}
             <Section title="Menu Lateral">
               <ColorRow
                 label="Fundo Menu"
@@ -412,7 +408,6 @@ export default function AppearancePage() {
               />
             </Section>
 
-            {/* 3. SISTEMA E ESTRUTURA */}
             <Section title="Estrutura de Cards">
               <ColorRow
                 label="Fundo Página"
@@ -457,13 +452,6 @@ export default function AppearancePage() {
                 v={config[m].colors.border}
                 onChange={update}
               />
-              <ColorRow
-                label="Borda Input"
-                m={m}
-                k="input"
-                v={config[m].colors.input}
-                onChange={update}
-              />
               <InputRow
                 label="Opacidade Borda Padrão"
                 m={m}
@@ -471,7 +459,8 @@ export default function AppearancePage() {
                 v={config[m].colors.borderOpacity}
                 onChange={update}
               />
-            </Section>            {/* 4. BOTÕES */}
+            </Section>
+
             <Section title="Botões">
               <ColorRow
                 label="Fundo Principal"
@@ -516,7 +505,6 @@ export default function AppearancePage() {
                 v={config[m].colors.cancelHover}
                 onChange={update}
               />
-              <hr className="my-2 opacity-20" />
               <InputRow
                 label="Raio dos Botões"
                 m={m}
@@ -526,24 +514,23 @@ export default function AppearancePage() {
               />
             </Section>
 
-            {/* 5. TABELAS */}
             <Section title="Tabelas">
               <ColorRow
-                label="Fundo Cabeçalho Tabela"
+                label="Fundo Cabeçalho"
                 m={m}
                 k="tableHeaderBackground"
                 v={config[m].colors.tableHeaderBackground}
                 onChange={update}
               />
               <ColorRow
-                label="Texto Cabeçalho Tabela"
+                label="Texto Cabeçalho"
                 m={m}
                 k="tableHeaderForeground"
                 v={config[m].colors.tableHeaderForeground}
                 onChange={update}
               />
               <ColorRow
-                label="Fundo Linha Hover"
+                label="Fundo Hover Linha"
                 m={m}
                 k="tableRowHover"
                 v={config[m].colors.tableRowHover}
@@ -577,7 +564,7 @@ function Section({ title, children }: any) {
   );
 }
 
-function ColorRow({ label, m, k, v, onChange }: any) {
+function ColorRow({ label, m, v, onChange, k }: any) {
   const hex = () => {
     try {
       const p = v.replace(/%/g, "").split(" ");
@@ -587,7 +574,7 @@ function ColorRow({ label, m, k, v, onChange }: any) {
     }
   };
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 p-1">
+    <div className="flex items-center justify-between gap-2 p-1">
       <span className="text-[11px] font-bold text-foreground">{label}</span>
       <input
         type="color"
@@ -601,7 +588,7 @@ function ColorRow({ label, m, k, v, onChange }: any) {
 
 function InputRow({ label, m, k, v, onChange }: any) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 p-1">
+    <div className="flex items-center justify-between gap-2 p-1">
       <span className="text-[11px] font-bold text-foreground">{label}</span>
       <input
         type="text"

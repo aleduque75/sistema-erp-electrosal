@@ -37,14 +37,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = !!user;
 
   const loadUser = async () => {
-    // Evita múltiplas tentativas simultâneas
     if (hasAttemptedLoad) {
       setIsPageLoading(false);
       return;
     }
 
     setIsPageLoading(true);
-    const token = localStorage.getItem('accessToken');
+    // ✅ Alinhado com a chave 'token' que estamos usando no login/api.ts
+    const token = localStorage.getItem('token');
 
     if (!token) {
       setUser(null);
@@ -54,19 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Adicionado timestamp para evitar cache do navegador na busca do usuário
       const response = await api.get(`/auth/me?t=${Date.now()}`);
       setUser(response.data);
     } catch (error: any) {
       console.warn('⚠️ Falha ao buscar o usuário:', error?.response?.status || error?.message);
 
-      // Se for 401, limpa o token mas NÃO redireciona
       if (error?.response?.status === 401) {
-        localStorage.removeItem('accessToken');
+        localStorage.removeItem('token');
         setUser(null);
-      } else {
-        // Para outros erros, mantém o estado atual
-        console.error('Erro inesperado ao carregar usuário:', error);
       }
     } finally {
       setIsPageLoading(false);
@@ -75,15 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Só carrega uma vez na montagem do componente
-    if (!hasAttemptedLoad) {
-      loadUser();
-    }
-  }, []); // Array vazio - executa apenas uma vez
+    loadUser();
+  }, []);
 
-  const login = (accessToken: string) => {
-    localStorage.setItem('accessToken', accessToken);
-    setHasAttemptedLoad(false); // Permite nova tentativa após login
+  const login = (token: string) => {
+    localStorage.setItem('token', token); // ✅ Salva como 'token'
+    setHasAttemptedLoad(false); 
     loadUser();
   };
 
@@ -93,11 +85,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    // ✅ 1. Limpa tudo
+    localStorage.removeItem('token');
     localStorage.removeItem('accessToken');
     setUser(null);
-    setHasAttemptedLoad(false);
-    // Redireciona apenas uma vez, sem reload
-    window.location.href = '/logout';
+    setHasAttemptedLoad(true); // Impede que o loadUser tente rodar de novo
+
+    // ✅ 2. REDIRECIONA PARA O LOGIN (Nunca para o logout, para evitar o loop)
+    // Se o usuário já estiver na página de logout, ele não fará nada.
+    if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+    }
   };
 
   return (

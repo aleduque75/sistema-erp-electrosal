@@ -1,34 +1,40 @@
-import { Controller, Get, Body, Patch, UseGuards } from '@nestjs/common';
+import { Controller, Get, Body, UseGuards, Patch, Req } from '@nestjs/common';
 import { LandingPageService } from './landing-page.service';
 import { UpdateLandingPageDto } from './dto/update-landing-page.dto';
-import { AuthGuard } from '@nestjs/passport';
-import { Public } from '../auth/decorators/public.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Public } from '../auth/public.decorator';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Landing Page')
 @Controller('landing-page')
 export class LandingPageController {
   constructor(private readonly landingPageService: LandingPageService) {}
 
   @Public()
-  @Get()
-  findOne() {
-    return this.landingPageService.findOne(true); // Sempre hidratado para o público
+  @Get('public')
+  async findPublic() {
+    return this.landingPageService.findPublic();
   }
 
-  @UseGuards(AuthGuard('jwt'))
   @Get('editor')
-  findOneForEditor() {
-    return this.landingPageService.findOne(false); // Não hidratado para o editor
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async findForEditor(@Req() req) {
+    const organizationId = req.user?.organizationId || req.user?.orgId;
+    return this.landingPageService.findOneByOrg(organizationId);
   }
 
-  @UseGuards(AuthGuard('jwt'))
   @Patch()
-  update(@Body() updateLandingPageDto: UpdateLandingPageDto) {
-    const { sections, logoText, logoImageId } = updateLandingPageDto; // Extrai os novos campos
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async update(@Req() req, @Body() updateDto: UpdateLandingPageDto) {
+    const organizationId = req.user?.organizationId || req.user?.orgId;
+    return this.landingPageService.update(organizationId, updateDto);
+  }
 
-    const sectionsToUpdate = sections.map(section => ({
-      ...section,
-      content: JSON.parse(JSON.stringify(section.content)),
-    }));
-    return this.landingPageService.update(sectionsToUpdate, logoText, logoImageId); // Passa os novos campos
+  @Get('admin')
+  async findOne(@Req() req: any) {
+    const organizationId = req.user.organizationId;
+    return this.landingPageService.findOneByOrg(organizationId); // Agora o método existe
   }
 }

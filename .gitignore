@@ -67,3 +67,4 @@ ofx/
 data/xml/
 
 .aider*
+apps/backend/backup_producao.sql

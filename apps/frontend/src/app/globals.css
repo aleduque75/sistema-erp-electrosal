@@ -66,13 +66,13 @@
     /* Adicionado */
 
     /* TABELAS */
-    --tableHeaderBackground: 210 40% 96%;
+    --table-header-background: 210 40% 96%;
     /* Cinza bem claro para cabeçalhos */
-    --tableHeaderForeground: 215 25% 27%;
+    --table-header-foreground: 215 25% 27%;
     /* Texto escuro para contraste */
-    --tableRowHover: 210 40% 98%;
+    --table-row-hover: 210 40% 98%;
     /* Um pouco mais escuro no hover */
-    --tableBorder: 214 32% 91%;
+    --table-border: 214 32% 91%;
     /* Mesma cor da borda do card */
 
     /* POPOVER (Dropdowns, Tooltips, etc.) */
@@ -145,13 +145,13 @@
     --badge-text: 0 0% 100%;
 
     /* TABELAS DARK */
-    --tableHeaderBackground: 222 47% 15%;
+    --table-header-background: 222 47% 15%;
     /* Um pouco mais claro que o card */
-    --tableHeaderForeground: 210 40% 98%;
+    --table-header-foreground: 210 40% 98%;
     /* Texto claro */
-    --tableRowHover: 222 47% 18%;
+    --table-row-hover: 222 47% 18%;
     /* Um pouco mais claro no hover */
-    --tableBorder: 217 33% 15%;
+    --table-border: 217 33% 15%;
     /* Mais escuro para não ofuscar no modo dark */
 
     /* POPOVER DARK */
@@ -192,7 +192,7 @@
   /* Estilos para Tabelas */
   .table {
     @apply w-full caption-bottom text-sm;
-    border: 1px solid hsl(var(--tableBorder));
+    border: 1px solid hsl(var(--table-border));
     border-radius: var(--card-radius);
     /* Usar o mesmo radius do card */
   }
@@ -210,18 +210,18 @@
   }
 
   .table-row {
-    border-bottom: 1px solid hsl(var(--tableBorder));
+    border-bottom: 1px solid hsl(var(--table-border));
   }
 
   /* Remove a borda padrão e aplica a cor da variável */
   .table-row:not([data-state=selected]):hover {
-    background-color: hsl(var(--tableRowHover));
+    background-color: hsl(var(--table-row-hover));
   }
 
   .table-head {
     @apply h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px];
-    background-color: hsl(var(--tableHeaderBackground));
-    color: hsl(var(--tableHeaderForeground));
+    background-color: hsl(var(--table-header-background));
+    color: hsl(var(--table-header-foreground));
   }
 
   .table-cell {

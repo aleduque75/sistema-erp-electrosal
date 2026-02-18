@@ -1,24 +1,24 @@
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class RegisterUserDto {
-  @IsEmail()
+  @IsEmail({}, { message: 'Por favor, insira um e-mail válido' })
   email: string;
 
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'A senha é obrigatória' })
   @IsString()
-  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @MinLength(6, { message: 'A senha deve ter pelo menos 6 caracteres' })
   password: string;
 
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'O nome é obrigatório' })
   @IsString()
   name: string;
 }
 
 export class LoginUserDto {
-  @IsEmail()
+  @IsEmail({}, { message: 'E-mail inválido' })
   email: string;
 
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'A senha não pode estar vazia' })
   @IsString()
   password: string;
 }

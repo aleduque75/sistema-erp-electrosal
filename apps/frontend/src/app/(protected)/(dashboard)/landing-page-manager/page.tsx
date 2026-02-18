@@ -1,355 +1,193 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import React, { useEffect, useState } from "react";
 import api from "@/lib/api";
-import {
-  LandingPageData,
-  HeroNewConfig,
-  FeaturesSectionConfig,
-  ProcessGalleryConfig,
-} from "@/config/landing-page";
+import { motion, AnimatePresence } from "framer-motion";
+import { Save, Loader2, ArrowUp, ArrowDown, Trash2 } from "lucide-react"; // ✅ Adicionado Trash2
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Trash2, Save, Loader2, Eye, ChevronUp, ChevronDown } from "lucide-react";
+import { MediaSelector } from "@/components/landing-page-editor/MediaSelector";
 import { HeroNewEditor } from "@/components/landing-page-editor/HeroNewEditor";
-import { FeaturesSectionEditor } from "@/components/landing-page-editor/FeaturesSectionEditor";
 import { ProcessGalleryEditor } from "@/components/landing-page-editor/ProcessGalleryEditor";
-import Link from "next/link";
-
-export const dynamic = 'force-dynamic';
+import { FeaturesSectionEditor } from "@/components/landing-page-editor/FeaturesSectionEditor";
 
 export default function LandingPageManagerPage() {
-  const [landingPageData, setLandingPageData] = useState<LandingPageData | null>(null);
-  const [loading, setIsPageLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [data, setData] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
 
-  // 1. Carregar dados do Banco
   useEffect(() => {
-    const fetchLandingPageData = async () => {
-      try {
-        const response = await api.get("/landing-page/editor");
-        setLandingPageData(response.data);
-      } catch (err) {
-        console.error("Erro ao carregar:", err);
-        toast.error("Erro ao carregar dados da página.");
-      } finally {
-        setIsPageLoading(false);
-      }
-    };
-    fetchLandingPageData();
+    api.get("/landing-page/editor").then((res) => {
+      const sortedSections = res.data.sections.sort(
+        (a: any, b: any) => a.order - b.order,
+      );
+      setData({ ...res.data, sections: sortedSections });
+    });
   }, []);
 
-  // 2. Adicionar Nova Seção com campos COMPLETOS e CORRETOS
-  const handleAddSection = (type: "hero-new" | "process-gallery" | "features") => {
-    if (!landingPageData) return;
-
-    const tempId = `temp-${Date.now()}`;
-    const newOrder = landingPageData.sections.length + 1;
-
-    let defaultContent: HeroNewConfig | ProcessGalleryConfig | FeaturesSectionConfig;
-
-    if (type === "hero-new") {
-      // ✅ TODOS os campos que HeroNew espera
-      defaultContent = {
-        type: "hero-new",
-        logoImage: "", // ID da imagem ou path local
-        title: "Electrosal",
-        subtitle: "Galvanoplastia de Excelência",
-        description: "Transformamos metais em obras-primas através de processos químicos de alta precisão.",
-        ctaButtonText: "Comece Agora",
-        ctaButtonLink: "/entrar",
-        secondaryButtonText: "Ver Nossos Processos",
-        secondaryButtonLink: "#galeria",
-        backgroundImage: "", // ID da imagem ou path local
-        stats: {
-          years: "20+",
-          pieces: "10k+",
-          satisfaction: "99%",
-        },
-      } as HeroNewConfig;
-    } else if (type === "process-gallery") {
-      // ✅ TODOS os campos que ProcessGallery espera
-      defaultContent = {
-        type: "process-gallery",
-        title: "Nossos Processos",
-        description: "Conheça a tecnologia e os processos que fazem da Electrosal referência em galvanoplastia",
-        ctaButtonText: "Entre em Contato",
-        ctaButtonLink: "/entrar",
-        processes: [
-          {
-            image: "", // ID da imagem ou path local
-            title: "Banho Químico de Precisão",
-            description: "Processos controlados com máxima precisão para garantir acabamentos perfeitos e duradouros.",
-            icon: "Zap", // Nome do ícone do lucide-react
-          },
-        ],
-      } as ProcessGalleryConfig;
-    } else {
-      // type === "features"
-      // ✅ TODOS os campos que Features espera
-      defaultContent = {
-        type: "features",
-        title: "Recursos Incríveis",
-        description: "Descubra tudo o que podemos fazer por você",
-        items: [
-          {
-            icon: "Zap", // Nome do ícone do lucide-react
-            title: "Rapidez",
-            description: "Processos ágeis e eficientes",
-          },
-        ],
-      } as FeaturesSectionConfig;
-    }
-
-    const newSection = {
-      id: tempId,
-      order: newOrder,
-      type: type,
-      content: defaultContent,
-    };
-
-    setLandingPageData({
-      ...landingPageData,
-      sections: [...landingPageData.sections, newSection]
-    });
-    toast.success(`Seção ${type} adicionada! Role para baixo para editar.`);
+  // ✅ NOVA FUNÇÃO: Remover a seção inteira
+  const removeSection = (index: number) => {
+    if (!confirm("Tem certeza que deseja excluir esta seção inteira do site?"))
+      return;
+    const newSections = data.sections.filter(
+      (_: any, i: number) => i !== index,
+    );
+    // Reordena para não deixar buracos no 'order'
+    const reordered = newSections.map((sec: any, i: number) => ({
+      ...sec,
+      order: i,
+    }));
+    setData({ ...data, sections: reordered });
   };
 
-  // 3. Salvar no Banco
+  const moveSection = (index: number, direction: "up" | "down") => {
+    const newSections = [...data.sections];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newSections.length) return;
+    [newSections[index], newSections[targetIndex]] = [
+      newSections[targetIndex],
+      newSections[index],
+    ];
+    const reordered = newSections.map((sec, i) => ({ ...sec, order: i }));
+    setData({ ...data, sections: reordered });
+  };
+
+  const updateSectionContent = (index: number, newContent: any) => {
+    const updatedSections = [...data.sections];
+    updatedSections[index].content = newContent;
+    setData({ ...data, sections: updatedSections });
+  };
+
   const handleSave = async () => {
-    if (!landingPageData) return;
-    setIsSaving(true);
+    setSaving(true);
     try {
-      const sectionsToSave = landingPageData.sections.map((section) => ({
-        order: section.order,
-        type: section.type,
-        content: section.content,
-        // Só inclui ID se não for temporário
-        ...(section.id && !section.id.startsWith('temp-') ? { id: section.id } : {})
-      }));
-
       await api.patch("/landing-page", {
-        sections: sectionsToSave,
-        logoText: landingPageData.logoText,
-        logoImageId: landingPageData.logoImageId,
+        sections: data.sections,
+        logoText: data.logoText,
+        logoImageId: data.logoImageId,
       });
-
-      toast.success("✅ Landing Page salva com sucesso!");
-
-      // Recarrega para pegar os IDs reais do banco
-      const response = await api.get("/landing-page/editor");
-      setLandingPageData(response.data);
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
-      toast.error("❌ Erro ao salvar alterações.");
+      alert("✅ Alterações salvas com sucesso!");
+    } catch (e) {
+      alert("❌ Erro ao salvar.");
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
-  // 4. Remover Seção
-  const handleRemoveSection = (index: number) => {
-    if (!landingPageData) return;
-    const updated = [...landingPageData.sections];
-    updated.splice(index, 1);
-    // Reordena as seções
-    const reordered = updated.map((s, i) => ({ ...s, order: i + 1 }));
-    setLandingPageData({ ...landingPageData, sections: reordered });
-    toast.info("Seção removida. Clique em 'Salvar' para confirmar.");
-  };
-
-  // 5. Atualizar conteúdo de uma seção
-  const handleSectionChange = (index: number, newConfig: any) => {
-    if (!landingPageData) return;
-    const updated = [...landingPageData.sections];
-    updated[index].content = newConfig;
-    setLandingPageData({ ...landingPageData, sections: updated });
-  };
-
-  // 6. Mover seção para cima
-  const handleMoveUp = (index: number) => {
-    if (!landingPageData || index === 0) return;
-    const updated = [...landingPageData.sections];
-    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
-    // Atualiza os números de ordem
-    const reordered = updated.map((s, i) => ({ ...s, order: i + 1 }));
-    setLandingPageData({ ...landingPageData, sections: reordered });
-    toast.info("Seção movida para cima. Clique em 'Salvar' para confirmar.");
-  };
-
-  // 7. Mover seção para baixo
-  const handleMoveDown = (index: number) => {
-    if (!landingPageData || index === landingPageData.sections.length - 1) return;
-    const updated = [...landingPageData.sections];
-    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
-    // Atualiza os números de ordem
-    const reordered = updated.map((s, i) => ({ ...s, order: i + 1 }));
-    setLandingPageData({ ...landingPageData, sections: reordered });
-    toast.info("Seção movida para baixo. Clique em 'Salvar' para confirmar.");
-  };
-
-  if (loading) {
+  if (!data)
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-muted-foreground">Carregando Editor...</p>
-        </div>
+      <div className="h-screen bg-[#020617] flex items-center justify-center">
+        <Loader2 className="animate-spin text-blue-500 w-10 h-10" />
       </div>
     );
-  }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6">
-      {/* Header com Título e Ações */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-            Editor da Landing Page
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie as seções da sua página inicial
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/" target="_blank">
-            <Button variant="outline" size="lg">
-              <Eye className="mr-2 h-4 w-4" />
-              Visualizar
-            </Button>
-          </Link>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            size="lg"
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {isSaving ? (
-              <Loader2 className="animate-spin mr-2 h-4 w-4" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            Salvar Alterações
-          </Button>
+    <div className="dark bg-[#020617] min-h-screen text-slate-100 p-8 pb-40">
+      <div className="max-w-6xl mx-auto space-y-10">
+        {/* IDENTIDADE VISUAL */}
+        <section className="bg-slate-900 border border-white/10 p-8 rounded-[3rem] flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl backdrop-blur-xl">
+          <div className="space-y-2 text-center md:text-left">
+            <h2 className="text-blue-500 font-black uppercase italic tracking-[0.3em] text-xs">
+              Identidade Visual
+            </h2>
+            <p className="text-slate-400 text-sm">Logotipo central superior.</p>
+          </div>
+          <div className="flex items-center gap-6 bg-slate-950 p-5 rounded-[2rem] border border-white/5">
+            <MediaSelector
+              value={data.logoImageId}
+              onChange={(url) => setData({ ...data, logoImageId: url })}
+            />
+          </div>
+        </section>
+
+        {/* LISTAGEM DE MÓDULOS */}
+        <div className="space-y-8">
+          <AnimatePresence mode="popLayout">
+            {data.sections.map((section: any, idx: number) => (
+              <motion.div
+                key={section.id || idx}
+                layout
+                className="bg-slate-900/40 border border-white/10 p-8 rounded-[3.5rem] flex flex-col md:flex-row gap-8 relative group"
+              >
+                {/* Controles Laterais */}
+                <div className="flex md:flex-col gap-2 bg-slate-950 p-2 rounded-2xl h-fit border border-white/5 self-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => moveSection(idx, "up")}
+                    disabled={idx === 0}
+                  >
+                    <ArrowUp size={18} />
+                  </Button>
+                  <span className="flex items-center justify-center font-black italic text-blue-500 text-xs">
+                    0{idx + 1}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => moveSection(idx, "down")}
+                    disabled={idx === data.sections.length - 1}
+                  >
+                    <ArrowDown size={18} />
+                  </Button>
+
+                  {/* ✅ BOTÃO PARA EXCLUIR A SEÇÃO INTEIRA */}
+                  <div className="h-[1px] bg-white/10 my-1" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeSection(idx)}
+                    className="text-red-500 hover:bg-red-500/20"
+                  >
+                    <Trash2 size={18} />
+                  </Button>
+                </div>
+
+                <div className="flex-1">
+                  <h3 className="text-[10px] font-black uppercase text-blue-400 italic mb-6 tracking-widest">
+                    Módulo: {section.type}
+                  </h3>
+                  {section.type === "hero-new" && (
+                    <HeroNewEditor
+                      config={section.content}
+                      onChange={(c: any) => updateSectionContent(idx, c)}
+                    />
+                  )}
+                  {section.type === "process-gallery" && (
+                    <ProcessGalleryEditor
+                      config={section.content}
+                      onChange={(c: any) => updateSectionContent(idx, c)}
+                    />
+                  )}
+                  {section.type === "features" && (
+                    <FeaturesSectionEditor
+                      config={section.content}
+                      onChange={(c: any) => updateSectionContent(idx, c)}
+                    />
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Toolbar de Ações - Adicionar Seções */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-dashed border-2 border-blue-300 dark:border-blue-700">
-        <CardHeader>
-          <CardTitle className="text-lg">Adicionar Nova Seção</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-3 flex-wrap">
-          <Button
-            variant="default"
-            onClick={() => handleAddSection("hero-new")}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Hero Principal
-          </Button>
-          <Button
-            variant="default"
-            onClick={() => handleAddSection("process-gallery")}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Galeria de Processos
-          </Button>
-          <Button
-            variant="default"
-            onClick={() => handleAddSection("features")}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Seção de Features
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Lista de Seções Ativas */}
-      {landingPageData?.sections.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-2">
-          <p className="text-muted-foreground text-lg">
-            Nenhuma seção adicionada ainda. Clique nos botões acima para começar!
-          </p>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {landingPageData?.sections.map((section, index) => (
-            <Card
-              key={section.id || index}
-              className="border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-shadow"
-            >
-              <CardHeader className="flex flex-row items-center justify-between py-4 bg-slate-50/50 dark:bg-slate-900/50">
-                <div className="flex items-center gap-3">
-                  <div className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
-                    {index + 1}
-                  </div>
-                  <CardTitle className="text-base font-mono uppercase text-slate-700 dark:text-slate-300">
-                    {section.type === "hero-new" && "🎨 Hero Principal"}
-                    {section.type === "process-gallery" && "🖼️ Galeria de Processos"}
-                    {section.type === "features" && "⚡ Features"}
-                  </CardTitle>
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* Botões de Reordenação */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleMoveUp(index)}
-                    disabled={index === 0}
-                    className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950 disabled:opacity-30"
-                    title="Mover para cima"
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleMoveDown(index)}
-                    disabled={index === landingPageData.sections.length - 1}
-                    className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950 disabled:opacity-30"
-                    title="Mover para baixo"
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveSection(index)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                    title="Remover seção"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6">
-                {section.type === "hero-new" && (
-                  <HeroNewEditor
-                    config={section.content as HeroNewConfig}
-                    onChange={(c) => handleSectionChange(index, c)}
-                  />
-                )}
-                {section.type === "process-gallery" && (
-                  <ProcessGalleryEditor
-                    config={section.content as ProcessGalleryConfig}
-                    onChange={(c) => handleSectionChange(index, c)}
-                  />
-                )}
-                {section.type === "features" && (
-                  <FeaturesSectionEditor
-                    config={section.content as FeaturesSectionConfig}
-                    onChange={(c) => handleSectionChange(index, c)}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <motion.div
+        initial={{ y: 100 }}
+        animate={{ y: 0 }}
+        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100]"
+      >
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-blue-600 hover:bg-blue-700 h-16 px-16 rounded-full font-black italic shadow-[0_0_50px_rgba(37,99,235,0.4)]"
+        >
+          {saving ? (
+            <Loader2 className="animate-spin mr-2" />
+          ) : (
+            <Save className="mr-2" />
+          )}{" "}
+          SALVAR CONFIGURAÇÕES
+        </Button>
+      </motion.div>
     </div>
   );
 }

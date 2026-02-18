@@ -29,10 +29,18 @@ export function Sidebar() {
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   useEffect(() => {
-    api.get("/menu").then((res) => setItems(res.data.menuItems || []));
+    // ✅ O segredo está no .catch no final
+    api
+      .get("/menu")
+      .then((res) => setItems(res.data.menuItems || []))
+      .catch((err) => {
+        console.error("Erro no menu (provável 401):", err);
+        setItems([]); // Se der erro, o menu fica vazio mas o SITE NÃO SOME
+      });
   }, []);
 
   const renderItems = (menu: any[]) => {
+    if (!Array.isArray(menu)) return null;
     return menu.map((item) => {
       const Icon = IconMap[item.icon] || MoreHorizontal;
       const active =
@@ -45,7 +53,9 @@ export function Sidebar() {
           <div
             className={cn(
               "flex items-center transition-all duration-200 rounded-[8px]",
-              active ? "bg-sidebar-selected text-sidebar-selected-foreground" : "bg-transparent text-sidebar-foreground hover:bg-sidebar-hover"
+              active
+                ? "bg-sidebar-selected text-sidebar-selected-foreground"
+                : "bg-transparent text-sidebar-foreground hover:bg-sidebar-hover",
             )}
           >
             <Link
@@ -64,14 +74,11 @@ export function Sidebar() {
                   <span className="text-sm font-medium flex-1 truncate">
                     {item.title}
                   </span>
-                  {item.badge && (
-                    <span className="badge-custom ml-auto">{item.badge}</span>
-                  )}
                   {item.subItems?.length > 0 && (
                     <ChevronDown
                       className={cn(
                         "size-4 transition-transform",
-                        isOpen && "rotate-180"
+                        isOpen && "rotate-180",
                       )}
                     />
                   )}
@@ -80,9 +87,7 @@ export function Sidebar() {
             </Link>
           </div>
           {isOpen && item.subItems && (isExpanded || isHovered) && (
-            <ul
-              className="mt-1 ml-6 border-l border-sidebar-border space-y-1"
-            >
+            <ul className="mt-1 ml-6 border-l border-sidebar-border space-y-1">
               {renderItems(item.subItems)}
             </ul>
           )}
@@ -96,61 +101,31 @@ export function Sidebar() {
       onMouseEnter={() => isDesktop && !isExpanded && setIsHovered(true)}
       onMouseLeave={() => isDesktop && !isExpanded && setIsHovered(false)}
       className={cn(
-        "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-sidebar border-sidebar-border transform transition-transform duration-300 ease-in-out",
+        "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-sidebar border-sidebar-border transition-transform duration-300",
         isMobileOpen ? "translate-x-0" : "-translate-x-full",
-        "md:translate-x-0"
+        "md:translate-x-0",
       )}
-      style={{
-        width: sidebarWidth + "px",
-      }}
+      style={{ width: sidebarWidth + "px" }}
     >
-      <div
-        className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border shrink-0"
-      >
+      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center">
-          <Image src="/images/logo.png" alt="Logo" width={32} height={32} />
+          <Image
+            src="/images/logo.png"
+            alt="Logo"
+            width={32}
+            height={32}
+            style={{ width: "auto", height: "auto" }}
+          />
           {(isExpanded || isHovered) && (
-            <span
-              className="ml-3 font-black text-lg truncate text-sidebar-foreground"
-            >
+            <span className="ml-3 font-black text-lg text-sidebar-foreground tracking-tighter">
               ELECTROSAL
             </span>
           )}
         </div>
-        <button
-          onClick={toggleMobileSidebar}
-          className={cn("p-2 rounded-md md:hidden", {
-            "hidden": !isMobileOpen,
-          })}
-        >
-          <X className="h-6 w-6" />
-          <span className="sr-only">Fechar menu</span>
-        </button>
       </div>
-
       <ScrollArea className="flex-1 py-4">
         <ul>{renderItems(items)}</ul>
       </ScrollArea>
-
-      <div
-        className="p-4 border-t border-sidebar-border"
-      >
-        <button
-          onClick={toggleTheme}
-          className="flex items-center justify-center w-full p-2 rounded-lg hover:bg-muted transition-colors"
-        >
-          {theme === "dark" ? (
-            <Sun className="text-yellow-500" />
-          ) : (
-            <Moon className="text-slate-500" />
-          )}
-          {(isExpanded || isHovered) && (
-            <span className="ml-3 text-sm font-bold">
-              {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
-            </span>
-          )}
-        </button>
-      </div>
     </aside>
   );
 }

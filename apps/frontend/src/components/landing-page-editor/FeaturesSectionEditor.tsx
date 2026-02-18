@@ -1,131 +1,143 @@
-// apps/frontend/src/components/landing-page-editor/FeaturesSectionEditor.tsx
-
 "use client";
 
-import React from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FeaturesSectionConfig } from "@/config/landing-page";
-import { PlusCircle, MinusCircle } from "lucide-react";
-import { IconPicker } from "./IconPicker"; // Import IconPicker
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Trash2, FileText } from "lucide-react";
+import { IconPicker } from "@/components/landing-page-editor/IconPicker"; // Importe o seu componente aqui
+import * as LucideIcons from "lucide-react"; // Importe para renderizar o ícone selecionado
 
-const featureItemSchema = z.object({
-  icon: z.string().min(1, "Ícone é obrigatório"),
-  title: z.string().min(1, "Título do item é obrigatório"),
-  description: z.string().min(1, "Descrição do item é obrigatória"),
-});
+export function FeaturesSectionEditor({ config, onChange }: any) {
+  const items = Array.isArray(config?.items) ? config.items : [];
 
-const featuresSectionSchema = z.object({
-  title: z.string().min(1, "Título é obrigatório"),
-  description: z.string().min(1, "Descrição é obrigatória"),
-  items: z.array(featureItemSchema).min(1, "Pelo menos um item é obrigatório"),
-});
-
-interface FeaturesSectionEditorProps {
-  config: FeaturesSectionConfig;
-  onChange: (newConfig: FeaturesSectionConfig) => void;
-}
-
-export const FeaturesSectionEditor: React.FC<FeaturesSectionEditorProps> = ({
-  config,
-  onChange,
-}) => {
-  const form = useForm<FeaturesSectionConfig>({
-    resolver: zodResolver(featuresSectionSchema),
-    defaultValues: config,
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
-
-  // Watch for changes and call onChange
-  React.useEffect(() => {
-    const subscription = form.watch((value) => {
-      onChange(value as FeaturesSectionConfig);
-    });
-    return () => subscription.unsubscribe();
-  }, [form, onChange]);
+  const updateItem = (idx: number, field: string, value: any) => {
+    const newItems = [...items];
+    newItems[idx] = { ...newItems[idx], [field]: value };
+    onChange({ ...config, items: newItems });
+  };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="features-title">Título</Label>
-        <Input id="features-title" {...form.register("title")} />
-        {form.formState.errors.title && (
-          <p className="text-red-500 text-sm">
-            {form.formState.errors.title.message}
-          </p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="features-description">Descrição</Label>
-        <Textarea id="features-description" {...form.register("description")} />
-        {form.formState.errors.description && (
-          <p className="text-red-500 text-sm">
-            {form.formState.errors.description.message}
-          </p>
-        )}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center border-b border-white/10 pb-4">
+        <h3 className="text-sm font-black text-green-400 uppercase italic">
+          Diferenciais e Serviços
+        </h3>
+        <Button
+          onClick={() =>
+            onChange({
+              ...config,
+              items: [
+                ...items,
+                {
+                  title: "Novo Serviço",
+                  description: "Resumo",
+                  ctaText: "Saiba Mais",
+                  icon: "CheckCircle2",
+                },
+              ],
+            })
+          }
+          className="bg-green-600 font-bold rounded-full"
+        >
+          <Plus className="w-4 h-4 mr-1" /> ADICIONAR SERVIÇO
+        </Button>
       </div>
 
-      <h3 className="text-lg font-semibold mt-6">Itens da Seção</h3>
-      {fields.map((item, index) => (
-        <div key={item.id} className="border p-4 rounded-md space-y-2 relative">
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            onClick={() => remove(index)}
-            className="absolute top-2 right-2"
-          >
-            <MinusCircle className="h-4 w-4 mr-2" /> Remover Item
-          </Button>
-          <div>
-            <Label htmlFor={`items.${index}.icon`}>Ícone (Nome do Lucide Icon)</Label>
-            <IconPicker
-              value={form.watch(`items.${index}.icon`) || ""}
-              onChange={(iconName) => form.setValue(`items.${index}.icon`, iconName)}
-            />
-            {form.formState.errors.items?.[index]?.icon && (
-              <p className="text-red-500 text-sm">
-                {form.formState.errors.items[index]?.icon?.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor={`items.${index}.title`}>Título do Item</Label>
-            <Input id={`items.${index}.title`} {...form.register(`items.${index}.title`)} />
-            {form.formState.errors.items?.[index]?.title && (
-              <p className="text-red-500 text-sm">
-                {form.formState.errors.items[index]?.title?.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor={`items.${index}.description`}>Descrição do Item</Label>
-            <Textarea id={`items.${index}.description`} {...form.register(`items.${index}.description`)} />
-            {form.formState.errors.items?.[index]?.description && (
-              <p className="text-red-500 text-sm">
-                {form.formState.errors.items[index]?.description?.message}
-              </p>
-            )}
-          </div>
-        </div>
-      ))}
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => append({ icon: "", title: "", description: "" })}
-        className="w-full"
-      >
-        <PlusCircle className="h-4 w-4 mr-2" /> Adicionar Item
-      </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {items.map((item: any, idx: number) => {
+          // Renderiza o ícone atual para o preview no editor
+          const SelectedIcon = (LucideIcons as any)[
+            item.icon || "CheckCircle2"
+          ];
+
+          return (
+            <div
+              key={idx}
+              className="p-6 bg-slate-950/60 border border-white/10 rounded-[2rem] relative group shadow-xl"
+            >
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute -top-2 -right-2 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-all z-50"
+                onClick={() =>
+                  onChange({
+                    ...config,
+                    items: items.filter((_: any, i: number) => i !== idx),
+                  })
+                }
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  {/* ICON PICKER INTEGRADO AQUI */}
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold opacity-40 uppercase italic">
+                      Ícone
+                    </Label>
+                    <IconPicker
+                      value={item.icon || "CheckCircle2"}
+                      onChange={(newIcon) => updateItem(idx, "icon", newIcon)}
+                    />
+                  </div>
+
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-[10px] font-bold opacity-40 uppercase italic">
+                      Título do Serviço
+                    </Label>
+                    <Input
+                      className="bg-slate-900 border-white/10 font-bold"
+                      value={item.title}
+                      onChange={(e) => updateItem(idx, "title", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold opacity-40 uppercase italic">
+                    Resumo (Home)
+                  </Label>
+                  <Input
+                    className="bg-slate-900 border-white/10"
+                    value={item.description}
+                    onChange={(e) =>
+                      updateItem(idx, "description", e.target.value)
+                    }
+                  />
+                </div>
+
+                {/* Campos do Modal (Dialog) */}
+                <div className="pt-4 border-t border-white/5 space-y-4">
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <FileText className="w-3 h-3" />
+                    <span className="text-[9px] font-black uppercase italic tracking-widest">
+                      Página de Detalhes
+                    </span>
+                  </div>
+
+                  <Input
+                    className="bg-slate-900 border-white/10 text-xs"
+                    placeholder="Texto do Botão"
+                    value={item.ctaText}
+                    onChange={(e) => updateItem(idx, "ctaText", e.target.value)}
+                  />
+
+                  <Textarea
+                    className="bg-slate-900 border-white/10 min-h-[80px] text-xs"
+                    placeholder="Conteúdo detalhado da assessoria..."
+                    value={item.modalContent}
+                    onChange={(e) =>
+                      updateItem(idx, "modalContent", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
-};
+}

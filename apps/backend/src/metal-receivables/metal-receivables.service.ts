@@ -24,7 +24,7 @@ export class MetalReceivablesService {
         sale: {
           select: { orderNumber: true },
         },
-        pessoa: {
+        pessoas: {
           select: { name: true },
         },
       },
