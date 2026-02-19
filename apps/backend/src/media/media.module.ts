@@ -3,15 +3,14 @@ import { MediaService } from './media.service';
 import { MediaController } from './media.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MulterModule } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 import * as path from 'path';
-import { PrismaMediaRepository } from './repositories/prisma-media.repository';
 import * as fs from 'fs';
-// Removed: import { ServeStaticModule } from '@nestjs/serve-static'; // Removed ServeStaticModule import
-import { PublicMediaController } from './public-media.controller'; // Import PublicMediaController
+import { PrismaMediaRepository } from './repositories/prisma-media.repository';
 
 const mediaPath = path.join(process.cwd(), 'uploads');
 
-// Garante que o diretório de uploads exista
+// Garante que o diretório de uploads exista na VPS
 if (!fs.existsSync(mediaPath)) {
   fs.mkdirSync(mediaPath, { recursive: true });
 }
@@ -20,9 +19,16 @@ if (!fs.existsSync(mediaPath)) {
   imports: [
     PrismaModule,
     MulterModule.register({
-      dest: mediaPath, // Diretório onde os arquivos serão salvos
+      storage: diskStorage({
+        destination: mediaPath,
+        filename: (req, file, cb) => {
+          // Gera um nome único mantendo a extensão original (ex: .png, .jpg)
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = path.extname(file.originalname);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
     }),
-    // Removed: ServeStaticModule.forRoot // Removed ServeStaticModule configuration
   ],
   providers: [
     MediaService,
@@ -31,7 +37,7 @@ if (!fs.existsSync(mediaPath)) {
       useClass: PrismaMediaRepository,
     },
   ],
-  controllers: [MediaController, PublicMediaController], // Add PublicMediaController here
-  exports: [MediaService, 'IMediaRepository'], // Exportar se outros módulos precisarem acessar o MediaService
+  controllers: [MediaController],
+  exports: [MediaService, 'IMediaRepository'],
 })
 export class MediaModule {}
