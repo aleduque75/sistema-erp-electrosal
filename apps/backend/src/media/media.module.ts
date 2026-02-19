@@ -8,11 +8,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { PrismaMediaRepository } from './repositories/prisma-media.repository';
 
-const mediaPath = path.join(process.cwd(), 'uploads');
+const destinationPath = path.join(process.cwd(), 'uploads');
 
 // Garante que o diretório de uploads exista na VPS
-if (!fs.existsSync(mediaPath)) {
-  fs.mkdirSync(mediaPath, { recursive: true });
+if (!fs.existsSync(destinationPath)) {
+  fs.mkdirSync(destinationPath, { recursive: true });
 }
 
 @Module({
@@ -20,7 +20,7 @@ if (!fs.existsSync(mediaPath)) {
     PrismaModule,
     MulterModule.register({
       storage: diskStorage({
-        destination: mediaPath,
+        destination: destinationPath,
         filename: (req, file, cb) => {
           // Gera um nome único mantendo a extensão original (ex: .png, .jpg)
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
