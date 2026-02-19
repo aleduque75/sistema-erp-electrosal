@@ -19,7 +19,7 @@ async function bootstrap() {
   // AJUSTE AQUI: O prefixo agora bate com o que o MediaService salva (/uploads)
   // Como temos um prefixo global 'api', o link final será: https://dev-api.electrosal.com.br/api/uploads/...
   app.useStaticAssets(uploadsPath, {
-    prefix: '/api/uploads/',
+    prefix: '/uploads/', // Alterado para '/uploads/'
     index: false,
   });
 

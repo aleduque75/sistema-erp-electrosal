@@ -18,7 +18,7 @@ export class MediaService {
     const baseUrl = process.env.APP_URL || process.env.API_URL || 'https://dev-api.electrosal.com.br';
 
     // O path já vem do banco como '/uploads/arquivo.jpg'
-    // Como o main.ts serve em '/api/uploads/', precisamos garantir essa estrutura
+    // Como o main.ts serve em '/uploads/', precisamos garantir essa estrutura prefixada com /api
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
     return `${baseUrl}/api${cleanPath}`;
