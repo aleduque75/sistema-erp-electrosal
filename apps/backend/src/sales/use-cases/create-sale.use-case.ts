@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, Logger, ConflictExc
 import { CreateSaleDto, ConfirmSaleDto } from '../dtos/sales.dto';
 import { ConfirmSaleUseCase } from './confirm-sale.use-case';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma, TipoMetal, SaleInstallmentStatus, StockMovementType } from '@prisma/client';
+import { Prisma, TipoMetal, SaleInstallmentStatus,  } from '@prisma/client';
 import { SettingsService } from '../../settings/settings.service';
 import { ProductMapper } from '../../products/mappers/product.mapper';
 import { QuotationsService } from '../../quotations/quotations.service';
@@ -269,7 +269,7 @@ export class CreateSaleUseCase {
           productId: saleItem.productId,
           inventoryLotId: saleItemLot.inventoryLotId,
           quantity: -saleItemLot.quantity,
-          type: 'SALE' as StockMovementType,
+          type: 'OUT' as any,
           sourceDocument: `Venda #${sale.orderNumber}`,
           createdAt: sale.createdAt,
         });

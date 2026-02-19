@@ -1,28 +1,27 @@
 module.exports = {
   apps: [
     {
-      name: "erp-backend",
-      cwd: "/root/apps/sistema-erp-electrosal/apps/backend",
+      name: "erp-backend-homolog",
+      cwd: "/root/apps/homolog-erp/apps/backend",
       script: "dist/main.js",
       env: {
         NODE_ENV: "production",
-        PORT: 3001,
-        DATABASE_URL: "postgresql://admin:Electrosal123@172.17.0.1:5432/erp_electrosal?schema=erp",
+        PORT: 4001,
+        DATABASE_URL: "postgresql://admin:Electrosal123@172.17.0.1:5432/erp_homolog?schema=erp",
         JWT_SECRET: "segredoelectrosal2026",
-        // Adicionado localhost para testes internos se necessário
-        ALLOWED_ORIGINS: "https://erp.electrosal.com.br,https://electrosal.com.br,https://api.electrosal.com.br,http://localhost:3000"
+        ALLOWED_ORIGINS: "https://dev-erp.electrosal.com.br,https://dev-api.electrosal.com.br,http://localhost:4000"
+        
       }
     },
-{
-      name: "erp-frontend",
-      // Removemos o cwd para testar o caminho direto
-      script: "/root/apps/sistema-erp-electrosal/apps/frontend/.next/standalone/apps/frontend/server.js", 
+    {
+      name: "erp-frontend-homolog",
+      cwd: "/root/apps/homolog-erp/apps/frontend",
+      script: "npm",
+      args: "start -- -p 4000",
       env: {
         NODE_ENV: "production",
-        PORT: 3000,
-        HOSTNAME: "0.0.0.0",
-        // Importante: garante que o frontend saiba onde está o backend
-        NEXT_PUBLIC_API_URL: "https://api.electrosal.com.br" 
+        PORT: 4000,
+        NEXT_PUBLIC_API_URL: "https://dev-api.electrosal.com.br"
       }
     }
   ]

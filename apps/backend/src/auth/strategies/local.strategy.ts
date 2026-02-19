@@ -14,18 +14,31 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(email: string, password: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email.toLowerCase().trim());
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanPassword = password.trim();
+
+    console.log(`[Auth] Tentativa de login: ${cleanEmail}`);
+
+    const user = await this.usersService.findByEmail(cleanEmail);
+
     if (!user) {
+      console.log(`[Auth] Usuário não encontrado: ${cleanEmail}`);
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const isPasswordValid = await bcrypt.compare(password.trim(), user.password);
+    if (!user.active) {
+      console.log(`[Auth] Usuário inativo: ${cleanEmail}`);
+      throw new UnauthorizedException('Usuário desativado');
+    }
+
+    const isPasswordValid = await bcrypt.compare(cleanPassword, user.password);
+    
     if (!isPasswordValid) {
+      console.log(`[Auth] Senha incorreta para: ${cleanEmail}`);
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
     const { password: _, ...result } = user;
-    console.log('[Auth Debug] LocalStrategy user object:', result);
     return result;
   }
 }

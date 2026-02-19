@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { WhatsappRoutinesApiClient, WhatsappRoutine } from '../../../../lib/api/WhatsappRoutinesApiClient';
+// import { WhatsappRoutinesApiClient }';
 
 // Definição local do DTO para uso no frontend
 type CreateWhatsappRoutineDto = {
