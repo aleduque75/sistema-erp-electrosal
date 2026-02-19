@@ -8,7 +8,21 @@ import * as fs from 'fs';
 
 @Injectable()
 export class MediaService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
+
+  /**
+   * Ajuste Crítico: Monta a URL incluindo o prefixo global '/api' 
+   * que foi definido no main.ts (app.setGlobalPrefix('api'))
+   */
+  private getFullUrl(path: string): string {
+    const baseUrl = process.env.APP_URL || process.env.API_URL || 'https://dev-api.electrosal.com.br';
+
+    // O path já vem do banco como '/uploads/arquivo.jpg'
+    // Como o main.ts serve em '/api/uploads/', precisamos garantir essa estrutura
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+
+    return `${baseUrl}/api${cleanPath}`;
+  }
 
   async create(
     file: Express.Multer.File,
@@ -33,7 +47,7 @@ export class MediaService {
       filename: file.filename,
       mimetype: file.mimetype,
       size: file.size,
-      path: `/uploads/${file.filename}`,
+      path: `/uploads/${file.filename}`, // Salvo assim no banco
       width,
       height,
       organizationId,
@@ -51,7 +65,35 @@ export class MediaService {
       data: MediaMapper.toPersistence(newMedia),
     });
 
-    return MediaMapper.toDomain(prismaMedia);
+    const domainMedia = MediaMapper.toDomain(prismaMedia);
+
+    // Injeta a URL correta: https://dev-api.electrosal.com.br/api/uploads/...
+    (domainMedia as any).url = this.getFullUrl(prismaMedia.path);
+
+    return domainMedia;
+  }
+
+  async findAll(): Promise<Media[]> {
+    const prismaMedia = await this.prisma.media.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return prismaMedia.map(item => {
+      const domain = MediaMapper.toDomain(item);
+      (domain as any).url = this.getFullUrl(item.path);
+      return domain;
+    });
+  }
+
+  async findOne(id: string): Promise<Media> {
+    const prismaMedia = await this.prisma.media.findUnique({ where: { id } });
+    if (!prismaMedia)
+      throw new NotFoundException(`Mídia ${id} não encontrada.`);
+
+    const domain = MediaMapper.toDomain(prismaMedia);
+    (domain as any).url = this.getFullUrl(prismaMedia.path);
+
+    return domain;
   }
 
   async associateMediaWithTransacao(
@@ -67,38 +109,19 @@ export class MediaService {
     });
   }
 
-  async findAll(): Promise<Media[]> {
-    const prismaMedia = await this.prisma.media.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-    return prismaMedia.map(MediaMapper.toDomain);
-  }
-
-  async findOne(id: string): Promise<Media> {
-    const prismaMedia = await this.prisma.media.findUnique({ where: { id } });
-    if (!prismaMedia)
-      throw new NotFoundException(`Mídia ${id} não encontrada.`);
-    return MediaMapper.toDomain(prismaMedia);
-  }
-
   async remove(id: string): Promise<Media> {
-    const mediaToDelete = await this.findOne(id); // Obtém a mídia antes de deletar do banco
-
-    // Extrai o nome do arquivo
+    const mediaToDelete = await this.findOne(id);
     const filename = (mediaToDelete as any).props?.filename || (mediaToDelete as any).filename;
 
     if (filename) {
       const filePath = join(process.cwd(), 'uploads', filename);
       try {
-        if (fs.existsSync(filePath)) { // Verifica se o arquivo existe antes de tentar deletar
+        if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
           console.log(`Arquivo ${filename} removido do sistema de arquivos.`);
-        } else {
-          console.warn(`Tentativa de remover arquivo inexistente: ${filePath}`);
         }
       } catch (error) {
         console.error(`Erro ao remover o arquivo físico ${filename}:`, error.message);
-        // Dependendo da criticidade, pode-se lançar uma exceção ou apenas logar o erro
       }
     }
 
