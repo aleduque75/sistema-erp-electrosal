@@ -75,6 +75,7 @@ model User {
   organizationId String
   pessoaId       String?       @unique
   role           Role          @default(USER)
+  active         Boolean  @default(true)
   organization   Organization  @relation(fields: [organizationId], references: [id])
   pessoa         Pessoa?       @relation("UserToPessoa", fields: [pessoaId], references: [id])
   settings       UserSettings?
