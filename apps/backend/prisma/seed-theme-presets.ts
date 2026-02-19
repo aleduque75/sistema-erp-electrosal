@@ -1,6 +1,6 @@
 // apps/backend/prisma/seed-theme-presets.ts
 
-import { PrismaClient } from '../src/generated/client'; // Importar do local gerado
+import { PrismaClient } from '@prisma/client';
 import { config } from 'dotenv';
 
 config();
