@@ -3,6 +3,11 @@
 # Faz o script parar se qualquer comando der erro
 set -e
 
+# Garante que pnpm e pm2 estejam no PATH
+export PATH=$PATH:/usr/bin:/usr/local/bin
+export PNPM_HOME="/root/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PATH"
+
 echo "🚀 Iniciando Deploy Seguro - Electrosal"
 echo ""
 echo "⚠️  ATENÇÃO: Banco compartilhado com n8n!"
@@ -68,10 +73,10 @@ if [ -d "apps/frontend" ]; then
 
   # ⚠️ IMPORTANTE: Next.js standalone NÃO copia public e static automaticamente!
   echo "📁 Copiando pasta public para standalone..."
-  cp -r public .next/standalone/apps/frontend/public
+  cp -r public .next/standalone/apps/frontend/public || true
 
   echo "📁 Copiando pasta static para standalone..."
-  cp -r .next/static .next/standalone/apps/frontend/.next/static
+  cp -r .next/static .next/standalone/apps/frontend/.next/static || true
 
   cd ../..
 else
@@ -86,7 +91,8 @@ fi
 echo "🔄 Recarregando processos no PM2..."
 
 # Usa 'reload' em vez de 'restart' para zero-downtime
-pm2 reload ecosystem.config.js --env production --update-env
+# Note: o nome do arquivo foi corrigido para carregar ambos os apps
+pm2 reload ecosystem.config.js --update-env
 
 # Salva configuração
 pm2 save
