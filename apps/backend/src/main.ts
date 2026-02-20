@@ -12,7 +12,7 @@ async function bootstrap() {
 
   // Configuração para servir arquivos estáticos
   // Mapeia a pasta física 'uploads' para a URL /api/media/public-media/
-  const uploadsPath = join(process.cwd(), 'uploads');
+  const uploadsPath = '/root/apps/homolog-erp/apps/backend/uploads';
   app.useStaticAssets(uploadsPath, {
     prefix: '/api/media/public-media/',
     index: false,

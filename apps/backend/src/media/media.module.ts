@@ -4,11 +4,10 @@ import { MediaController } from './media.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import * as path from 'path';
 import * as fs from 'fs';
 import { PrismaMediaRepository } from './repositories/prisma-media.repository';
 
-const destinationPath = path.join(process.cwd(), 'uploads');
+const destinationPath = '/root/apps/homolog-erp/apps/backend/uploads';
 
 // Garante que o diretório de uploads exista na VPS
 if (!fs.existsSync(destinationPath)) {
