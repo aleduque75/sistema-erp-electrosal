@@ -62,11 +62,11 @@ export function MediaLibrary({ onSelect, selectedMediaId }: any) {
 
     // 2. Fallback: Extrair filename do objeto de domínio ou props
     const filename = media?.props?.filename || media?.filename;
-    
+
     if (filename) {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://dev-api.electrosal.com.br";
-      // O prefixo deve ser exatamente o que definimos no main.ts
-      return `${baseUrl}/api/media/public-media/${filename}`;
+      // Usamos caminhos relativos para aproveitar os rewrites do next.config.mjs
+      // Isso funciona tanto em dev quanto em prod
+      return `/api/public-media/${filename}`;
     }
 
     return "https://placehold.co/400?text=Sem+Arquivo";
@@ -77,7 +77,7 @@ export function MediaLibrary({ onSelect, selectedMediaId }: any) {
     setIsUploading(true);
     const formData = new FormData();
     formData.append("file", file);
-    
+
     try {
       await api.post("/media/upload", formData);
       toast.success("Mídia enviada com sucesso!");
@@ -119,139 +119,147 @@ export function MediaLibrary({ onSelect, selectedMediaId }: any) {
   };
 
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="w-full">
-          {selectedMediaId ? "Alterar Imagem" : "Selecionar Mídia"}
+    <Dialog open= { isDialogOpen } onOpenChange = { setIsDialogOpen } >
+      <DialogTrigger asChild >
+      <Button variant="outline" className = "w-full" >
+        { selectedMediaId? "Alterar Imagem": "Selecionar Mídia" }
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col border-none shadow-2xl bg-white">
-        <DialogHeader className="border-b pb-4">
-          <DialogTitle className="text-2xl font-bold text-gray-800">
-            Biblioteca de Mídias
-          </DialogTitle>
-        </DialogHeader>
+        </DialogTrigger>
+        < DialogContent className = "sm:max-w-[900px] h-[85vh] flex flex-col border-none shadow-2xl bg-white" >
+          <DialogHeader className="border-b pb-4" >
+            <DialogTitle className="text-2xl font-bold text-gray-800" >
+              Biblioteca de Mídias
+                </DialogTitle>
+                </DialogHeader>
 
-        <div className="flex gap-4 flex-grow overflow-hidden p-4">
-          {/* Coluna de Upload */}
-          <Card className="w-1/3 p-6 flex flex-col gap-4 bg-slate-50/50 border-dashed border-2">
-            <div className="space-y-2">
-              <Label className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-                Novo Upload
-              </Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
-                <Input
+                < div className = "flex gap-4 flex-grow overflow-hidden p-4" >
+                  {/* Coluna de Upload */ }
+                  < Card className = "w-1/3 p-6 flex flex-col gap-4 bg-slate-50/50 border-dashed border-2" >
+                    <div className="space-y-2" >
+                      <Label className="text-sm font-bold text-gray-700 uppercase tracking-wider" >
+                        Novo Upload
+                          </Label>
+                          < div className = "border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors" >
+                            <Input
                   type="file"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                  className="cursor-pointer border-none shadow-none focus-visible:ring-0"
-                  accept="image/*"
-                />
-              </div>
-            </div>
+  onChange = {(e) => setFile(e.target.files?.[0] || null)
+}
+className = "cursor-pointer border-none shadow-none focus-visible:ring-0"
+accept = "image/*"
+  />
+  </div>
+  </div>
 
-            <Button
-              className="w-full shadow-md py-6 text-lg"
-              onClick={handleUpload}
-              disabled={!file || isUploading}
+  < Button
+className = "w-full shadow-md py-6 text-lg"
+onClick = { handleUpload }
+disabled = {!file || isUploading}
             >
-              {isUploading ? (
-                <Loader2 className="animate-spin h-5 w-5 mr-2" />
-              ) : (
-                <UploadCloud className="mr-2 h-5 w-5" />
+  {
+    isUploading?(
+                <Loader2 className = "animate-spin h-5 w-5 mr-2" />
+              ): (
+        <UploadCloud className = "mr-2 h-5 w-5" />
               )}
-              {isUploading ? "Enviando..." : "Enviar Agora"}
-            </Button>
-            
-            <div className="mt-auto p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <p className="text-[11px] text-blue-700 leading-relaxed">
-                <strong>Atenção:</strong> Se as imagens não aparecerem, limpe o cache do navegador (Ctrl+F5) após o upload.
-              </p>
-            </div>
-          </Card>
+{ isUploading ? "Enviando..." : "Enviar Agora" }
+</Button>
 
-          {/* Galeria */}
-          <ScrollArea className="flex-grow rounded-lg border bg-white shadow-inner">
-            {loading ? (
-              <div className="flex h-64 items-center justify-center">
-                <div className="text-center space-y-2">
-                  <Loader2 className="animate-spin h-10 w-10 text-blue-600 mx-auto" />
-                  <p className="text-sm text-gray-500 font-medium">Carregando galeria...</p>
-                </div>
-              </div>
+  < div className = "mt-auto p-4 bg-blue-50 rounded-lg border border-blue-100" >
+    <p className="text-[11px] text-blue-700 leading-relaxed" >
+      <strong>Atenção: </strong> Se as imagens não aparecerem, limpe o cache do navegador (Ctrl+F5) após o upload.
+        </p>
+        </div>
+        </Card>
+
+{/* Galeria */ }
+<ScrollArea className="flex-grow rounded-lg border bg-white shadow-inner" >
+{
+  loading?(
+              <div className = "flex h-64 items-center justify-center" >
+      <div className="text-center space-y-2">
+  <Loader2 className="animate-spin h-10 w-10 text-blue-600 mx-auto" />
+    <p className="text-sm text-gray-500 font-medium" > Carregando galeria...</p>
+      </div>
+      </div>
             ) : (
-              <div className="grid grid-cols-3 gap-4 p-4">
-                {mediaFiles.map((media, index) => {
-                  // O ID no seu padrão DDD/Prisma costuma vir dentro de _id.value ou id
-                  const mediaId = media?.id || media?._id?.value;
-                  const isSelected = localSelectedId === mediaId;
+  <div className= "grid grid-cols-3 gap-4 p-4" >
+  {
+    mediaFiles.map((media, index) => {
+      // O ID no seu padrão DDD/Prisma costuma vir dentro de _id.value ou id
+      const mediaId = media?.id || media?._id?.value;
+      const isSelected = localSelectedId === mediaId;
 
-                  return (
-                    <div
-                      key={`${mediaId}-${index}`}
-                      onClick={() => mediaId && setLocalSelectedId(mediaId)}
-                      className={`group relative aspect-square rounded-xl overflow-hidden transition-all duration-200 border-2 ${
-                        isSelected
-                          ? "border-blue-600 ring-4 ring-blue-100 shadow-lg"
-                          : "border-gray-100 hover:border-blue-300 shadow-sm"
-                      } cursor-pointer`}
+      return (
+        <div
+                      key= {`${mediaId}-${index}`
+    }
+                      onClick = {() => mediaId && setLocalSelectedId(mediaId)}
+className = {`group relative aspect-square rounded-xl overflow-hidden transition-all duration-200 border-2 ${isSelected
+    ? "border-blue-600 ring-4 ring-blue-100 shadow-lg"
+    : "border-gray-100 hover:border-blue-300 shadow-sm"
+  } cursor-pointer`}
                     >
-                      {/* Botão Excluir */}
-                      <button
-                        onClick={(e) => handleDelete(mediaId, e)}
-                        className="absolute top-2 right-2 z-20 p-1.5 bg-white/90 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+  {/* Botão Excluir */ }
+  < button
+onClick = {(e) => handleDelete(mediaId, e)}
+className = "absolute top-2 right-2 z-20 p-1.5 bg-white/90 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+  >
+  <Trash2 className="h-4 w-4" />
+    </button>
 
-                      <Image
-                        src={getMediaUrl(media)}
-                        alt="media asset"
-                        fill
-                        unoptimized
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => {
-                          (e.target as any).src = "https://placehold.co/400?text=Erro+no+Link";
-                        }}
+    < Image
+src = { getMediaUrl(media) }
+alt = "media asset"
+fill
+unoptimized
+className = "object-cover transition-transform duration-300 group-hover:scale-105"
+onError = {(e) => {
+  (e.target as any).src = "https://placehold.co/400?text=Erro+no+Link";
+}}
                       />
 
-                      {isSelected && (
-                        <div className="absolute inset-0 bg-blue-600/10 flex items-center justify-center backdrop-blur-[1px] z-10">
-                          <CheckCircle2 className="text-blue-600 bg-white rounded-full h-10 w-10 shadow-xl" />
-                        </div>
-                      )}
+{
+  isSelected && (
+    <div className="absolute inset-0 bg-blue-600/10 flex items-center justify-center backdrop-blur-[1px] z-10" >
+      <CheckCircle2 className="text-blue-600 bg-white rounded-full h-10 w-10 shadow-xl" />
+        </div>
+                      )
+}
 
-                      <div className="absolute inset-x-0 bottom-0 bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                        <p className="text-[10px] text-white truncate text-center font-mono">
-                          {media?.props?.filename || media?.filename || "arquivo"}
-                        </p>
-                      </div>
-                    </div>
+<div className="absolute inset-x-0 bottom-0 bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10" >
+  <p className="text-[10px] text-white truncate text-center font-mono" >
+    { media?.props?.filename || media?.filename || "arquivo"}
+</p>
+  </div>
+  </div>
                   );
                 })}
-                
-                {mediaFiles.length === 0 && (
-                  <div className="col-span-3 py-20 text-center text-gray-400">
-                    Nenhuma mídia encontrada. Comece fazendo um upload.
-                  </div>
-                )}
-              </div>
-            )}
-          </ScrollArea>
-        </div>
 
-        <DialogFooter className="border-t p-4 bg-gray-50/50 rounded-b-2xl">
-          <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleConfirm} 
-            disabled={!localSelectedId}
-            className="px-8 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            Confirmar Seleção
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+{
+  mediaFiles.length === 0 && (
+    <div className="col-span-3 py-20 text-center text-gray-400" >
+      Nenhuma mídia encontrada.Comece fazendo um upload.
+                  </div>
+                )
+}
+</div>
+            )}
+</ScrollArea>
+  </div>
+
+  < DialogFooter className = "border-t p-4 bg-gray-50/50 rounded-b-2xl" >
+    <Button variant="ghost" onClick = {() => setIsDialogOpen(false)}>
+      Cancelar
+      </Button>
+      < Button
+onClick = { handleConfirm }
+disabled = {!localSelectedId}
+className = "px-8 bg-blue-600 hover:bg-blue-700 text-white"
+  >
+  Confirmar Seleção
+    </Button>
+    </DialogFooter>
+    </DialogContent>
     </Dialog>
   );
 }

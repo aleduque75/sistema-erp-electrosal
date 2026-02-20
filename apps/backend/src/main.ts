@@ -12,27 +12,33 @@ async function bootstrap() {
 
   // Configuração para servir arquivos estáticos
   // Mapeia a pasta física 'uploads' para a URL /api/media/public-media/
-  const uploadsPath = '/root/apps/homolog-erp/apps/backend/uploads';
+  const uploadsPath = path.join(process.cwd(), 'uploads');
+
+  // Garante que o diretório de uploads exista
+  if (!require('fs').existsSync(uploadsPath)) {
+    require('fs').mkdirSync(uploadsPath, { recursive: true });
+  }
+
   app.useStaticAssets(uploadsPath, {
     prefix: '/api/media/public-media/',
     index: false,
   });
 
   // Limites de tamanho para JSON e Uploads
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(require('express').json({ limit: '50mb' }));
+  app.use(require('express').urlencoded({ limit: '50mb', extended: true }));
 
-  // Configuração de CORS para VPS
+  // Configuração de CORS dinâmica
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:3000', 'http://localhost:4000'];
+
   app.enableCors({
-    origin: [
-      'https://dev-erp.electrosal.com.br',
-      'https://dev-api.electrosal.com.br',
-      'http://localhost:3000'
-    ],
+    origin: allowedOrigins,
     credentials: true,
   });
 
-  const PORT = process.env.PORT || 4001;
+  const PORT = process.env.PORT || 3001;
   await app.listen(PORT, '0.0.0.0');
 
   console.log('--------------------------------------------------');
