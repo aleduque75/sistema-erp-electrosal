@@ -9,9 +9,9 @@ import * as fs from 'fs';
 import { PrismaMediaRepository } from './repositories/prisma-media.repository';
 import { PublicMediaController } from './public-media.controller';
 
-const destinationPath = '/root/apps/homolog-erp/apps/backend/uploads';
+const destinationPath = path.join(process.cwd(), 'uploads');
 
-// Garante que o diretório de uploads exista na VPS
+// Garante que o diretório de uploads exista no ambiente atual
 if (!fs.existsSync(destinationPath)) {
   fs.mkdirSync(destinationPath, { recursive: true });
 }
