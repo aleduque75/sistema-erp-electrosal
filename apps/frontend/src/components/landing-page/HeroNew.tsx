@@ -13,7 +13,7 @@ export function HeroNew({ config }: any) {
 
     if (isUUID) {
       // ✅ IMPORTANTE: Se o arquivo na pasta 'uploads' tiver extensão, adicione .png aqui
-      return `http://localhost:3001/api/public-media/${path}`;
+      return `/api/public-media/${path}`;
     }
     return path;
   };
