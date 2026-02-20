@@ -66,7 +66,7 @@ export function MediaLibrary({ onSelect, selectedMediaId }: any) {
     if (filename) {
       // Usamos caminhos relativos para aproveitar os rewrites do next.config.mjs
       // Isso funciona tanto em dev quanto em prod
-      return `/api/public-media/${filename}`;
+      return `/api/media/public-media/${filename}`;
     }
 
     return "https://placehold.co/400?text=Sem+Arquivo";
@@ -195,8 +195,8 @@ disabled = {!file || isUploading}
     }
                       onClick = {() => mediaId && setLocalSelectedId(mediaId)}
 className = {`group relative aspect-square rounded-xl overflow-hidden transition-all duration-200 border-2 ${isSelected
-    ? "border-blue-600 ring-4 ring-blue-100 shadow-lg"
-    : "border-gray-100 hover:border-blue-300 shadow-sm"
+  ? "border-blue-600 ring-4 ring-blue-100 shadow-lg"
+  : "border-gray-100 hover:border-blue-300 shadow-sm"
   } cursor-pointer`}
                     >
   {/* Botão Excluir */ }

@@ -42,7 +42,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     // 4. Fallback para media pública (caso não use o decorador)
     if (
-      request.url.startsWith('/api/public-media/') ||
+      request.url.includes('/api/media/public-media/') ||
       request.url.includes('/api/landing-page/public')
     ) {
       return true;

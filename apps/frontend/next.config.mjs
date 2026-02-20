@@ -19,11 +19,11 @@ const nextConfig = {
       // Garante que o frontend ache as imagens usando o caminho que o Backend mapeou
       {
         source: '/public-media/:path*',
-        destination: `${apiUrl}/api/public-media/:path*`,
+        destination: `${apiUrl}/api/media/public-media/:path*`,
       },
       {
         source: '/uploads/:path*',
-        destination: `${apiUrl}/api/public-media/:path*`,
+        destination: `${apiUrl}/api/media/public-media/:path*`,
       },
     ];
   },

@@ -57,7 +57,7 @@ export function MediaLibrary({ onSelect, selectedMediaId }: any) {
     const mediaId = media?.id || media?._id?.value;
     if (mediaId) {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.electrosal.com.br";
-      return `${baseUrl}/api/public-media/${mediaId}`;
+      return `${baseUrl}/api/media/public-media/${mediaId}`;
     }
     return "";
   };

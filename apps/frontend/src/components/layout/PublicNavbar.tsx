@@ -47,7 +47,7 @@ export function PublicNavbar({ logoText, logoImage }: PublicNavbarProps) {
       // FIX: Check if it's a local path (starts with /images) or use API URL
       const imageSrc = logoImage.path?.startsWith('/images/')
         ? logoImage.path
-        : `/api/public-media/${logoImage.id}`;
+        : `/api/media/public-media/${logoImage.id}`;
 
       return (
         <div className="flex items-center gap-2">

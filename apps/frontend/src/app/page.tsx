@@ -56,7 +56,7 @@ export default function HomePage() {
 
     // Usa o host dinâmico do ambiente ou relativo se no navegador
     const baseUrl = typeof window !== "undefined" ? "" : (process.env.NEXT_PUBLIC_API_URL || "https://api.electrosal.com.br");
-    return `${baseUrl}/api/public-media/${path}`;
+    return `${baseUrl}/api/media/public-media/${path}`;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {

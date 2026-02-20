@@ -103,7 +103,7 @@ export default function LoginPage() {
   const getLogoUrl = (logoImageId: string | undefined) => {
     if (!logoImageId) return "";
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || API_BASE_URL;
-    return `${baseUrl}/api/public-media/${logoImageId}`;
+    return `${baseUrl}/api/media/public-media/${logoImageId}`;
   };
 
   if (checkingAuth) {
