@@ -20,7 +20,7 @@ async function bootstrap() {
   }
 
   app.useStaticAssets(uploadsPath, {
-    prefix: '/api/media/public-media/',
+    prefix: '/api/media/file/',
     index: false,
   });
 

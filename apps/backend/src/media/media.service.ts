@@ -11,11 +11,11 @@ export class MediaService {
   constructor(private prisma: PrismaService) { }
 
   /**
-   * Monta a URL pública: /api/public-media/:id
+   * Monta a URL pública: /api/media/public-media/:id
    */
   private getFullUrl(id: string): string {
-    const baseUrl = process.env.APP_URL || 'https://dev-api.electrosal.com.br';
-    return `${baseUrl}/api/public-media/${id}`;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    return `${baseUrl}/api/media/public-media/${id}`;
   }
 
   async create(

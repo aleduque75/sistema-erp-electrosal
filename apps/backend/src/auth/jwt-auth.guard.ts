@@ -31,17 +31,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       context.getClass(),
     ]);
 
-    // 3. Lógica para rotas públicas
-    if (isPublic) {
-      // Tenta validar o JWT se o header existir, mas não barra se falhar ou estiver ausente
-      if (request.headers['authorization']) {
-        return super.canActivate(context);
-      }
-      return true;
-    }
-
-    // 4. Fallback para media pública (caso não use o decorador)
+    // 3. Lógica para rotas públicas ou mídias
     if (
+      isPublic ||
       request.url.includes('/api/media/public-media/') ||
       request.url.includes('/api/landing-page/public')
     ) {

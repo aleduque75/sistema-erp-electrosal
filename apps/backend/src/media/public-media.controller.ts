@@ -11,9 +11,9 @@ import { createReadStream } from 'fs';
 import { join } from 'path';
 import { MediaService } from './media.service';
 
-@Controller('public-media') // New controller for public media
+@Controller('media/public-media') // Unificado com o prefixo do frontend
 export class PublicMediaController {
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(private readonly mediaService: MediaService) { }
 
   @Get(':id')
   async serveMedia(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
