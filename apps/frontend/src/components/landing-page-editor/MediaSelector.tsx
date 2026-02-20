@@ -21,7 +21,7 @@ export function MediaSelector({ value, onChange, label }: MediaSelectorProps) {
     if (id.startsWith("http") || id.startsWith("/")) return id;
     // Constrói URL completa usando NEXT_PUBLIC_API_URL para garantir preview correto
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.electrosal.com.br";
-    return `${baseUrl}/api/public-media/${id}`;
+    return `${baseUrl}/api/media/public-media/${id}`;
   };
 
   return (
