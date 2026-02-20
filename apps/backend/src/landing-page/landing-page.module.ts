@@ -2,12 +2,11 @@ import { Module } from '@nestjs/common';
 import { LandingPageService } from './landing-page.service';
 import { LandingPageController } from './landing-page.controller';
 import { PrismaModule } from '../prisma/prisma.module';
-import { CommonModule } from '../common/common.module';
 
 @Module({
-  imports: [PrismaModule, CommonModule],
-  providers: [LandingPageService],
+  imports: [PrismaModule],
   controllers: [LandingPageController],
-  exports: [LandingPageService], // Exportar se outros módulos precisarem
+  providers: [LandingPageService],
+  exports: [LandingPageService],
 })
-export class LandingPageModule {}
+export class LandingPageModule { }

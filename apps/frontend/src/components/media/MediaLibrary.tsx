@@ -50,9 +50,14 @@ export function MediaLibrary({ onSelect, selectedMediaId }: any) {
   };
 
   const getMediaUrl = (media: any) => {
-    const mediaId = media?._id?.value;
+    // Tenta usar a URL direta do backend primeiro
+    if (media?.url) return media.url;
+
+    // Fallback construindo a URL
+    const mediaId = media?.id || media?._id?.value;
     if (mediaId) {
-      return `http://localhost:3001/api/media/public-media/${mediaId}`;
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.electrosal.com.br";
+      return `${baseUrl}/api/public-media/${mediaId}`;
     }
     return "";
   };
@@ -154,20 +159,18 @@ export function MediaLibrary({ onSelect, selectedMediaId }: any) {
             ) : (
               <div className="grid grid-cols-3 gap-4 p-4">
                 {mediaFiles.map((media, index) => {
-                  const mediaId = media?._id?.value || null;
+                  const mediaId = media?.id || media?._id?.value || null;
                   const isSelected = localSelectedId === mediaId;
 
                   return (
                     <div
                       key={`${mediaId}-${index}`}
                       onClick={() => mediaId && setLocalSelectedId(mediaId)}
-                      className={`group relative aspect-square rounded-xl overflow-hidden transition-all duration-200 ${
-                        mediaId ? 'cursor-pointer' : 'cursor-not-allowed'
-                      } ${
-                        isSelected
+                      className={`group relative aspect-square rounded-xl overflow-hidden transition-all duration-200 ${mediaId ? 'cursor-pointer' : 'cursor-not-allowed'
+                        } ${isSelected
                           ? "border-blue-600 ring-4 ring-blue-100 shadow-lg"
                           : "border-gray-100 hover:border-blue-300 shadow-sm"
-                      }`}
+                        }`}
                     >
                       <button
                         onClick={(e) => handleDelete(mediaId!, e)}

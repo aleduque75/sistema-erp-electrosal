@@ -53,7 +53,10 @@ export default function HomePage() {
       "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?q=80&w=1470&auto=format&fit=crop";
     if (!path || path === "" || path === "undefined") return DEFAULT;
     if (path.startsWith("http") || path.startsWith("/")) return path;
-    return `http://localhost:3001/api/public-media/${path}`;
+
+    // Usa o host dinâmico do ambiente ou relativo se no navegador
+    const baseUrl = typeof window !== "undefined" ? "" : (process.env.NEXT_PUBLIC_API_URL || "https://api.electrosal.com.br");
+    return `${baseUrl}/api/public-media/${path}`;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,16 +78,25 @@ export default function HomePage() {
     const formData = new FormData(e.currentTarget);
     const nome = formData.get("nome") as string;
 
-    const payload = {
+    const data = {
       nome: nome,
+      name: nome,
       whatsapp: phone,
+      phone: phone,
+      number: phone,
       mensagem: formData.get("mensagem"),
       timestamp: new Date().toISOString(),
       origem: "Landing Page Electrosal",
     };
 
+    const payload = {
+      ...data,
+      body: data
+    };
+
     try {
-      await fetch("https://n8n.electrosal.com.br/webhook/contato-lp", {
+      const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL || "https://n8n.electrosal.com.br/webhook/contato-lp";
+      await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -108,7 +120,11 @@ export default function HomePage() {
         headers: { skipAuth: true },
       })
       .then((res) => setData(res.data))
-      .catch((err) => console.error("Erro ao carregar dados", err));
+      .catch((err) => {
+        console.error("Erro ao carregar dados", err);
+        // Define um estado padrão mínimo para evitar loop infinito de loading
+        setData({ sections: [], logoImageId: null });
+      });
   }, []);
 
   const nextSlide = useCallback(() => {
@@ -303,12 +319,19 @@ export default function HomePage() {
               className="relative h-screen w-full bg-zinc-950 overflow-hidden"
             >
               <div className="absolute top-10 w-full z-40 flex justify-center">
-                <div className="bg-zinc-900/60 backdrop-blur-xl px-10 py-5 rounded-full border border-white/10">
-                  <img
-                    src={getImageUrl(data.logoImageId)}
-                    className="h-10 md:h-16"
-                    alt="Logo"
-                  />
+                <div className="bg-zinc-900/60 backdrop-blur-xl px-10 py-5 rounded-full border border-white/10 flex items-center gap-4">
+                  {data.logoImageId && (
+                    <img
+                      src={getImageUrl(data.logoImageId)}
+                      className="h-10 md:h-16 object-contain"
+                      alt="Logo"
+                    />
+                  )}
+                  {data.logoText && (
+                    <span className="text-white font-black italic uppercase tracking-widest text-sm md:text-xl border-l border-white/20 pl-4 whitespace-nowrap">
+                      {data.logoText}
+                    </span>
+                  )}
                 </div>
               </div>
               <AnimatePresence mode="wait">
@@ -324,7 +347,7 @@ export default function HomePage() {
                     animate={{ scale: 1 }}
                     transition={{ duration: 10 }}
                     src={getImageUrl(slide?.imageUrl)}
-                    className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale"
+                    className="absolute inset-0 w-full h-full object-cover opacity-60"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent" />
                   <div className="relative z-20 px-6 md:px-24 text-left">
@@ -332,26 +355,47 @@ export default function HomePage() {
                       variants={titleContainer}
                       initial="hidden"
                       animate="visible"
-                      className="flex flex-wrap gap-x-[0.3em] max-w-6xl"
+                      className="flex flex-col max-w-6xl"
                     >
-                      {slide?.title?.split(" ").map((word: any, i: any) => (
+                      <div className="flex flex-wrap gap-x-[0.3em] mb-4">
+                        {slide?.title?.split(" ").map((word: any, i: any) => (
+                          <motion.span
+                            key={i}
+                            variants={titleWord}
+                            className={cn(
+                              "text-6xl md:text-[8.5rem] font-black italic tracking-tighter leading-[0.8] uppercase",
+                              i === 1 ? "text-amber-500" : "text-white"
+                            )}
+                          >
+                            {word}
+                          </motion.span>
+                        ))}
+                      </div>
+
+                      {slide?.subtitle && (
                         <motion.span
-                          key={i}
                           variants={titleWord}
-                          className={cn(
-                            "text-6xl md:text-[8.5rem] font-black italic tracking-tighter leading-[0.8] uppercase",
-                            i === 1 ? "text-amber-500" : "text-white",
-                          )}
+                          className="text-amber-500 font-black italic uppercase tracking-widest text-sm md:text-2xl mb-6"
                         >
-                          {word}
+                          {slide.subtitle}
                         </motion.span>
-                      ))}
+                      )}
+
+                      {slide?.description && (
+                        <motion.p
+                          variants={titleWord}
+                          className="text-zinc-300 font-bold italic text-lg md:text-2xl max-w-2xl leading-relaxed mb-4"
+                        >
+                          {slide.description}
+                        </motion.p>
+                      )}
                     </motion.div>
+
                     <button
                       onClick={() => setActiveDialogContent(slide)}
-                      className="mt-12 bg-amber-600 text-white px-14 py-6 rounded-full font-black italic uppercase flex items-center gap-4 hover:bg-white hover:text-amber-600 transition-all"
+                      className="mt-8 bg-amber-600 text-white px-14 py-6 rounded-full font-black italic uppercase flex items-center gap-4 hover:bg-white hover:text-amber-600 transition-all shadow-xl shadow-amber-600/20"
                     >
-                      CONSULTORIA <ArrowRight />
+                      {slide.ctaText || "CONSULTORIA"} <ArrowRight />
                     </button>
                   </div>
                 </motion.div>

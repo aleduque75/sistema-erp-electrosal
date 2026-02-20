@@ -4,8 +4,10 @@ import { MediaController } from './media.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
+import * as path from 'path'; // <--- ESTE IMPORT TINHA SUMIDO
 import * as fs from 'fs';
 import { PrismaMediaRepository } from './repositories/prisma-media.repository';
+import { PublicMediaController } from './public-media.controller';
 
 const destinationPath = '/root/apps/homolog-erp/apps/backend/uploads';
 
@@ -36,7 +38,7 @@ if (!fs.existsSync(destinationPath)) {
       useClass: PrismaMediaRepository,
     },
   ],
-  controllers: [MediaController],
+  controllers: [MediaController, PublicMediaController],
   exports: [MediaService, 'IMediaRepository'],
 })
-export class MediaModule {}
+export class MediaModule { }

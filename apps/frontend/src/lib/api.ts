@@ -7,19 +7,21 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.elec
 // REMOVEMOS a lógica de adicionar /api automaticamente aqui, 
 // pois o GlobalPrefix do Nest + Rewrites do Next já cuidam disso.
 const api = axios.create({
-  baseURL: API_BASE_URL.endsWith("/api") ? API_BASE_URL : API_BASE_URL,
+  // No navegador, usamos caminhos relativos para aproveitar o proxy/rewrites do Next.js
+  // Isso evita problemas de CORS e garante o envio de headers.
+  baseURL: typeof window !== "undefined" ? "" : API_BASE_URL,
 });
 
 api.interceptors.request.use(
   (config) => {
-    // Garante que toda requisição comece com /api se não tiver
+    // Garante prefixo /api se não for URL absoluta
     if (config.url && !config.url.startsWith('http') && !config.url.startsWith('/api')) {
       config.url = `/api${config.url.startsWith('/') ? '' : '/'}${config.url}`;
     }
 
-    if (config.headers.skipAuth) {
-      delete config.headers.Authorization;
-      delete config.headers.skipAuth;
+    // Tratamento de skipAuth de forma robusta
+    if (config.headers && (config.headers as any).skipAuth) {
+      delete (config.headers as any).skipAuth;
       return config;
     }
 
