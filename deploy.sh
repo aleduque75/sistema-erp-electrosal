@@ -70,14 +70,6 @@ if [ -d "apps/frontend" ]; then
   cd apps/frontend
   rm -rf .next
   pnpm build
-
-  # ⚠️ IMPORTANTE: Next.js standalone NÃO copia public e static automaticamente!
-  echo "📁 Copiando pasta public para standalone..."
-  cp -r public .next/standalone/apps/frontend/public || true
-
-  echo "📁 Copiando pasta static para standalone..."
-  cp -r .next/static .next/standalone/apps/frontend/.next/static || true
-
   cd ../..
 else
   echo "❌ ERRO: Diretório apps/frontend não encontrado!"
