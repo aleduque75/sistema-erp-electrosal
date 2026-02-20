@@ -7,43 +7,37 @@ import * as express from 'express';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Define o prefixo global para todas as rotas
+  // Prefixo global para as rotas (ex: /api/auth)
   app.setGlobalPrefix('api');
 
-  // Limite de 50mb para uploads
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
+  // Configuração para servir arquivos estáticos
+  // Mapeia a pasta física 'uploads' para a URL /api/media/public-media/
   const uploadsPath = join(process.cwd(), 'uploads');
-
-  // AJUSTE AQUI: O prefixo agora bate com o que o MediaService salva (/uploads)
-  // Como temos um prefixo global 'api', o link final será: https://dev-api.electrosal.com.br/api/uploads/...
   app.useStaticAssets(uploadsPath, {
-    prefix: '/uploads/', // Alterado para '/uploads/'
+    prefix: '/api/media/public-media/',
     index: false,
   });
 
-  // Configuração de CORS usando as origens do seu .env
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['https://dev-erp.electrosal.com.br', 'http://localhost:3000'];
+  // Limites de tamanho para JSON e Uploads
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+  // Configuração de CORS para VPS
   app.enableCors({
-    origin: allowedOrigins,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+    origin: [
+      'https://dev-erp.electrosal.com.br',
+      'https://dev-api.electrosal.com.br',
+      'http://localhost:3000'
+    ],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    optionsSuccessStatus: 204,
   });
 
   const PORT = process.env.PORT || 4001;
-
-  // Escutando em 0.0.0.0 para aceitar conexões externas na VPS
   await app.listen(PORT, '0.0.0.0');
 
   console.log('--------------------------------------------------');
-  console.log(`🚀 API rodando em: http://localhost:${PORT}/api`);
-  console.log(`📂 Servindo arquivos de: ${uploadsPath} em /api/uploads/`);
+  console.log(`🚀 API: http://localhost:${PORT}/api`);
+  console.log(`📂 Servindo: ${uploadsPath} em /api/media/public-media/`);
   console.log('--------------------------------------------------');
 }
 bootstrap();
