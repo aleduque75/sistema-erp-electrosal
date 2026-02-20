@@ -12,7 +12,7 @@ async function bootstrap() {
 
   // Configuração para servir arquivos estáticos
   // Mapeia a pasta física 'uploads' para a URL /api/media/public-media/
-  const uploadsPath = path.join(process.cwd(), 'uploads');
+  const uploadsPath = join(process.cwd(), 'uploads');
 
   // Garante que o diretório de uploads exista
   if (!require('fs').existsSync(uploadsPath)) {
