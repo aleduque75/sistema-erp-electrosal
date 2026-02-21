@@ -61,15 +61,24 @@ pnpm build
 cd ../..
 
 # ============================================
-# 5. Build Frontend
+# 5. Build Frontend (zero-downtime)
 # ============================================
-echo "🔨 Compilando Frontend (Next.js)..."
+echo "🔨 Compilando Frontend (Next.js) sem derrubar o servidor..."
 
-# Garante caminho correto
 if [ -d "apps/frontend" ]; then
   cd apps/frontend
-  rm -rf .next
-  pnpm build
+
+  # Build em diretório temporário para não derrubar o servidor
+  export NEXT_BUILD_DIR=".next.building"
+  rm -rf .next.building
+  NEXT_BUILD_DIR=".next.building" pnpm build
+
+  # Swap atômico: só substitui .next APÓS o build completar com sucesso
+  rm -rf .next.old
+  [ -d ".next" ] && mv .next .next.old
+  mv .next.building .next
+  rm -rf .next.old
+
   cd ../..
 else
   echo "❌ ERRO: Diretório apps/frontend não encontrado!"
