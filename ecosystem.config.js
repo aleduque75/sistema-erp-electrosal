@@ -11,10 +11,12 @@ module.exports = {
     {
       name: "erp-frontend",
       cwd: "apps/frontend",
-      script: "npm",
-      args: "start",
+      script: "pnpm",
+      args: "run start -- -p 3000",
+      interpreter: "none",
       env: {
         NODE_ENV: "production",
+        PORT: "3000",
       }
     }
   ]
