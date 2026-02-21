@@ -53,6 +53,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { TransacaoForm } from "../../transacao-form";
 import { TransferForm } from "../../components/transfer-form"; // Adicionar esta linha
@@ -112,11 +114,11 @@ const formatGold = (value?: number | null) => {
 const formatDateOnly = (dateString?: string | null) =>
   dateString
     ? new Date(dateString).toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "2-digit",
-        timeZone: "UTC",
-      })
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      timeZone: "UTC",
+    })
     : "N/A";
 
 const formatDateTime = (dateString?: string | null) =>
@@ -174,7 +176,7 @@ export default function ExtratoPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const mode = searchParams.get('mode');
+  const mode = searchParams?.get('mode');
   const id = (params?.id ?? "") as string;
 
   const [extrato, setExtrato] = useState<ExtratoData | null>(null);
@@ -478,92 +480,110 @@ export default function ExtratoPage() {
     <>
       <Card className="my-8">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle className="text-2xl">Extrato da Conta</CardTitle>
-              <p className="text-muted-foreground">
-                {extrato?.contaCorrente.nome} -{" "}
-                {extrato?.contaCorrente.numeroConta}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div className="w-full">
+              <CardTitle className="text-xl md:text-2xl">Extrato da Conta</CardTitle>
+              <p className="text-xs md:text-sm text-muted-foreground line-clamp-1">
+                {extrato?.contaCorrente.nome} - {extrato?.contaCorrente.numeroConta}
               </p>
             </div>
 
-            <div className="flex items-center gap-4 flex-wrap">
-              <ToggleGroup
-                type="single"
-                value={currencyView}
-                onValueChange={(value: "BRL" | "GOLD") =>
-                  value && setCurrencyView(value)
-                }
-                aria-label="Visualização de Moeda"
-              >
-                <ToggleGroupItem value="BRL" aria-label="Visualizar em Reais">
-                  R$
-                </ToggleGroupItem>
-                <ToggleGroupItem value="GOLD" aria-label="Visualizar em Ouro">
-                  Au
-                </ToggleGroupItem>
-              </ToggleGroup>
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full lg:w-auto">
+              <div className="flex justify-between items-center gap-2">
+                <ToggleGroup
+                  type="single"
+                  value={currencyView}
+                  onValueChange={(value: "BRL" | "GOLD") =>
+                    value && setCurrencyView(value)
+                  }
+                  className="bg-muted p-0.5 rounded-lg border"
+                >
+                  <ToggleGroupItem value="BRL" className="px-3 h-8 text-xs">R$</ToggleGroupItem>
+                  <ToggleGroupItem value="GOLD" className="px-3 h-8 text-xs">Au</ToggleGroupItem>
+                </ToggleGroup>
 
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button variant="outline" onClick={() => router.back()}>
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-                </Button>
-                <Button variant="outline" onClick={fetchExtrato}>
-                  <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
-                </Button>
-                <Button variant="outline" onClick={handleGeneratePdf}>
-                  <FileText className="mr-2 h-4 w-4" /> PDF
-                </Button>
-                <Button onClick={() => setIsLancamentoModalOpen(true)}>
+                <div className="flex md:hidden gap-1">
+                  <Button variant="outline" size="icon" onClick={() => router.back()} title="Voltar">
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={fetchExtrato} title="Atualizar">
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={handleGeneratePdf} title="PDF">
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap md:flex-nowrap gap-2 items-center">
+                <div className="hidden md:flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => router.back()}>
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={fetchExtrato}>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleGeneratePdf}>
+                    <FileText className="mr-2 h-4 w-4" /> PDF
+                  </Button>
+                </div>
+
+                <Button size="sm" className="flex-1 md:flex-none" onClick={() => setIsLancamentoModalOpen(true)}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Novo Lançamento
                 </Button>
-                {/* Botão de Transferência Genérica */}
-                <Button onClick={() => setIsGenericTransferModalOpen(true)}>
-                  <ArrowRightLeft className="mr-2 h-4 w-4" /> Transferir
-                </Button>
-                {/* CORRIGIDO: Usa a string literal 'FORNECEDOR_METAL' */}
-                {extrato?.contaCorrente.type === "FORNECEDOR_METAL" && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsTransferModalOpen(true)}
-                  >
-                    {" "}
-                    {/* Novo botão */}
-                    <ArrowRightLeft className="mr-2 h-4 w-4" /> Transferir Ouro
-                  </Button>
-                )}
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex-1 md:flex-none">
+                      <ArrowRightLeft className="mr-2 h-4 w-4" /> Mais Ações
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setIsGenericTransferModalOpen(true)}>
+                      <ArrowRightLeft className="mr-2 h-4 w-4" /> Transferência
+                    </DropdownMenuItem>
+                    {extrato?.contaCorrente.type === "FORNECEDOR_METAL" && (
+                      <DropdownMenuItem onClick={() => setIsTransferModalOpen(true)}>
+                        <ArrowRightLeft className="mr-2 h-4 w-4" /> Transferir Ouro
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 my-4 p-4 border rounded-lg items-end">
-            <div className="flex-1 w-full">
-              <Label htmlFor="startDate">Data Inicial</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4 p-3 border rounded-xl bg-muted/20">
+            <div className="space-y-1">
+              <Label htmlFor="startDate" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Data Inicial</Label>
               <Input
                 type="date"
                 id="startDate"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                className="h-9 focus-visible:ring-primary"
               />
             </div>
-            <div className="flex-1 w-full">
-              <Label htmlFor="endDate">Data Final</Label>
+            <div className="space-y-1">
+              <Label htmlFor="endDate" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Data Final</Label>
               <Input
                 type="date"
                 id="endDate"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                className="h-9 focus-visible:ring-primary"
               />
             </div>
-            <div className="flex-1 w-full">
-              <Label htmlFor="descriptionFilter">Filtrar por Descrição</Label>
+            <div className="space-y-1">
+              <Label htmlFor="descriptionFilter" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Filtrar por Descrição</Label>
               <Input
                 id="descriptionFilter"
                 type="text"
                 value={descriptionFilter}
                 onChange={(e) => setDescriptionFilter(e.target.value)}
-                placeholder="Buscar..."
+                placeholder="Buscar lançamento..."
+                className="h-9 focus-visible:ring-primary"
               />
             </div>
           </div>
@@ -580,7 +600,7 @@ export default function ExtratoPage() {
                     label: `${cc.codigo} - ${cc.nome}`,
                   }))}
                   placeholder="Alterar Conta Contábil..."
-                  onChange={setNewContaContabilId}
+                  onChange={(val) => setNewContaContabilId(val || "")}
                   value={newContaContabilId}
                 />
               </div>
@@ -591,15 +611,15 @@ export default function ExtratoPage() {
                     label: f.name,
                   }))}
                   placeholder="Alterar Fornecedor..."
-                  onChange={setNewFornecedorId}
+                  onChange={(val) => setNewFornecedorId(val || "")}
                   value={newFornecedorId}
                 />
               </div>
               <Button onClick={handleBulkUpdate}>Alterar em Lote</Button>
               <Button variant="secondary" onClick={handleBulkCreateAccountPay}>Gerar C.P.</Button>
-              <Button 
-                variant="outline" 
-                onClick={handleAdjustResidue} 
+              <Button
+                variant="outline"
+                onClick={handleAdjustResidue}
                 className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
                 disabled={isAdjusting}
               >
@@ -613,19 +633,19 @@ export default function ExtratoPage() {
             <p className="text-center p-4">Atualizando...</p>
           ) : extrato ? (
             <div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center md:text-left p-4 bg-muted/50 rounded-md mb-4">
-                <div>
-                  <strong>Saldo Anterior:</strong>
-                  <p className="font-semibold text-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-muted/40 rounded-xl mb-4 border border-border/50">
+                <div className="flex flex-col items-center md:items-start p-3 bg-background rounded-lg border shadow-sm">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saldo Anterior</span>
+                  <p className="font-black text-xl text-foreground">
                     {currencyView === "BRL"
                       ? formatCurrency(extrato.saldoAnteriorBRL)
                       : formatGold(extrato.saldoAnteriorGold)}
                   </p>
                 </div>
 
-                <div>
-                  <strong>Saldo Final do Período:</strong>
-                  <p className="font-semibold text-lg">
+                <div className="flex flex-col items-center md:items-start p-3 bg-background rounded-lg border shadow-sm">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saldo Final do Período</span>
+                  <p className="font-black text-xl text-primary">
                     {currencyView === "BRL"
                       ? formatCurrency(extrato.saldoFinalBRL)
                       : formatGold(extrato.saldoFinalGold)}
@@ -641,9 +661,9 @@ export default function ExtratoPage() {
                     <span className="text-yellow-700 dark:text-yellow-400">
                       Esta conta possui um saldo de <strong>{formatGold(extrato?.saldoFinalGold)}</strong> mas o saldo em Reais está zerado. Isso indica uma variação de cotação.
                     </span>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       className="border-yellow-300 text-yellow-800 hover:bg-yellow-100"
                       onClick={handleAdjustResidue}
                       disabled={isAdjusting}
@@ -656,225 +676,367 @@ export default function ExtratoPage() {
               )}
               <Button
                 variant="outline"
+                size="sm"
+                className="mb-4"
                 onClick={handleGenerateSelectedPdf}
                 disabled={selectedIds.length === 0}
               >
                 <FileText className="mr-2 h-4 w-4" /> Imprimir Selecionados
               </Button>
 
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto rounded-xl border border-border/50 bg-background shadow-sm">
                 <Table>
                   <TableHeader>
-                                        <TableRow>
-                                          <TableHead className="w-[40px]">
-                                            <Checkbox
-                                              checked={
-                                                selectedIds.length === filteredTransacoes.length &&
-                                                filteredTransacoes.length > 0
-                                              }
-                                              onCheckedChange={(checked) => {
-                                                if (checked) {
-                                                  setSelectedIds(filteredTransacoes.map((t) => t.id));
-                                                } else {
-                                                  setSelectedIds([]);
-                                                }
-                                              }}
-                                            />
-                                          </TableHead>
-                                          <TableHead className="w-[100px]">Data</TableHead>
-                                          <TableHead className="min-w-[150px]">Descrição</TableHead>
-                                          <TableHead className="hidden lg:table-cell">Fornecedor</TableHead>
-                                          <TableHead className="hidden xl:table-cell">Conta Contábil</TableHead>
-                                          <TableHead className="text-right px-2 min-w-[120px]">
-                                            Valor
-                                          </TableHead>
-                                          <TableHead className="w-[40px]">Ações</TableHead>
-                                        </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTransacoes.length > 0 ? (
-                    filteredTransacoes.map((t, index) => {
-                      const isEligibleForAccountPay = t.tipo === 'DEBITO' && !!t.fornecedorNome;
-                      return (
-                        <TableRow
-                          key={t.id}
-                          onClick={() => handleToggleReconciled(t.id)}
-                          className={
-                            reconciledIds.includes(t.id)
-                              ? "bg-green-800/50 dark:bg-green-800 hover:bg-green-600/50 dark:hover:bg-green-700"
-                              : ""
+                    <TableRow>
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={
+                            selectedIds.length === filteredTransacoes.length &&
+                            filteredTransacoes.length > 0
                           }
-                        >
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedIds.includes(t.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedIds([...selectedIds, t.id]);
-                                } else {
-                                  setSelectedIds(
-                                    selectedIds.filter((id) => id !== t.id)
-                                  );
-                                }
-                              }}
-                              title={!isEligibleForAccountPay ? 'Aviso: Esta transação não pode ser convertida em Contas a Pagar (não é um débito ou não possui fornecedor).' : undefined}
-                            />
-                          </TableCell>
-                          <TableCell className="py-2 text-sm font-medium whitespace-nowrap">{formatDateOnly(t.dataHora)}</TableCell>
-                          <TableCell className="py-2 max-w-[150px] md:max-w-[200px] lg:max-w-[250px] xl:max-w-[300px] truncate" title={t.descricao}>
-                            <div className="flex flex-col gap-0.5">
-                              <div className="flex items-center gap-1 overflow-hidden">
-                                <span className="truncate text-sm">{t.descricao}</span>
-                                {t.sale && (
-                                  <Button
-                                    variant="link"
-                                    className="h-auto p-0 text-[10px] text-blue-600 hover:underline shrink-0"
-                                    onClick={(e) => {
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedIds(filteredTransacoes.map((t) => t.id));
+                            } else {
+                              setSelectedIds([]);
+                            }
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead className="w-[100px]">Data</TableHead>
+                      <TableHead className="min-w-[150px]">Descrição</TableHead>
+                      <TableHead className="hidden lg:table-cell">Fornecedor</TableHead>
+                      <TableHead className="hidden xl:table-cell">Conta Contábil</TableHead>
+                      <TableHead className="text-right px-2 min-w-[120px]">
+                        Valor
+                      </TableHead>
+                      <TableHead className="w-[40px]">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTransacoes.length > 0 ? (
+                      filteredTransacoes.map((t, index) => {
+                        const isEligibleForAccountPay = t.tipo === 'DEBITO' && !!t.fornecedorNome;
+                        return (
+                          <TableRow
+                            key={t.id}
+                            onClick={() => handleToggleReconciled(t.id)}
+                            className={
+                              reconciledIds.includes(t.id)
+                                ? "bg-green-800/50 dark:bg-green-800 hover:bg-green-600/50 dark:hover:bg-green-700"
+                                : ""
+                            }
+                          >
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedIds.includes(t.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedIds([...selectedIds, t.id]);
+                                  } else {
+                                    setSelectedIds(
+                                      selectedIds.filter((id) => id !== t.id)
+                                    );
+                                  }
+                                }}
+                                title={!isEligibleForAccountPay ? 'Aviso: Esta transação não pode ser convertida em Contas a Pagar (não é um débito ou não possui fornecedor).' : undefined}
+                              />
+                            </TableCell>
+                            <TableCell className="py-2 text-sm font-medium whitespace-nowrap">{formatDateOnly(t.dataHora)}</TableCell>
+                            <TableCell className="py-2 max-w-[150px] md:max-w-[200px] lg:max-w-[250px] xl:max-w-[300px] truncate" title={t.descricao}>
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-1 overflow-hidden">
+                                  <span className="truncate text-sm">{t.descricao}</span>
+                                  {t.sale && (
+                                    <Button
+                                      variant="link"
+                                      className="h-auto p-0 text-[10px] text-blue-600 hover:underline shrink-0"
+                                      onClick={(e) => {
                                         e.stopPropagation();
                                         handleViewSaleDetails(t.sale!.id);
-                                    }}
-                                  >
-                                    #{t.sale.orderNumber}
-                                  </Button>
-                                )}
-                                {t.medias && t.medias.length > 0 && (
+                                      }}
+                                    >
+                                      #{t.sale.orderNumber}
+                                    </Button>
+                                  )}
+                                  {t.medias && t.medias.length > 0 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-5 w-5 shrink-0"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedMedias(t.medias!);
+                                        setInitialImageIndex(0);
+                                        setIsMediaModalOpen(true);
+                                      }}
+                                    >
+                                      <Paperclip className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground flex flex-wrap gap-x-1.5 items-center opacity-70">
+                                  <span className="font-mono bg-muted/30 px-1 rounded">{formatCurrency(t.valor)}</span>
+                                  {t.goldAmount !== undefined && t.goldAmount !== 0 && (
+                                    <>
+                                      <span className="opacity-30">|</span>
+                                      <span className="font-mono bg-muted/30 px-1 rounded">{formatGold(t.goldAmount)}</span>
+                                      {t.goldPrice && (
+                                        <>
+                                          <span className="opacity-30">|</span>
+                                          <span className="font-mono bg-muted/30 px-1 rounded">
+                                            @{formatCurrency(t.goldPrice)}
+                                          </span>
+                                        </>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell py-2 text-sm">{t.fornecedorNome || 'N/A'}</TableCell>
+                            <TableCell
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTransacaoId(t.id);
+                              }}
+                              className="cursor-pointer hover:bg-muted/50 hidden xl:table-cell py-2 text-sm"
+                            >
+                              {editingTransacaoId === t.id ? (
+                                <Combobox
+                                  options={contasContabeis.map((cc) => ({
+                                    value: cc.id,
+                                    label: `${cc.codigo} - ${cc.nome}`,
+                                  }))}
+                                  value={t.contaContabilId}
+                                  onChange={(value) => {
+                                    handleUpdateContaContabil(t.id, value || "");
+                                  }}
+                                  placeholder="Selecione a conta..."
+                                />
+                              ) : (
+                                t.contaContabilNome
+                              )}
+                            </TableCell>
+                            <TableCell
+                              className={`text-right px-2 py-2 font-bold whitespace-nowrap min-w-[110px] ${t.tipo === "CREDITO" ? "text-green-600" : "text-red-600"}`}
+                            >
+                              <span className="tabular-nums text-sm">
+                                {t.tipo === "CREDITO" ? "+" : "-"}
+                                {currencyView === "BRL"
+                                  ? formatCurrency(Math.abs(t.valor)).replace("R$", "").trim()
+                                  : formatGold(Math.abs(t.goldAmount || 0))}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5 shrink-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedMedias(t.medias!);
-                                      setInitialImageIndex(0);
-                                      setIsMediaModalOpen(true);
+                                    className="h-8 w-8 p-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <span className="sr-only">Abrir menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() => handleMove(t.id, "up")}
+                                    disabled={index === 0}
+                                  >
+                                    Mover para Cima
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleMove(t.id, "down")}
+                                    disabled={
+                                      index === filteredTransacoes.length - 1
+                                    }
+                                  >
+                                    Mover para Baixo
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setEditingTransacao(t);
+                                      setIsLancamentoModalOpen(true);
                                     }}
                                   >
-                                    <Paperclip className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                              <div className="text-[10px] text-muted-foreground flex flex-wrap gap-x-1.5 items-center opacity-70">
-                                <span className="font-mono bg-muted/30 px-1 rounded">{formatCurrency(t.valor)}</span>
-                                {t.goldAmount !== undefined && t.goldAmount !== 0 && (
-                                  <>
-                                    <span className="opacity-30">|</span>
-                                    <span className="font-mono bg-muted/30 px-1 rounded">{formatGold(t.goldAmount)}</span>
-                                    {t.goldPrice && (
-                                      <>
-                                        <span className="opacity-30">|</span>
-                                        <span className="font-mono bg-muted/30 px-1 rounded">
-                                          @{formatCurrency(t.goldPrice)}
-                                        </span>
-                                      </>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell py-2 text-sm">{t.fornecedorNome || 'N/A'}</TableCell>
-                          <TableCell
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingTransacaoId(t.id);
-                            }}
-                            className="cursor-pointer hover:bg-muted/50 hidden xl:table-cell py-2 text-sm"
-                          >
-                            {editingTransacaoId === t.id ? (
-                              <Combobox
-                                options={contasContabeis.map((cc) => ({
-                                  value: cc.id,
-                                  label: `${cc.codigo} - ${cc.nome}`,
-                                }))}
-                                value={t.contaContabilId}
-                                onChange={(value) => {
-                                  handleUpdateContaContabil(t.id, value);
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedTransaction(t);
+                                      setIsDetailsModalOpen(true);
+                                    }}
+                                  >
+                                    Detalhes
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setDeletingTransacaoId(t.id);
+                                      setIsDeleteModalOpen(true);
+                                    }}
+                                  >
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center h-24">
+                          Nenhuma transação no período selecionado.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3 max-w-md mx-auto">
+                {filteredTransacoes.length > 0 ? (
+                  filteredTransacoes.map((t, index) => {
+                    const isCredit = t.tipo === "CREDITO";
+                    const isReconciled = reconciledIds.includes(t.id);
+
+                    return (
+                      <div
+                        key={t.id}
+                        className={`p-4 rounded-2xl border transition-all active:scale-[0.98] relative ${isReconciled
+                          ? "bg-green-50/50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+                          : "bg-card border-border shadow-sm"
+                          }`}
+                        onClick={() => handleToggleReconciled(t.id)}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedIds.includes(t.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedIds([...selectedIds, t.id]);
+                                  } else {
+                                    setSelectedIds(selectedIds.filter((id) => id !== t.id));
+                                  }
                                 }}
-                                placeholder="Selecione a conta..."
+                                className="h-5 w-5"
                               />
-                            ) : (
-                              t.contaContabilNome
+                            </div>
+                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">
+                              {formatDateOnly(t.dataHora)}
+                            </span>
+                          </div>
+                          <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${isCredit ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                            }`}>
+                            {t.tipo}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 mb-3">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-sm font-bold leading-tight text-foreground line-clamp-2">{t.descricao}</span>
+                            {t.sale && (
+                              <Button
+                                variant="link"
+                                className="h-auto p-0 text-[10px] font-bold text-blue-600 underline shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewSaleDetails(t.sale!.id);
+                                }}
+                              >
+                                #{t.sale.orderNumber}
+                              </Button>
                             )}
-                          </TableCell>
-                          <TableCell
-                            className={`text-right px-2 py-2 font-bold whitespace-nowrap min-w-[110px] ${t.tipo === "CREDITO" ? "text-green-600" : "text-red-600"}`}
-                          >
-                            <span className="tabular-nums text-sm">
-                              {t.tipo === "CREDITO" ? "+" : "-"}
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            {t.fornecedorNome && (
+                              <span className="text-[10px] text-muted-foreground font-medium">Fornecedor: {t.fornecedorNome}</span>
+                            )}
+                            <span className="text-[10px] text-muted-foreground font-medium truncate">C. Contábil: {t.contaContabilNome}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-end border-t pt-3 mt-2 border-border/50">
+                          <div className="flex flex-col">
+                            <span className={`text-lg font-black tabular-nums ${isCredit ? "text-green-600" : "text-red-600"}`}>
+                              {isCredit ? "+" : "-"}
                               {currencyView === "BRL"
-                                ? formatCurrency(Math.abs(t.valor)).replace("R$", "").trim()
+                                ? formatCurrency(Math.abs(t.valor))
                                 : formatGold(Math.abs(t.goldAmount || 0))}
                             </span>
-                          </TableCell>
-                          <TableCell>
+                            {currencyView === "BRL" && t.goldAmount !== undefined && t.goldAmount !== 0 && (
+                              <span className="text-[10px] font-bold text-muted-foreground">
+                                {formatGold(t.goldAmount)}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2">
+                            {t.medias && t.medias.length > 0 && (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-9 w-9 border-muted"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMedias(t.medias!);
+                                  setInitialImageIndex(0);
+                                  setIsMediaModalOpen(true);
+                                }}
+                              >
+                                <Paperclip className="h-4 w-4" />
+                              </Button>
+                            )}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
-                                  variant="ghost"
-                                  className="h-8 w-8 p-0"
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-9 w-9"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  <span className="sr-only">Abrir menu</span>
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="end"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <DropdownMenuItem
-                                  onClick={() => handleMove(t.id, "up")}
-                                  disabled={index === 0}
-                                >
+                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuItem onClick={() => handleMove(t.id, "up")} disabled={index === 0}>
                                   Mover para Cima
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleMove(t.id, "down")}
-                                  disabled={
-                                    index === filteredTransacoes.length - 1
-                                  }
-                                >
+                                <DropdownMenuItem onClick={() => handleMove(t.id, "down")} disabled={index === filteredTransacoes.length - 1}>
                                   Mover para Baixo
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setEditingTransacao(t);
-                                    setIsLancamentoModalOpen(true);
-                                  }}
-                                >
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => { setEditingTransacao(t); setIsLancamentoModalOpen(true); }}>
                                   Editar
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedTransaction(t);
-                                    setIsDetailsModalOpen(true);
-                                  }}
-                                >
+                                <DropdownMenuItem onClick={() => { setSelectedTransaction(t); setIsDetailsModalOpen(true); }}>
                                   Detalhes
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setDeletingTransacaoId(t.id);
-                                    setIsDeleteModalOpen(true);
-                                  }}
-                                >
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => { setDeletingTransacaoId(t.id); setIsDeleteModalOpen(true); }} className="text-red-600">
                                   Excluir
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center h-24">
-                        Nenhuma transação no período selecionado.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="py-12 text-center text-muted-foreground italic bg-muted/20 rounded-2xl border-2 border-dashed">
+                    Nenhuma transação encontrada.
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -974,7 +1136,7 @@ export default function ExtratoPage() {
             <DialogTitle>Imagens da Transação</DialogTitle>
           </DialogHeader>
           <ImageGallery
-            media={selectedMedias}
+            media={selectedMedias as any}
             onDeleteSuccess={() => {
               setIsMediaModalOpen(false);
               fetchExtrato();
@@ -986,9 +1148,10 @@ export default function ExtratoPage() {
 
       {selectedSale && (
         <SaleDetailsModal
-          sale={selectedSale}
+          sale={selectedSale as any}
           open={!!selectedSale}
           onOpenChange={(open) => !open && setSelectedSale(null)}
+          onSave={() => { }}
         />
       )}
 

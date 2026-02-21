@@ -7,3 +7,121 @@
   - Environments: .env.local, .env
 
  [37m[1m [22m[39m Creating an optimized production build ...
+ [32m[1m✓[22m[39m Compiled successfully
+ [37m[1m [22m[39m Skipping validation of types
+ [37m[1m [22m[39m Skipping linting
+[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G[?25h [37m[1m [22m[39m Collecting page data     [32m[1m✓[22m[39m Collecting page data 
+[?25l [37m[1m [22m[39m Generating static pages (0/80)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (1/80)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (2/80)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (5/80)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (6/80)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (7/80)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (8/80)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (9/80)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (10/80)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (13/80)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (16/80)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (18/80)  [36m[====][39m[2K[1G [37m[1m [22m[39m Generating static pages (20/80)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (22/80)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (24/80)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (26/80)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/80)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (29/80)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (31/80)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (33/80)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (34/80)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (35/80)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (36/80)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (38/80)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (42/80)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (46/80)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (48/80)  [36m[====][39m[2K[1G [37m[1m [22m[39m Generating static pages (52/80)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (53/80)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (57/80)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (59/80)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (60/80)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (61/80)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (63/80)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (66/80)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (70/80)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (72/80)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (73/80)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (74/80)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (76/80)  [36m[  ==][39m[2K[1G[?25h [32m[1m✓[22m[39m Generating static pages (80/80)
+[?25l [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[?25l [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G[?25h [37m[1m [22m[39m Collecting build traces     [32m[1m✓[22m[39m Collecting build traces 
+[2K[1G[?25h [37m[1m [22m[39m Finalizing page optimization     [32m[1m✓[22m[39m Finalizing page optimization 
+
+[4mRoute (app)[24m                                   [4mSize[24m     [4mFirst Load JS[24m
+┌ ○ /                                         6.31 kB         [37m[1m336 kB[22m[39m
+├ ○ /_not-found                               880 B          [37m[1m88.3 kB[22m[39m
+├ ƒ /(.)test                                  219 B          [37m[1m87.7 kB[22m[39m
+├ ○ /accounts-pay                             13.4 kB         [37m[1m422 kB[22m[39m
+├ ƒ /accounts-pay/[id]                        1.75 kB         [37m[1m117 kB[22m[39m
+├ ƒ /accounts-pay/[id]/edit                   2.24 kB         [37m[1m118 kB[22m[39m
+├ ○ /accounts-pay/create                      8.94 kB         [37m[1m131 kB[22m[39m
+├ ○ /accounts-rec                             15.1 kB         [37m[1m265 kB[22m[39m
+├ ƒ /accounts-rec/[id]                        3.23 kB         [37m[1m126 kB[22m[39m
+├ ○ /accounts-rec/create                      2.06 kB         [37m[1m118 kB[22m[39m
+├ ƒ /ajuda                                    1.18 kB         [37m[1m124 kB[22m[39m
+├ ○ /ajuda/tutoriais                          1.82 kB         [37m[1m131 kB[22m[39m
+├ ƒ /ajuda/tutoriais/[slug]                   3.81 kB         [37m[1m161 kB[22m[39m
+├ ○ /ajuste-historico                         3.38 kB         [37m[1m128 kB[22m[39m
+├ ○ /analises-quimicas                        17.8 kB         [37m[1m281 kB[22m[39m
+├ ƒ /api/cotacao                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/recuperacoes                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/recuperacoes/[id]                    0 B                [37m[1m0 B[22m[39m
+├ ○ /audit-logs                               6.93 kB         [37m[1m152 kB[22m[39m
+├ ○ /cadastros/grupos-de-produto              12.9 kB         [37m[1m233 kB[22m[39m
+├ ƒ /chemical-reactions/[id]                  5.35 kB         [37m[1m205 kB[22m[39m
+├ ○ /client-dashboard                         1.57 kB         [37m[1m120 kB[22m[39m
+├ ○ /contas-contabeis                         7.72 kB         [37m[1m214 kB[22m[39m
+├ ○ /contas-contabeis/create                  4.83 kB         [37m[1m166 kB[22m[39m
+├ ○ /contas-correntes                         7.71 kB         [37m[1m276 kB[22m[39m
+├ ƒ /contas-correntes/[id]/extrato            17.4 kB         [37m[1m252 kB[22m[39m
+├ ○ /contas-correntes/create                  4.45 kB         [37m[1m127 kB[22m[39m
+├ ○ /contas-correntes/transfer-from-supplier  4.35 kB         [37m[1m209 kB[22m[39m
+├ ○ /contas-metais                            3.92 kB         [37m[1m273 kB[22m[39m
+├ ○ /credit-card-bills                        26.2 kB         [37m[1m292 kB[22m[39m
+├ ƒ /credit-card-bills/[id]                   4.64 kB         [37m[1m129 kB[22m[39m
+├ ○ /credit-card-bills/new                    7.33 kB         [37m[1m182 kB[22m[39m
+├ ○ /credit-card-transactions                 8.08 kB         [37m[1m246 kB[22m[39m
+├ ○ /credit-cards                             2.23 kB         [37m[1m206 kB[22m[39m
+├ ƒ /credit-cards/[id]/edit                   753 B           [37m[1m201 kB[22m[39m
+├ ○ /creditos-clientes                        12.5 kB         [37m[1m285 kB[22m[39m
+├ ○ /dashboard                                20.6 kB         [37m[1m343 kB[22m[39m
+├ ○ /estoque/adjust                           4.33 kB         [37m[1m209 kB[22m[39m
+├ ○ /estoque/extrato                          5.45 kB         [37m[1m210 kB[22m[39m
+├ ○ /financeiro/ajuste-transacao              5.36 kB         [37m[1m161 kB[22m[39m
+├ ○ /financeiro/contas                        5.31 kB         [37m[1m185 kB[22m[39m
+├ ○ /financeiro/recebimentos-metais           6.28 kB         [37m[1m201 kB[22m[39m
+├ ○ /imports                                  13.3 kB         [37m[1m232 kB[22m[39m
+├ ○ /imports/sales                            3.86 kB         [37m[1m129 kB[22m[39m
+├ ○ /knowledge-base                           332 kB          [37m[1m476 kB[22m[39m
+├ ○ /landing-page-manager                     14.4 kB         [37m[1m362 kB[22m[39m
+├ ○ /login                                    6 kB            [37m[1m136 kB[22m[39m
+├ ○ /logout                                   409 B          [37m[1m87.8 kB[22m[39m
+├ ○ /market-data                              10.9 kB         [37m[1m253 kB[22m[39m
+├ ○ /metal-deposits/new                       3.86 kB         [37m[1m158 kB[22m[39m
+├ ○ /metal-payments/pay-client                6.74 kB         [37m[1m213 kB[22m[39m
+├ ○ /metal-receivables/settle                 4.57 kB         [37m[1m162 kB[22m[39m
+├ ○ /pcp/a-separar                            8.4 kB          [37m[1m310 kB[22m[39m
+├ ƒ /pcp/a-separar/[id]                       272 B          [37m[1m87.7 kB[22m[39m
+├ ○ /pdf-import                               6.98 kB         [37m[1m218 kB[22m[39m
+├ ○ /pessoas                                  8.5 kB          [37m[1m253 kB[22m[39m
+├ ƒ /pessoas/[id]                             1.74 kB         [37m[1m117 kB[22m[39m
+├ ƒ /pessoas/[id]/edit                        2.2 kB          [37m[1m118 kB[22m[39m
+├ ○ /pessoas/create                           4.61 kB         [37m[1m136 kB[22m[39m
+├ ○ /pessoas/import                           10 kB           [37m[1m135 kB[22m[39m
+├ ○ /producao/reacoes-quimicas                15 kB           [37m[1m282 kB[22m[39m
+├ ƒ /producao/reacoes-quimicas/[id]           273 B          [37m[1m87.7 kB[22m[39m
+├ ○ /producao/reacoes-quimicas/nova           7.17 kB         [37m[1m236 kB[22m[39m
+├ ○ /product-groups                           7.11 kB         [37m[1m145 kB[22m[39m
+├ ○ /products                                 6.15 kB         [37m[1m245 kB[22m[39m
+├ ƒ /products/[id]                            1.71 kB         [37m[1m117 kB[22m[39m
+├ ƒ /products/[id]/edit                       2.09 kB         [37m[1m118 kB[22m[39m
+├ ○ /products/create                          1.94 kB         [37m[1m118 kB[22m[39m
+├ ○ /products/import-xml                      5.61 kB         [37m[1m162 kB[22m[39m
+├ ○ /profile                                  5.26 kB         [37m[1m237 kB[22m[39m
+├ ○ /purchase-orders                          12.9 kB         [37m[1m397 kB[22m[39m
+├ ○ /pure-metal-lots                          9.86 kB         [37m[1m240 kB[22m[39m
+├ ƒ /pure-metal-lots/movements/[id]           1.95 kB         [37m[1m205 kB[22m[39m
+├ ○ /quotations                               2.81 kB         [37m[1m214 kB[22m[39m
+├ ○ /raw-materials                            7.5 kB          [37m[1m239 kB[22m[39m
+├ ○ /recovery-orders                          18.4 kB         [37m[1m285 kB[22m[39m
+├ ƒ /recovery-orders/[id]                     308 B          [37m[1m87.7 kB[22m[39m
+├ ○ /recuperacoes                             161 B          [37m[1m87.6 kB[22m[39m
+├ ○ /register                                 1.86 kB         [37m[1m111 kB[22m[39m
+├ ○ /relatorios/balancete                     7.08 kB         [37m[1m186 kB[22m[39m
+├ ○ /relatorios/contas-a-pagar                5.24 kB         [37m[1m168 kB[22m[39m
+├ ○ /relatorios/resultado-financeiro          8.33 kB         [37m[1m137 kB[22m[39m
+├ ○ /sales                                    11.2 kB         [37m[1m279 kB[22m[39m
+├ ○ /sales-adjustments                        3.7 kB          [37m[1m128 kB[22m[39m
+├ ƒ /sales/[id]                               3.48 kB         [37m[1m126 kB[22m[39m
+├ ○ /sales/new                                3.08 kB         [37m[1m242 kB[22m[39m
+├ ○ /settings                                 6.77 kB         [37m[1m213 kB[22m[39m
+├ ○ /settings/appearance                      10.2 kB         [37m[1m149 kB[22m[39m
+├ ○ /settings/fees                            8.73 kB         [37m[1m176 kB[22m[39m
+├ ○ /settings/payment-terms                   4.96 kB         [37m[1m185 kB[22m[39m
+├ ○ /tasks                                    32 kB           [37m[1m201 kB[22m[39m
+├ ○ /test                                     259 B          [37m[1m87.7 kB[22m[39m
+├ ○ /test-page                                274 B          [37m[1m87.7 kB[22m[39m
+├ ○ /transacoes                               4.33 kB         [37m[1m136 kB[22m[39m
+├ ○ /transacoes/bulk-edit                     9.42 kB         [37m[1m187 kB[22m[39m
+├ ○ /transacoes/reconcile                     4.1 kB          [37m[1m172 kB[22m[39m
+├ ○ /tutorials                                1.44 kB         [37m[1m124 kB[22m[39m
+├ ƒ /tutorials/[slug]                         1.47 kB         [37m[1m117 kB[22m[39m
+└ ○ /whatsapp-routines                        2.27 kB        [37m[1m89.7 kB[22m[39m
++ First Load JS shared by all                 [37m[1m87.4 kB[22m[39m
+  ├ chunks/4031-077e9c8bb257c7a9.js           31.7 kB
+  ├ chunks/461535ec-83b52c706f80a042.js       53.6 kB
+  └ other shared chunks (total)               2.11 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+[?25h

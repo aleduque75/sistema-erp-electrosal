@@ -64,9 +64,9 @@ export function LancarResultadoModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<LancarResultadoFormData>({
-    resolver: zodResolver(lancarResultadoSchema),
+    resolver: zodResolver(lancarResultadoSchema) as any,
     defaultValues: {
-      resultadoAnaliseValor: undefined,
+      resultadoAnaliseValor: 0,
       unidadeResultado: "g/kg", // Unidade padrão mais comum
       percentualQuebra: 0.05,
       taxaServicoPercentual: 0.2,
@@ -117,7 +117,7 @@ export function LancarResultadoModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Lançar Resultado da Análise</DialogTitle>
           <DialogDescription>
@@ -125,7 +125,7 @@ export function LancarResultadoModal({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
+          <form onSubmit={(form as any).handleSubmit(onSubmit)} className="space-y-4 py-2">
             <FormField
               control={form.control}
               name="resultadoAnaliseValor"
@@ -204,7 +204,7 @@ export function LancarResultadoModal({
 
                   <p className="text-muted-foreground">Au Bruto Estimado (g)</p>
                   <p className="text-right font-mono">{summary.auEstimadoBrutoGramas}</p>
-                  
+
                   <p className="text-muted-foreground">Au Recuperável Estimado (g)</p>
                   <p className="text-right font-mono">{summary.auEstimadoRecuperavelGramas}</p>
 

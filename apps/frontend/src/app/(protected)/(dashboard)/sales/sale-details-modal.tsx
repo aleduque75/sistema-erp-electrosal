@@ -68,7 +68,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
     const receivedAccounts = sale.accountsRec?.filter(ar => ar.received) || [];
 
     if (receivedAccounts.length > 0) {
-      const accountNames = receivedAccounts.flatMap(ar => ar.transacoes?.map(t => t.contaCorrente?.nome)).filter(Boolean).join(', ');
+      const accountNames = receivedAccounts.map(ar => ar.transacao?.contaCorrente?.nome).filter(Boolean).join(', ');
       return `Recebido em: ${accountNames}`;
     }
 
@@ -93,17 +93,17 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
 
   const uniqueTransactions = useMemo(() => {
     if (!sale) return [];
-    
+
     const transactions = [
-      ...(sale.accountsRec?.flatMap(ar => ar.transacoes || []) || []),
-      ...(sale.installments?.flatMap(inst => inst.accountRec?.transacoes || []) || [])
-    ];
+      ...(sale.accountsRec?.map(ar => ar.transacao) || []),
+      ...(sale.installments?.map(inst => (inst as any).accountRec?.transacao) || [])
+    ].filter(Boolean);
 
     const uniqueMap = new Map();
     transactions.forEach(t => {
-        if (t && t.id) {
-            uniqueMap.set(t.id, t);
-        }
+      if (t && t.id) {
+        uniqueMap.set(t.id, t);
+      }
     });
 
     return Array.from(uniqueMap.values());
@@ -111,7 +111,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-full sm:max-w-lg md:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-full sm:max-w-lg md:max-w-3xl max-h-[95vh] h-[95vh] md:h-auto overflow-y-auto p-2 md:p-6">
         <DialogHeader>
           <DialogTitle>Detalhes da Venda #{sale?.orderNumber}</DialogTitle>
         </DialogHeader>
@@ -126,138 +126,141 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
               </Button>
             </div>
 
-              {/* DESTAQUE DO LUCRO */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="bg-primary/5 border-primary/20 shadow-sm">
-                  <CardHeader className="pb-2 px-4 pt-4">
-                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Lucro Líquido (R$)</CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4">
-                    <div className={`text-2xl font-bold ${Number(sale.adjustment?.netProfitBRL || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(Number(sale.adjustment?.netProfitBRL || 0))}
-                    </div>
-                    {/* Detalhamento do Lucro */}
-                    {sale.adjustment && (
-                      <div className="mt-4 pt-4 border-t border-primary/10 space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Lucro Bruto:</span>
-                          <span className="font-medium text-foreground">{formatCurrency(Number(sale.adjustment.grossProfitBRL || 0))}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Frete/Outros Custos:</span>
-                          <span className="font-medium text-red-500">-{formatCurrency(Number(sale.adjustment.otherCostsBRL || 0))}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground font-bold text-blue-600">Comissão:</span>
-                          <span className="font-bold text-blue-600">-{formatCurrency(Number(sale.adjustment.commissionBRL || 0))}</span>
-                        </div>
+            {/* DESTAQUE DO LUCRO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="bg-primary/5 border-primary/20 shadow-sm">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Lucro Líquido (R$)</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <div className={`text-2xl font-bold ${Number(sale.adjustment?.netProfitBRL || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(Number(sale.adjustment?.netProfitBRL || 0))}
+                  </div>
+                  {/* Detalhamento do Lucro */}
+                  {sale.adjustment && (
+                    <div className="mt-4 pt-4 border-t border-primary/10 space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Lucro Bruto:</span>
+                        <span className="font-medium text-foreground">{formatCurrency(Number(sale.adjustment.grossProfitBRL || 0))}</span>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-                <Card className="bg-primary/5 border-primary/20 shadow-sm">
-                  <CardHeader className="pb-2 px-4 pt-4">
-                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Lucro em Metal (AU)</CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4">
-                    <div className={`text-2xl font-bold ${Number(sale.adjustment?.netDiscrepancyGrams || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatGrams(Number(sale.adjustment?.netDiscrepancyGrams || 0))}
-                    </div>
-                    {/* Detalhamento do Lucro em Ouro */}
-                    {sale.adjustment && (
-                      <div className="mt-4 pt-4 border-t border-primary/10 space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Diferença Bruta (Au):</span>
-                          <span className="font-medium text-foreground">{formatGrams(Number(sale.adjustment.grossDiscrepancyGrams || 0))} g</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Custos (Au):</span>
-                          <span className="font-medium text-red-500">-{formatGrams(Number(sale.adjustment.costsInGrams || 0))} g</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Mão de Obra (Au):</span>
-                          <span className="font-medium text-foreground">{formatGrams(Number(sale.adjustment.laborCostGrams || 0))} g</span>
-                        </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Frete/Outros Custos:</span>
+                        <span className="font-medium text-red-500">-{formatCurrency(Number(sale.adjustment.otherCostsBRL || 0))}</span>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Detalhes do Cliente e Venda em Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Card do Cliente */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
-                      <User className="h-4 w-4" />
-                      Dados do Cliente
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="font-semibold text-lg">{sale.pessoa.name}</p>
-                    </div>
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                      <div>
-                        <p>{`${sale.pessoa.logradouro || ''}, ${sale.pessoa.numero || ''}`}</p>
-                        <p>{`${sale.pessoa.bairro || ''} - ${sale.pessoa.cidade || ''}/${sale.pessoa.uf || ''}`}</p>
-                        <p>{`CEP: ${sale.pessoa.cep || ''}`}</p>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground font-bold text-blue-600">Comissão:</span>
+                        <span className="font-bold text-blue-600">-{formatCurrency(Number(sale.adjustment.commissionBRL || 0))}</span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Card da Venda */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
-                      <Calendar className="h-4 w-4" />
-                      Resumo da Venda
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Data:</span>
-                      <span className="font-medium">{new Date(sale.createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Status Pagamento:</span>
-                      <span className="font-bold">{getPaymentInfo()}</span>
-                    </div>
-
-                    {sale.adjustment && (
-                      <div className="pt-2 mt-2 border-t border-border/50 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Cotação Pagamento:</span>
-                          <span>{formatCurrency(sale.adjustment.paymentQuotation)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Equivalente em Ouro:</span>
-                          <span>{formatGrams(sale.adjustment.paymentEquivalentGrams)} g</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Variação Cotação:</span>
-                          <span className={`font-bold ${sale.adjustment.grossDiscrepancyGrams > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatDecimal(
-                              (sale.adjustment.grossDiscrepancyGrams /
-                                (sale.adjustment.saleExpectedGrams || 1)) *
-                                100,
-                            )}%
-                          </span>
-                        </div>
+                  )}
+                </CardContent>
+              </Card>
+              <Card className="bg-primary/5 border-primary/20 shadow-sm">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Lucro em Metal (AU)</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <div className={`text-2xl font-bold ${Number(sale.adjustment?.netDiscrepancyGrams || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatGrams(Number(sale.adjustment?.netDiscrepancyGrams || 0))}
+                  </div>
+                  {/* Detalhamento do Lucro em Ouro */}
+                  {sale.adjustment && (
+                    <div className="mt-4 pt-4 border-t border-primary/10 space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Diferença Bruta (Au):</span>
+                        <span className="font-medium text-foreground">{formatGrams(Number(sale.adjustment.grossDiscrepancyGrams || 0))} g</span>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Custos (Au):</span>
+                        <span className="font-medium text-red-500">-{formatGrams(Number(sale.adjustment.costsInGrams || 0))} g</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Mão de Obra (Au):</span>
+                        <span className="font-medium text-foreground">{formatGrams(Number(sale.adjustment.laborCostGrams || 0))} g</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-              {/* Detalhes dos Pagamentos */}
+            {/* Detalhes do Cliente e Venda em Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Card do Cliente */}
               <Card>
-                <CardHeader><CardTitle>Detalhes dos Pagamentos</CardTitle></CardHeader>
-                <CardContent>
-                  <Table size="sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                    <User className="h-4 w-4" />
+                    Dados do Cliente
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="font-semibold text-lg">{sale.pessoa.name}</p>
+                  </div>
+                  <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div>
+                      <p>{`${sale.pessoa.logradouro || ''}, ${sale.pessoa.numero || ''}`}</p>
+                      <p>{`${sale.pessoa.bairro || ''} - ${sale.pessoa.cidade || ''}/${sale.pessoa.uf || ''}`}</p>
+                      <p>{`CEP: ${sale.pessoa.cep || ''}`}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card da Venda */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                    <Calendar className="h-4 w-4" />
+                    Resumo da Venda
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Data:</span>
+                    <span className="font-medium">{new Date(sale.createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Status Pagamento:</span>
+                    <span className="font-bold">{getPaymentInfo()}</span>
+                  </div>
+
+                  {sale.adjustment && (
+                    <div className="pt-2 mt-2 border-t border-border/50 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Cotação Pagamento:</span>
+                        <span>{formatCurrency(Number(sale.adjustment.paymentQuotation || 0))}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Equivalente em Ouro:</span>
+                        <span>{formatGrams(sale.adjustment.paymentEquivalentGrams)} g</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Variação Cotação:</span>
+                        <span className={`font-bold ${Number(sale.adjustment.grossDiscrepancyGrams || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatDecimal(
+                            (Number(sale.adjustment.grossDiscrepancyGrams || 0) /
+                              (sale.adjustment.saleExpectedGrams || 1)) *
+                            100,
+                          )}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Detalhes dos Pagamentos */}
+            <Card className="border-none md:border shadow-none md:shadow-sm">
+              <CardHeader className="p-2 md:p-6 pb-0 md:pb-6">
+                <CardTitle className="text-xs md:text-sm font-bold uppercase tracking-widest text-muted-foreground">Detalhes dos Pagamentos</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 md:p-6">
+                <div className="hidden md:block">
+                  <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Data</TableHead>
@@ -275,22 +278,40 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                           <TableCell className="text-right">{formatGrams(transacao.goldAmount)} g</TableCell>
                         </TableRow>
                       ))}
-                      {/* Mensagem se não houver pagamentos */}
-                      {uniqueTransactions.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground">Nenhum pagamento registrado.</TableCell>
-                          </TableRow>
-                        )}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Itens da Venda */}
-              <Card>
-                <CardHeader><CardTitle>Itens da Venda</CardTitle></CardHeader>
-                <CardContent>
-                  <Table size="sm">
+                {/* Mobile Mobile View */}
+                <div className="md:hidden divide-y divide-zinc-100 italic max-w-sm mx-auto">
+                  {uniqueTransactions.map((transacao) => (
+                    <div key={transacao.id} className="p-4 space-y-2">
+                      <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-tighter">
+                        <span>{formatDate(transacao.dataHora)}</span>
+                        <span>{transacao.contaCorrente?.nome || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-lg font-black text-zinc-950 font-mono tracking-tighter">{formatCurrency(transacao.valor)}</span>
+                        <span className="text-xs text-amber-600 font-bold">{formatGrams(transacao.goldAmount)} g</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {uniqueTransactions.length === 0 && (
+                  <div className="p-8 text-center text-muted-foreground italic">Nenhum pagamento registrado.</div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Itens da Venda */}
+            <Card className="border-none md:border shadow-none md:shadow-sm">
+              <CardHeader className="p-2 md:p-6 pb-0 md:pb-6">
+                <CardTitle className="text-xs md:text-sm font-bold uppercase tracking-widest text-muted-foreground">Itens da Venda</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 md:p-6">
+                <div className="hidden md:block">
+                  <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Produto</TableHead>
@@ -303,30 +324,57 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                       {sale.saleItems?.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell>{item.product.name}</TableCell>
-                          <TableCell>{item.inventoryLot?.batchNumber || 'N/A'}</TableCell>
+                          <TableCell>{item.inventoryLotId || 'N/A'}</TableCell>
                           <TableCell className="text-center">{item.quantity}</TableCell>
                           <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+
+                {/* Mobile Items List */}
+                <div className="md:hidden divide-y divide-zinc-100 italic max-w-sm mx-auto">
+                  {sale.saleItems?.map((item) => (
+                    <div key={item.id} className="p-4 gap-1 flex flex-col">
+                      <div className="flex justify-between items-start">
+                        <span className="font-black text-zinc-900 leading-tight uppercase tracking-tight">{item.product.name}</span>
+                        <span className="text-[10px] bg-zinc-100 px-2 py-0.5 rounded-full font-bold text-zinc-500 uppercase">LT: {item.inventoryLotId || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-xs text-zinc-500 font-bold">QTD: {item.quantity}</span>
+                        <span className="font-bold text-zinc-950">{formatCurrency(item.price * item.quantity)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Observações */}
+            {/* @ts-ignore */}
+            {sale.observation && (
+              <Card className="border-none md:border shadow-none md:shadow-sm">
+                <CardHeader className="p-2 md:p-6 pb-0 md:pb-6">
+                  <CardTitle className="text-xs md:text-sm font-bold uppercase tracking-widest text-muted-foreground">Observações</CardTitle>
+                </CardHeader>
+                <CardContent className="p-2 md:p-6">
+                  {/* @ts-ignore */}
+                  <p className="text-sm whitespace-pre-wrap">{sale.observation}</p>
                 </CardContent>
               </Card>
+            )}
 
-              {/* Observações */}
-              {sale.observation && (
-                <Card>
-                  <CardHeader><CardTitle>Observações</CardTitle></CardHeader>
-                  <CardContent>
-                    <p className="text-sm whitespace-pre-wrap">{sale.observation}</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Installments List */}
-              {sale.installments && sale.installments.length > 0 && (
-                <InstallmentList installments={sale.installments} />
-              )}
+            {/* Installments List */}
+            {sale.installments && sale.installments.length > 0 && (
+              <InstallmentList
+                installments={sale.installments}
+                saleId={sale.id}
+                onInstallmentPaid={() => {
+                  api.get(`/sales/${sale.id}`).then(res => setSale(res.data));
+                }}
+              />
+            )}
 
             <DialogFooter className="p-4 pt-0">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>

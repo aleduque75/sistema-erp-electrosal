@@ -95,7 +95,7 @@ export function ImageGallery({ media, onDeleteSuccess, initialIndex = 0 }: Image
 
         // Ajusta o índice se a imagem excluída for a última
 
-        setCurrentIndex(prev => Math.max(0, prev -1));
+        setCurrentIndex(prev => Math.max(0, prev - 1));
 
       }
 
@@ -126,9 +126,7 @@ export function ImageGallery({ media, onDeleteSuccess, initialIndex = 0 }: Image
           <div key={item.id} className="relative group aspect-square">
 
             <Image
-
-              src={`${API_BASE_URL}${item.path}`}
-
+              src={item.url || `${API_BASE_URL}${item.path}`}
               alt={item.filename || 'Imagem da transação'}
 
               layout="fill"
@@ -179,10 +177,8 @@ export function ImageGallery({ media, onDeleteSuccess, initialIndex = 0 }: Image
 
             {currentMedia && (
 
-               <Image
-
-                src={`${API_BASE_URL}${currentMedia.path}`}
-
+              <Image
+                src={currentMedia.url || `${API_BASE_URL}${currentMedia.path}`}
                 alt={currentMedia.filename || 'Imagem da transação'}
 
                 layout="fill"

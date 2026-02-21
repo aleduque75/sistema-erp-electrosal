@@ -3,6 +3,7 @@ import { TipoMetal } from './tipo-metal';
 import { Media } from './media';
 
 export interface ClienteAnalise {
+  id: string;
   name: string;
 }
 

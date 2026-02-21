@@ -1,5 +1,10 @@
 export interface Pessoa {
   id: string;
   name: string;
-  // Adicione outros campos conforme necessário
+  logradouro?: string;
+  numero?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
 }

@@ -64,7 +64,9 @@ export default function PurchaseOrdersPage() {
   const [orderToView, setOrderToView] = useState<PurchaseOrder | null>(null);
   const [supplierFilter, setSupplierFilter] = useState("");
   const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
-  const [filter, setFilter] = useState(""); // Add filter state
+  const [filter, setFilter] = useState("");
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
   const fetchPurchaseOrders = useCallback(async () => {
     if (!user) return;
@@ -93,7 +95,7 @@ export default function PurchaseOrdersPage() {
     fetchPurchaseOrders();
   }, [fetchPurchaseOrders]);
 
-useEffect(() => {
+  useEffect(() => {
     api.get("/pessoas?role=FORNECEDOR").then((res) => {
       setSuppliers(res.data.map((p: any) => ({ id: p.id, name: p.name })));
     });
@@ -227,18 +229,100 @@ useEffect(() => {
         <Combobox
           options={[{ value: "", label: "Todos os Fornecedores" }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
           value={supplierFilter}
-          onChange={setSupplierFilter}
+          onChange={(val) => setSupplierFilter(val || "")}
           placeholder="Filtrar por Fornecedor..."
           searchPlaceholder="Buscar fornecedor..."
           emptyText="Nenhum fornecedor encontrado."
         />
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <DataTable columns={columns} data={filteredPurchaseOrders} />
-        </CardContent>
-      </Card>
+      {/* Desktop View */}
+      <div className="hidden md:block">
+        <Card>
+          <CardContent className="pt-6">
+            <DataTable columns={columns} data={filteredPurchaseOrders} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Mobile View */}
+      <div className="md:hidden space-y-2 max-w-md mx-auto">
+        {filteredPurchaseOrders.length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground italic">Nenhum pedido encontrado.</div>
+        ) : (
+          filteredPurchaseOrders.map((order) => {
+            let variant: "default" | "secondary" | "destructive" | "outline" = "secondary";
+            if (order.status === "PENDING") variant = "default";
+            if (order.status === "RECEIVED") variant = "outline";
+            if (order.status === "CANCELED") variant = "destructive";
+
+            return (
+              <div
+                key={order.id}
+                className="p-3 rounded-xl border border-border bg-card shadow-sm space-y-2 active:scale-[0.98] transition-transform"
+                onClick={() => order.status === 'PENDING' ? handleOpenEditModal(order) : setOrderToView(order)}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{order.orderNumber}</span>
+                    <span className="font-bold text-sm text-foreground line-clamp-1">{order.fornecedor.pessoa.name}</span>
+                  </div>
+                  <Badge variant={variant} className="text-[10px] px-1.5 py-0 h-5">{order.status}</Badge>
+                </div>
+
+                <div className="flex justify-between items-end">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase">{format(new Date(order.orderDate), "dd/MM/yyyy")}</span>
+                    <span className="text-sm font-black text-zinc-900">{formatCurrency(order.totalAmount)}</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {order.status === 'PENDING' && (
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOrderToReceive(order);
+                        }}
+                      >
+                        <Badge variant="outline" className="border-none p-0"><Info className="h-4 w-4" /></Badge>
+                      </Button>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                        {order.status === 'PENDING' ? (
+                          <DropdownMenuItem onClick={() => handleOpenEditModal(order)}>
+                            <Edit className="mr-2 h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => setOrderToView(order)}>
+                            <Info className="mr-2 h-4 w-4" /> Detalhes
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setOrderToDelete(order)}
+                          className="text-red-600"
+                        >
+                          Deletar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
 
 
       <ResponsiveDialog

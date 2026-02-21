@@ -30,6 +30,11 @@ export class MediaController {
     return this.mediaService.findAll();
   }
 
+  @Get('analise-quimica/:id')
+  async findByAnaliseQuimicaId(@Param('id') id: string) {
+    return this.mediaService.findByAnaliseQuimicaId(id);
+  }
+
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(

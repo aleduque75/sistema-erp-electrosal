@@ -1,5 +1,46 @@
 import { Transacao } from './transacao';
-import { Pessoa } from './pessoa'; // Assuming Pessoa interface exists
+import { Pessoa } from '../@types/pessoa';
+
+export interface InventoryLot {
+  id: string;
+  remainingQuantity: number;
+  sourceType: string;
+  batchNumber?: string;
+  costPrice: number;
+  receivedDate: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  inventoryLots: InventoryLot[];
+  productGroup?: {
+    id: string;
+    name: string;
+    isReactionProductGroup: boolean;
+  };
+}
+
+export interface SaleItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  price: number;
+  product: { name: string; goldValue?: number };
+  inventoryLotId?: string;
+  laborPercentage?: number;
+  entryUnit?: string;
+  entryQuantity?: number;
+  stock?: number;
+  name?: string; // NewSaleForm uses .name in its items
+}
+
+export interface SaleItemLot {
+  inventoryLotId: string;
+  quantity: number;
+}
 
 export interface SaleInstallment {
   id: string;

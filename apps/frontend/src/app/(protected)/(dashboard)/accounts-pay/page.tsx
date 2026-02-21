@@ -93,12 +93,12 @@ export default function AccountsPayPage() {
   const [accounts, setAccounts] = useState<AccountPay[]>([]);
   const [total, setTotal] = useState(0);
   const [isFetching, setIsFetching] = useState(true);
-  
+
   const [date, setDate] = useState<DateRange | undefined>(INITIAL_DATE_RANGE);
   const [descriptionFilter, setDescriptionFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [fornecedorFilter, setFornecedorFilter] = useState("all");
-  
+
   const debouncedDescription = useDebounce(descriptionFilter, 500);
 
   const [fornecedores, setFornecedores] = useState<Pessoa[]>([]);
@@ -115,7 +115,7 @@ export default function AccountsPayPage() {
   const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
   const [accountToSplit, setAccountToSplit] = useState<AccountPay | null>(null);
   const [accountToView, setAccountToView] = useState<AccountPay | null>(null);
-  
+
   useEffect(() => {
     const fetchFornecedores = async () => {
       try {
@@ -338,52 +338,127 @@ export default function AccountsPayPage() {
 
         <Card>
           <CardContent className="pt-6 space-y-4">
-             <div className="flex flex-wrap items-center gap-2">
-                <Input 
-                  placeholder="Filtrar por descrição..."
-                  value={descriptionFilter}
-                  onChange={(e) => setDescriptionFilter(e.target.value)}
-                  className="w-full max-w-xs"
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                placeholder="Filtrar por descrição..."
+                value={descriptionFilter}
+                onChange={(e) => setDescriptionFilter(e.target.value)}
+                className="w-full max-w-xs"
+              />
+              <div className="w-full max-w-[200px]">
+                <Combobox
+                  options={fornecedorOptions}
+                  value={fornecedorFilter}
+                  onChange={(value) => setFornecedorFilter(value || 'all')}
+                  placeholder="Selecione um fornecedor"
+                  searchPlaceholder="Buscar fornecedor..."
+                  emptyText="Nenhum fornecedor encontrado."
                 />
-                <div className="w-full max-w-[200px]">
-                  <Combobox
-                    options={fornecedorOptions}
-                    value={fornecedorFilter}
-                    onChange={(value) => setFornecedorFilter(value || 'all')}
-                    placeholder="Selecione um fornecedor"
-                    searchPlaceholder="Buscar fornecedor..."
-                    emptyText="Nenhum fornecedor encontrado."
-                  />
-                </div>
-                <div className="w-full max-w-[180px]">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="paid">Pago</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <DateRangePicker date={date} onDateChange={setDate} />
-             </div>
-             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => fetchAccounts()} title="Atualizar lista">
-                  <RotateCcw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleClearFilters}>
-                  <X className="mr-2 h-4 w-4" />
-                  Limpar Filtros
-                </Button>
-             </div>
+              </div>
+              <div className="w-full max-w-[180px]">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="paid">Pago</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <DateRangePicker date={date} onDateChange={setDate} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => fetchAccounts()} title="Atualizar lista">
+                <RotateCcw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleClearFilters}>
+                <X className="mr-2 h-4 w-4" />
+                Limpar Filtros
+              </Button>
+            </div>
 
-            <DataTable
-              columns={columns}
-              data={accounts}
-              isLoading={isFetching}
-            />
+            <div className="hidden md:block">
+              <DataTable
+                columns={columns}
+                data={accounts}
+                isLoading={isFetching}
+              />
+            </div>
+
+            <div className="md:hidden space-y-2 max-w-md mx-auto">
+              {isFetching ? (
+                <div className="py-8 text-center text-muted-foreground animate-pulse italic">Carregando...</div>
+              ) : accounts.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground italic">Nenhuma conta encontrada.</div>
+              ) : (
+                accounts.map((account) => (
+                  <div
+                    key={account.id}
+                    className="p-3 rounded-xl border border-border bg-card shadow-sm space-y-2 active:scale-[0.98] transition-transform"
+                    onClick={() => setAccountToView(account)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider line-clamp-1">{account.fornecedor?.pessoa?.name || "N/A"}</span>
+                        <span className="font-bold text-sm text-foreground line-clamp-1">{account.description}</span>
+                      </div>
+                      <Badge variant={account.paid ? "default" : "secondary"} className="text-[10px] px-1.5 py-0 h-5">
+                        {account.paid ? "Pago" : "Pendente"}
+                      </Badge>
+                    </div>
+
+                    <div className="flex justify-between items-end">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase">Venc: {formatDate(account.dueDate)}</span>
+                        <span className="text-sm font-black text-zinc-900">
+                          {formatCurrency(account.amount)}
+                        </span>
+                        {account.goldAmount && (
+                          <span className="text-[10px] text-muted-foreground">{formatGrams(account.goldAmount)} AU</span>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => setAccountToView(account)}>
+                              <Info className="mr-2 h-4 w-4" /> Detalhes
+                            </DropdownMenuItem>
+                            {!account.paid && (
+                              <>
+                                <DropdownMenuItem onClick={() => setAccountToPay(account)}>
+                                  <DollarSign className="mr-2 h-4 w-4" /> Registrar Pagamento
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenEditModal(account)}>
+                                  <Edit className="mr-2 h-4 w-4" /> Editar
+                                </DropdownMenuItem>
+                                {!account.isInstallment && (
+                                  <DropdownMenuItem onClick={() => { setAccountToSplit(account); setIsSplitModalOpen(true); }}>
+                                    <GitCommitHorizontal className="mr-2 h-4 w-4" /> Parcelar
+                                  </DropdownMenuItem>
+                                )}
+                              </>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setAccountToDelete(account)} className="text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </CardContent>
           <CardFooter className="font-bold text-lg justify-end">
             Total Pendente no Período: {formatCurrency(total)}

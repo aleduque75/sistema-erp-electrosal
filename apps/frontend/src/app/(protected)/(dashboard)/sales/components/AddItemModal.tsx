@@ -21,36 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
+import { InventoryLot, Product, SaleItem } from '@/types/sale';
 
-// --- Interfaces (can be moved to a types file later) ---
-interface InventoryLot {
-  id: string;
-  remainingQuantity: number;
-  sourceType: string;
-  batchNumber?: string;
-  costPrice: number;
-  receivedDate: string;
-}
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  inventoryLots: InventoryLot[];
-  productGroup?: {
-    id: string;
-    name: string;
-    isReactionProductGroup: boolean;
-  };
-}
-interface SaleItem {
-  productId: string;
-  name: string;
-  quantity: number;
-  price: number;
-  stock: number;
-  inventoryLotId?: string;
-}
 
 interface AddItemModalProps {
   open: boolean;
@@ -169,15 +141,15 @@ export function AddItemModal({
     }
 
     const isManufactured = selectedProduct.inventoryLots.length > 0;
-    
+
     // Calculate total available stock across all lots for this product
     const totalStockAvailable = isManufactured
       ? selectedProduct.inventoryLots.reduce((sum, lot) => {
-          const usedInCurrentSale = items
-            .filter((item) => item.inventoryLotId === lot.id)
-            .reduce((acc, item) => acc + Number(item.quantity), 0);
-          return sum + (lot.remainingQuantity - usedInCurrentSale);
-        }, 0)
+        const usedInCurrentSale = items
+          .filter((item) => item.inventoryLotId === lot.id)
+          .reduce((acc, item) => acc + Number(item.quantity), 0);
+        return sum + (lot.remainingQuantity - usedInCurrentSale);
+      }, 0)
       : (selectedProduct.stock || 0);
 
     if (finalQuantity > totalStockAvailable + 0.01) {

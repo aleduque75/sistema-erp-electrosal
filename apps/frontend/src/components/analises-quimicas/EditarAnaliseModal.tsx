@@ -35,7 +35,10 @@ export function EditarAnaliseModal({
   const onSubmit = async (values: AnaliseQuimicaFormValues) => {
     setIsSubmitting(true);
     try {
-      await updateAnaliseQuimica(analise.id, values);
+      await updateAnaliseQuimica(analise.id, {
+        ...values,
+        dataEntrada: values.dataEntrada.toISOString(),
+      });
       toast.success("Sucesso!", {
         description: "Análise química atualizada.",
       });
@@ -58,7 +61,7 @@ export function EditarAnaliseModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[625px]">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Análise Química #{analise.numeroAnalise}</DialogTitle>
           <DialogDescription>

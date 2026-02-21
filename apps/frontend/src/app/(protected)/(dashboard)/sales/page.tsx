@@ -55,6 +55,7 @@ export default function SalesPage() {
     SEPARADO: { label: 'Separado', className: 'text-purple-600 bg-purple-100' },
     FINALIZADO: { label: 'Finalizado', className: 'text-green-600 bg-green-100' },
     CANCELADO: { label: 'Cancelado', className: 'text-red-600 bg-red-600' },
+    PAGO_PARCIALMENTE: { label: 'Pago Parcial', className: 'text-cyan-600 bg-cyan-100' },
   };
 
   const [sales, setSales] = useState<Sale[]>([]);
@@ -66,8 +67,8 @@ export default function SalesPage() {
   const [saleToConfirm, setSaleToConfirm] = useState<Sale | null>(null);
   const [saleToApplyCommission, setSaleToApplyCommission] = useState<Sale | null>(null);
   const [saleToUpdateShipping, setSaleToUpdateShipping] = useState<Sale | null>(null);
-  const [accountToReceive, setAccountToReceive] = useState<Sale['accountsRec'][0] | null>(null);
-  const [rowSelection, setRowSelection] = useState({});
+  const [accountToReceive, setAccountToReceive] = useState<any | null>(null);
+  const [rowSelection, setRowSelection] = useState<Record<number, boolean>>({});
 
   // Filter states
   const [clients, setClients] = useState<{ value: string; label: string }[]>([]);
@@ -232,20 +233,21 @@ export default function SalesPage() {
       const cep = pessoa.cep || '';
       const doc = pessoa.cnpj || pessoa.cpf || '';
 
-      const itemsText = sale.saleItems.map(item => {
+      const itemsText = (sale.saleItems || []).map(item => {
+        const product = item.product as any;
         // Use 'gr' as unit if stockUnit is 'GRAMS', otherwise use the unit name or 'un'
         let unit = 'gr';
-        if (item.product.stockUnit === 'KILOGRAMS') unit = 'kg';
-        else if (item.product.stockUnit === 'LITERS') unit = 'L';
-        else if (item.product.stockUnit === 'UNITS') unit = 'un';
+        if (product?.stockUnit === 'KILOGRAMS') unit = 'kg';
+        else if (product?.stockUnit === 'LITERS') unit = 'L';
+        else if (product?.stockUnit === 'UNITS') unit = 'un';
 
-        const goldQty = (item.quantity * (item.product.goldValue || 0));
+        const goldQty = (item.quantity * (product?.goldValue || 0));
 
         // Format: 58,8 (using comma for decimals)
         const formattedQty = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(item.quantity);
         const formattedGoldQty = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(goldQty);
 
-        return `Produto: ${item.product.name}\nQtd ${item.product.name}: ${formattedQty} ${unit}  /  Qtd Au: ${formattedGoldQty}`;
+        return `Produto: ${product?.name}\nQtd ${product?.name}: ${formattedQty} ${unit}  /  Qtd Au: ${formattedGoldQty}`;
       }).join('\n');
 
       return `Pedido: ${sale.orderNumber}  - Data: ${saleDate}  - Cliente:  ${sale.pessoa.name}
@@ -273,11 +275,11 @@ ${itemsText}`;
 
     try {
       const response = await api.post('/sales/bulk-confirm', { saleIds: selectedSaleIds });
-      toast.success(`${response.data.filter(r => r.status === 'success').length} venda(s) confirmada(s) com sucesso.`);
+      toast.success(`${response.data.filter((r: any) => r.status === 'success').length} venda(s) confirmada(s) com sucesso.`);
 
-      const errors = response.data.filter(r => r.status === 'error');
+      const errors = response.data.filter((r: any) => r.status === 'error');
       if (errors.length > 0) {
-        errors.forEach(err => {
+        errors.forEach((err: any) => {
           // It's better to find the orderNumber to show in the toast
           const sale = sales.find(s => s.id === err.saleId);
           const orderNumber = sale ? sale.orderNumber : err.saleId;
@@ -475,7 +477,7 @@ ${itemsText}`;
   ];
 
   return (
-    <div className="space-y-4 p-2 md:p-8">
+    <div className="space-y-4 p-1 md:p-8">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Vendas</h1>
         <div className="flex items-center gap-2">
@@ -521,7 +523,7 @@ ${itemsText}`;
             </div>
             <div className="space-y-2">
               <Label>Cliente</Label>
-              <Combobox options={clients} value={filters.clientId} onChange={value => handleFilterChange('clientId', value)} placeholder="Selecione um cliente..." />
+              <Combobox options={clients} value={filters.clientId || ''} onChange={value => handleFilterChange('clientId', value)} placeholder="Selecione um cliente..." />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
@@ -544,8 +546,8 @@ ${itemsText}`;
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="border-none md:border md:shadow-sm bg-transparent md:bg-card">
+        <CardContent className="p-2 md:pt-6">
           <div className="flex items-center gap-2 mb-4">
             {Object.keys(rowSelection).length > 0 && (
               <>
@@ -559,13 +561,92 @@ ${itemsText}`;
               </>
             )}
           </div>
-          <DataTable
-            columns={columns}
-            data={sales}
-            filterColumnId="orderNumber"
-            rowSelection={rowSelection}
-            onRowSelectionChange={setRowSelection}
-          />
+
+          {/* Desktop View */}
+          <div className="hidden md:block">
+            <DataTable
+              columns={columns}
+              data={sales}
+              filterColumnId="orderNumber"
+              rowSelection={rowSelection}
+              onRowSelectionChange={setRowSelection}
+            />
+          </div>
+
+          {/* Mobile View */}
+          <div className="md:hidden space-y-2 max-w-md mx-auto">
+            {loading ? (
+              <div className="py-8 text-center text-muted-foreground italic">Carregando vendas...</div>
+            ) : sales.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground italic">Nenhuma venda encontrada.</div>
+            ) : (
+              sales.map((sale, idx) => {
+                const config = statusConfig[sale.status] || { label: sale.status, className: '' };
+                const saleItems = sale.saleItems || [];
+                const totalQty = saleItems.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0;
+
+                return (
+                  <div
+                    key={sale.id}
+                    className="flex gap-2 p-3 rounded-lg border border-border bg-card shadow-sm active:scale-[0.98] transition-transform relative overflow-hidden group"
+                  >
+                    {/* Checkbox de Seleção */}
+                    <div className="pt-1">
+                      <Checkbox
+                        checked={rowSelection[idx] || false}
+                        onCheckedChange={(checked) => {
+                          setRowSelection(prev => ({
+                            ...prev,
+                            [idx]: !!checked
+                          }));
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex-1 space-y-3" onClick={() => setSelectedSale(sale)}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{sale.orderNumber}</p>
+                          <h3 className="font-black italic text-zinc-950 truncate max-w-[150px]">{sale.pessoa?.name}</h3>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant="outline" className={`border-none ${config.className} text-[10px] px-2 py-0`}>
+                            {config.label}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-zinc-400 hover:text-blue-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadPdf(sale);
+                            }}
+                          >
+                            <Printer size={16} />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-end">
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Produtos ({totalQty})</p>
+                          <p className="text-xs text-zinc-600 line-clamp-1 italic">
+                            {saleItems.map(i => i.product?.name).join(', ')}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Total</p>
+                          <p className="font-black italic text-zinc-950 text-base">
+                            {formatCurrency(Number(sale.adjustment?.paymentReceivedBRL || 0))}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </CardContent>
       </Card>
 

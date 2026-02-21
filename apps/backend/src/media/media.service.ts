@@ -55,6 +55,18 @@ export class MediaService {
     });
   }
 
+  async findByAnaliseQuimicaId(analiseQuimicaId: string): Promise<Media[]> {
+    const prismaMedias = await this.prisma.media.findMany({
+      where: { analiseQuimicaId },
+      orderBy: { createdAt: 'desc' }
+    });
+    return prismaMedias.map(item => {
+      const domain = MediaMapper.toDomain(item);
+      (domain as any).url = this.getFullUrl(item.id);
+      return domain;
+    });
+  }
+
   async findAll(): Promise<Media[]> {
     const prismaMedia = await this.prisma.media.findMany({
       orderBy: { createdAt: 'desc' }

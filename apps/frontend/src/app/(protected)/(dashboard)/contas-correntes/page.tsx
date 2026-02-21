@@ -13,6 +13,7 @@ import {
   FileText,
   PlusCircle,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -100,7 +101,7 @@ export default function ContasCorrentesPage() {
       if (!showInactive) {
         params.activeOnly = true;
       }
-      
+
       const response = await api.get("/contas-correntes", { params });
       setContas(
         response.data.map((c: any) => ({
@@ -148,8 +149,8 @@ export default function ContasCorrentesPage() {
   };
 
   const columns: ColumnDef<ContaCorrente>[] = [
-    { 
-      accessorKey: "nome", 
+    {
+      accessorKey: "nome",
       header: "Nome da Conta",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
@@ -179,7 +180,7 @@ export default function ContasCorrentesPage() {
             : row.original.saldoAtualGold;
         const formatted =
           currencyMode === "BRL" ? formatCurrency(val) : formatGold(val);
-        
+
         const isNegative = val < 0;
         return (
           <span className={isNegative ? "text-red-600 font-bold" : "text-foreground font-medium"}>
@@ -240,12 +241,12 @@ export default function ContasCorrentesPage() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <CardTitle>Contas Correntes (Caixa e Bancos)</CardTitle>
             <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
-              
+
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="showInactive" 
-                  checked={showInactive} 
-                  onCheckedChange={(checked) => setShowInactive(!!checked)} 
+                <Checkbox
+                  id="showInactive"
+                  checked={showInactive}
+                  onCheckedChange={(checked) => setShowInactive(!!checked)}
                 />
                 <Label htmlFor="showInactive" className="text-sm cursor-pointer text-foreground">Mostrar Inativas</Label>
               </div>
@@ -284,12 +285,86 @@ export default function ContasCorrentesPage() {
           {isFetching ? (
             <p className="text-center p-10 text-foreground">Buscando contas...</p>
           ) : (
-            <DataTable
-              columns={columns}
-              data={contas}
-              filterColumnId="nome"
-              filterPlaceholder="Pesquisar por nome da conta..."
-            />
+            <>
+              <div className="hidden md:block">
+                <DataTable
+                  columns={columns}
+                  data={contas}
+                  filterColumnId="nome"
+                  filterPlaceholder="Pesquisar por nome da conta..."
+                />
+              </div>
+
+              <div className="md:hidden space-y-2 max-w-md mx-auto">
+                {contas.length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground italic">Nenhuma conta encontrada.</div>
+                ) : (
+                  contas.map((conta) => {
+                    const val = currencyMode === "BRL" ? conta.saldoAtualBRL : conta.saldoAtualGold;
+                    const formatted = currencyMode === "BRL" ? formatCurrency(val) : formatGold(val);
+                    const isNegative = val < 0;
+
+                    return (
+                      <div
+                        key={conta.id}
+                        className="p-3 rounded-xl border border-border bg-card shadow-sm space-y-2 active:scale-[0.98] transition-transform"
+                        onClick={() => { }}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{conta.type || "CONTA"}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-foreground line-clamp-1">{conta.nome}</span>
+                              {!conta.isActive && (
+                                <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">Inativa</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">#{conta.numeroConta}</Badge>
+                        </div>
+
+                        <div className="flex justify-between items-end">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-muted-foreground font-medium uppercase">Saldo Atual ({currencyMode})</span>
+                            <span className={isNegative ? "text-sm font-black text-red-600" : "text-sm font-black text-zinc-900"}>
+                              {formatted}
+                            </span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                <Link href={`/contas-correntes/${conta.id}/extrato?mode=${currencyMode}`}>
+                                  <DropdownMenuItem>
+                                    <FileText className="mr-2 h-4 w-4" /> Ver Extrato
+                                  </DropdownMenuItem>
+                                </Link>
+                                <DropdownMenuItem onClick={() => setContaForLancamento(conta)}>
+                                  <PlusCircle className="mr-2 h-4 w-4" /> Novo Lançamento
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenEditModal(conta)}>
+                                  <Edit className="mr-2 h-4 w-4" /> Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setContaToDelete(conta)} className="text-red-600">
+                                  <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -304,14 +379,12 @@ export default function ContasCorrentesPage() {
           conta={
             contaToEdit
               ? {
-                  ...contaToEdit,
-                  saldoInicial:
-                    (contaToEdit as any).saldoInicial ??
-                    (contaToEdit as any).saldo ?? // Fallback antigo
-                    0,
-                  limite: (contaToEdit as any).limite ?? null,
-                  type: (contaToEdit as any).type ?? null,
-                }
+                ...contaToEdit,
+                initialBalanceBRL: (contaToEdit as any).initialBalanceBRL ?? 0,
+                initialBalanceGold: (contaToEdit as any).initialBalanceGold ?? 0,
+                limite: (contaToEdit as any).limite ?? null,
+                type: (contaToEdit as any).type ?? null,
+              }
               : null
           }
           onSave={handleSave}

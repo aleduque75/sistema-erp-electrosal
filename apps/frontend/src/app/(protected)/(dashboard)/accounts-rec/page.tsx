@@ -200,68 +200,134 @@ export default function AccountsRecPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-8">
-        <h1 className="text-2xl font-bold">Contas a Receber</h1>
-        
-        <div className="flex items-center gap-4">
-            <Input 
-              placeholder="Filtrar por descrição ou pedido..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="max-w-sm"
-            />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="received">Recebido</SelectItem>
-              </SelectContent>
-            </Select>
-            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
-            <Button variant="ghost" size="icon" onClick={fetchAccounts} title="Atualizar lista">
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-        </div>
+      <h1 className="text-2xl font-bold">Contas a Receber</h1>
 
-        <Card>
-            <CardContent className="pt-6">
-                <DataTable columns={columns} data={filteredAccounts} />
-            </CardContent>
-        </Card>
+      <div className="flex items-center gap-4">
+        <Input
+          placeholder="Filtrar por descrição ou pedido..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="max-w-sm"
+        />
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+            <SelectItem value="received">Recebido</SelectItem>
+          </SelectContent>
+        </Select>
+        <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+        <Button variant="ghost" size="icon" onClick={fetchAccounts} title="Atualizar lista">
+          <RotateCcw className="h-4 w-4" />
+        </Button>
+      </div>
 
-        {/* Modal para Registrar Recebimento */}
-        <Dialog open={!!accountToReceive} onOpenChange={(isOpen) => !isOpen && setAccountToReceive(null)}>
-            <DialogContent className="max-h-[90vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>Registrar Recebimento</DialogTitle>
-                </DialogHeader>
-                <div className="overflow-y-auto flex-1 pr-2">
-                    {accountToReceive && <ReceivePaymentForm accountRec={accountToReceive} onSave={handleSavePayment} />}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="hidden md:block">
+            <DataTable columns={columns} data={filteredAccounts} />
+          </div>
+
+          <div className="md:hidden space-y-2 max-w-md mx-auto">
+            {loading ? (
+              <div className="py-8 text-center text-muted-foreground animate-pulse italic">Carregando...</div>
+            ) : filteredAccounts.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground italic">Nenhuma conta encontrada.</div>
+            ) : (
+              filteredAccounts.map((account) => (
+                <div
+                  key={account.id}
+                  className="p-3 rounded-xl border border-border bg-card shadow-sm space-y-2 active:scale-[0.98] transition-transform"
+                  onClick={() => account.sale?.id && handleViewSale(account.sale.id)}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider line-clamp-1">
+                        {account.pessoa?.name || (account.sale?.orderNumber ? `Pedido #${account.sale.orderNumber}` : "N/A")}
+                      </span>
+                      <span className="font-bold text-sm text-foreground line-clamp-1">{account.description}</span>
+                    </div>
+                    <Badge variant={account.received ? "default" : "secondary"} className="text-[10px] px-1.5 py-0 h-5">
+                      {account.received ? "Recebido" : "Pendente"}
+                    </Badge>
+                  </div>
+
+                  <div className="flex justify-between items-end">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-muted-foreground font-medium uppercase">Venc: {formatDate(account.dueDate)}</span>
+                      <span className="text-sm font-black text-zinc-900">
+                        {formatCurrency(account.amount)}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          {account.sale?.id && (
+                            <DropdownMenuItem onClick={() => handleViewSale(account.sale!.id)}>
+                              Visualizar Venda
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onClick={() => handleEdit(account)}>
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {!account.received && (
+                            <DropdownMenuItem onClick={() => setAccountToReceive(account)}>
+                              Registrar Recebimento
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
                 </div>
-            </DialogContent>
-        </Dialog>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Modal para Editar Conta a Receber */}
-        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Editar Conta a Receber</DialogTitle>
-                </DialogHeader>
-                {accountToEdit && <EditAccountRecForm accountRec={accountToEdit} onSave={handleSaveEdit} />}
-            </DialogContent>
-        </Dialog>
+      {/* Modal para Registrar Recebimento */}
+      <Dialog open={!!accountToReceive} onOpenChange={(isOpen) => !isOpen && setAccountToReceive(null)}>
+        <DialogContent className="max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Registrar Recebimento</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto flex-1 pr-2">
+            {accountToReceive && <ReceivePaymentForm accountRec={accountToReceive} onSave={handleSavePayment} />}
+          </div>
+        </DialogContent>
+      </Dialog>
 
-        {/* Modal para Visualizar a Venda */}
-        <Dialog open={isViewSaleModalOpen} onOpenChange={setIsViewSaleModalOpen}>
-            <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                    <DialogTitle>Detalhes da Venda - Pedido #{saleToView?.orderNumber}</DialogTitle>
-                </DialogHeader>
-                {saleToView ? <SaleDetailsView sale={saleToView} onReceivePayment={setAccountToReceive} onUpdate={() => handleViewSale(saleToView.id)} /> : <p>Carregando...</p>}
-            </DialogContent>
-        </Dialog>
+      {/* Modal para Editar Conta a Receber */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Conta a Receber</DialogTitle>
+          </DialogHeader>
+          {accountToEdit && <EditAccountRecForm accountRec={accountToEdit} onSave={handleSaveEdit} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para Visualizar a Venda */}
+      <Dialog open={isViewSaleModalOpen} onOpenChange={setIsViewSaleModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Venda - Pedido #{saleToView?.orderNumber}</DialogTitle>
+          </DialogHeader>
+          {saleToView ? <SaleDetailsView sale={saleToView} onReceivePayment={setAccountToReceive} onUpdate={() => handleViewSale(saleToView.id)} /> : <p>Carregando...</p>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

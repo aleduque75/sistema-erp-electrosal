@@ -25,15 +25,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { LotSelectionModal } from "@/components/sales/LotSelectionModal";
 import { AddItemModal } from "./AddItemModal";
-import { Product } from "@/types/product";
-import { SaleItem, SaleItemLot } from "@/types/sale";
-import { InventoryLot } from "@/types/inventory-lot";
+import { Product, SaleItem, SaleItemLot, InventoryLot } from "@/types/sale";
 
 // --- Interfaces ---
 interface Client { id: string; name: string; }
 interface ContaCorrente { id: string; nome: string; }
 interface Fee { id: string; installments: number; feePercentage: number; }
-interface PaymentTerm { id:string; name: string; installmentsDays: number[]; interestRate?: number; }
+interface PaymentTerm { id: string; name: string; installmentsDays: number[]; interestRate?: number; }
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -183,14 +181,14 @@ export function NewSaleForm({ onSave }: any) {
 
     if (newItemData.inventoryLotId) {
       // User manually selected a lot in the AddItemModal
-      assignedLots = [{ 
-        inventoryLotId: newItemData.inventoryLotId, 
-        quantity: newItemData.quantity 
+      assignedLots = [{
+        inventoryLotId: newItemData.inventoryLotId,
+        quantity: newItemData.quantity
       }];
     } else if (product && product.inventoryLots && product.inventoryLots.length > 0) {
       // Automatic FIFO allocation
       let remainingToAssign = new Decimal(newItemData.quantity);
-      
+
       // Sort lots by date (oldest first)
       const sortedLots = [...product.inventoryLots].sort(
         (a, b) => new Date(a.receivedDate).getTime() - new Date(b.receivedDate).getTime()
@@ -254,10 +252,10 @@ export function NewSaleForm({ onSave }: any) {
   const handleLotsSelected = (selectedLots: SaleItemLot[]) => {
     if (itemToSelectLots === null) return;
     const { itemIndex } = itemToSelectLots;
-    
+
     const updatedItems = [...items];
     updatedItems[itemIndex].lots = selectedLots;
-    
+
     // Auto-update total quantity based on selected lots if product is not service/reaction
     // But usually we want quantity to match lots sum
     const totalLotQty = selectedLots.reduce((acc, lot) => acc + lot.quantity, 0);
@@ -265,7 +263,7 @@ export function NewSaleForm({ onSave }: any) {
     updatedItems[itemIndex].quantity = parseFloat(totalLotQty.toFixed(2));
 
     setItems(updatedItems);
-    
+
     setItemToSelectLots(null);
   };
 
@@ -407,11 +405,11 @@ export function NewSaleForm({ onSave }: any) {
       <div className="flex flex-col lg:flex-row flex-1 gap-4">
         <div className="w-full lg:w-1/3 space-y-4">
           <Card className="h-full">
-            <CardHeader>
+            <CardHeader className="p-4 md:p-6">
               <CardTitle className="text-lg">1. Dados da Venda</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-               <div className="grid grid-cols-2 gap-4">
+            <CardContent className="space-y-4 p-4 md:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label>Data da Venda</Label>
                   <Input
@@ -426,13 +424,13 @@ export function NewSaleForm({ onSave }: any) {
                   render={({ field }) => (
                     <div className="space-y-1">
                       <Label>Nº Pedido (Opcional)</Label>
-                      <Input 
-                        {...field} 
-                        type="number" 
-                        placeholder="Automático se vazio" 
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Automático se vazio"
                         onBlur={handleCheckOrderNumber}
                       />
-                       <p className="text-sm text-destructive">{typeof errors.orderNumber?.message === "string" ? errors.orderNumber.message : ""}</p>
+                      <p className="text-sm text-destructive">{typeof errors.orderNumber?.message === "string" ? errors.orderNumber.message : ""}</p>
                     </div>
                   )}
                 />
@@ -473,7 +471,7 @@ export function NewSaleForm({ onSave }: any) {
                   </div>
                 )}
               />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label>Ouro (R$)</Label>
                   <Input
@@ -493,24 +491,24 @@ export function NewSaleForm({ onSave }: any) {
                   />
                 </div>
               </div>
-                <div className="space-y-1">
-                  <Label>Frete (R$)</Label>
-                  <Input
-                    type="number"
-                    value={freightAmount}
-                    onChange={(e) => setFreightAmount(Number(e.target.value))}
-                    step="0.01"
-                  />
-                </div>
+              <div className="space-y-1">
+                <Label>Frete (R$)</Label>
+                <Input
+                  type="number"
+                  value={freightAmount}
+                  onChange={(e) => setFreightAmount(Number(e.target.value))}
+                  step="0.01"
+                />
+              </div>
               <Controller
                 name="observation"
                 control={control}
                 render={({ field }) => (
                   <div className="space-y-1">
                     <Label>Observações</Label>
-                    <Textarea 
-                      {...field} 
-                      placeholder="Observações adicionais..." 
+                    <Textarea
+                      {...field}
+                      placeholder="Observações adicionais..."
                       className="resize-none h-24"
                     />
                   </div>
@@ -575,82 +573,84 @@ export function NewSaleForm({ onSave }: any) {
                 Adicionar Item
               </Button>
             </CardHeader>
-            <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-[350px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40%]">Produto</TableHead>
-                      <TableHead>Qtd</TableHead>
-                      <TableHead>Preço Unit.</TableHead>
-                      <TableHead>Lotes</TableHead>
-                      <TableHead className="text-right">Subtotal</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.length > 0 ? (
-                      items.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <span className="font-medium">{item.name}</span>
-                            {item.laborPercentage !== undefined && (
-                              <div className="text-xs text-muted-foreground">
-                                Mão de obra: {item.laborPercentage}%
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                // Allow typing decimals, but limit precision if needed or just pass as string then parse
-                                handleUpdateItem(index, 'quantity', val === '' ? 0 : parseFloat(val));
-                              }}
-                              className="w-24"
-                              step="0.01"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={item.price}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                handleUpdateItem(index, 'price', val === '' ? 0 : parseFloat(val));
-                              }}
-                              className="w-24"
-                              step="0.01"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button type="button" variant="outline" size="sm" onClick={() => openLotSelector(index)}>
-                              <PackageSearch className="mr-2 h-4 w-4" />
-                              ({item.lots.length})
-                            </Button>
-                          </TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
-                          <TableCell>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(index)}>
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
+            <CardContent className="flex-1 p-0 overflow-hidden">
+              <ScrollArea className="h-[350px] w-full">
+                <div className="min-w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[40%]">Produto</TableHead>
+                        <TableHead>Qtd</TableHead>
+                        <TableHead>Preço Unit.</TableHead>
+                        <TableHead>Lotes</TableHead>
+                        <TableHead className="text-right">Subtotal</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.length > 0 ? (
+                        items.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <span className="font-medium">{item.name}</span>
+                              {item.laborPercentage !== undefined && (
+                                <div className="text-xs text-muted-foreground">
+                                  Mão de obra: {item.laborPercentage}%
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  // Allow typing decimals, but limit precision if needed or just pass as string then parse
+                                  handleUpdateItem(index, 'quantity', val === '' ? 0 : parseFloat(val));
+                                }}
+                                className="w-24"
+                                step="0.01"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={item.price}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  handleUpdateItem(index, 'price', val === '' ? 0 : parseFloat(val));
+                                }}
+                                className="w-24"
+                                step="0.01"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Button type="button" variant="outline" size="sm" onClick={() => openLotSelector(index)}>
+                                <PackageSearch className="mr-2 h-4 w-4" />
+                                ({item.lots.length})
+                              </Button>
+                            </TableCell>
+                            <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
+                            <TableCell>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(index)}>
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center h-full">
+                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                              <p>Nenhum item adicionado.</p>
+                              <p className="text-sm">Clique em "Adicionar Item" para começar.</p>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center h-full">
-                          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                            <p>Nenhum item adicionado.</p>
-                            <p className="text-sm">Clique em "Adicionar Item" para começar.</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </ScrollArea>
             </CardContent>
             <div className="flex flex-col space-y-2 text-right p-4 border-t">

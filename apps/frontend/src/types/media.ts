@@ -4,6 +4,7 @@ export interface Media {
   mimetype: string;
   size: number;
   path: string;
+  url?: string;
   createdAt: string;
   updatedAt: string;
   organizationId?: string;

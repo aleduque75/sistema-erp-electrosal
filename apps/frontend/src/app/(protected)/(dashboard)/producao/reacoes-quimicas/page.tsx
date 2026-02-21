@@ -126,7 +126,7 @@ export default function ChemicalReactionsPage() {
   const filteredReactions = reactions.filter((reaction) => {
     const matchesStatus = statusFilter === "ALL" || reaction.status === statusFilter;
     const matchesMetalType = metalTypeFilter === "ALL" || reaction.metalType === metalTypeFilter;
-    
+
     let matchesDate = true;
     if (dateRange?.from) {
       const reactionDate = new Date(reaction.reactionDate);
@@ -338,13 +338,89 @@ export default function ChemicalReactionsPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <DataTable 
-              columns={columns} 
-              data={filteredReactions} 
-              filterColumnId="reactionNumber"
-              filterPlaceholder="Filtrar por número da reação..."
-              isLoading={loading}
-            />
+            <div className="hidden md:block">
+              <DataTable
+                columns={columns}
+                data={filteredReactions}
+                filterColumnId="reactionNumber"
+                filterPlaceholder="Filtrar por número da reação..."
+                isLoading={loading}
+              />
+            </div>
+
+            <div className="md:hidden space-y-2 max-w-md mx-auto p-4">
+              {loading ? (
+                <div className="py-8 text-center text-muted-foreground animate-pulse italic">Carregando...</div>
+              ) : filteredReactions.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground italic">Nenhuma reação encontrada.</div>
+              ) : (
+                filteredReactions.map((reaction) => {
+                  const displayStatus = reaction.status ? (statusLabelMap[reaction.status] || reaction.status.replace('_', ' ')) : 'Desconhecido';
+                  const variant = reaction.status && statusVariantMap[reaction.status] ? statusVariantMap[reaction.status] : 'outline';
+
+                  return (
+                    <div
+                      key={reaction.id}
+                      className="p-3 rounded-xl border border-border bg-card shadow-sm space-y-2 active:scale-[0.98] transition-transform"
+                      onClick={() => handleOpenDetails(reaction.id)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{reaction.reactionNumber}</span>
+                          <span className="font-bold text-sm text-foreground">{reaction.metalType}</span>
+                        </div>
+                        <Badge variant={variant} className="text-[10px] px-1.5 py-0 h-5">{displayStatus}</Badge>
+                      </div>
+
+                      <div className="flex justify-between items-end">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-muted-foreground font-medium uppercase">{new Date(reaction.reactionDate).toLocaleDateString('pt-BR')}</span>
+                          <span className="text-sm font-black text-zinc-900">
+                            {new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(Number(reaction.auUsedGrams))} g
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">Lote: {reaction.productionBatch?.batchNumber || '-'}</span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleOpenDetails(reaction.id)}>
+                                <Eye className="mr-2 h-4 w-4" /> Ver Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePrintPdf(reaction.id)} disabled={isPrinting}>
+                                <Printer className="mr-2 h-4 w-4" /> Imprimir Relatório
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {reaction.status === 'STARTED' && (
+                                <DropdownMenuItem onClick={() => handleOpenLotSelectionModal(reaction)}>
+                                  Editar Lotes
+                                </DropdownMenuItem>
+                              )}
+                              {(reaction.status === 'STARTED' || reaction.status === 'PROCESSING') && (
+                                <div className="p-2" onClick={(e) => e.stopPropagation()}>
+                                  <ProductionStepClientBlock reactionId={reaction.id} auUsedGrams={reaction.auUsedGrams} />
+                                </div>
+                              )}
+                              {reaction.status === 'PENDING_PURITY_ADJUSTMENT' && (
+                                <div className="p-2" onClick={(e) => e.stopPropagation()}>
+                                  <AdjustPurityClientBlock reactionId={reaction.id} />
+                                </div>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

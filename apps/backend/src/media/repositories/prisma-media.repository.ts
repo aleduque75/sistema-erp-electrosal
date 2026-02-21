@@ -6,7 +6,7 @@ import { Media as PrismaMedia } from '@prisma/client';
 
 @Injectable()
 export class PrismaMediaRepository implements IMediaRepository {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async findById(id: string): Promise<Media | null> {
     const prismaMedia = await this.prisma.media.findUnique({
@@ -19,6 +19,13 @@ export class PrismaMediaRepository implements IMediaRepository {
   async findByRecoveryOrderId(recoveryOrderId: string): Promise<Media[]> {
     const prismaMedias = await this.prisma.media.findMany({
       where: { recoveryOrderId },
+    });
+    return prismaMedias.map(MediaMapper.toDomain);
+  }
+
+  async findByAnaliseQuimicaId(analiseQuimicaId: string): Promise<Media[]> {
+    const prismaMedias = await this.prisma.media.findMany({
+      where: { analiseQuimicaId },
     });
     return prismaMedias.map(MediaMapper.toDomain);
   }

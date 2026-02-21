@@ -59,11 +59,14 @@ main();
 ```
 2. Execute com `node set-password.cjs`.
 
-## 5. Aplicando Alterações em Produção (Homologação)
-Sempre reconstrua o monorepo após alterações no backend ou frontend:
+## 6. Tela Branca (Client Modules Error)
+Causas comuns: Cache corrompido do Next.js após alterações drásticas no monorepo ou falta de memória no build.
 
+1. Identifique o erro no log: `TypeError: Cannot read properties of undefined (reading 'clientModules')`.
+2. Solução: Limpeza profunda e rebuild.
 // turbo
-1. Execute o build e restart:
 ```bash
-pnpm build && pm2 restart erp-backend-homolog erp-frontend-homolog
+rm -rf apps/frontend/.next
+pnpm build
+pm2 restart erp-frontend-homolog
 ```

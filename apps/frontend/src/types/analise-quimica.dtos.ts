@@ -16,6 +16,7 @@ export interface UpdateAnaliseQuimicaDto {
   dataAnaliseConcluida?: string | null;
   dataAprovacaoCliente?: string | null;
   dataFinalizacaoRecuperacao?: string | null;
+  metalType?: string;
 }
 
 export interface LancarResultadoDto {

@@ -14,6 +14,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -96,7 +97,7 @@ export function AnalisesQuimicasTable({
     } catch (error: any) {
       toast.error("Erro ao baixar resíduo", { description: error.message });
     } finally {
-        setAnaliseParaBaixarResiduo(null);
+      setAnaliseParaBaixarResiduo(null);
     }
   };
 
@@ -222,7 +223,7 @@ export function AnalisesQuimicasTable({
 
   return (
     <>
-      <div className="rounded-md border">
+      <div className="hidden md:block rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -239,126 +240,228 @@ export function AnalisesQuimicasTable({
           <TableBody>
             {analises.map((analise) => {
               return (
-              <TableRow key={analise.id}>
-                <TableCell className="font-medium">
-                  {analise.numeroAnalise}
-                </TableCell>
-                <TableCell>{analise.cliente?.name || "N/A"}</TableCell>
-                <TableCell>
-                  {format(new Date(analise.dataEntrada), "dd/MM/yyyy")}
-                </TableCell>
-                <TableCell>{analise.descricaoMaterial}</TableCell>
-                <TableCell>{analise.metalType || 'AU'}</TableCell>
-                <TableCell>
-                  {analise.auEstimadoBrutoGramas != null
-                    ? `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(analise.auEstimadoBrutoGramas)} g` 
-                    : '-'}
-                </TableCell>
-                <TableCell>
-                  {/* Removemos 'as any' e confiamos no tipo corrigido do Badge */}
-                  <ChemicalAnalysisStatusBadge status={analise.status} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Abrir menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem
-                        onClick={() => setAnaliseParaVisualizar(analise)}
-                      >
-                        Ver Detalhes
-                      </DropdownMenuItem>
-                      {(analise.status === "RECEBIDO" || analise.status === "EM_ANALISE") && (
+                <TableRow key={analise.id}>
+                  <TableCell className="font-medium">
+                    {analise.numeroAnalise}
+                  </TableCell>
+                  <TableCell>{analise.cliente?.name || "N/A"}</TableCell>
+                  <TableCell>
+                    {format(new Date(analise.dataEntrada), "dd/MM/yyyy")}
+                  </TableCell>
+                  <TableCell>{analise.descricaoMaterial}</TableCell>
+                  <TableCell>{analise.metalType || 'AU'}</TableCell>
+                  <TableCell>
+                    {analise.auEstimadoBrutoGramas != null
+                      ? `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(analise.auEstimadoBrutoGramas)} g`
+                      : '-'}
+                  </TableCell>
+                  <TableCell>
+                    {/* Removemos 'as any' e confiamos no tipo corrigido do Badge */}
+                    <ChemicalAnalysisStatusBadge status={analise.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Abrir menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
                         <DropdownMenuItem
-                          onClick={() => setAnaliseParaEditar(analise)}
+                          onClick={() => setAnaliseParaVisualizar(analise)}
                         >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Editar Análise
+                          Ver Detalhes
                         </DropdownMenuItem>
-                      )}
-                      {analise.status === "EM_ANALISE" && (
-                        <>
+                        {(analise.status === "RECEBIDO" || analise.status === "EM_ANALISE") && (
                           <DropdownMenuItem
-                            onClick={() => setAnaliseParaLancar(analise)}
+                            onClick={() => setAnaliseParaEditar(analise)}
                           >
-                            <FlaskConical className="mr-2 h-4 w-4" />
-                            Lançar Resultado
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar Análise
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <XCircle className="mr-2 h-4 w-4" />
-                            Cancelar
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {analise.status === "ANALISADO_AGUARDANDO_APROVACAO" && (
-                        <>
+                        )}
+                        {analise.status === "EM_ANALISE" && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => setAnaliseParaLancar(analise)}
+                            >
+                              <FlaskConical className="mr-2 h-4 w-4" />
+                              Lançar Resultado
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <XCircle className="mr-2 h-4 w-4" />
+                              Cancelar
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {analise.status === "ANALISADO_AGUARDANDO_APROVACAO" && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => handleAprovarAnalise(analise.id)}
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Aprovar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleReprovarAnalise(analise.id)}
+                            >
+                              <ThumbsDown className="mr-2 h-4 w-4" />
+                              Reprovar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setAnaliseParaLancar(analise)}
+                            >
+                              <FlaskConical className="mr-2 h-4 w-4" />
+                              Editar Resultado
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleRefazerAnalise(analise.id)}
+                            >
+                              <RotateCw className="mr-2 h-4 w-4" />
+                              Refazer Análise
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {analise.status === "APROVADO_PARA_RECUPERACAO" && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => handleDownloadPdf(analise.id)}
+                              disabled={isDownloadingPdf === analise.id}
+                            >
+                              <Paperclip className="mr-2 h-4 w-4" />
+                              {isDownloadingPdf === analise.id
+                                ? "Baixando..."
+                                : "Imprimir PDF"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onRevertToPendingApproval(analise.id)}
+                            >
+                              <RotateCw className="mr-2 h-4 w-4" />
+                              Reverter para Aguardando Aprovação
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {analise.status === "RESIDUO" && (
                           <DropdownMenuItem
-                            onClick={() => handleAprovarAnalise(analise.id)}
+                            onClick={() => setAnaliseParaBaixarResiduo(analise)}
+                            className="text-destructive focus:text-destructive"
                           >
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Aprovar
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Baixar como Perda
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleReprovarAnalise(analise.id)}
-                          >
-                            <ThumbsDown className="mr-2 h-4 w-4" />
-                            Reprovar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setAnaliseParaLancar(analise)}
-                          >
-                            <FlaskConical className="mr-2 h-4 w-4" />
-                            Editar Resultado
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleRefazerAnalise(analise.id)}
-                          >
-                            <RotateCw className="mr-2 h-4 w-4" />
-                            Refazer Análise
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {analise.status === "APROVADO_PARA_RECUPERACAO" && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={() => handleDownloadPdf(analise.id)}
-                            disabled={isDownloadingPdf === analise.id}
-                          >
-                            <Paperclip className="mr-2 h-4 w-4" />
-                            {isDownloadingPdf === analise.id
-                              ? "Baixando..."
-                              : "Imprimir PDF"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => onRevertToPendingApproval(analise.id)}
-                          >
-                            <RotateCw className="mr-2 h-4 w-4" />
-                            Reverter para Aguardando Aprovação
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {analise.status === "RESIDUO" && (
-                        <DropdownMenuItem
-                          onClick={() => setAnaliseParaBaixarResiduo(analise)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Baixar como Perda
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            );})}
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
+
+      {/* Mobile View */}
+      <div className="md:hidden space-y-2 max-w-md mx-auto">
+        {analises.map((analise) => (
+          <div
+            key={analise.id}
+            className="p-3 rounded-xl border border-border bg-card shadow-sm space-y-2 active:scale-[0.98] transition-transform"
+            onClick={() => setAnaliseParaVisualizar(analise)}
+          >
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{analise.numeroAnalise}</span>
+                <span className="font-bold text-sm text-foreground line-clamp-1">{analise.cliente?.name || "N/A"}</span>
+              </div>
+              <ChemicalAnalysisStatusBadge status={analise.status} />
+            </div>
+
+            <div className="flex justify-between items-end">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium uppercase">
+                  <span>{format(new Date(analise.dataEntrada), "dd/MM/yyyy")}</span>
+                  <span>•</span>
+                  <span>{analise.metalType || 'AU'}</span>
+                </div>
+                <span className="text-sm font-black text-zinc-900">
+                  {analise.auEstimadoBrutoGramas != null
+                    ? `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(analise.auEstimadoBrutoGramas)} g`
+                    : '-'}
+                </span>
+                <span className="text-[10px] text-muted-foreground line-clamp-1">{analise.descricaoMaterial}</span>
+              </div>
+
+              <div className="flex gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setAnaliseParaVisualizar(analise)}>
+                      Ver Detalhes
+                    </DropdownMenuItem>
+                    {(analise.status === "RECEBIDO" || analise.status === "EM_ANALISE") && (
+                      <DropdownMenuItem onClick={() => setAnaliseParaEditar(analise)}>
+                        <Pencil className="mr-2 h-4 w-4" /> Editar Análise
+                      </DropdownMenuItem>
+                    )}
+                    {analise.status === "EM_ANALISE" && (
+                      <DropdownMenuItem onClick={() => setAnaliseParaLancar(analise)}>
+                        <FlaskConical className="mr-2 h-4 w-4" /> Lançar Resultado
+                      </DropdownMenuItem>
+                    )}
+                    {analise.status === "ANALISADO_AGUARDANDO_APROVACAO" && (
+                      <>
+                        <DropdownMenuItem onClick={() => handleAprovarAnalise(analise.id)}>
+                          <CheckCircle className="mr-2 h-4 w-4" /> Aprovar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleReprovarAnalise(analise.id)}>
+                          <ThumbsDown className="mr-2 h-4 w-4" /> Reprovar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setAnaliseParaLancar(analise)}>
+                          <FlaskConical className="mr-2 h-4 w-4" /> Editar Resultado
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleRefazerAnalise(analise.id)}>
+                          <RotateCw className="mr-2 h-4 w-4" /> Refazer Análise
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {analise.status === "APROVADO_PARA_RECUPERACAO" && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => handleDownloadPdf(analise.id)}
+                          disabled={isDownloadingPdf === analise.id}
+                        >
+                          <Paperclip className="mr-2 h-4 w-4" />
+                          {isDownloadingPdf === analise.id ? "Baixando..." : "Imprimir PDF"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onRevertToPendingApproval(analise.id)}>
+                          <RotateCw className="mr-2 h-4 w-4" /> Reverter
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    {analise.status === "RESIDUO" && (
+                      <DropdownMenuItem
+                        onClick={() => setAnaliseParaBaixarResiduo(analise)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Baixar como Perda
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <LancarResultadoModal
         isOpen={!!analiseParaLancar}
         onOpenChange={(open) => !open && setAnaliseParaLancar(null)}
