@@ -10,7 +10,7 @@ import { Prisma } from '@prisma/client'; // ✅ Necessário para InputJsonValue
 
 @Injectable()
 export class SettingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /**
    * Busca as configurações do usuário. Se não existirem, cria o registro inicial.
@@ -69,17 +69,22 @@ export class SettingsService {
       });
       if (defaultLandingPage && defaultLandingPage.organizationId) {
         targetOrganizationId = defaultLandingPage.organizationId;
-      } else {
-        return null;
       }
     }
 
-    return this.prisma.appearanceSettings.findUnique({
+    if (!targetOrganizationId) return null;
+
+    console.log(`[SettingsService] Fetching appearance for Org: ${targetOrganizationId}`);
+
+    const result = await this.prisma.appearanceSettings.findUnique({
       where: { organizationId: targetOrganizationId },
       include: {
         logo: true,
       },
     });
+
+    console.log(`[SettingsService] Found settings: ${!!result}`, { themeName: result?.themeName });
+    return result;
   }
 
   async updateAppearanceSettings(

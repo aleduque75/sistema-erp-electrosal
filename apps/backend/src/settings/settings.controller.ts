@@ -19,7 +19,7 @@ import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(private readonly settingsService: SettingsService) { }
 
   @UseGuards(AuthGuard('jwt'))
   @Get()
@@ -39,6 +39,7 @@ export class SettingsController {
   async getAppearanceSettings(@Request() req) {
     // Tenta pegar do usuário logado, se não tiver, o service busca o padrão
     const organizationId = req.user?.organizationId || req.user?.orgId;
+    console.log(`[AppearanceDebug] GET /appearance - User: ${req.user?.email || 'Public'} - OrgId: ${organizationId || 'None'}`);
     return this.settingsService.getAppearanceSettings(organizationId);
   }
 
@@ -51,6 +52,7 @@ export class SettingsController {
   ) {
     // ✅ Pega o ID da organização garantindo os dois nomes comuns (orgId ou organizationId)
     const organizationId = req.user.organizationId || req.user.orgId;
+    console.log(`[AppearanceDebug] PUT /appearance - User: ${req.user?.email} - OrgId: ${organizationId}`, { hasCustom: !!dto.customTheme });
 
     if (!organizationId) {
       console.error('❌ Erro: organizationId não encontrado no token JWT');

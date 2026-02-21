@@ -112,18 +112,20 @@ const config = {
           hover: "hsl(var(--menu-bg-hover))",
           selected: "hsl(var(--menu-selected-background))",
           "selected-foreground": "hsl(var(--menu-selected-text))",
-          border: "hsla(var(--menu-border), var(--menu-border-opacity, 1))",
+          // ✅ Sintaxe corrigida: hsl(H S% L% / alpha) é válida; hsla(H S% L%, alpha) é INVÁLIDA
+          border: "hsl(var(--menu-border) / var(--menu-border-opacity, 1))",
         },
         badge: {
           DEFAULT: "hsl(var(--badge-background))",
           foreground: "hsl(var(--badge-text))",
         },
         table: {
-          header: "hsl(var(--tableHeaderBackground))",
-          "header-foreground": "hsl(var(--tableHeaderForeground))",
-          hover: "hsl(var(--tableRowHover))",
-          border: "hsl(var(--tableBorder))",
+          header: "hsl(var(--table-header-background))",
+          "header-foreground": "hsl(var(--table-header-foreground))",
+          hover: "hsl(var(--table-row-hover))",
+          border: "hsl(var(--table-border))",
         },
+        divider: "hsl(var(--divider))",
       },
       borderRadius: {
         lg: "var(--radius)",

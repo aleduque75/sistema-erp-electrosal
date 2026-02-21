@@ -10,6 +10,8 @@ export interface UserSettingsProps {
   metalStockAccountId?: string;
   productionCostAccountId?: string;
   metalCreditPayableAccountId?: string;
+  theme?: string;
+  language?: string;
   createdAt?: Date; // Not in schema, but good practice
   updatedAt?: Date; // Not in schema, but good practice
 }
@@ -61,6 +63,14 @@ export class UserSettings extends Entity<UserSettingsProps> {
 
   get metalCreditPayableAccountId(): string | undefined {
     return this.props.metalCreditPayableAccountId;
+  }
+
+  get theme(): string | undefined {
+    return this.props.theme;
+  }
+
+  get language(): string | undefined {
+    return this.props.language;
   }
 
   get createdAt(): Date {

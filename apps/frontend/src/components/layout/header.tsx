@@ -9,7 +9,7 @@ export function Header() {
   const { toggleSidebar, toggleMobileSidebar } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-card">
+    <header className="sticky top-0 z-40 w-full border-b border-divider bg-card">
       <div className="flex items-center justify-between h-16 px-4 md:px-6">
         <div className="flex items-center">
           {/* Botão para toggle do sidebar em Desktop */}

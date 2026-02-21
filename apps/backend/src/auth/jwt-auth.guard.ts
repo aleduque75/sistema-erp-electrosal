@@ -31,13 +31,19 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       context.getClass(),
     ]);
 
-    // 3. Lógica para rotas públicas ou mídias
+    // 3. Lógica para rotas públicas - Tenta extrair o usuário mas permite prosseguir se falhar
     if (
       isPublic ||
       request.url.includes('/api/media/public-media/') ||
       request.url.includes('/api/landing-page/public')
     ) {
-      return true;
+      // Tentamos rodar a autenticação original. 
+      // O handleRequest abaixo cuidará de não estourar erro se falhar e for public.
+      try {
+        return super.canActivate(context);
+      } catch (e) {
+        return true;
+      }
     }
 
     return super.canActivate(context);

@@ -17,12 +17,19 @@
     /* White card background */
     --card-foreground: 222 47% 11%;
     /* Dark text on cards */
-    /* Added missing variable */
     --card-border: 214 32% 91%;
     /* Light gray border */
     --card-border-opacity: 1;
     --card-radius: 12px;
     --border: 214 32% 91%;
+
+    /* FEEDBACK */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 221 83% 53%;
+    --info-foreground: 0 0% 100%;
 
     /* SHADCN COMPATIBILITY */
     --muted: 210 40% 96%;
@@ -75,6 +82,10 @@
     --table-border: 214 32% 91%;
     /* Mesma cor da borda do card */
 
+    /* DIVISÓRIAS */
+    --divider: 214 32% 88%;
+    /* Separador horizontal e vertical de seções */
+
     /* POPOVER (Dropdowns, Tooltips, etc.) */
     --popover: var(--card);
     --popover-foreground: var(--foreground);
@@ -98,10 +109,17 @@
     --background: 222 47% 11%;
     --card: 222 47% 12%;
     --card-foreground: 210 40% 98%;
-    /* Added missing variable */
     --card-border: 217 33% 25%;
 
     --border: 217 33% 17%;
+
+    /* FEEDBACK DARK */
+    --success: 142 76% 20%;
+    --success-foreground: 210 40% 98%;
+    --warning: 38 92% 30%;
+    --warning-foreground: 210 40% 98%;
+    --info: 221 83% 40%;
+    --info-foreground: 210 40% 98%;
     --border-opacity: 1;
     /* Adicionado para garantir solidez por padrão */
 
@@ -154,6 +172,9 @@
     --table-border: 217 33% 15%;
     /* Mais escuro para não ofuscar no modo dark */
 
+    /* Divisórias DARK */
+    --divider: 217 33% 20%;
+
     /* POPOVER DARK */
     --popover: var(--card);
     --popover-foreground: var(--foreground);
@@ -165,7 +186,19 @@
   /* Força todos os inputs do sistema a obedecerem as variáveis */
   input,
   textarea,
-  select {
+  select,
+  [class*="input"],
+  [data-slot="input"],
+  .search-input {
+    background-color: hsl(var(--input)) !important;
+    color: hsl(var(--input-foreground)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+
+  /* Campos com role de searchbox e inputs dentro de grupos de busca */
+  input[type="search"],
+  input[type="text"],
+  input[placeholder] {
     background-color: hsl(var(--input)) !important;
     color: hsl(var(--input-foreground)) !important;
   }
@@ -173,7 +206,19 @@
   /* Cards com borda controlada */
   .card-custom {
     background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
     border-radius: var(--card-radius);
+    /* ✅ Sintaxe corrigida: hsl(H S% L% / alpha) é válida */
+    border: 1px solid hsl(var(--card-border) / var(--card-border-opacity, 1));
+  }
+
+  /* Divisória horizontal e vertical controlada por variável */
+  .divider-h {
+    border-top: 1px solid hsl(var(--divider));
+  }
+
+  .divider-v {
+    border-right: 1px solid hsl(var(--divider));
   }
 
   .button-radius-custom {
@@ -192,9 +237,12 @@
   /* Estilos para Tabelas */
   .table {
     @apply w-full caption-bottom text-sm;
+    /* Borda externa da tabela */
     border: 1px solid hsl(var(--table-border));
     border-radius: var(--card-radius);
-    /* Usar o mesmo radius do card */
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
   }
 
   .table-header {

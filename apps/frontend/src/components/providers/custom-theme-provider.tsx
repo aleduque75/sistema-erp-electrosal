@@ -7,7 +7,6 @@ import {
   useState,
   ReactNode,
   useRef,
-  callback,
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
@@ -22,13 +21,15 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const DEFAULT_THEME = {
+export const DEFAULT_THEME = {
   light: {
     colors: {
       foreground: "222 47% 11%",
       "muted-foreground": "215 16% 47%",
+      muted: "210 40% 96%",
       background: "0 0% 100%",
       card: "0 0% 100%",
+      "card-foreground": "222 47% 11%",
       "card-border": "214 32% 91%",
       border: "214 32% 91%",
       input: "210 40% 98%",
@@ -37,17 +38,38 @@ const DEFAULT_THEME = {
       primary: "221 83% 53%",
       "primary-foreground": "0 0% 100%",
       "primary-hover": "221 83% 45%",
+      secondary: "210 40% 96%",
+      "secondary-foreground": "222 47% 11%",
+      accent: "210 40% 96%",
+      "accent-foreground": "222 47% 11%",
+      destructive: "0 84% 60%",
+      "destructive-foreground": "0 0% 100%",
+      success: "142 76% 36%",
+      "success-foreground": "0 0% 100%",
+      warning: "38 92% 50%",
+      "warning-foreground": "0 0% 100%",
       cancel: "215 16% 47%",
       "cancel-hover": "215 16% 40%",
       "cancel-foreground": "0 0% 100%",
+      popover: "0 0% 100%",
+      "popover-foreground": "222 47% 11%",
+      "badge-background": "221 83% 53%",
+      "badge-text": "0 0% 100%",
+      "table-header-background": "210 40% 96%",
+      "table-header-foreground": "215 25% 27%",
+      "table-row-hover": "210 40% 98%",
+      "table-border": "214 32% 91%",
+      divider: "214 32% 88%",
     },
   },
   dark: {
     colors: {
       foreground: "210 40% 98%",
       "muted-foreground": "215 20% 65%",
+      muted: "217 33% 17%",
       background: "222 47% 11%",
       card: "222 47% 12%",
+      "card-foreground": "210 40% 98%",
       "card-border": "217 33% 25%",
       border: "217 33% 17%",
       input: "217 33% 18%",
@@ -56,9 +78,28 @@ const DEFAULT_THEME = {
       primary: "221 83% 60%",
       "primary-foreground": "0 0% 100%",
       "primary-hover": "221 83% 70%",
+      secondary: "217 33% 17%",
+      "secondary-foreground": "210 40% 98%",
+      accent: "217 33% 17%",
+      "accent-foreground": "210 40% 98%",
+      destructive: "0 63% 31%",
+      "destructive-foreground": "210 40% 98%",
+      success: "142 76% 20%",
+      "success-foreground": "210 40% 98%",
+      warning: "38 92% 30%",
+      "warning-foreground": "210 40% 98%",
       cancel: "215 16% 55%",
       "cancel-hover": "215 16% 65%",
       "cancel-foreground": "0 0% 100%",
+      popover: "222 47% 12%",
+      "popover-foreground": "210 40% 98%",
+      "badge-background": "221 83% 60%",
+      "badge-text": "0 0% 100%",
+      "table-header-background": "222 47% 15%",
+      "table-header-foreground": "210 40% 98%",
+      "table-row-hover": "222 47% 18%",
+      "table-border": "217 33% 15%",
+      divider: "217 33% 20%",
     },
   },
 };
@@ -76,8 +117,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (!colors || typeof window === "undefined") return;
     const root = document.documentElement;
     Object.entries(colors).forEach(([k, v]) => {
-      // Converte camelCase para kebab-case para variáveis CSS
-      const cssVarName = k.replace(/([A-Z])/g, "-$1").toLowerCase();
+      // Converte camelCase → kebab-case com suporte a todos os padrões
+      // Exemplo: primaryForeground → primary-foreground, menuBgHover → menu-bg-hover
+      const cssVarName = k
+        .replace(/([A-Z])/g, (match) => `-${match.toLowerCase()}`)
+        .replace(/^-/, ""); // remove leading dash if any
       root.style.setProperty(`--${cssVarName}`, v as string);
     });
   };
@@ -104,13 +148,34 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         const { data } = await api.get(`/settings/appearance?t=${Date.now()}`);
 
         if (data?.customTheme) {
-          setCustomThemeData(data.customTheme);
-          // Se o backend retornou um themeName (Preferência da Org), usamos ele
-          if (data.themeName) setInternalTheme(data.themeName);
+          console.log("[ThemeDebug] Custom theme loaded from backend:", data.customTheme);
+          // Faz o MERGE com os padrões para garantir que variáveis novas não fiquem vazias
+          const merged = {
+            light: {
+              colors: {
+                ...DEFAULT_THEME.light.colors,
+                ...(data.customTheme.light?.colors || {})
+              }
+            },
+            dark: {
+              colors: {
+                ...DEFAULT_THEME.dark.colors,
+                ...(data.customTheme.dark?.colors || {})
+              }
+            }
+          };
+          setCustomThemeData(merged);
+
+          if (data.themeName) {
+            console.log("[ThemeDebug] Preference detected:", data.themeName);
+            setInternalTheme(data.themeName);
+          }
         } else {
+          console.log("[ThemeDebug] No custom theme found, using defaults.");
           setCustomThemeData(DEFAULT_THEME);
         }
       } catch (error: any) {
+        console.error("[ThemeDebug] Error loading theme:", error);
         setCustomThemeData(DEFAULT_THEME);
       } finally {
         setMounted(true);
