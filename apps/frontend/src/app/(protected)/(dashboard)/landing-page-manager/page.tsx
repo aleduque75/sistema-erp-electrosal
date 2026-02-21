@@ -80,6 +80,7 @@ export default function LandingPageManagerPage() {
         sections: data.sections,
         logoText: data.logoText,
         logoImageId: data.logoImageId,
+        highlights: data.highlights,
       });
       alert("✅ Salvo com sucesso!");
     } catch (e) {
@@ -111,6 +112,54 @@ export default function LandingPageManagerPage() {
             />
           </div>
           <MediaSelector label="Logo da Empresa" value={data.logoImageId} onChange={(id) => setData({ ...data, logoImageId: id })} />
+        </section>
+
+        {/* DESTAQUES GLOBAIS */}
+        <section className="bg-slate-900 border border-white/10 p-8 rounded-[3rem] space-y-6 shadow-2xl">
+          <div className="flex items-center justify-between">
+            <h2 className="text-blue-500 font-black uppercase italic tracking-widest text-xs">Destaques do Modal (Sidebar)</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const highlights = Array.isArray(data.highlights) ? data.highlights : [];
+                setData({ ...data, highlights: [...highlights, "Novo Destaque"] });
+              }}
+              className="border-white/10 hover:bg-blue-600/20 text-[10px] font-bold"
+            >
+              <Plus size={14} className="mr-1" /> ADICIONAR ITEM
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.isArray(data.highlights) && data.highlights.map((item: string, idx: number) => (
+              <div key={idx} className="flex gap-2 items-center bg-slate-950/50 p-3 rounded-2xl border border-white/5 group">
+                <input
+                  className="bg-transparent border-none text-sm outline-none focus:text-blue-400 transition-all w-full font-medium"
+                  value={item}
+                  onChange={(e) => {
+                    const newHighlights = [...data.highlights];
+                    newHighlights[idx] = e.target.value;
+                    setData({ ...data, highlights: newHighlights });
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="opacity-0 group-hover:opacity-100 text-red-500 hover:bg-red-500/10 h-8 w-8 rounded-full transition-opacity"
+                  onClick={() => {
+                    const newHighlights = data.highlights.filter((_: any, i: number) => i !== idx);
+                    setData({ ...data, highlights: newHighlights });
+                  }}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+            ))}
+            {(!data.highlights || data.highlights.length === 0) && (
+              <p className="text-slate-500 text-xs italic col-span-2 text-center py-4">Nenhum destaque configurado.</p>
+            )}
+          </div>
         </section>
 
         {/* LISTAGEM DE MÓDULOS */}

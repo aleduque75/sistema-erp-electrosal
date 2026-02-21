@@ -13,6 +13,7 @@ datasource db {
 model Organization {
   id                      String                   @id @default(uuid())
   name                    String
+  active                  Boolean                  @default(true)
   absorbCreditCardFee     Boolean                  @default(false)
   creditCardReceiveDays   Int?                     @default(30)
   accountsRec             AccountRec[]
@@ -660,6 +661,7 @@ model LandingPage {
   updatedAt       DateTime      @updatedAt
   logoImageId     String?
   logoText        String?
+  highlights      Json?         @default("[]")
   organizationId  String?
   themePreference String?       @default("dark")
   logoImage       Media?        @relation(fields: [logoImageId], references: [id])

@@ -278,28 +278,37 @@ export default function HomePage() {
                     Destaques
                   </h4>
                   <ul className="space-y-6">
-                    {[
-                      "Suporte 35 Anos",
-                      "Zinco de Alta Performance",
-                      "Processos Otimizados",
-                    ].map((i) => (
-                      <li
-                        key={i}
-                        className="flex items-center gap-4 text-sm font-bold italic"
-                      >
-                        <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0" />{" "}
-                        {i}
-                      </li>
-                    ))}
+                    <ul className="space-y-6">
+                      {(Array.isArray(data?.highlights) && data.highlights.length > 0 ? data.highlights : [
+                        "Suporte 35 Anos",
+                        "Zinco de Alta Performance",
+                        "Processos Otimizados",
+                      ]).map((i: any) => (
+                        <li
+                          key={i}
+                          className="flex items-center gap-4 text-sm font-bold italic"
+                        >
+                          <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0" />{" "}
+                          {i}
+                        </li>
+                      ))}
+                    </ul>
                   </ul>
                   <button
                     onClick={() => {
                       setActiveDialogContent(null);
                       setTimeout(() => setIsContactOpen(true), 300);
                     }}
-                    className="w-full mt-10 bg-amber-600 py-6 rounded-2xl font-black italic uppercase text-[11px] tracking-widest hover:bg-white hover:text-amber-600 transition-all"
+                    className="w-full mt-10 bg-amber-600 py-6 rounded-2xl font-black italic uppercase text-[11px] tracking-widest hover:bg-white hover:text-amber-600 transition-all shadow-xl"
                   >
-                    FALAR COM EQUIPE
+                    SOLICITAR CONSULTORIA AGORA
+                  </button>
+
+                  <button
+                    onClick={() => setActiveDialogContent(null)}
+                    className="w-full mt-4 bg-zinc-800 py-4 rounded-2xl font-black italic uppercase text-[10px] tracking-widest hover:bg-red-600 hover:text-white transition-all opacity-60 hover:opacity-100"
+                  >
+                    FECHAR
                   </button>
                 </aside>
               </div>

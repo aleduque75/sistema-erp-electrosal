@@ -54,6 +54,7 @@ class SectionDto {
 export class UpdateLandingPageDto {
   @IsOptional() @IsString() logoText?: string;
   @IsOptional() @IsString() logoImageId?: string;
+  @IsOptional() @IsArray() @IsString({ each: true }) highlights?: string[];
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => SectionDto)

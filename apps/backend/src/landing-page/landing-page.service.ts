@@ -31,6 +31,7 @@ export class LandingPageService {
           organizationId,
           name: 'Nova Landing Page',
           logoText: 'Minha Empresa',
+          highlights: [], // Inicializa vazio
         },
         include: { sections: { orderBy: { order: 'asc' } } },
       });
@@ -51,6 +52,7 @@ export class LandingPageService {
           organizationId,
           logoText: dto.logoText,
           logoImageId: dto.logoImageId,
+          highlights: dto.highlights || [],
         }
       });
     }
@@ -61,6 +63,7 @@ export class LandingPageService {
         data: {
           logoText: dto.logoText,
           logoImageId: dto.logoImageId,
+          highlights: dto.highlights,
         },
       });
 
