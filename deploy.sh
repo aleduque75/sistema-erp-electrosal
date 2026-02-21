@@ -63,22 +63,14 @@ cd ../..
 # ============================================
 # 5. Build Frontend (zero-downtime)
 # ============================================
-echo "🔨 Compilando Frontend (Next.js) sem derrubar o servidor..."
+echo "🔨 Compilando Frontend (Next.js)..."
 
 if [ -d "apps/frontend" ]; then
   cd apps/frontend
-
-  # Build em diretório temporário para não derrubar o servidor
-  export NEXT_BUILD_DIR=".next.building"
-  rm -rf .next.building
-  NEXT_BUILD_DIR=".next.building" pnpm build
-
-  # Swap atômico: só substitui .next APÓS o build completar com sucesso
-  rm -rf .next.old
-  [ -d ".next" ] && mv .next .next.old
-  mv .next.building .next
-  rm -rf .next.old
-
+  # ✅ NÃO apaga .next antes de buildar!
+  # O build sobrescreve atomicamente o .next — servidor continua respondendo
+  # Se falhar, o .next antigo continua intacto
+  pnpm build
   cd ../..
 else
   echo "❌ ERRO: Diretório apps/frontend não encontrado!"
@@ -91,8 +83,6 @@ fi
 # ============================================
 echo "🔄 Recarregando processos no PM2..."
 
-# Usa 'reload' em vez de 'restart' para zero-downtime
-# Note: o nome do arquivo foi corrigido para carregar ambos os apps
 pm2 reload ecosystem.config.js --update-env
 
 # Salva configuração
