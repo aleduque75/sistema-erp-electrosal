@@ -9,6 +9,7 @@ import { MediaSelector } from "@/components/landing-page-editor/MediaSelector";
 import { HeroNewEditor } from "@/components/landing-page-editor/HeroNewEditor";
 import { ProcessGalleryEditor } from "@/components/landing-page-editor/ProcessGalleryEditor";
 import { FeaturesSectionEditor } from "@/components/landing-page-editor/FeaturesSectionEditor";
+import { IconPicker } from "@/components/landing-page-editor/IconPicker";
 
 export default function LandingPageManagerPage() {
   const [data, setData] = useState<any>(null);
@@ -22,18 +23,17 @@ export default function LandingPageManagerPage() {
       setData({ ...res.data, sections: sortedSections });
     } catch (error) {
       console.error("Erro ao carregar:", error);
-      // Fallback para evitar tela de loading infinita
       setData({
         logoText: "Minha Empresa",
         sections: [],
-        logoImageId: null
+        logoImageId: null,
+        highlights: []
       });
     }
   };
 
   useEffect(() => { loadData(); }, []);
 
-  // Função para ADICIONAR novas seções manualmente
   const addSection = (type: "hero-new" | "process-gallery" | "features") => {
     const newSection = {
       type,
@@ -43,7 +43,6 @@ export default function LandingPageManagerPage() {
     setData({ ...data, sections: [...data.sections, newSection] });
   };
 
-  // Conteúdo inicial padrão para cada tipo para não vir em branco
   const getInitialContent = (type: string) => {
     if (type === "hero-new") return { title: "Novo Título", subtitle: "Subtítulo aqui", description: "Descrição...", ctaButtonText: "Começar" };
     if (type === "features") return { title: "Nossos Diferenciais", items: [] };
@@ -63,7 +62,7 @@ export default function LandingPageManagerPage() {
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newSections.length) return;
     [newSections[index], newSections[targetIndex]] = [newSections[targetIndex], newSections[index]];
-    const reordered = newSections.map((sec, i) => ({ ...sec, order: i }));
+    const reordered = newSections.map((sec: any, i: number) => ({ ...sec, order: i }));
     setData({ ...data, sections: reordered });
   };
 
@@ -123,7 +122,7 @@ export default function LandingPageManagerPage() {
               size="sm"
               onClick={() => {
                 const highlights = Array.isArray(data.highlights) ? data.highlights : [];
-                setData({ ...data, highlights: [...highlights, "Novo Destaque"] });
+                setData({ ...data, highlights: [...highlights, { text: "Novo Destaque", icon: "CheckCircle2" }] });
               }}
               className="border-white/10 hover:bg-blue-600/20 text-[10px] font-bold"
             >
@@ -132,30 +131,45 @@ export default function LandingPageManagerPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Array.isArray(data.highlights) && data.highlights.map((item: string, idx: number) => (
-              <div key={idx} className="flex gap-2 items-center bg-slate-950/50 p-3 rounded-2xl border border-white/5 group">
-                <input
-                  className="bg-transparent border-none text-sm outline-none focus:text-blue-400 transition-all w-full font-medium"
-                  value={item}
-                  onChange={(e) => {
-                    const newHighlights = [...data.highlights];
-                    newHighlights[idx] = e.target.value;
-                    setData({ ...data, highlights: newHighlights });
-                  }}
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="opacity-0 group-hover:opacity-100 text-red-500 hover:bg-red-500/10 h-8 w-8 rounded-full transition-opacity"
-                  onClick={() => {
-                    const newHighlights = data.highlights.filter((_: any, i: number) => i !== idx);
-                    setData({ ...data, highlights: newHighlights });
-                  }}
-                >
-                  <Trash2 size={14} />
-                </Button>
-              </div>
-            ))}
+            {Array.isArray(data.highlights) && data.highlights.map((item: any, idx: number) => {
+              const highlight = typeof item === 'string' ? { text: item, icon: 'CheckCircle2' } : item;
+
+              return (
+                <div key={idx} className="flex gap-4 items-center bg-slate-950/50 p-4 rounded-2xl border border-white/5 group relative">
+                  <div className="w-12 shrink-0">
+                    <IconPicker
+                      value={highlight.icon || "CheckCircle2"}
+                      onChange={(newIcon) => {
+                        const newHighlights = [...data.highlights];
+                        newHighlights[idx] = { ...highlight, icon: newIcon };
+                        setData({ ...data, highlights: newHighlights });
+                      }}
+                    />
+                  </div>
+                  <input
+                    className="bg-transparent border-none text-sm outline-none focus:text-blue-400 transition-all w-full font-medium"
+                    value={highlight.text || ""}
+                    onChange={(e) => {
+                      const newHighlights = [...data.highlights];
+                      newHighlights[idx] = { ...highlight, text: e.target.value };
+                      setData({ ...data, highlights: newHighlights });
+                    }}
+                    placeholder="Texto do destaque..."
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="opacity-0 group-hover:opacity-100 text-red-500 hover:bg-red-500/10 h-8 w-8 rounded-full transition-opacity absolute top-2 right-2"
+                    onClick={() => {
+                      const newHighlights = data.highlights.filter((_: any, i: number) => i !== idx);
+                      setData({ ...data, highlights: newHighlights });
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              );
+            })}
             {(!data.highlights || data.highlights.length === 0) && (
               <p className="text-slate-500 text-xs italic col-span-2 text-center py-4">Nenhum destaque configurado.</p>
             )}

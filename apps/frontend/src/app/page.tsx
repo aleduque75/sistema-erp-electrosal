@@ -13,6 +13,7 @@ import {
   User,
   MessageSquare,
   Send,
+  X,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -244,7 +245,14 @@ export default function HomePage() {
         open={!!activeDialogContent}
         onOpenChange={(open) => !open && setActiveDialogContent(null)}
       >
-        <DialogContent className="max-w-[1100px] w-[95vw] h-[90vh] flex flex-col rounded-[3.5rem] border-none bg-zinc-50 p-0 shadow-2xl overflow-hidden">
+        <DialogContent className="max-w-[1100px] w-[95vw] h-[90vh] flex flex-col rounded-3xl md:rounded-[3.5rem] border-none bg-zinc-50 p-0 shadow-2xl overflow-hidden group">
+          <button
+            onClick={() => setActiveDialogContent(null)}
+            className="absolute top-4 right-4 md:top-8 md:right-8 z-[200] bg-zinc-900/40 hover:bg-zinc-900/60 backdrop-blur-md text-white p-2 md:p-4 rounded-full border border-white/10 transition-all shadow-xl hover:scale-110 active:scale-95"
+          >
+            <X className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
+
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-amber-600">
             <div className="relative h-[350px] md:h-[500px] w-full">
               <img
@@ -259,39 +267,44 @@ export default function HomePage() {
                 <div className="flex items-center gap-2 mb-4 italic text-amber-600 font-black tracking-widest text-[10px]">
                   <Sparkles className="w-4 h-4" /> TECNOLOGIA ELECTROSAL
                 </div>
-                <DialogTitle className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter text-zinc-950 leading-[0.85]">
+                <DialogTitle className="text-4xl md:text-8xl font-black italic uppercase tracking-tighter text-zinc-950 leading-[0.9] md:leading-[0.85]">
                   {activeDialogContent?.title}
                 </DialogTitle>
               </header>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-16 pb-12">
-                <div className="md:col-span-2 text-zinc-700 text-xl md:text-3xl leading-snug font-medium italic tracking-tight">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-16 pb-12">
+                <div className="md:col-span-3 text-zinc-700 text-lg md:text-3xl leading-snug font-medium italic tracking-tight">
                   {activeDialogContent?.modalContent
                     ?.split("\n")
                     .map((p: any, i: any) => (
-                      <p key={i} className="mb-8">
+                      <p key={i} className="mb-6 md:mb-8">
                         {p}
                       </p>
                     )) || activeDialogContent?.description}
                 </div>
-                <aside className="sticky top-0 h-fit bg-zinc-900 p-12 rounded-[3.5rem] text-white shadow-2xl border border-amber-500/10">
-                  <h4 className="font-black italic uppercase text-amber-500 text-xs mb-10 tracking-widest text-center">
+                <aside className="md:col-span-2 sticky top-0 h-fit bg-zinc-900 p-8 md:p-12 rounded-3xl md:rounded-[3.5rem] text-white shadow-2xl border border-amber-500/10">
+                  <h4 className="font-black italic uppercase text-amber-500 text-[10px] md:text-xs mb-6 md:mb-10 tracking-widest text-center">
                     Destaques
                   </h4>
                   <ul className="space-y-6">
                     <ul className="space-y-6">
                       {(Array.isArray(data?.highlights) && data.highlights.length > 0 ? data.highlights : [
-                        "Suporte 35 Anos",
-                        "Zinco de Alta Performance",
-                        "Processos Otimizados",
-                      ]).map((i: any) => (
-                        <li
-                          key={i}
-                          className="flex items-center gap-4 text-sm font-bold italic"
-                        >
-                          <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0" />{" "}
-                          {i}
-                        </li>
-                      ))}
+                        { text: "Suporte 35 Anos", icon: "CheckCircle2" },
+                        { text: "Zinco de Alta Performance", icon: "CheckCircle2" },
+                        { text: "Processos Otimizados", icon: "CheckCircle2" },
+                      ]).map((item: any, i: any) => {
+                        const highlight = typeof item === 'string' ? { text: item, icon: 'CheckCircle2' } : item;
+                        const IconComp = (LucideIcons as any)[highlight.icon] || CheckCircle2;
+
+                        return (
+                          <li
+                            key={i}
+                            className="flex items-center gap-4 text-sm font-bold italic"
+                          >
+                            <IconComp className="w-5 h-5 text-amber-500 shrink-0" />{" "}
+                            {highlight.text}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </ul>
                   <button
@@ -303,217 +316,219 @@ export default function HomePage() {
                   >
                     SOLICITAR CONSULTORIA AGORA
                   </button>
-
-                  <button
-                    onClick={() => setActiveDialogContent(null)}
-                    className="w-full mt-4 bg-zinc-800 py-4 rounded-2xl font-black italic uppercase text-[10px] tracking-widest hover:bg-red-600 hover:text-white transition-all opacity-60 hover:opacity-100"
-                  >
-                    FECHAR
-                  </button>
                 </aside>
               </div>
             </div>
           </div>
+
+          <button
+            onClick={() => setActiveDialogContent(null)}
+            className="w-full md:hidden bg-zinc-900 hover:bg-red-600 text-white py-8 font-black italic uppercase text-xs tracking-[0.4em] transition-all border-t border-white/5"
+          >
+            FECHAR DETALHES
+          </button>
         </DialogContent>
       </Dialog>
 
       {/* SECTIONS */}
-      {data.sections?.map((section: any) => {
-        if (section.type === "hero-new") {
-          const slide = section.content?.slides?.[currentSlide];
-          if (!slide) return null;
-          return (
-            <section
-              key={section.id}
-              className="relative h-screen w-full bg-zinc-950 overflow-hidden"
-            >
-              <div className="absolute top-10 w-full z-40 flex justify-center">
-                <div className="bg-zinc-900/60 backdrop-blur-xl px-10 py-5 rounded-full border border-white/10 flex items-center gap-4">
-                  {data.logoImageId && (
-                    <img
-                      src={getImageUrl(data.logoImageId)}
-                      className="h-10 md:h-16 object-contain"
-                      alt="Logo"
-                    />
-                  )}
-                  {data.logoText && (
-                    <span className="text-white font-black italic uppercase tracking-widest text-sm md:text-xl border-l border-white/20 pl-4 whitespace-nowrap">
-                      {data.logoText}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentSlide}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex items-center"
-                >
-                  <motion.img
-                    initial={{ scale: 1.2 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 10 }}
-                    src={getImageUrl(slide?.imageUrl)}
-                    className="absolute inset-0 w-full h-full object-cover opacity-60"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent" />
-                  <div className="relative z-20 px-6 md:px-24 text-left">
-                    <motion.div
-                      variants={titleContainer}
-                      initial="hidden"
-                      animate="visible"
-                      className="flex flex-col max-w-6xl"
-                    >
-                      <div className="flex flex-wrap gap-x-[0.3em] mb-4">
-                        {slide?.title?.split(" ").map((word: any, i: any) => (
-                          <motion.span
-                            key={i}
-                            variants={titleWord}
-                            className={cn(
-                              "text-6xl md:text-[8.5rem] font-black italic tracking-tighter leading-[0.8] uppercase",
-                              i === 1 ? "text-amber-500" : "text-white"
-                            )}
-                          >
-                            {word}
-                          </motion.span>
-                        ))}
-                      </div>
-
-                      {slide?.subtitle && (
-                        <motion.span
-                          variants={titleWord}
-                          className="text-amber-500 font-black italic uppercase tracking-widest text-sm md:text-2xl mb-6"
-                        >
-                          {slide.subtitle}
-                        </motion.span>
-                      )}
-
-                      {slide?.description && (
-                        <motion.p
-                          variants={titleWord}
-                          className="text-zinc-300 font-bold italic text-lg md:text-2xl max-w-2xl leading-relaxed mb-4"
-                        >
-                          {slide.description}
-                        </motion.p>
-                      )}
-                    </motion.div>
-
-                    <button
-                      onClick={() => setActiveDialogContent(slide)}
-                      className="mt-8 bg-amber-600 text-white px-14 py-6 rounded-full font-black italic uppercase flex items-center gap-4 hover:bg-white hover:text-amber-600 transition-all shadow-xl shadow-amber-600/20"
-                    >
-                      {slide.ctaText || "CONSULTORIA"} <ArrowRight />
-                    </button>
+      {
+        data.sections?.map((section: any) => {
+          if (section.type === "hero-new") {
+            const slide = section.content?.slides?.[currentSlide];
+            if (!slide) return null;
+            return (
+              <section
+                key={section.id}
+                className="relative h-screen w-full bg-zinc-950 overflow-hidden"
+              >
+                <div className="absolute top-10 w-full z-40 flex justify-center">
+                  <div className="bg-zinc-900/60 backdrop-blur-xl px-10 py-5 rounded-full border border-white/10 flex items-center gap-4">
+                    {data.logoImageId && (
+                      <img
+                        src={getImageUrl(data.logoImageId)}
+                        className="h-10 md:h-16 object-contain"
+                        alt="Logo"
+                      />
+                    )}
+                    {data.logoText && (
+                      <span className="text-white font-black italic uppercase tracking-widest text-sm md:text-xl border-l border-white/20 pl-4 whitespace-nowrap">
+                        {data.logoText}
+                      </span>
+                    )}
                   </div>
-                </motion.div>
-              </AnimatePresence>
-            </section>
-          );
-        }
-
-        if (section.type === "process-gallery") {
-          return (
-            <section
-              key={section.id}
-              className="py-32 bg-zinc-100 px-6 md:px-24 text-left"
-            >
-              <div className="max-w-[1400px] mx-auto">
-                <h2 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter text-zinc-900 mb-20 border-l-[12px] border-amber-600 pl-8">
-                  WORKFLOW
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                  {section.content?.processes?.map((proc: any, i: any) => (
-                    <div
-                      key={i}
-                      className="group cursor-pointer"
-                      onClick={() => setActiveDialogContent(proc)}
-                    >
-                      <div className="aspect-[4/5] rounded-[3rem] overflow-hidden relative shadow-2xl bg-white border border-zinc-200">
-                        <img
-                          src={getImageUrl(proc.imageUrl)}
-                          className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-110 grayscale group-hover:grayscale-0"
-                          alt={proc.title}
-                        />
-                        <div className="absolute inset-0 bg-amber-600/30 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm">
-                          <span className="bg-zinc-900 text-amber-500 px-8 py-3 rounded-full font-black italic text-xs">
-                            DETALHES +
-                          </span>
-                        </div>
-                      </div>
-                      <h3 className="mt-8 text-3xl font-black italic uppercase text-zinc-900 leading-none">
-                        {proc.title}
-                      </h3>
-                      <p className="mt-2 text-zinc-500 font-bold italic line-clamp-2">
-                        {proc.description}
-                      </p>
-                    </div>
-                  ))}
                 </div>
-              </div>
-            </section>
-          );
-        }
-
-        if (section.type === "features") {
-          return (
-            <section
-              key={section.id}
-              className="py-32 bg-zinc-950 px-6 md:px-24 relative overflow-hidden text-left"
-            >
-              <div className="max-w-[1400px] mx-auto relative z-10">
-                <h2 className="text-5xl md:text-[8rem] font-black italic uppercase tracking-tighter text-white mb-24">
-                  SOLUÇÕES
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-                  {section.content?.items?.map((feat: any, i: any) => {
-                    const IconComp = (LucideIcons as any)[feat.icon] || Zap;
-                    return (
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentSlide}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 flex items-center"
+                  >
+                    <motion.img
+                      initial={{ scale: 1.2 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 10 }}
+                      src={getImageUrl(slide?.imageUrl)}
+                      className="absolute inset-0 w-full h-full object-cover opacity-60"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent" />
+                    <div className="relative z-20 px-6 md:px-24 text-left">
                       <motion.div
-                        key={i}
-                        whileHover={{ y: -10 }}
-                        onClick={() => setActiveDialogContent(feat)}
-                        className={cn(
-                          "group cursor-pointer p-12 rounded-[4rem] transition-all duration-500 border border-white/5 bg-zinc-900/40 backdrop-blur-sm hover:border-amber-500/30",
-                          i === 0 || i === 3
-                            ? "md:col-span-7"
-                            : "md:col-span-5",
-                        )}
+                        variants={titleContainer}
+                        initial="hidden"
+                        animate="visible"
+                        className="flex flex-col max-w-6xl"
                       >
-                        <div className="relative z-20 h-full flex flex-col justify-between">
-                          <div>
-                            <div className="w-16 h-16 bg-amber-600 text-white rounded-2xl flex items-center justify-center mb-10 shadow-xl group-hover:rotate-6 transition-transform">
-                              <IconComp className="w-8 h-8" />
-                            </div>
-                            <h3 className="text-3xl md:text-5xl font-black italic uppercase text-white mb-4 tracking-tighter leading-none">
-                              {feat.title}
-                            </h3>
-                            <p className="text-zinc-400 font-bold text-lg leading-relaxed italic mb-10 line-clamp-3">
-                              {feat.description}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3 text-amber-500 font-black italic text-[10px] tracking-[0.2em]">
-                            SAIBA MAIS{" "}
-                            <div className="p-2 bg-amber-600 text-white rounded-full">
-                              <ArrowRight className="w-4 h-4" />
-                            </div>
-                          </div>
+                        <div className="flex flex-wrap gap-x-[0.3em] mb-4">
+                          {slide?.title?.split(" ").map((word: any, i: any) => (
+                            <motion.span
+                              key={i}
+                              variants={titleWord}
+                              className={cn(
+                                "text-6xl md:text-[8.5rem] font-black italic tracking-tighter leading-[0.8] uppercase",
+                                i === 1 ? "text-amber-500" : "text-white"
+                              )}
+                            >
+                              {word}
+                            </motion.span>
+                          ))}
                         </div>
-                        <div className="absolute -bottom-10 -right-10 text-amber-500 opacity-0 group-hover:opacity-10 transition-all duration-700 rotate-[20deg] group-hover:rotate-[-10deg]">
-                          <IconComp size={300} strokeWidth={1} />
-                        </div>
+
+                        {slide?.subtitle && (
+                          <motion.span
+                            variants={titleWord}
+                            className="text-amber-500 font-black italic uppercase tracking-widest text-sm md:text-2xl mb-6"
+                          >
+                            {slide.subtitle}
+                          </motion.span>
+                        )}
+
+                        {slide?.description && (
+                          <motion.p
+                            variants={titleWord}
+                            className="text-zinc-300 font-bold italic text-lg md:text-2xl max-w-2xl leading-relaxed mb-4"
+                          >
+                            {slide.description}
+                          </motion.p>
+                        )}
                       </motion.div>
-                    );
-                  })}
+
+                      <button
+                        onClick={() => setActiveDialogContent(slide)}
+                        className="mt-8 bg-amber-600 text-white px-14 py-6 rounded-full font-black italic uppercase flex items-center gap-4 hover:bg-white hover:text-amber-600 transition-all shadow-xl shadow-amber-600/20"
+                      >
+                        {slide.ctaText || "CONSULTORIA"} <ArrowRight />
+                      </button>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </section>
+            );
+          }
+
+          if (section.type === "process-gallery") {
+            return (
+              <section
+                key={section.id}
+                className="py-32 bg-zinc-100 px-6 md:px-24 text-left"
+              >
+                <div className="max-w-[1400px] mx-auto">
+                  <h2 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter text-zinc-900 mb-20 border-l-[12px] border-amber-600 pl-8">
+                    WORKFLOW
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                    {section.content?.processes?.map((proc: any, i: any) => (
+                      <div
+                        key={i}
+                        className="group cursor-pointer"
+                        onClick={() => setActiveDialogContent(proc)}
+                      >
+                        <div className="aspect-[4/5] rounded-[3rem] overflow-hidden relative shadow-2xl bg-white border border-zinc-200">
+                          <img
+                            src={getImageUrl(proc.imageUrl)}
+                            className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-110 grayscale group-hover:grayscale-0"
+                            alt={proc.title}
+                          />
+                          <div className="absolute inset-0 bg-amber-600/30 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm">
+                            <span className="bg-zinc-900 text-amber-500 px-8 py-3 rounded-full font-black italic text-xs">
+                              DETALHES +
+                            </span>
+                          </div>
+                        </div>
+                        <h3 className="mt-8 text-3xl font-black italic uppercase text-zinc-900 leading-none">
+                          {proc.title}
+                        </h3>
+                        <p className="mt-2 text-zinc-500 font-bold italic line-clamp-2">
+                          {proc.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </section>
-          );
-        }
-        return null;
-      })}
+              </section>
+            );
+          }
+
+          if (section.type === "features") {
+            return (
+              <section
+                key={section.id}
+                className="py-32 bg-zinc-950 px-6 md:px-24 relative overflow-hidden text-left"
+              >
+                <div className="max-w-[1400px] mx-auto relative z-10">
+                  <h2 className="text-5xl md:text-[8rem] font-black italic uppercase tracking-tighter text-white mb-24">
+                    SOLUÇÕES
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                    {section.content?.items?.map((feat: any, i: any) => {
+                      const IconComp = (LucideIcons as any)[feat.icon] || Zap;
+                      return (
+                        <motion.div
+                          key={i}
+                          whileHover={{ y: -10 }}
+                          onClick={() => setActiveDialogContent(feat)}
+                          className={cn(
+                            "group cursor-pointer p-12 rounded-[4rem] transition-all duration-500 border border-white/5 bg-zinc-900/40 backdrop-blur-sm hover:border-amber-500/30",
+                            i === 0 || i === 3
+                              ? "md:col-span-7"
+                              : "md:col-span-5",
+                          )}
+                        >
+                          <div className="relative z-20 h-full flex flex-col justify-between">
+                            <div>
+                              <div className="w-16 h-16 bg-amber-600 text-white rounded-2xl flex items-center justify-center mb-10 shadow-xl group-hover:rotate-6 transition-transform">
+                                <IconComp className="w-8 h-8" />
+                              </div>
+                              <h3 className="text-3xl md:text-5xl font-black italic uppercase text-white mb-4 tracking-tighter leading-none">
+                                {feat.title}
+                              </h3>
+                              <p className="text-zinc-400 font-bold text-lg leading-relaxed italic mb-10 line-clamp-3">
+                                {feat.description}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3 text-amber-500 font-black italic text-[10px] tracking-[0.2em]">
+                              SAIBA MAIS{" "}
+                              <div className="p-2 bg-amber-600 text-white rounded-full">
+                                <ArrowRight className="w-4 h-4" />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="absolute -bottom-10 -right-10 text-amber-500 opacity-0 group-hover:opacity-10 transition-all duration-700 rotate-[20deg] group-hover:rotate-[-10deg]">
+                            <IconComp size={300} strokeWidth={1} />
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            );
+          }
+          return null;
+        })
+      }
       <CookieConsent />
-    </main>
+    </main >
   );
 }
