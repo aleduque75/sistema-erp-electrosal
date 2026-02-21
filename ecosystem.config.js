@@ -11,9 +11,9 @@ module.exports = {
     {
       name: "erp-frontend",
       cwd: "apps/frontend",
-      script: "pnpm",
-      args: "run start -- -p 3000",
-      interpreter: "none",
+      // Chama o next diretamente para evitar problemas de passagem de args pelo pnpm
+      script: "node_modules/.bin/next",
+      args: "start -p 3000",
       env: {
         NODE_ENV: "production",
         PORT: "3000",
