@@ -20,5 +20,9 @@ jobs:
           script: |
             echo "Conectado na VPS! Iniciando script..."
             cd /root/apps/sistema-erp-electrosal
-            # Executa o script que criamos anteriormente
-            ./deploy.sh
+            # Atualiza o código ANTES de executar o script
+            # Isso garante que o deploy.sh mais recente seja usado
+            git fetch origin main
+            git reset --hard origin/main
+            # Executa o deploy.sh já atualizado
+            bash deploy.sh
