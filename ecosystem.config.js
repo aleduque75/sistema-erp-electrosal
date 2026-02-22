@@ -11,8 +11,9 @@ module.exports = {
     {
       name: "erp-frontend",
       cwd: "apps/frontend",
-      // Chama o next diretamente para evitar problemas de passagem de args pelo pnpm
-      script: "node_modules/.bin/next",
+      // Usa o binário JS real do Next.js (não o shell wrapper em .bin/)
+      // .bin/next é um shell script — PM2 tentava rodar como Node.js e quebrava
+      script: "node_modules/next/dist/bin/next",
       args: "start -p 3000",
       env: {
         NODE_ENV: "production",
