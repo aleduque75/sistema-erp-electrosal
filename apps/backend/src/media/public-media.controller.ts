@@ -10,7 +10,9 @@ import type { Response } from 'express';
 import { createReadStream } from 'fs';
 import { join } from 'path';
 import { MediaService } from './media.service';
+import { Public } from '../auth/public.decorator';
 
+@Public()
 @Controller('media/public-media') // Unificado com o prefixo do frontend
 export class PublicMediaController {
   constructor(private readonly mediaService: MediaService) { }
