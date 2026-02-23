@@ -75,16 +75,34 @@ export class GerarPdfAnaliseUseCase {
 
   private async getImageAsBase64(filePath: string): Promise<string | null> {
     try {
-      const imageBuffer = await fs.readFile(filePath);
+      if (!filePath) return null;
+
+      let imageBuffer: Buffer;
+
+      if (filePath.startsWith('http')) {
+        // Download from S3 or external URL
+        const response = await fetch(filePath);
+        if (!response.ok) throw new Error(`Falha ao baixar imagem: ${response.statusText}`);
+        const arrayBuffer = await response.arrayBuffer();
+        imageBuffer = Buffer.from(arrayBuffer);
+      } else {
+        // Local file
+        let absolutePath = filePath;
+        if (filePath.startsWith('/uploads/')) {
+          absolutePath = path.join(process.cwd(), filePath.substring(1));
+        }
+        imageBuffer = await fs.readFile(absolutePath);
+      }
+
       const base64Image = imageBuffer.toString('base64');
-      const ext = path.extname(filePath).toLowerCase();
-      let mimeType = '';
+      const ext = path.extname(filePath.split('?')[0]).toLowerCase();
+      let mimeType = 'image/jpeg'; // Default
       if (ext === '.png') mimeType = 'image/png';
       else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
-      if (mimeType) return `data:${mimeType};base64,${base64Image}`;
-      return null;
+
+      return `data:${mimeType};base64,${base64Image}`;
     } catch (error) {
-      console.error(`Erro ao ler imagem para base64: ${filePath}`, error);
+      console.error(`Erro ao processar imagem para PDF: ${filePath}`, error);
       return null;
     }
   }

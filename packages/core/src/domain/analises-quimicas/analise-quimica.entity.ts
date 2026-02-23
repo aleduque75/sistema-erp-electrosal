@@ -132,11 +132,16 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
     this.props.dataAnaliseConcluida = new Date();
     this.props.dataAtualizacao = new Date();
   }
-  
+
   public aprovarParaRecuperacao() {
-      this.props.status = StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO;
-      this.props.dataAprovacaoCliente = new Date();
-      this.props.dataAtualizacao = new Date();
+    this.props.status = StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO;
+    this.props.dataAprovacaoCliente = new Date();
+    this.props.dataAtualizacao = new Date();
+  }
+
+  public reverterStatusParaAprovadoParaRecuperacao() {
+    this.props.status = StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO;
+    this.props.dataAtualizacao = new Date();
   }
 
 
@@ -153,13 +158,13 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
   }
 
   public reprovar() {
-      this.props.status = StatusAnaliseQuimica.RECUSADO_PELO_CLIENTE;
-      this.props.dataAtualizacao = new Date();
+    this.props.status = StatusAnaliseQuimica.RECUSADO_PELO_CLIENTE;
+    this.props.dataAtualizacao = new Date();
   }
 
   public refazer() {
-      this.props.status = StatusAnaliseQuimica.EM_ANALISE;
-      this.props.dataAtualizacao = new Date();
+    this.props.status = StatusAnaliseQuimica.EM_ANALISE;
+    this.props.dataAtualizacao = new Date();
   }
 
   public static criarResiduo(props: Omit<AnaliseQuimicaProps, 'id' | 'dataCriacao' | 'dataAtualizacao' | 'status' | 'numeroAnalise'> & { organizationId: string, clienteId: string | null | undefined }): AnaliseQuimica {
@@ -180,7 +185,7 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
     return analise;
   }
 
-  public update(dto: Partial<AnaliseQuimicaProps & { 
+  public update(dto: Partial<AnaliseQuimicaProps & {
     dataEntrada?: string | null;
     dataAnaliseConcluida?: string | null;
     dataAprovacaoCliente?: string | null;
