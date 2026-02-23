@@ -64,28 +64,30 @@ Para garantir compatibilidade com as fórmulas de notificação de WhatsApp, o f
 2. **deploy.sh**: Automatiza o `git pull`, `pnpm install`, `build` e `pm2 reload`.
 3. **ecosystem.config.js**: Gerencia os processos do PM2. Deve usar caminhos relativos ao `cwd`.
 
-### Comandos de Emergência (Tela Branca / Conflito de Porta)
-Se o sistema ficar fora do ar ou apresentar erro de renderização:
+### Comandos de Emergência (Isolamento de Ambientes)
+Se o sistema apresentar "HTML puro" (sem estilo) ou o banco de dados estiver cruzado (Produção vendo Homolog):
 
-// turbo
+// turbo-all
 ```bash
-# 1. Matar processos órfãos nas portas críticas
-fuser -k 3000/tcp 3001/tcp 4000/tcp 4001/tcp
+# 1. Limpar processos fantasmas e redundantes
+pm2 delete all
 
-# 2. Homologação (Portas 4000/4001)
+# 2. Subir Homologação (Diretório Específico)
 cd /root/apps/homolog-erp
-rm -rf apps/frontend/.next
-pnpm build
-pm2 delete erp-backend-homolog erp-frontend-homolog
-pm2 start apps/backend/dist/main.js --name erp-backend-homolog
-pm2 start "pnpm --cwd apps/frontend next start -p 4000" --name erp-frontend-homolog
+pnpm --filter frontend build
+pm2 start ecosystem.config.js
 
-# 3. Produção (Portas 3000/3001)
+# 3. Subir Produção (Diretório Específico)
 cd /root/apps/sistema-erp-electrosal
-pm2 delete erp-backend erp-frontend
-pm2 start apps/backend/dist/main.js --name erp-backend
-pm2 start "pnpm --cwd apps/frontend next start -p 3000" --name erp-frontend
+# pnpm --filter frontend build # (Opcional se já estiver buildado)
+pm2 start ecosystem.config.js
+
+# 4. Salvar configuração para reinicialização do server
+pm2 save
 ```
+
+> [!IMPORTANT]
+> **NUNCA** use `pm2 start apps/backend/dist/main.js` diretamente. Use sempre o `ecosystem.config.js` de cada pasta, pois os arquivos de configuração agora utilizam **caminhos absolutos** (`/root/apps/...`) para garantir que o PM2 não se confunda entre as pastas.
 
 ---
 

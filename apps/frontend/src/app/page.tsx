@@ -318,15 +318,18 @@ export default function HomePage() {
                   </button>
                 </aside>
               </div>
+
+              {/* Botão Fechar no final do conteúdo */}
+              <div className="flex justify-center pb-12">
+                <button
+                  onClick={() => setActiveDialogContent(null)}
+                  className="px-12 py-5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full font-black italic uppercase text-[10px] tracking-[0.3em] transition-all border border-white/10 shadow-xl flex items-center gap-3 active:scale-95"
+                >
+                  <X className="w-4 h-4" /> FECHAR DETALHES
+                </button>
+              </div>
             </div>
           </div>
-
-          <button
-            onClick={() => setActiveDialogContent(null)}
-            className="w-full md:hidden bg-zinc-900 hover:bg-red-600 text-white py-8 font-black italic uppercase text-xs tracking-[0.4em] transition-all border-t border-white/5"
-          >
-            FECHAR DETALHES
-          </button>
         </DialogContent>
       </Dialog>
 

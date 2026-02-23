@@ -89,6 +89,14 @@
     /* POPOVER (Dropdowns, Tooltips, etc.) */
     --popover: var(--card);
     --popover-foreground: var(--foreground);
+
+    /* MOBILE & STATUS */
+    --mobile-card-title: 222 47% 11%;
+    --mobile-card-subtitle: 215 16% 47%;
+    --mobile-card-value: 222 47% 11%;
+    --mobile-card-icon: 215 16% 47%;
+    --status-finalizado-bg: 142 76% 95%;
+    --status-finalizado-text: 142 76% 36%;
   }
 
   @media (max-width: 639px) {
@@ -178,6 +186,14 @@
     /* POPOVER DARK */
     --popover: var(--card);
     --popover-foreground: var(--foreground);
+
+    /* MOBILE & STATUS DARK */
+    --mobile-card-title: 210 40% 98%;
+    --mobile-card-subtitle: 215 20% 65%;
+    --mobile-card-value: 210 40% 98%;
+    --mobile-card-icon: 215 20% 65%;
+    --status-finalizado-bg: 142 76% 15%;
+    --status-finalizado-text: 142 76% 80%;
   }
 }
 

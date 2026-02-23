@@ -60,6 +60,12 @@ export const DEFAULT_THEME = {
       "table-row-hover": "210 40% 98%",
       "table-border": "214 32% 91%",
       divider: "214 32% 88%",
+      "mobile-card-title": "222 47% 11%",
+      "mobile-card-subtitle": "215 16% 47%",
+      "mobile-card-value": "222 47% 11%",
+      "mobile-card-icon": "215 16% 47%",
+      "status-finalizado-bg": "142 76% 95%",
+      "status-finalizado-text": "142 76% 36%",
     },
   },
   dark: {
@@ -100,6 +106,12 @@ export const DEFAULT_THEME = {
       "table-row-hover": "222 47% 18%",
       "table-border": "217 33% 15%",
       divider: "217 33% 20%",
+      "mobile-card-title": "210 40% 98%",
+      "mobile-card-subtitle": "215 20% 65%",
+      "mobile-card-value": "210 40% 98%",
+      "mobile-card-icon": "215 20% 65%",
+      "status-finalizado-bg": "142 76% 15%",
+      "status-finalizado-text": "142 76% 80%",
     },
   },
 };
@@ -118,11 +130,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     Object.entries(colors).forEach(([k, v]) => {
       // Converte camelCase → kebab-case com suporte a todos os padrões
-      // Exemplo: primaryForeground → primary-foreground, menuBgHover → menu-bg-hover
       const cssVarName = k
         .replace(/([A-Z])/g, (match) => `-${match.toLowerCase()}`)
-        .replace(/^-/, ""); // remove leading dash if any
-      root.style.setProperty(`--${cssVarName}`, v as string);
+        .replace(/^-/, "");
+
+      // ✅ Suporte a Escala de Saturação (Intensidade)
+      let finalValue = v as string;
+      if (typeof v === "string" && v.includes("%") && colors.primarySaturationScale && !k.toLowerCase().includes("opacity")) {
+        const parts = v.split(" ");
+        if (parts.length === 3) {
+          const s = parseFloat(parts[1].replace("%", ""));
+          const intensity = parseFloat(colors.primarySaturationScale);
+          const newS = Math.min(100, Math.max(0, s * intensity));
+          finalValue = `${parts[0]} ${newS.toFixed(1)}% ${parts[2]}`;
+        }
+      }
+
+      root.style.setProperty(`--${cssVarName}`, finalValue);
     });
   };
 

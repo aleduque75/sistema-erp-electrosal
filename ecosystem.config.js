@@ -1,23 +1,25 @@
+const path = require('path');
+const rootPath = '/root/apps/homolog-erp';
+
 module.exports = {
   apps: [
     {
-      name: "erp-backend",
-      cwd: "apps/backend",
+      name: "erp-backend-homologation",
+      cwd: path.join(rootPath, "apps/backend"),
       script: "dist/main.js",
       env: {
         NODE_ENV: "production",
+        PORT: "4001",
       }
     },
     {
-      name: "erp-frontend",
-      cwd: "apps/frontend",
-      // Usa o binário JS real do Next.js (não o shell wrapper em .bin/)
-      // .bin/next é um shell script — PM2 tentava rodar como Node.js e quebrava
+      name: "erp-frontend-homologation",
+      cwd: path.join(rootPath, "apps/frontend"),
       script: "node_modules/next/dist/bin/next",
-      args: "start -p 3000",
+      args: "start -p 4000",
       env: {
         NODE_ENV: "production",
-        PORT: "3000",
+        PORT: "4000",
       }
     }
   ]

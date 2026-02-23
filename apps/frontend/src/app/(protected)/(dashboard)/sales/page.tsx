@@ -53,7 +53,7 @@ export default function SalesPage() {
     CONFIRMADO: { label: 'Confirmado', className: 'text-blue-600 bg-blue-100' },
     A_SEPARAR: { label: 'A Separar', className: 'text-orange-600 bg-orange-100' },
     SEPARADO: { label: 'Separado', className: 'text-purple-600 bg-purple-100' },
-    FINALIZADO: { label: 'Finalizado', className: 'text-green-600 bg-green-100' },
+    FINALIZADO: { label: 'Finalizado', className: 'text-[hsl(var(--status-finalizado-text))] bg-[hsl(var(--status-finalizado-bg))] border border-[hsl(var(--status-finalizado-text)/0.2)]' },
     CANCELADO: { label: 'Cancelado', className: 'text-red-600 bg-red-600' },
     PAGO_PARCIALMENTE: { label: 'Pago Parcial', className: 'text-cyan-600 bg-cyan-100' },
   };
@@ -360,7 +360,7 @@ ${itemsText}`;
         const sale = row.original;
         const paymentText = sale.paymentAccountName || sale.paymentMethod?.replace('_', ' ') || 'N/A';
         return (
-          <Badge variant="outline">
+          <Badge variant="outline" className="border-white/10 bg-black/20 text-amber-500/80 font-bold text-[10px] px-2 py-0.5">
             {paymentText}
           </Badge>
         );
@@ -523,7 +523,7 @@ ${itemsText}`;
             </div>
             <div className="space-y-2">
               <Label>Cliente</Label>
-              <Combobox options={clients} value={filters.clientId || ''} onChange={value => handleFilterChange('clientId', value)} placeholder="Selecione um cliente..." />
+              <Combobox options={clients} value={filters.clientId ?? ''} onChange={value => handleFilterChange('clientId', value)} placeholder="Selecione um cliente..." />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
@@ -607,7 +607,7 @@ ${itemsText}`;
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{sale.orderNumber}</p>
-                          <h3 className="font-black italic text-zinc-950 truncate max-w-[150px]">{sale.pessoa?.name}</h3>
+                          <h3 className="font-black italic text-[hsl(var(--mobile-card-title))] truncate max-w-[150px]">{sale.pessoa?.name}</h3>
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <Badge variant="outline" className={`border-none ${config.className} text-[10px] px-2 py-0`}>
@@ -616,7 +616,7 @@ ${itemsText}`;
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-zinc-400 hover:text-blue-600"
+                            className="h-8 w-8 text-[hsl(var(--mobile-card-icon))] hover:text-blue-600"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDownloadPdf(sale);
@@ -630,13 +630,13 @@ ${itemsText}`;
                       <div className="flex justify-between items-end">
                         <div className="space-y-1">
                           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Produtos ({totalQty})</p>
-                          <p className="text-xs text-zinc-600 line-clamp-1 italic">
+                          <p className="text-xs text-[hsl(var(--mobile-card-subtitle))] line-clamp-1 italic">
                             {saleItems.map(i => i.product?.name).join(', ')}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Total</p>
-                          <p className="font-black italic text-zinc-950 text-base">
+                          <p className="font-black italic text-[hsl(var(--mobile-card-value))] text-base">
                             {formatCurrency(Number(sale.adjustment?.paymentReceivedBRL || 0))}
                           </p>
                         </div>

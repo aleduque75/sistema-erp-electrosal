@@ -30,6 +30,7 @@ interface DataTableProps<TData, TValue> {
   filterColumnId?: string;
   filterPlaceholder?: string;
   isLoading?: boolean;
+  loading?: boolean;
   renderSubComponent?: (props: { row: Row<TData> }) => React.ReactElement; // NOVO
   getRowCanExpand?: (row: Row<TData>) => boolean; // NOVO
   rowSelection?: object;
@@ -58,7 +59,7 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     getRowCanExpand, // NOVO
-    onRowSelectionChange: onRowSelectionChange,
+    onRowSelectionChange: onRowSelectionChange as any,
     enableRowSelection: true,
     state: {
       sorting,
@@ -90,7 +91,7 @@ export function DataTable<TData, TValue>({
         </div>
       )}
 
-      <div className="rounded-md border">
+      <div className="rounded-md">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -100,9 +101,9 @@ export function DataTable<TData, TValue>({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>

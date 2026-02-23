@@ -94,7 +94,7 @@ export default function AppearancePage() {
   const update = (mode: string, key: string, val: string) => {
     let final = val;
     // Se não for raio ou opacidade, converte hex para HSL string
-    if (!key.toLowerCase().includes("radius") && !key.toLowerCase().includes("opacity")) {
+    if (!key.toLowerCase().includes("radius") && !key.toLowerCase().includes("opacity") && !key.toLowerCase().includes("intensity")) {
       try {
         const [h, s, l] = hexToHsl(val);
         final = `${h.toFixed(0)} ${s.toFixed(1)}% ${l.toFixed(1)}%`;
@@ -111,6 +111,9 @@ export default function AppearancePage() {
       },
     };
     setConfig(next);
+
+    // Se for intensidade, precisamos ajustar as cores live? 
+    // Por enquanto vamos apenas atualizar o estado e o ThemeProvider cuida do resto
     updateLiveColors(next[mode].colors);
   };
 
@@ -229,6 +232,7 @@ export default function AppearancePage() {
                 <SettingSection title="Identidade Visual" description="Cores base que definem o tom do seu ERP.">
                   <ColorRow label="Fundo da Aplicação" mode={currentMode} k="background" v={config[currentMode]?.colors?.background} onChange={update} />
                   <ColorRow label="Cor de Destaque (Principal)" mode={currentMode} k="primary" v={config[currentMode]?.colors?.primary} onChange={update} />
+                  <SliderRow label="Intensidade da Cor (Saturação)" mode={currentMode} k="primarySaturationScale" v={config[currentMode]?.colors?.primarySaturationScale || "1"} onChange={update} />
                   <ColorRow label="Secundário" mode={currentMode} k="secondary" v={config[currentMode]?.colors?.secondary} onChange={update} />
                   <ColorRow label="Acento (Accent)" mode={currentMode} k="accent" v={config[currentMode]?.colors?.accent} onChange={update} />
                   <ColorRow label="Muted" mode={currentMode} k="muted" v={config[currentMode]?.colors?.muted} onChange={update} />
@@ -243,6 +247,10 @@ export default function AppearancePage() {
                   <ColorRow label="Cor da Borda" mode={currentMode} k="cardBorder" v={config[currentMode]?.colors?.cardBorder} onChange={update} />
                   <SliderRow label="Opacidade da Borda" mode={currentMode} k="cardBorderOpacity" v={config[currentMode]?.colors?.cardBorderOpacity || "1"} onChange={update} />
                   <RadiusRow label="Arredondamento (px)" mode={currentMode} k="cardRadius" v={config[currentMode]?.colors?.cardRadius || "12px"} onChange={update} />
+                  <hr className="opacity-20 my-4" />
+                  <p className="text-[10px] font-black uppercase text-primary mb-3">Campos de Formulário</p>
+                  <ColorRow label="Fundo do Input" mode={currentMode} k="input" v={config[currentMode]?.colors?.input} onChange={update} />
+                  <ColorRow label="Texto do Input" mode={currentMode} k="inputForeground" v={config[currentMode]?.colors?.inputForeground} onChange={update} />
                 </SettingSection>
               )}
 
@@ -252,6 +260,12 @@ export default function AppearancePage() {
                   <ColorRow label="Texto Muted/Secundário" mode={currentMode} k="mutedForeground" v={config[currentMode]?.colors?.mutedForeground} onChange={update} />
                   <ColorRow label="Texto Destrutivo/Erro" mode={currentMode} k="destructiveForeground" v={config[currentMode]?.colors?.destructiveForeground} onChange={update} />
                   <ColorRow label="Texto em Fundo Primário" mode={currentMode} k="primaryForeground" v={config[currentMode]?.colors?.primaryForeground} onChange={update} />
+                  <hr className="opacity-20 my-4" />
+                  <p className="text-[10px] font-black uppercase text-primary mb-3">Mobile & Cards Especiais</p>
+                  <ColorRow label="Nome do Cliente (Mobile)" mode={currentMode} k="mobileCardTitle" v={config[currentMode]?.colors?.mobileCardTitle} onChange={update} />
+                  <ColorRow label="Subtítulo/Descrição (Mobile)" mode={currentMode} k="mobileCardSubtitle" v={config[currentMode]?.colors?.mobileCardSubtitle} onChange={update} />
+                  <ColorRow label="Valor Total (Mobile)" mode={currentMode} k="mobileCardValue" v={config[currentMode]?.colors?.mobileCardValue} onChange={update} />
+                  <ColorRow label="Ícones do Card (Mobile)" mode={currentMode} k="mobileCardIcon" v={config[currentMode]?.colors?.mobileCardIcon} onChange={update} />
                 </SettingSection>
               )}
 
@@ -280,6 +294,10 @@ export default function AppearancePage() {
                   <ColorRow label="Sucesso (Success)" mode={currentMode} k="success" v={config[currentMode]?.colors?.success || "142 76% 36%"} onChange={update} />
                   <ColorRow label="Aviso (Warning)" mode={currentMode} k="warning" v={config[currentMode]?.colors?.warning || "38 92% 50%"} onChange={update} />
                   <ColorRow label="Erro (Destructive)" mode={currentMode} k="destructive" v={config[currentMode]?.colors?.destructive} onChange={update} />
+                  <hr className="opacity-20 my-4" />
+                  <p className="text-[10px] font-black uppercase text-primary mb-3">Status Específicos</p>
+                  <ColorRow label="Status Finalizado (Texto)" mode={currentMode} k="statusFinalizadoText" v={config[currentMode]?.colors?.statusFinalizadoText} onChange={update} />
+                  <ColorRow label="Status Finalizado (Fundo)" mode={currentMode} k="statusFinalizadoBg" v={config[currentMode]?.colors?.statusFinalizadoBg} onChange={update} />
                 </SettingSection>
               )}
 
@@ -316,11 +334,17 @@ export default function AppearancePage() {
 
                   {/* Exemplo de Card */}
                   <Card className="card-custom p-4 shadow-sm border">
-                    <p className="text-[10px] font-black uppercase tracking-widest mb-2 opacity-50">Exemplo de Card</p>
-                    <p className="text-xs font-medium">Os conteúdos do sistema aparecerão dentro de containers como este.</p>
-                    <div className="mt-4 flex gap-2">
-                      <Button size="sm">Ação Primária</Button>
-                      <Button variant="outline" size="sm">Ação Outline</Button>
+                    <p className="text-[10px] font-black uppercase tracking-widest mb-2 opacity-50">Exemplo de Card & Input</p>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase font-bold opacity-70">Nome do Cliente</Label>
+                        <Input placeholder="Digite o nome..." className="h-8 text-xs" />
+                      </div>
+                      <p className="text-xs font-medium">Os conteúdos do sistema aparecerão dentro de containers como este.</p>
+                      <div className="mt-4 flex gap-2">
+                        <Button size="sm">Ação Primária</Button>
+                        <Button variant="outline" size="sm">Ação Outline</Button>
+                      </div>
                     </div>
                   </Card>
 
