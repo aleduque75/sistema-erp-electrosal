@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { LandingPageService } from './landing-page.service';
 import { LandingPageController } from './landing-page.controller';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -6,7 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { MediaModule } from '../media/media.module';
 
 @Module({
-  imports: [PrismaModule, MediaModule],
+  imports: [PrismaModule, forwardRef(() => MediaModule)],
   controllers: [LandingPageController],
   providers: [LandingPageService],
   exports: [LandingPageService],

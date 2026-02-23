@@ -17,7 +17,6 @@ import { PayAccountsRecWithMetalMultipleUseCase } from './use-cases/pay-accounts
 
 import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
 
-import { SettingsService } from '../settings/settings.service';
 
 @Module({
   imports: [
@@ -37,11 +36,10 @@ import { SettingsService } from '../settings/settings.service';
     PayAccountsRecWithMetalCreditMultipleUseCase,
     PayAccountsRecWithMetalMultipleUseCase,
     HybridReceiveUseCase,
-    SettingsService,
     {
       provide: 'IMetalCreditRepository',
       useClass: PrismaMetalCreditRepository,
     },
   ],
 })
-export class AccountsRecModule {}
+export class AccountsRecModule { }
