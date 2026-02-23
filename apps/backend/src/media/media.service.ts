@@ -61,8 +61,11 @@ export class MediaService {
       mimetype: file.mimetype.startsWith('image/') ? 'image/jpeg' : file.mimetype
     });
 
+    // Extrair o filename único da URL do S3 para garantir unicidade no banco de dados
+    const uniqueFilename = s3Url.split('/').pop() || file.originalname;
+
     const mediaData: Omit<MediaProps, 'createdAt' | 'updatedAt'> = {
-      filename: file.originalname,
+      filename: uniqueFilename,
       mimetype: file.mimetype.startsWith('image/') ? 'image/jpeg' : file.mimetype,
       size: uploadSize,
       path: s3Url, // Agora salvamos a URL completa do S3 no campo path
