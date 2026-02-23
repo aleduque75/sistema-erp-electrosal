@@ -2,9 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateLandingPageDto } from './dto/update-landing-page.dto';
 
+import { MediaService } from '../media/media.service';
+
 @Injectable()
 export class LandingPageService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private mediaService: MediaService,
+  ) { }
 
   async findPublic() {
     // Busca a landing page atualizada mais recentemente que possua seções.
@@ -57,6 +62,14 @@ export class LandingPageService {
       });
     }
 
+    // --- Lógica para deletar logo antigo se substituído ---
+    if (dto.logoImageId && lp.logoImageId && lp.logoImageId !== dto.logoImageId) {
+      console.log(`[LandingPageService] Logo substituído de ${lp.logoImageId} para ${dto.logoImageId}. Excluindo antigo...`);
+      await this.mediaService.remove(lp.logoImageId).catch(err => {
+        console.error(`[LandingPageService] Erro ao deletar logo antigo ${lp.logoImageId}:`, err);
+      });
+    }
+
     return this.prisma.$transaction(async (tx) => {
       await tx.landingPage.update({
         where: { id: lp.id },
@@ -68,6 +81,19 @@ export class LandingPageService {
       });
 
       if (dto.sections) {
+        const oldSections = await tx.section.findMany({
+          where: { landingPageId: lp.id }
+        });
+
+        // Tenta identificar mídias dentro do JSON das seções antigas
+        for (const section of oldSections) {
+          const content = section.content as any;
+          if (content?.imageId) {
+            console.log(`[LandingPageService] Limpando imagem da seção deletada: ${content.imageId}`);
+            await this.mediaService.remove(content.imageId).catch(() => { });
+          }
+        }
+
         // Remove as seções antigas e insere as novas para manter a ordem limpa
         await tx.section.deleteMany({ where: { landingPageId: lp.id } });
 

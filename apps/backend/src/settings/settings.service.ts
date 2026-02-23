@@ -8,9 +8,14 @@ import { CreateThemePresetDto } from './dto/create-theme-preset.dto';
 import { UpdateThemePresetDto } from './dto/update-theme-preset.dto';
 import { Prisma } from '@prisma/client'; // ✅ Necessário para InputJsonValue
 
+import { MediaService } from '../media/media.service';
+
 @Injectable()
 export class SettingsService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private mediaService: MediaService,
+  ) { }
 
   /**
    * Busca as configurações do usuário. Se não existirem, cria o registro inicial.
@@ -108,6 +113,25 @@ export class SettingsService {
       customTheme: (dto.customTheme || {}) as Prisma.InputJsonValue,
       logoId: dto.logoId,
     };
+
+    // --- Lógica para deletar logo antigo se substituído ---
+    if (dto.logoId) {
+      const currentSettings = await this.prisma.appearanceSettings.findUnique({
+        where: { organizationId },
+        select: { logoId: true },
+      });
+
+      if (currentSettings?.logoId && currentSettings.logoId !== dto.logoId) {
+        console.log(`[SettingsService] Logo substituído de ${currentSettings.logoId} para ${dto.logoId}. Excluindo antigo...`);
+        try {
+          await this.mediaService.remove(currentSettings.logoId).catch(err => {
+            console.error(`[SettingsService] Erro ao deletar logo antigo ${currentSettings.logoId}:`, err);
+          });
+        } catch (e) {
+          // Silencioso para não quebrar o salvamento
+        }
+      }
+    }
 
     return this.prisma.appearanceSettings.upsert({
       where: { organizationId },

@@ -60,12 +60,14 @@ export class S3Service {
 
         try {
             const key = url.split('.com/')[1];
+            this.logger.log(`Deleting file from S3. Bucket: ${this.bucketName}, Key: ${key}`);
             await this.s3Client.send(
                 new DeleteObjectCommand({
                     Bucket: this.bucketName,
                     Key: key,
                 }),
             );
+            this.logger.log(`Successfully deleted file from S3: ${key}`);
         } catch (error) {
             this.logger.error(`Error deleting file from S3: ${error.message}`);
         }

@@ -3,8 +3,10 @@ import { LandingPageService } from './landing-page.service';
 import { LandingPageController } from './landing-page.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 
+import { MediaModule } from '../media/media.module';
+
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, MediaModule],
   controllers: [LandingPageController],
   providers: [LandingPageService],
   exports: [LandingPageService],

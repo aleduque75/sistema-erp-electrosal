@@ -170,13 +170,15 @@ export class MediaService {
     const mediaToDelete = await this.findOne(id);
     const itemPath = (mediaToDelete as any).props?.path || (mediaToDelete as any).path;
 
-    if (itemPath && itemPath.startsWith('http')) {
+    if (itemPath && (itemPath.startsWith('http') || itemPath.includes('amazonaws.com'))) {
       // Remover do S3
+      console.log(`[MediaService] Removendo arquivo do S3: ${itemPath}`);
       await this.s3Service.deleteFile(itemPath);
     } else {
       // Remover local
       const filename = (mediaToDelete as any).props?.filename || (mediaToDelete as any).filename;
       if (filename) {
+        console.log(`[MediaService] Removendo arquivo local: ${filename}`);
         const filePath = join(process.cwd(), 'uploads', filename);
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
