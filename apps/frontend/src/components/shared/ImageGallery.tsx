@@ -126,7 +126,7 @@ export function ImageGallery({ media, onDeleteSuccess, initialIndex = 0 }: Image
           <div key={item.id} className="relative group aspect-square">
 
             <Image
-              src={item.url || `${API_BASE_URL}${item.path}`}
+              src={item.url || `${API_BASE_URL}/api/media/file/${item.filename}`}
               alt={item.filename || 'Imagem da transação'}
 
               layout="fill"
@@ -178,7 +178,7 @@ export function ImageGallery({ media, onDeleteSuccess, initialIndex = 0 }: Image
             {currentMedia && (
 
               <Image
-                src={currentMedia.url || `${API_BASE_URL}${currentMedia.path}`}
+                src={currentMedia.url || `${API_BASE_URL}/api/media/file/${currentMedia.filename}`}
                 alt={currentMedia.filename || 'Imagem da transação'}
 
                 layout="fill"

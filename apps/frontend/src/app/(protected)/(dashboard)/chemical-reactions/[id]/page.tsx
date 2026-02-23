@@ -8,6 +8,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AddRawMaterialModal } from "./add-raw-material-modal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ImageUpload } from "@/components/shared/ImageUpload";
+import { ImageGallery } from "@/components/shared/ImageGallery";
+import { getMediaForChemicalReaction } from "@/services/mediaApi";
+import { Media } from "@/types/media";
+import { Separator } from "@/components/ui/separator";
 
 interface RawMaterialUsed {
   id: string;
@@ -34,6 +39,8 @@ export default function ChemicalReactionDetailsPage() {
   const { id } = params;
   const [chemicalReaction, setChemicalReaction] = useState<ChemicalReaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [media, setMedia] = useState<Media[]>([]);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
 
   const fetchChemicalReaction = async () => {
     try {
@@ -44,9 +51,23 @@ export default function ChemicalReactionDetailsPage() {
     }
   };
 
+  const fetchMedia = async () => {
+    if (!id) return;
+    setIsLoadingMedia(true);
+    try {
+      const fetchedMedia = await getMediaForChemicalReaction(id as string);
+      setMedia(fetchedMedia);
+    } catch (error) {
+      toast.error("Erro ao carregar imagens da reação.");
+    } finally {
+      setIsLoadingMedia(false);
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchChemicalReaction();
+      fetchMedia();
     }
   }, [id]);
 
@@ -106,6 +127,27 @@ export default function ChemicalReactionDetailsPage() {
         chemicalReactionId={id as string}
         onRawMaterialAdded={handleRawMaterialAdded}
       />
+
+      <Separator />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Imagens</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ImageUpload
+            entity={{ type: 'chemicalReaction', id: id as string }}
+            onMediaUploadSuccess={fetchMedia}
+          />
+          {isLoadingMedia ? (
+            <p className="text-sm text-muted-foreground animate-pulse italic">Carregando imagens...</p>
+          ) : media.length > 0 ? (
+            <ImageGallery media={media} onDeleteSuccess={fetchMedia} />
+          ) : (
+            <p className="text-sm text-muted-foreground italic text-center py-4">Nenhuma imagem associada a esta reação.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

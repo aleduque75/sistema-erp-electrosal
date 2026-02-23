@@ -48,7 +48,17 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'dev-api.electrosal.com.br',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: '76.13.229.204',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'electrosal-erp-media.s3.us-east-2.amazonaws.com',
         pathname: '/**',
       },
     ],

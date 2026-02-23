@@ -8,6 +8,8 @@ import * as path from 'path'; // <--- ESTE IMPORT TINHA SUMIDO
 import * as fs from 'fs';
 import { PrismaMediaRepository } from './repositories/prisma-media.repository';
 import { PublicMediaController } from './public-media.controller';
+import { S3Service } from '../shared/storage/s3.service';
+import { memoryStorage } from 'multer';
 
 const destinationPath = path.join(process.cwd(), 'uploads');
 
@@ -20,19 +22,12 @@ if (!fs.existsSync(destinationPath)) {
   imports: [
     PrismaModule,
     MulterModule.register({
-      storage: diskStorage({
-        destination: destinationPath,
-        filename: (req, file, cb) => {
-          // Gera um nome único mantendo a extensão original (ex: .png, .jpg)
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = path.extname(file.originalname);
-          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-        },
-      }),
+      storage: memoryStorage(),
     }),
   ],
   providers: [
     MediaService,
+    S3Service,
     {
       provide: 'IMediaRepository',
       useClass: PrismaMediaRepository,

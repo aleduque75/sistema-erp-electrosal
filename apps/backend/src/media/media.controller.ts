@@ -12,6 +12,7 @@ import {
   Req,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MediaService } from './media.service';
@@ -27,12 +28,52 @@ export class MediaController {
 
   @Get('/')
   async findAll() {
-    return this.mediaService.findAll();
+    const medias = await this.mediaService.findAll();
+    return medias.map(m => ({
+      ...(m as any).props,
+      id: m.id.toString(),
+      url: (m as any).url
+    }));
   }
 
   @Get('analise-quimica/:id')
   async findByAnaliseQuimicaId(@Param('id') id: string) {
-    return this.mediaService.findByAnaliseQuimicaId(id);
+    const medias = await this.mediaService.findByAnaliseQuimicaId(id);
+    return medias.map(m => ({
+      ...(m as any).props,
+      id: m.id.toString(),
+      url: (m as any).url
+    }));
+  }
+
+  @Get('recovery-order/:id')
+  async findByRecoveryOrderId(@Param('id') id: string) {
+    const medias = await this.mediaService.findByRecoveryOrderId(id);
+    return medias.map(m => ({
+      ...(m as any).props,
+      id: m.id.toString(),
+      url: (m as any).url
+    }));
+  }
+
+  @Get('chemical-reaction/:id')
+  async findByChemicalReactionId(@Param('id') id: string) {
+    const medias = await this.mediaService.findByChemicalReactionId(id);
+    return medias.map(m => ({
+      ...(m as any).props,
+      id: m.id.toString(),
+      url: (m as any).url
+    }));
+  }
+
+  @Get('transacao/:id')
+  async findByTransacaoId(@Param('id') id: string) {
+    const medias = await this.mediaService.findByTransacaoId(id);
+    return medias.map(m => ({
+      ...(m as any).props,
+      id: m.id.toString(),
+      url: (m as any).url
+    }));
   }
 
   @Post('upload')
@@ -40,6 +81,10 @@ export class MediaController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Req() req: any,
+    @Query('analiseQuimicaId') analiseQuimicaId?: string,
+    @Query('recoveryOrderId') recoveryOrderId?: string,
+    @Query('transacaoId') transacaoId?: string,
+    @Query('chemicalReactionId') chemicalReactionId?: string,
   ) {
     if (!file) {
       throw new BadRequestException('Nenhum arquivo enviado.');
@@ -52,8 +97,21 @@ export class MediaController {
       throw new BadRequestException('ID da organização ausente no token.');
     }
 
-    const media = await this.mediaService.create(file, organizationId);
-    return { message: 'Arquivo enviado com sucesso!', media };
+    const media = await this.mediaService.create(file, organizationId, {
+      analiseQuimicaId,
+      recoveryOrderId,
+      transacaoId,
+      chemicalReactionId,
+    });
+
+    return {
+      message: 'Arquivo enviado com sucesso!',
+      media: {
+        ... (media as any).props,
+        id: media.id.toString(),
+        url: (media as any).url
+      }
+    };
   }
 
   @Delete(':id')

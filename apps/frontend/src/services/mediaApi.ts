@@ -59,6 +59,11 @@ export const getMediaForRecoveryOrder = async (recoveryOrderId: string): Promise
   return response.data;
 };
 
+export const getMediaForChemicalReaction = async (chemicalReactionId: string): Promise<Media[]> => {
+  const response = await api.get<Media[]>(`/media/chemical-reaction/${chemicalReactionId}`);
+  return response.data;
+};
+
 export const deleteMedia = async (mediaId: string): Promise<void> => {
   await api.delete(`/media/${mediaId}`);
 };
