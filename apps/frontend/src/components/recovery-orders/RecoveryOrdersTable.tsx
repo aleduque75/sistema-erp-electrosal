@@ -154,7 +154,7 @@ export function RecoveryOrdersTable({
 
   return (
     <>
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <DataTable
           columns={columns}
           data={recoveryOrders}
@@ -164,7 +164,7 @@ export function RecoveryOrdersTable({
         />
       </div>
 
-      <div className="md:hidden space-y-2 max-w-md mx-auto">
+      <div className="lg:hidden space-y-2 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0">
         {isLoading ? (
           <div className="py-8 text-center text-muted-foreground animate-pulse italic">Carregando...</div>
         ) : recoveryOrders.length === 0 ? (
@@ -192,7 +192,7 @@ export function RecoveryOrdersTable({
                 <div className="flex justify-between items-end">
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground font-medium uppercase">{format(new Date(order.dataInicio), "dd/MM/yyyy")}</span>
-                    <span className="text-sm font-black text-zinc-900">
+                    <span className="text-sm font-black" style={{ color: 'hsl(var(--mobile-card-quantity, var(--foreground)))' }}>
                       {order.auPuroRecuperadoGramas?.toFixed(4) ?? "0.0000"} g
                     </span>
                   </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -161,26 +162,27 @@ export function MobileMenu() {
               </CollapsibleContent>
             </Collapsible>
           ) : (
-            <Link
-              href={item.href}
-              className={cn(
-                "menu-item group",
-                highlightItem
-                  ? "bg-brand-50 text-brand-500 dark:bg-brand-500/12 dark:text-brand-400"
-                  : "menu-item-inactive",
-              )}
-              onClick={() => toggleMobileSidebar()}
-            >
-              {IconComponent && (
-                <IconComponent className={cn(
-                  "h-5 w-5",
-                  highlightItem ? "menu-item-icon-active" : "menu-item-icon-inactive"
-                )} />
-              )}
-              <span className="menu-item-text">
-                {item.title}
-              </span>
-            </Link>
+            <SheetClose asChild>
+              <Link
+                href={item.href}
+                className={cn(
+                  "menu-item group",
+                  highlightItem
+                    ? "bg-brand-50 text-brand-500 dark:bg-brand-500/12 dark:text-brand-400"
+                    : "menu-item-inactive",
+                )}
+              >
+                {IconComponent && (
+                  <IconComponent className={cn(
+                    "h-5 w-5",
+                    highlightItem ? "menu-item-icon-active" : "menu-item-icon-inactive"
+                  )} />
+                )}
+                <span className="menu-item-text">
+                  {item.title}
+                </span>
+              </Link>
+            </SheetClose>
           )}
         </li>
       );
@@ -197,7 +199,7 @@ export function MobileMenu() {
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="left" className="flex flex-col w-[290px] p-0 lg:hidden">
+      <SheetContent side="left" className="flex flex-col w-[290px] p-0 lg:hidden !top-0 !h-full">
         <SheetHeader className="text-left flex-shrink-0 border-b p-4">
           <SheetTitle>Navegação</SheetTitle>
         </SheetHeader>

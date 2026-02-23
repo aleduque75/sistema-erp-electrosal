@@ -16,7 +16,7 @@ export class TransacoesService {
     private prisma: PrismaService,
     private mediaService: MediaService, // Injetar MediaService
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
-  ) {}
+  ) { }
 
   async bulkUpdate(
     dto: GenericBulkUpdateTransacaoDto,
@@ -77,39 +77,41 @@ export class TransacoesService {
     organizationId: string,
     dto: CreateTransferDto,
   ): Promise<{ debitTransaction: Transacao; creditTransaction: Transacao }> {
-    const { sourceAccountId, destinationAccountId, description, contaContabilId, dataHora, mediaIds } = dto;
+    const { sourceAccountId, destinationAccountId, description, contaContabilId, mediaIds } = dto;
     let { amount, goldAmount, quotation } = dto;
+    // Converter dataHora para Date explicitamente — o Prisma exige ISO-8601 completo
+    const dataHoraDate: Date = dto.dataHora ? new Date(dto.dataHora) : new Date();
 
     if (!amount && !goldAmount) {
       throw new Error('É necessário fornecer o valor em BRL ou em metal.');
     }
 
     if (!quotation && (amount && !goldAmount || !amount && goldAmount)) {
-        // Se a cotação não for fornecida e for necessária para a conversão, busca a cotação do dia
-        const today = new Date().toISOString().split('T')[0];
-        const quotationData = await this.prisma.quotation.findFirst({
-            where: {
-                organizationId,
-                metal: 'AU',
-                date: new Date(today),
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-        });
-        if (quotationData) {
-            quotation = quotationData.buyPrice.toNumber();
-        } else {
-            throw new Error('Cotação não encontrada para a data de hoje. Por favor, forneça a cotação manualmente.');
-        }
+      // Se a cotação não for fornecida e for necessária para a conversão, busca a cotação do dia
+      const today = new Date().toISOString().split('T')[0];
+      const quotationData = await this.prisma.quotation.findFirst({
+        where: {
+          organizationId,
+          metal: 'AU',
+          date: new Date(today),
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+      if (quotationData) {
+        quotation = quotationData.buyPrice.toNumber();
+      } else {
+        throw new Error('Cotação não encontrada para a data de hoje. Por favor, forneça a cotação manualmente.');
+      }
     }
 
     if (quotation) { // Garantir que a cotação existe antes de usar
-        if (amount && !goldAmount) {
-            goldAmount = amount / quotation;
-        } else if (!amount && goldAmount) {
-            amount = goldAmount * quotation;
-        }
+      if (amount && !goldAmount) {
+        goldAmount = amount / quotation;
+      } else if (!amount && goldAmount) {
+        amount = goldAmount * quotation;
+      }
     }
 
     // 1. Validar se as contas existem e pertencem à organização
@@ -135,9 +137,9 @@ export class TransacoesService {
         valor: amount || 0,
         goldAmount: goldAmount || 0,
         goldPrice: quotation,
-        moeda: 'BRL', // Assumindo BRL para transferências de valor
+        moeda: 'BRL',
         descricao: description || `Transferência para ${destinationAccount.nome}`,
-        dataHora: dataHora || new Date(),
+        dataHora: dataHoraDate,
         contaContabilId,
         contaCorrenteId: sourceAccountId,
       },
@@ -151,9 +153,9 @@ export class TransacoesService {
         valor: amount || 0,
         goldAmount: goldAmount || 0,
         goldPrice: quotation,
-        moeda: 'BRL', // Assumindo BRL para transferências de valor
+        moeda: 'BRL',
         descricao: description || `Transferência de ${sourceAccount.nome}`,
-        dataHora: dataHora ? new Date(dataHora) : new Date(),
+        dataHora: dataHoraDate,
         contaContabilId,
         contaCorrenteId: destinationAccountId,
       },
@@ -264,14 +266,14 @@ export class TransacoesService {
 
       if (transacao.linkedTransactionId) {
         const linkedTransactionId = transacao.linkedTransactionId;
-        
+
         const linkedData: Prisma.TransacaoUpdateInput = {};
         if (restData.valor !== undefined) linkedData.valor = restData.valor;
         if (restData.goldAmount !== undefined) linkedData.goldAmount = restData.goldAmount;
         if (restData.goldPrice !== undefined) linkedData.goldPrice = restData.goldPrice;
         if (restData.dataHora !== undefined) linkedData.dataHora = restData.dataHora;
         if (restData.descricao !== undefined) linkedData.descricao = restData.descricao;
-        
+
         await tx.transacao.update({ where: { id }, data: restData });
 
         if (Object.keys(linkedData).length > 0) {
@@ -302,7 +304,7 @@ export class TransacoesService {
 
         const accountRec = await tx.accountRec.findUnique({ where: { id: updatedTransacao.accountRecId } });
 
-        if(accountRec) {
+        if (accountRec) {
           const isFullyPaid = totalAmountPaid.greaterThanOrEqualTo(accountRec.amount);
 
           await tx.accountRec.update({
@@ -449,7 +451,7 @@ export class TransacoesService {
       dataHoraFilter.lte = new Date(endDate);
     }
 
-    if(startDate || endDate) {
+    if (startDate || endDate) {
       where.dataHora = dataHoraFilter;
     }
 

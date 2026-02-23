@@ -69,15 +69,15 @@ export function RecoveryReport() {
         <CardTitle>Relatório de Recuperação</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex gap-4 items-center mb-4">
+        <div className="flex flex-wrap gap-3 items-center mb-4">
           <DateRangePicker date={dateRange} onDateChange={setDateRange} />
-          <Button onClick={handleGenerateReport} disabled={loading}>
+          <Button onClick={handleGenerateReport} disabled={loading} className="shrink-0">
             {loading ? "Gerando..." : "Gerar Relatório"}
           </Button>
         </div>
 
         {reportData && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             <Card className="card-custom shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Total Recuperado (g)</CardTitle>

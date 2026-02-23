@@ -265,6 +265,7 @@ export default function AppearancePage() {
                   <ColorRow label="Nome do Cliente (Mobile)" mode={currentMode} k="mobileCardTitle" v={config[currentMode]?.colors?.mobileCardTitle} onChange={update} />
                   <ColorRow label="Subtítulo/Descrição (Mobile)" mode={currentMode} k="mobileCardSubtitle" v={config[currentMode]?.colors?.mobileCardSubtitle} onChange={update} />
                   <ColorRow label="Valor Total (Mobile)" mode={currentMode} k="mobileCardValue" v={config[currentMode]?.colors?.mobileCardValue} onChange={update} />
+                  <ColorRow label="Quantidade/Métrica (Mobile)" mode={currentMode} k="mobileCardQuantity" v={config[currentMode]?.colors?.mobileCardQuantity} onChange={update} />
                   <ColorRow label="Ícones do Card (Mobile)" mode={currentMode} k="mobileCardIcon" v={config[currentMode]?.colors?.mobileCardIcon} onChange={update} />
                 </SettingSection>
               )}
