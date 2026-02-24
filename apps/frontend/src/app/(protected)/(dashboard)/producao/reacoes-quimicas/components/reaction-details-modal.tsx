@@ -3,13 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Activity, 
-  Zap, 
-  Box, 
-  Clock, 
-  Image as ImageIcon, 
-  X, 
+import {
+  Activity,
+  Zap,
+  Box,
+  Clock,
+  Image as ImageIcon,
+  X,
   ArrowRight,
   FlaskConical,
   Database
@@ -24,32 +24,42 @@ import { getChemicalReactionById } from "@/services/chemicalReactionsApi";
 
 // NOTA: Esta interface DEVE existir em '@/services/chemicalReactionsApi.ts'
 export interface ChemicalReactionDetails {
-    id: string;
-    reactionNumber: string;
-    createdAt: string;
-    updatedAt: string | null;
-    reactionDate: string | null;
-    status: 'STARTED' | 'PROCESSING' | 'PENDING_PURITY' | 'PENDING_PURITY_ADJUSTMENT' | 'COMPLETED' | 'CANCELED' | string;
-    auUsedGrams: number;
-    outputProductGrams: number;
-    metalType: string;
-    notes?: string | null;
-    medias: Media[];
-    
-    productionBatch?: {
-        batchNumber: string;
-        product: { name: string; goldValue: number };
-    } | null;
+  id: string;
+  reactionNumber: string;
+  createdAt: string;
+  updatedAt: string | null;
+  reactionDate: string | null;
+  status: 'STARTED' | 'PROCESSING' | 'PENDING_PURITY' | 'PENDING_PURITY_ADJUSTMENT' | 'COMPLETED' | 'CANCELED' | string;
+  auUsedGrams: number;
+  outputProductGrams: number;
+  metalType: string;
+  notes?: string | null;
+  medias: Media[];
 
-    lots: Array<{
-        id: string;
-        lotNumber?: string;
-        initialGrams: number;
-        remainingGrams: number;
-        gramsToUse: number;
-        description: string | null;
-        notes: string | null;
-    }>;
+  productionBatch?: {
+    batchNumber: string;
+    product: { name: string; goldValue: number };
+  } | null;
+
+  lots: Array<{
+    id: string;
+    lotNumber?: string;
+    initialGrams: number;
+    remainingGrams: number;
+    gramsToUse: number;
+    description: string | null;
+    notes: string | null;
+  }>;
+
+  rawMaterialsUsed: Array<{
+    id: string;
+    quantity: number;
+    cost: number;
+    rawMaterial: {
+      name: string;
+      unit: string;
+    };
+  }>;
 }
 
 const formatGrams = (grams: number) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(grams) + " g";
@@ -98,14 +108,12 @@ export function ReactionDetailsModal({ reaction, isOpen, onClose }: ReactionDeta
 
   const refreshReaction = async () => {
     if (currentReaction?.id) {
-        try {
-            // @ts-ignore - Ignoring type mismatch for now as local interface might differ slightly
-            const updatedReaction = await getChemicalReactionById(currentReaction.id);
-            // @ts-ignore
-            setCurrentReaction(updatedReaction);
-        } catch (error) {
-            console.error("Failed to refresh reaction details", error);
-        }
+      try {
+        const updatedReaction = await getChemicalReactionById(currentReaction.id);
+        setCurrentReaction(updatedReaction as unknown as ChemicalReactionDetails);
+      } catch (error) {
+        console.error("Failed to refresh reaction details", error);
+      }
     }
   };
 
@@ -164,6 +172,22 @@ export function ReactionDetailsModal({ reaction, isOpen, onClose }: ReactionDeta
                     ))}
                   </div>
                 </div>
+
+                {currentReaction.rawMaterialsUsed && currentReaction.rawMaterialsUsed.length > 0 && (
+                  <div className="space-y-2 mt-4 pt-4 border-t border-dashed">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-tight">Outros Insumos (Químicos):</p>
+                    <div className="max-h-[150px] overflow-y-auto pr-2">
+                      {currentReaction.rawMaterialsUsed.map(item => (
+                        <div key={item.id} className="flex items-center justify-between py-2 text-sm border-b last:border-0 border-muted/20">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{item.rawMaterial.name}</span>
+                          </div>
+                          <Badge variant="outline" className="font-mono">{item.quantity} {item.rawMaterial.unit}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -180,7 +204,7 @@ export function ReactionDetailsModal({ reaction, isOpen, onClose }: ReactionDeta
                     <DetailRow label="Produto Final" value={currentReaction.productionBatch?.product.name} icon={FlaskConical} />
                     <DetailRow label="Lote Gerado" value={<Badge className="font-mono">{currentReaction.productionBatch?.batchNumber}</Badge>} icon={Database} />
                     <DetailRow label="Peso Bruto (Sal)" value={new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(currentReaction.outputProductGrams) + " g"} icon={Activity} />
-                    
+
                     <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-100 flex items-center justify-between">
                       <span className="text-xs font-semibold text-blue-700 uppercase">Rendimento Metal</span>
                       <span className="font-bold text-blue-800">{formatGrams(currentReaction.outputProductGrams * (currentReaction.productionBatch?.product.goldValue || 0))}</span>
@@ -208,7 +232,7 @@ export function ReactionDetailsModal({ reaction, isOpen, onClose }: ReactionDeta
                 <DetailRow label="Iniciada em" value={formatDate(currentReaction.createdAt)} />
                 <DetailRow label="Data da Reação" value={currentReaction.reactionDate ? new Date(currentReaction.reactionDate).toLocaleDateString('pt-BR') : '-'} />
                 <DetailRow label="Última Atualização" value={formatDate(currentReaction.updatedAt)} />
-                
+
                 {currentReaction.notes && (
                   <div className="mt-4">
                     <p className="text-xs font-bold text-muted-foreground uppercase mb-1">Observações:</p>
@@ -226,16 +250,16 @@ export function ReactionDetailsModal({ reaction, isOpen, onClose }: ReactionDeta
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
-                <ImageUpload 
-                    entity={{ type: 'chemicalReaction', id: currentReaction.id }} 
-                    onMediaUploadSuccess={() => refreshReaction()}
+                <ImageUpload
+                  entity={{ type: 'chemicalReaction', id: currentReaction.id }}
+                  onMediaUploadSuccess={() => refreshReaction()}
                 />
-                
+
                 {currentReaction.medias && currentReaction.medias.length > 0 && (
-                    <ImageGallery 
-                        media={currentReaction.medias} 
-                        onDeleteSuccess={refreshReaction} 
-                    />
+                  <ImageGallery
+                    media={currentReaction.medias}
+                    onDeleteSuccess={refreshReaction}
+                  />
                 )}
               </CardContent>
             </Card>

@@ -23,6 +23,12 @@ export class PublicMediaController {
     if (!media) {
       throw new NotFoundException('Media not found');
     }
+
+    // Se o path for uma URL externa (S3), redireciona
+    if (media.path && (media.path.startsWith('http') || media.path.includes('amazonaws.com'))) {
+      return res.redirect(media.path);
+    }
+
     const filePath = join(process.cwd(), 'uploads', media.path.split('/').pop() || ''); // Assuming path is like /uploads/filename.ext
     res.type(media.mimetype); // Set the correct content type
     return new StreamableFile(createReadStream(filePath)); // Use StreamableFile for efficient streaming

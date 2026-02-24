@@ -17,7 +17,7 @@ export class MediaService {
   /**
    * Monta a URL pública: Prioriza a URL do S3 se salva, senão usa o gateway local
    */
-  private getFullUrl(item: any): string {
+  public getFullUrl(item: any): string {
     if (item.path && item.path.startsWith('http')) {
       return item.path;
     }

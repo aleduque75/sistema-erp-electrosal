@@ -17,8 +17,10 @@ import { PrismaChemicalReactionRepository } from './repositories/prisma-chemical
 import { PrismaMediaRepository } from '../media/repositories/prisma-media.repository';
 import { PrismaPureMetalLotRepository } from '../recovery-orders/repositories/prisma-pure-metal-lot.repository';
 
+import { MediaModule } from '../media/media.module';
+
 @Module({
-  imports: [PrismaModule, QuotationsModule, PureMetalLotsModule],
+  imports: [PrismaModule, QuotationsModule, PureMetalLotsModule, MediaModule],
   controllers: [ChemicalReactionsController],
   providers: [
     CreateChemicalReactionUseCase,
@@ -45,4 +47,4 @@ import { PrismaPureMetalLotRepository } from '../recovery-orders/repositories/pr
     },
   ],
 })
-export class ChemicalReactionsModule {}
+export class ChemicalReactionsModule { }

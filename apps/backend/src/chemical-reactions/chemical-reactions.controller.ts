@@ -17,6 +17,7 @@ import { UpdateChemicalReactionLotsUseCase } from './use-cases/update-chemical-r
 import { GenerateChemicalReactionPdfUseCase } from './use-cases/generate-chemical-reaction-pdf.use-case';
 import { UpdateChemicalReactionDto } from './dtos/update-chemical-reaction.dto';
 import { UpdateChemicalReactionLotsDto } from './dtos/update-chemical-reaction-lots.dto';
+import { MediaService } from '../media/media.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('chemical-reactions')
@@ -33,7 +34,8 @@ export class ChemicalReactionsController {
     private readonly updateChemicalReactionLotsUseCase: UpdateChemicalReactionLotsUseCase,
     private readonly generateChemicalReactionPdfUseCase: GenerateChemicalReactionPdfUseCase,
     private readonly prisma: PrismaService,
-  ) {}
+    private readonly mediaService: MediaService,
+  ) { }
 
   @Post()
   async create(@Body() dto: CreateChemicalReactionDto, @Req() req) {
@@ -50,7 +52,7 @@ export class ChemicalReactionsController {
   ) {
     const organizationId = req.user?.orgId;
     const command = { reactionId: id, organizationId };
-    
+
     const pdfBuffer = await this.generateChemicalReactionPdfUseCase.execute(command);
 
     res.set({
@@ -156,6 +158,10 @@ export class ChemicalReactionsController {
     return reactions.map(reaction => ({
       ...reaction,
       auUsedGrams: reaction.inputGoldGrams,
+      medias: (reaction as any).medias?.map(m => ({
+        ...m,
+        url: this.mediaService.getFullUrl(m)
+      })) || []
     }));
   }
 
@@ -187,6 +193,11 @@ export class ChemicalReactionsController {
         ...lot.pureMetalLot,
         gramsToUse: lot.gramsToUse,
       })),
+      medias: reaction.medias?.map(m => ({
+        ...m,
+        url: this.mediaService.getFullUrl(m)
+      })) || [],
+      rawMaterialsUsed: reaction.rawMaterialsUsed || []
     };
   }
 
