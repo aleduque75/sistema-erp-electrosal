@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContaCorrenteDto } from './dtos/create-conta-corrente.dto';
 import { UpdateContaCorrenteDto } from './dtos/update-conta-corrente.dto';
@@ -7,32 +7,40 @@ import { Decimal } from 'decimal.js';
 
 @Injectable()
 export class ContasCorrentesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(
     organizationId: string,
     data: CreateContaCorrenteDto,
   ): Promise<ContaCorrente> {
-    // Assume que DTO tem saldoInicial, e o schema tem saldo
-    return this.prisma.contaCorrente.create({
-      data: {
-        nome: data.nome,
-        numeroConta: data.numeroConta,
-        agencia: data.agencia,
-        moeda: data.moeda || 'BRL', // Default explícito se não vier
-        initialBalanceBRL: data.initialBalanceBRL || 0,
-        initialBalanceGold: data.initialBalanceGold || 0,
-        organizationId: organizationId,
-        type: data.type,
-        contaContabilId: data.contaContabilId || null, // Adicionado
-        isActive: data.isActive ?? true, // Adicionado (default true)
-      },
-    });
+    try {
+      return await this.prisma.contaCorrente.create({
+        data: {
+          nome: data.nome,
+          numeroConta: data.numeroConta,
+          agencia: data.agencia,
+          moeda: data.moeda || 'BRL', // Default explícito se não vier
+          initialBalanceBRL: data.initialBalanceBRL || 0,
+          initialBalanceGold: data.initialBalanceGold || 0,
+          organizationId: organizationId,
+          type: data.type,
+          contaContabilId: data.contaContabilId || null, // Adicionado
+          isActive: data.isActive ?? true, // Adicionado (default true)
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('Já existe uma conta com este número nesta organização.');
+        }
+      }
+      throw error;
+    }
   }
 
   async findAll(organizationId: string, types?: ContaCorrenteType | ContaCorrenteType[], activeOnly?: boolean) {
     const where: Prisma.ContaCorrenteWhereInput = { organizationId, deletedAt: null };
-    
+
     if (activeOnly) {
       where.isActive = true;
     }
@@ -242,12 +250,12 @@ export class ContasCorrentesService {
           sale: t.accountRec?.sale,
           contrapartida: t.linkedTransaction
             ? {
-                contaCorrente: {
-                  nome:
-                    t.linkedTransaction.contaCorrente?.nome ||
-                    'Conta Desconhecida',
-                },
-              }
+              contaCorrente: {
+                nome:
+                  t.linkedTransaction.contaCorrente?.nome ||
+                  'Conta Desconhecida',
+              },
+            }
             : null,
           goldPrice, // Usa o goldPrice calculado
         };
