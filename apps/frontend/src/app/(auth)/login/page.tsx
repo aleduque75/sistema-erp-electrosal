@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,50 +21,36 @@ interface LandingPageData {
 
 async function getLandingPageLogo(): Promise<LandingPageData | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/landing-page`, {
+    // Tenta carregar o logo da empresa, mas não trava se falhar
+    const response = await fetch('/api/landing-page/public', {
       cache: 'no-store',
     });
     if (!response.ok) return null;
     return await response.json();
   } catch (error) {
-    console.error("Erro ao buscar logo:", error);
+    // Silencioso para não assustar o usuário
     return null;
   }
 }
 
 export default function LoginPage() {
+  const { login, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [logoData, setLogoData] = useState<LandingPageData | null>(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Verifica se já está autenticado
+  // Redireciona se já estiver autenticado via contexto
   useEffect(() => {
-    const checkAuthentication = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (token) {
-          // Verifica se o token é válido
-          const response = await api.get("/auth/me");
-          if (response.status === 200) {
-            // Usuário já autenticado, redireciona para o editor
-            router.push("/dashboard");
-            return;
-          }
-        }
-      } catch (error) {
-        // Token inválido, remove do localStorage
-        localStorage.removeItem("token");
-      } finally {
-        setCheckingAuth(false);
-      }
-    };
-
-    checkAuthentication();
-  }, [router]);
+    if (isAuthenticated && !isAuthLoading && !isRedirecting) {
+      console.log("🚀 [LoginPage] Autenticado! Redirecionando para dashboard...");
+      setIsRedirecting(true);
+      router.push("/dashboard");
+    }
+  }, [isAuthenticated, isAuthLoading, isRedirecting, router]);
 
   // Carrega o logo da empresa
   useEffect(() => {
@@ -85,18 +72,17 @@ export default function LoginPage() {
       });
 
       if (response.data.access_token) {
-        localStorage.setItem("token", response.data.access_token);
         toast.success("Login realizado com sucesso!");
-        // Redireciona para o editor de landing page
-        router.push("/dashboard");
+        // ✅ Notifica o contexto para atualizar o estado global
+        login(response.data.access_token);
+        // O useEffect acima cuidará do redirecionamento
       }
     } catch (error: any) {
       console.error("Erro no login:", error);
+      setIsLoading(false); // Garante que o loading pare em caso de erro
       toast.error(
         error.response?.data?.message || "Credenciais inválidas. Tente novamente."
       );
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -106,12 +92,12 @@ export default function LoginPage() {
     return `${baseUrl}/api/media/public-media/${logoImageId}`;
   };
 
-  if (checkingAuth) {
+  if (isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-          <p className="text-slate-600">Verificando autenticação...</p>
+          <p className="text-slate-600">Verificando...</p>
         </div>
       </div>
     );

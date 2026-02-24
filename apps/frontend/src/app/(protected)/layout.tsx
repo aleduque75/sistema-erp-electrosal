@@ -3,7 +3,6 @@
 import { Header } from "@/components/layout/header";
 import { MainContent } from "@/components/layout/main-content";
 import { Sidebar } from "@/components/layout/sidebar";
-import { ThemeProvider } from "@/components/providers/custom-theme-provider";
 import { SidebarProvider, useSidebar } from "@/context/sidebar-context";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
@@ -38,11 +37,9 @@ export default function ProtectedLayout({
 }) {
   return (
     <ProtectedRoute>
-      <ThemeProvider>
-        <SidebarProvider>
-          <LayoutContent>{children}</LayoutContent>
-        </SidebarProvider>
-      </ThemeProvider>
+      <SidebarProvider>
+        <LayoutContent>{children}</LayoutContent>
+      </SidebarProvider>
     </ProtectedRoute>
   );
 }

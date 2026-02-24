@@ -36,17 +36,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const isAuthenticated = !!user;
 
-  const loadUser = async () => {
-    if (hasAttemptedLoad) {
+  const loadUser = async (force = false) => {
+    if (hasAttemptedLoad && !force) {
+      console.log('ℹ️ [AuthContext] Usuário já carregado ou tentativa realizada, pulando.');
       setIsPageLoading(false);
       return;
     }
 
     setIsPageLoading(true);
-    // ✅ Alinhado com a chave 'token' que estamos usando no login/api.ts
     const token = localStorage.getItem('token');
 
     if (!token) {
+      console.log('ℹ️ [AuthContext] Nenhum token encontrado no localStorage.');
       setUser(null);
       setIsPageLoading(false);
       setHasAttemptedLoad(true);
@@ -54,10 +55,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      console.log('🔍 [AuthContext] Buscando perfil do usuário...');
       const response = await api.get(`/auth/me?t=${Date.now()}`);
-      setUser(response.data);
+      const rawUser = response.data;
+
+      if (!rawUser || typeof rawUser !== 'object') {
+        throw new Error('Dados do usuário vazios ou inválidos');
+      }
+
+      // ✅ Mapeamento Crucial: O Backend do Prisma usa 'id' e 'organizationId', 
+      // mas o Frontend espera 'sub', 'orgId' e 'permissions'.
+      const mappedUser: AuthUser = {
+        sub: rawUser.id,
+        email: rawUser.email,
+        orgId: rawUser.organizationId,
+        name: rawUser.name,
+        permissions: rawUser.role ? [rawUser.role] : ['USER'], // Sempre garante uma permissão base
+        settings: rawUser.settings
+      };
+
+      console.log('✅ [AuthContext] Sucesso:', mappedUser.email, mappedUser.permissions);
+      setUser(mappedUser);
     } catch (error: any) {
-      console.warn('⚠️ Falha ao buscar o usuário:', error?.response?.status || error?.message);
+      console.error('❌ [AuthContext] Falha no loadUser:', error?.response?.status, error?.message);
 
       if (error?.response?.status === 401) {
         localStorage.removeItem('token');
@@ -74,14 +94,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (token: string) => {
-    localStorage.setItem('token', token); // ✅ Salva como 'token'
-    setHasAttemptedLoad(false); 
-    loadUser();
+    localStorage.setItem('token', token);
+    loadUser(true);
   };
 
   const hasPermission = (permission: string) => {
     if (!user || !Array.isArray(user.permissions)) return false;
-    return user.permissions.includes(permission);
+    // ✅ ADMIN sempre tem permissão (ou se a permissão estiver explicitamente na lista)
+    return user.permissions.includes('ADMIN') || user.permissions.includes(permission);
   };
 
   const logout = () => {
@@ -94,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // ✅ 2. REDIRECIONA PARA O LOGIN (Nunca para o logout, para evitar o loop)
     // Se o usuário já estiver na página de logout, ele não fará nada.
     if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      window.location.href = '/login';
     }
   };
 

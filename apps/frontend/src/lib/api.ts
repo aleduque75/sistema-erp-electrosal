@@ -34,10 +34,17 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      console.warn('🛑 [API Interceptor] Erro 401 em:', error.config?.url);
+
       if (typeof window !== "undefined") {
-        const isPublicPage = window.location.pathname === '/' || window.location.pathname === '/login';
-        localStorage.removeItem("token");
-        if (!isPublicPage) {
+        const token = localStorage.getItem("token");
+        const currentPath = window.location.pathname;
+        const isPublicPage = currentPath === '/' || currentPath === '/login';
+
+        // ✅ Só limpa e redireciona se realmente estávamos logados e em página protegida
+        if (token && !isPublicPage) {
+          console.log('🔄 [API Interceptor] Token expirado ou inválido. Redirecionando...');
+          localStorage.removeItem("token");
           window.location.href = "/login";
         }
       }
