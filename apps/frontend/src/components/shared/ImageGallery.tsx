@@ -126,17 +126,16 @@ export function ImageGallery({ media, onDeleteSuccess, initialIndex = 0 }: Image
           <div key={item.id} className="relative group aspect-square">
 
             <Image
-              src={item.url || `${API_BASE_URL}/api/media/file/${item.filename}`}
+              src={item.url || `/api/media/public-media/${item.id}`}
               alt={item.filename || 'Imagem da transação'}
-
               layout="fill"
-
               objectFit="cover"
-
               className="cursor-pointer rounded-md"
-
               onClick={() => openGallery(index)}
-
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "/images/placeholder.png";
+              }}
             />
 
             <Button
@@ -178,13 +177,14 @@ export function ImageGallery({ media, onDeleteSuccess, initialIndex = 0 }: Image
             {currentMedia && (
 
               <Image
-                src={currentMedia.url || `${API_BASE_URL}/api/media/file/${currentMedia.filename}`}
+                src={currentMedia.url || `/api/media/public-media/${currentMedia.id}`}
                 alt={currentMedia.filename || 'Imagem da transação'}
-
                 layout="fill"
-
                 objectFit="contain"
-
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/images/placeholder.png";
+                }}
               />
 
             )}

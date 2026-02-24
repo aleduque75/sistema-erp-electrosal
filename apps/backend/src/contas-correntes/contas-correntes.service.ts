@@ -4,10 +4,14 @@ import { CreateContaCorrenteDto } from './dtos/create-conta-corrente.dto';
 import { UpdateContaCorrenteDto } from './dtos/update-conta-corrente.dto';
 import { ContaCorrente, Prisma, ContaCorrenteType, TipoTransacaoPrisma } from '@prisma/client'; // Adicionado ContaCorrenteType
 import { Decimal } from 'decimal.js';
+import { MediaService } from '../media/media.service';
 
 @Injectable()
 export class ContasCorrentesService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private mediaService: MediaService,
+  ) { }
 
   async create(
     organizationId: string,
@@ -258,6 +262,10 @@ export class ContasCorrentesService {
             }
             : null,
           goldPrice, // Usa o goldPrice calculado
+          medias: t.medias.map(m => ({
+            ...m,
+            url: this.mediaService.getFullUrl(m)
+          })),
         };
       }),
     };
