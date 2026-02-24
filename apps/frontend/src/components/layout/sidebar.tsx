@@ -26,16 +26,29 @@ export function Sidebar() {
   const pathname = usePathname();
   const [items, setItems] = useState<any[]>([]);
   const [openSub, setOpenSub] = useState<string | null>(null);
+  const [appearance, setAppearance] = useState<any>(null);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   useEffect(() => {
-    // ✅ O segredo está no .catch no final
+    // Busca aparência com retry e tratamento de erro
+    const fetchAppearance = async () => {
+      try {
+        const res = await api.get(`/settings/appearance?t=${Date.now()}`);
+        console.log("[SidebarDebug] Appearance loaded:", res.data);
+        if (res.data) setAppearance(res.data);
+      } catch (err) {
+        console.error("Erro ao carregar aparência no sidebar:", err);
+      }
+    };
+
+    fetchAppearance();
+
     api
       .get("/menu")
       .then((res) => setItems(res.data.menuItems || []))
       .catch((err) => {
         console.error("Erro no menu (provável 401):", err);
-        setItems([]); // Se der erro, o menu fica vazio mas o SITE NÃO SOME
+        setItems([]);
       });
   }, []);
 
@@ -96,6 +109,10 @@ export function Sidebar() {
     });
   };
 
+  const logoUrl = appearance?.sidebarLogoId
+    ? `/api/media/public-media/${appearance.sidebarLogoId}`
+    : "/images/logo.png";
+
   return (
     <aside
       onMouseEnter={() => isDesktop && !isExpanded && setIsHovered(true)}
@@ -109,13 +126,18 @@ export function Sidebar() {
     >
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center">
-          <Image
-            src="/images/logo.png"
-            alt="Logo"
-            width={32}
-            height={32}
-            style={{ width: "auto", height: "auto" }}
-          />
+          <div className="relative w-8 h-8 flex items-center justify-center overflow-hidden rounded-md">
+            <Image
+              src={logoUrl}
+              alt="Logo"
+              fill
+              className="object-contain"
+              unoptimized
+              onError={(e) => {
+                (e.target as any).src = "/images/logo.png";
+              }}
+            />
+          </div>
           {(isExpanded || isHovered) && (
             <span className="ml-3 font-black text-lg text-sidebar-foreground tracking-tighter">
               ELECTROSAL

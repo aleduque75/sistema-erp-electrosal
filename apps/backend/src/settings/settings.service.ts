@@ -85,10 +85,17 @@ export class SettingsService {
       where: { organizationId: targetOrganizationId },
       include: {
         logo: true,
+        sidebarLogo: true,
+        favicon: true,
       },
     });
 
-    console.log(`[SettingsService] Found settings: ${!!result}`, { themeName: result?.themeName });
+    console.log(`[SettingsService] Found settings: ${!!result}`, {
+      themeName: result?.themeName,
+      logoId: result?.logoId,
+      sidebarLogoId: result?.sidebarLogoId,
+      faviconId: result?.faviconId
+    });
     return result;
   }
 
@@ -101,6 +108,9 @@ export class SettingsService {
       `[SettingsService] Persistindo dados para Org: ${organizationId}`,
       {
         themeName: dto.themeName,
+        logoId: dto.logoId,
+        sidebarLogoId: dto.sidebarLogoId,
+        faviconId: dto.faviconId,
         hasSidebar: !!dto.sidebarTheme,
         hasCustom: !!dto.customTheme,
       },
@@ -112,26 +122,37 @@ export class SettingsService {
       sidebarTheme: (dto.sidebarTheme || {}) as Prisma.InputJsonValue,
       customTheme: (dto.customTheme || {}) as Prisma.InputJsonValue,
       logoId: dto.logoId,
+      sidebarLogoId: dto.sidebarLogoId,
+      faviconId: dto.faviconId,
     };
 
-    // --- Lógica para deletar logo antigo se substituído ---
-    if (dto.logoId) {
-      const currentSettings = await this.prisma.appearanceSettings.findUnique({
-        where: { organizationId },
-        select: { logoId: true },
-      });
+    // --- Lógica para deletar mídias antigas se substituídas ---
+    const handleMediaCleanup = async (fieldName: 'logoId' | 'sidebarLogoId' | 'faviconId') => {
+      const newId = dto[fieldName];
+      if (newId) {
+        const currentSettings = await this.prisma.appearanceSettings.findUnique({
+          where: { organizationId },
+          select: { [fieldName]: true },
+        });
 
-      if (currentSettings?.logoId && currentSettings.logoId !== dto.logoId) {
-        console.log(`[SettingsService] Logo substituído de ${currentSettings.logoId} para ${dto.logoId}. Excluindo antigo...`);
-        try {
-          await this.mediaService.remove(currentSettings.logoId).catch(err => {
-            console.error(`[SettingsService] Erro ao deletar logo antigo ${currentSettings.logoId}:`, err);
-          });
-        } catch (e) {
-          // Silencioso para não quebrar o salvamento
+        if (currentSettings?.[fieldName] && currentSettings[fieldName] !== newId) {
+          console.log(`[SettingsService] ${fieldName} substituído de ${currentSettings[fieldName]} para ${newId}. Excluindo antigo...`);
+          try {
+            await this.mediaService.remove(currentSettings[fieldName]).catch(err => {
+              console.error(`[SettingsService] Erro ao deletar mídia antiga ${currentSettings[fieldName]}:`, err);
+            });
+          } catch (e) {
+            // Silencioso
+          }
         }
       }
-    }
+    };
+
+    await Promise.all([
+      handleMediaCleanup('logoId'),
+      handleMediaCleanup('sidebarLogoId'),
+      handleMediaCleanup('faviconId'),
+    ]);
 
     return this.prisma.appearanceSettings.upsert({
       where: { organizationId },

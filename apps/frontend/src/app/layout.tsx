@@ -5,6 +5,7 @@ import { AuthProvider } from "../contexts/AuthContext";
 import { ThemeProvider } from "@/components/providers/custom-theme-provider";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { DynamicFavicon } from "@/components/layout/dynamic-favicon";
 
 export default function RootLayout({
   children,
@@ -17,6 +18,7 @@ export default function RootLayout({
         <AuthProvider>
           <QueryProvider>
             <ThemeProvider>
+              <DynamicFavicon />
               <main className="min-h-screen flex flex-col">{children}</main>
               <Toaster richColors position="top-right" />
             </ThemeProvider>

@@ -16,4 +16,12 @@ export class UpdateAppearanceSettingsDto {
   @IsOptional()
   @IsString()
   logoId?: string;
+
+  @IsOptional()
+  @IsString()
+  sidebarLogoId?: string;
+
+  @IsOptional()
+  @IsString()
+  faviconId?: string;
 }

@@ -33,9 +33,12 @@ import {
   Copy,
   Sun,
   Moon,
-  Smartphone
+  Smartphone,
+  Image as ImageIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MediaLibrary } from "@/config/landing-page";
+import Image from "next/image";
 
 export default function AppearancePage() {
   const { theme, setTheme, updateLiveColors, setCustomTheme } = useTheme();
@@ -47,6 +50,11 @@ export default function AppearancePage() {
   const [isEditPresetModalOpen, setIsEditPresetModalOpen] = useState(false);
   const [currentEditingPreset, setCurrentEditingPreset] = useState<any>(null);
   const [editedPresetName, setEditedPresetName] = useState("");
+  const [logos, setLogos] = useState({
+    logoId: null,
+    sidebarLogoId: null,
+    faviconId: null
+  });
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -71,6 +79,11 @@ export default function AppearancePage() {
         };
 
         setConfig(merged);
+        setLogos({
+          logoId: appearanceSettings?.logoId || null,
+          sidebarLogoId: appearanceSettings?.sidebarLogoId || null,
+          faviconId: appearanceSettings?.faviconId || null
+        });
         const { data: presets } = await api.get("/settings/themes");
         setThemePresets(presets);
       } catch (e) {
@@ -120,12 +133,17 @@ export default function AppearancePage() {
   const handleSaveAll = async () => {
     try {
       await Promise.all([
-        api.put("/settings/appearance", { customTheme: config, themeName: theme }),
+        api.put("/settings/appearance", {
+          customTheme: config,
+          themeName: theme,
+          ...logos
+        }),
         api.put("/settings", { theme: theme })
       ]);
       setCustomTheme(config);
       toast.success("Design do sistema atualizado com sucesso!");
-    } catch (err) {
+    } catch (err: any) {
+      console.error("❌ Erro ao salvar aparência:", err.response?.data || err.message);
       toast.error("Erro ao salvar configurações.");
     }
   };
@@ -181,6 +199,7 @@ export default function AppearancePage() {
                 <CategoryItem active={activeTab === "buttons"} icon={<MousePointer2 className="w-4 h-4" />} label="Botões & Cliques" onClick={() => setActiveTab("buttons")} />
                 <CategoryItem active={activeTab === "feedback"} icon={<CheckCircle2 className="w-4 h-4" />} label="Feedback & Status" onClick={() => setActiveTab("feedback")} />
                 <CategoryItem active={activeTab === "menu"} icon={<Smartphone className="w-4 h-4" />} label="Menu & Navegação" onClick={() => setActiveTab("menu")} />
+                <CategoryItem active={activeTab === "branding"} icon={<ImageIcon className="w-4 h-4" />} label="Branding & Logos" onClick={() => setActiveTab("branding")} />
               </nav>
             </CardContent>
           </Card>
@@ -311,6 +330,33 @@ export default function AppearancePage() {
                   <ColorRow label="Fundo Selecionado" mode={currentMode} k="menuSelectedBackground" v={config[currentMode]?.colors?.menuSelectedBackground} onChange={update} />
                   <ColorRow label="Texto Selecionado" mode={currentMode} k="menuSelectedText" v={config[currentMode]?.colors?.menuSelectedText} onChange={update} />
                   <RadiusRow label="Raio dos Itens" mode={currentMode} k="menuItemRadius" v={config[currentMode]?.colors?.menuItemRadius || "8px"} onChange={update} />
+                </SettingSection>
+              )}
+
+              {activeTab === "branding" && (
+                <SettingSection title="Branding & Identidade" description="Logotipos e ícone do sistema.">
+                  <LogoSelection
+                    label="Logo Principal (Login)"
+                    description="Aparece na tela de entrada do ERP."
+                    value={logos.logoId}
+                    onChange={(id: any) => setLogos(prev => ({ ...prev, logoId: id }))}
+                  />
+                  <hr className="opacity-20" />
+                  <LogoSelection
+                    label="Logo do Menu (Sidebar)"
+                    description="O pequeno ícone no topo do menu lateral."
+                    value={logos.sidebarLogoId}
+                    onChange={(id: any) => setLogos(prev => ({ ...prev, sidebarLogoId: id }))}
+                    previewType="sidebar"
+                  />
+                  <hr className="opacity-20" />
+                  <LogoSelection
+                    label="Favicon"
+                    description="Ícone da aba do navegador (Recomendado 32x32)."
+                    value={logos.faviconId}
+                    onChange={(id: any) => setLogos(prev => ({ ...prev, faviconId: id }))}
+                    previewType="favicon"
+                  />
                 </SettingSection>
               )}
             </div>
@@ -510,6 +556,41 @@ function RadiusRow({ label, mode, k, v, onChange }: any) {
         onValueChange={(vals) => onChange(mode, k, `${vals[0]}px`)}
         className="w-full"
       />
+    </div>
+  );
+}
+
+function LogoSelection({ label, description, value, onChange, previewType }: any) {
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-start gap-4">
+        <div className="space-y-1">
+          <Label className="text-sm font-bold">{label}</Label>
+          <p className="text-[10px] text-muted-foreground">{description}</p>
+        </div>
+        <MediaLibrary onSelect={onChange} selectedMediaId={value} />
+      </div>
+
+      <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-xl border border-dashed">
+        <div className={cn(
+          "bg-background rounded-lg flex items-center justify-center overflow-hidden border shadow-sm",
+          previewType === "sidebar" ? "w-12 h-12" : previewType === "favicon" ? "w-8 h-8" : "w-32 h-16"
+        )}>
+          {value ? (
+            <Image
+              src={`/api/media/public-media/${value}`}
+              alt="Preview"
+              width={100}
+              height={100}
+              className="object-contain w-full h-full p-2"
+              unoptimized
+            />
+          ) : (
+            <span className="text-[10px] font-bold opacity-30 uppercase italic">Vazio</span>
+          )}
+        </div>
+        {!value && <p className="text-[10px] font-medium text-orange-500 italic">Usando padrão do sistema</p>}
+      </div>
     </div>
   );
 }

@@ -702,8 +702,10 @@ model Media {
   analiseQuimicaId       String?
   transacaoId            String?
   chemicalReactionId     String?
-  appearanceSettingsLogo AppearanceSettings? @relation("AppearanceLogo")
-  landingPageLogos       LandingPage[]
+  appearanceSettingsLogo        AppearanceSettings[] @relation("AppearanceLogo")
+  appearanceSettingsSidebarLogo AppearanceSettings[] @relation("AppearanceSidebarLogo")
+  appearanceSettingsFavicon     AppearanceSettings[] @relation("AppearanceFavicon")
+  landingPageLogos              LandingPage[]
   analiseQuimica         AnaliseQuimica?     @relation(fields: [analiseQuimicaId], references: [id])
   chemicalReaction       chemical_reactions? @relation(fields: [chemicalReactionId], references: [id])
   organization           Organization?       @relation(fields: [organizationId], references: [id])
@@ -1203,8 +1205,12 @@ model AppearanceSettings {
   customTheme    Json?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  logoId         String?      @unique
+  logoId         String?
+  sidebarLogoId  String?
+  faviconId      String?
   logo           Media?       @relation("AppearanceLogo", fields: [logoId], references: [id])
+  sidebarLogo    Media?       @relation("AppearanceSidebarLogo", fields: [sidebarLogoId], references: [id])
+  favicon        Media?       @relation("AppearanceFavicon", fields: [faviconId], references: [id])
   organization   Organization @relation("AppearanceToOrganization", fields: [organizationId], references: [id])
 
   @@map("AppearanceSettings")
