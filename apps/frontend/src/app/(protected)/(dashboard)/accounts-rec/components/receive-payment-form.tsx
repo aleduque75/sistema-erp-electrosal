@@ -27,9 +27,9 @@ interface AccountRec {
   clientId?: string;
   goldAmount?: number;
   goldAmountPaid?: number;
-  sale?: { 
-    pessoa?: { name: string }; 
-    createdAt?: string; 
+  sale?: {
+    pessoa?: { name: string };
+    createdAt?: string;
     observation?: string | null;
   };
   saleInstallments?: SaleInstallment[];
@@ -42,31 +42,31 @@ interface ReceivePaymentFormProps { accountRec: AccountRec; onSave: () => void; 
 // Schemas for individual payment types
 const financialPaymentSchema = z.object({
   contaCorrenteId: z.string().min(1, "A conta é obrigatória."),
-  amount: z.string().transform(Number).pipe(z.number().min(0.01, "O valor deve ser no mínimo R$ 0,01.")),
-  goldAmount: z.string().optional().transform(s => s ? Number(s) : undefined),
+  amount: z.coerce.number().min(0.01, "O valor deve ser no mínimo R$ 0,01."),
+  goldAmount: z.coerce.number().optional(),
   receivedAt: z.string().optional(),
   quotation: z.coerce.number().optional(),
 });
 
 const metalCreditPaymentSchema = z.object({
   metalCreditId: z.string().min(1, "Selecione o crédito de metal."),
-  amountInGrams: z.string().transform(Number).pipe(z.number().min(0.000001, "A quantidade em gramas é obrigatória.")),
+  amountInGrams: z.coerce.number().min(0.000001, "A quantidade em gramas é obrigatória."),
   receivedAt: z.string().optional(),
-  quotation: z.string().optional().transform(s => s ? Number(s) : undefined),
+  quotation: z.coerce.number().optional(),
 });
 
 const metalPaymentSchema = z.object({
   metalType: z.enum(['AU', 'AG', 'RH'], { message: "O tipo de metal é obrigatório." }),
-  amountInGrams: z.string().transform(Number).pipe(z.number().min(0.000001, "A quantidade em gramas é obrigatória.")),
-  purity: z.string().transform(Number).pipe(z.number().min(0.01, "A pureza é obrigatória.")),
+  amountInGrams: z.coerce.number().min(0.000001, "A quantidade em gramas é obrigatória."),
+  purity: z.coerce.number().min(0.01, "A pureza é obrigatória."),
   receivedAt: z.string().optional(),
-  quotation: z.string().optional().transform(s => s ? Number(s) : undefined),
+  quotation: z.coerce.number().optional(),
 });
 
 // Main form schema
 const formSchema = z.object({
   receivedAt: z.string().min(1, "A data do recebimento é obrigatória."),
-  
+
   financialPayments: z.array(financialPaymentSchema).optional(),
   metalCreditPayments: z.array(metalCreditPaymentSchema).optional(),
   metalPayments: z.array(metalPaymentSchema).optional(),
@@ -83,7 +83,7 @@ const formSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Adicione pelo menos um método de pagamento.",
-      path: ["financialPayments"], 
+      path: ["financialPayments"],
     });
   }
 
@@ -92,23 +92,23 @@ const formSchema = z.object({
   // A cotação pode estar no nível superior ou no item.
   // A validação completa é complexa no Zod sem contexto externo, mas mantemos a básica.
   // Se não tiver cotação global, verifica se todos os itens que precisam têm cotação individual.
-  
+
   if ((hasMetalCredit || hasMetal)) {
-      // Check global quotation
-      const globalQuotation = data.quotationBuyPrice;
-      if (!globalQuotation || globalQuotation <= 0) {
-          // Check if ALL items have individual quotation
-          const allMetalCreditsHaveQuotation = data.metalCreditPayments?.every(p => p.quotation && p.quotation > 0);
-          const allMetalsHaveQuotation = data.metalPayments?.every(p => p.quotation && p.quotation > 0);
-          
-          if (!allMetalCreditsHaveQuotation || !allMetalsHaveQuotation) {
-               ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "A cotação é obrigatória (informe a geral ou em cada item).",
-                path: ["quotationBuyPrice"],
-              });
-          }
+    // Check global quotation
+    const globalQuotation = data.quotationBuyPrice;
+    if (!globalQuotation || globalQuotation <= 0) {
+      // Check if ALL items have individual quotation
+      const allMetalCreditsHaveQuotation = data.metalCreditPayments?.every(p => p.quotation && p.quotation > 0);
+      const allMetalsHaveQuotation = data.metalPayments?.every(p => p.quotation && p.quotation > 0);
+
+      if (!allMetalCreditsHaveQuotation || !allMetalsHaveQuotation) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "A cotação é obrigatória (informe a geral ou em cada item).",
+          path: ["quotationBuyPrice"],
+        });
       }
+    }
   }
 });
 
@@ -146,7 +146,7 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
   const selectedInstallmentId = form.watch("selectedInstallmentId");
   const receivedAt = form.watch("receivedAt");
   const quotationBuyPrice = form.watch("quotationBuyPrice");
-  
+
   const watchedFinancialPayments = useWatch({ control: form.control, name: "financialPayments" });
   const watchedMetalCreditPayments = useWatch({ control: form.control, name: "metalCreditPayments" });
   const watchedMetalPayments = useWatch({ control: form.control, name: "metalPayments" });
@@ -197,26 +197,26 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
     let totalPaidGold = 0;
 
     watchedFinancialPayments?.forEach(p => {
-        const q = (p.quotation && p.quotation > 0) ? p.quotation : defaultQuotation;
-        const amount = p.amount || 0;
-        totalPaidBRL += amount;
-        if (q > 0) {
-            totalPaidGold += amount / q;
-        }
+      const q = (p.quotation && p.quotation > 0) ? p.quotation : defaultQuotation;
+      const amount = p.amount || 0;
+      totalPaidBRL += amount;
+      if (q > 0) {
+        totalPaidGold += amount / q;
+      }
     });
 
     watchedMetalCreditPayments?.forEach(p => {
-        const q = (p.quotation && p.quotation > 0) ? p.quotation : defaultQuotation;
-        const grams = p.amountInGrams || 0;
-        totalPaidGold += grams;
-        totalPaidBRL += grams * q;
+      const q = (p.quotation && p.quotation > 0) ? p.quotation : defaultQuotation;
+      const grams = p.amountInGrams || 0;
+      totalPaidGold += grams;
+      totalPaidBRL += grams * q;
     });
 
     watchedMetalPayments?.forEach(p => {
-         const q = (p.quotation && p.quotation > 0) ? p.quotation : defaultQuotation;
-         const grams = p.amountInGrams || 0;
-         totalPaidGold += grams;
-         totalPaidBRL += grams * q;
+      const q = (p.quotation && p.quotation > 0) ? p.quotation : defaultQuotation;
+      const grams = p.amountInGrams || 0;
+      totalPaidGold += grams;
+      totalPaidBRL += grams * q;
     });
 
     // Ensure we are using the numbers for calculation to avoid string concatenation issues if form values are strings
@@ -248,17 +248,17 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
     }
   }, [accountRec.clientId]);
 
-      useEffect(() => {
-        if (receivedAt) {
-          api.get(`/quotations/by-date?date=${receivedAt}&metal=AU`).then((res) => {
-            if (res.data?.buyPrice) {
-                 // Update global quotation
-                 form.setValue("quotationBuyPrice", res.data.buyPrice, { shouldValidate: true });
-            }
-          });
+  useEffect(() => {
+    if (receivedAt) {
+      api.get(`/quotations/by-date?date=${receivedAt}&metal=AU`).then((res) => {
+        if (res.data?.buyPrice) {
+          // Update global quotation
+          form.setValue("quotationBuyPrice", res.data.buyPrice, { shouldValidate: true });
         }
-      }, [receivedAt, form]);
-  
+      });
+    }
+  }, [receivedAt, form]);
+
   // Removed useEffect for goldAmount sync as we calculate it on the fly now
 
   useEffect(() => {
@@ -279,15 +279,15 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
         form.clearErrors();
       }
     } else {
-        // Clear financial payments if we deselect the installment, allowing for custom payment
-        const financialAmount = form.getValues('financialPayments')?.[0]?.amount;
-        const installmentAmount = accountRec.saleInstallments?.find(inst => inst.id === selectedInstallmentId)?.amount;
-        if(financialAmount && installmentAmount && financialAmount === Number(installmentAmount) ){
-             form.setValue("financialPayments", []);
-        }
+      // Clear financial payments if we deselect the installment, allowing for custom payment
+      const financialAmount = form.getValues('financialPayments')?.[0]?.amount;
+      const installmentAmount = accountRec.saleInstallments?.find(inst => inst.id === selectedInstallmentId)?.amount;
+      if (financialAmount && installmentAmount && financialAmount === Number(installmentAmount)) {
+        form.setValue("financialPayments", []);
+      }
     }
   }, [selectedInstallmentId, accountRec.saleInstallments, form]);
-  
+
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       const payload = {
@@ -299,15 +299,15 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
         metalPayments: data.metalPayments,
         installmentId: data.selectedInstallmentId || undefined,
       };
-      
+
       await api.post(`/accounts-rec/${accountRec.id}/hybrid-receive`, payload);
 
       toast.success("Recebimento registrado com sucesso!");
       onSave();
     } catch (err: any) {
-        const errorMessages = err.response?.data?.message;
-        const displayMessage = Array.isArray(errorMessages) ? errorMessages.join(', ') : (errorMessages || "Ocorreu um erro.");
-        toast.error(displayMessage);
+      const errorMessages = err.response?.data?.message;
+      const displayMessage = Array.isArray(errorMessages) ? errorMessages.join(', ') : (errorMessages || "Ocorreu um erro.");
+      toast.error(displayMessage);
     }
   };
 
@@ -322,8 +322,8 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
 
   return (
     <Form {...form}>
-      <form 
-        onSubmit={form.handleSubmit(onSubmit)} 
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
         onKeyDown={handleKeyDown}
         className="space-y-6"
       >
@@ -346,14 +346,14 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
             <span className="font-bold">Já Pago:</span> <span>{formatCurrency(displayAmountPaidBRL)}</span>
             <span className="font-bold text-primary">Restante Inicial:</span> <span className="font-bold text-primary">{formatCurrency(displayInitialRemainingBRL)}</span>
             {accountRec.goldAmount && (
-                <>
+              <>
                 <span className="font-bold text-yellow-600 mt-2">Total Ouro:</span> <span className="mt-2 text-yellow-600">{formatGrams(accountRec.goldAmount)}g</span>
-                 <span className="font-bold text-yellow-600">Restante Ouro:</span> <span className="text-yellow-600">{formatGrams(initialRemainingGold)}g</span>
-                </>
+                <span className="font-bold text-yellow-600">Restante Ouro:</span> <span className="text-yellow-600">{formatGrams(initialRemainingGold)}g</span>
+              </>
             )}
           </div>
         </div>
-        
+
         {accountRec.sale?.observation && (
           <div className="space-y-1 rounded-md border border-yellow-500/50 bg-yellow-500/10 p-4">
             <h4 className="font-medium text-sm text-yellow-600 dark:text-yellow-500">Observações do Pedido</h4>
@@ -381,141 +381,141 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
             </FormItem>
           )} />
         )}
-        
+
         <div className="grid grid-cols-2 gap-4 border-b pb-4 mb-4">
-            <div className="col-span-2 text-sm font-medium text-gray-500 mb-2">Padrões para novos itens (opcional)</div>
-            <FormField name="receivedAt" control={form.control} render={({ field }) => (
-                <FormItem className="w-fit"><FormLabel>Data Padrão</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date" 
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-            )} />
-            <FormField name="quotationBuyPrice" control={form.control} render={({ field }) => (
-                <FormItem className="w-fit"><FormLabel>Cotação Padrão (R$/g)</FormLabel>
-                    <FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-            )} />
+          <div className="col-span-2 text-sm font-medium text-gray-500 mb-2">Padrões para novos itens (opcional)</div>
+          <FormField name="receivedAt" control={form.control} render={({ field }) => (
+            <FormItem className="w-fit"><FormLabel>Data Padrão</FormLabel>
+              <FormControl>
+                <Input
+                  type="date"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField name="quotationBuyPrice" control={form.control} render={({ field }) => (
+            <FormItem className="w-fit"><FormLabel>Cotação Padrão (R$/g)</FormLabel>
+              <FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
         </div>
 
         {financialFields.length > 0 && (
-            <div className="space-y-2 pt-4">
-              <h4 className="text-md font-semibold border-b pb-2">Pagamentos Financeiros (R$)</h4>
-              <div className="space-y-4">
-                {financialFields.map((field, index) => (
-                  <div key={field.id} className="flex flex-col gap-4 rounded-md border p-4 bg-muted/20">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField control={form.control} name={`financialPayments.${index}.amount`} render={({ field }) => (<FormItem><FormLabel>Valor (R$)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
-                      <FormField control={form.control} name={`financialPayments.${index}.contaCorrenteId`} render={({ field }) => (<FormItem><FormLabel>Conta</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl><SelectContent>{contasCorrentes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 items-end">
-                       <FormField control={form.control} name={`financialPayments.${index}.receivedAt`} render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                       <FormField control={form.control} name={`financialPayments.${index}.quotation`} render={({ field }) => (<FormItem><FormLabel>Cotação (R$/g)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
-                       <FormItem><FormLabel>Valor em Ouro (g)</FormLabel><FormControl><Input readOnly value={(() => {
-                           const payment = watchedFinancialPayments?.[index];
-                           const amt = payment?.amount || 0;
-                           const q = (payment?.quotation && payment.quotation > 0) ? payment.quotation : (quotationBuyPrice || 0);
-                           return (amt && q > 0) ? (amt / q).toFixed(4) : "0.0000";
-                       })()} /></FormControl></FormItem>
-                    </div>
-
-                    <div className="flex justify-end">
-                         <Button type="button" variant="destructive" size="sm" onClick={() => removeFinancial(index)}><Trash2 className="h-4 w-4 mr-2" /> Remover</Button>
-                    </div>
+          <div className="space-y-2 pt-4">
+            <h4 className="text-md font-semibold border-b pb-2">Pagamentos Financeiros (R$)</h4>
+            <div className="space-y-4">
+              {financialFields.map((field, index) => (
+                <div key={field.id} className="flex flex-col gap-4 rounded-md border p-4 bg-muted/20">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name={`financialPayments.${index}.amount`} render={({ field }) => (<FormItem><FormLabel>Valor (R$)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name={`financialPayments.${index}.contaCorrenteId`} render={({ field }) => (<FormItem><FormLabel>Conta</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl><SelectContent>{contasCorrentes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
                   </div>
-                ))}
-              </div>
+
+                  <div className="grid grid-cols-3 gap-4 items-end">
+                    <FormField control={form.control} name={`financialPayments.${index}.receivedAt`} render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name={`financialPayments.${index}.quotation`} render={({ field }) => (<FormItem><FormLabel>Cotação (R$/g)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormItem><FormLabel>Valor em Ouro (g)</FormLabel><FormControl><Input readOnly value={(() => {
+                      const payment = watchedFinancialPayments?.[index];
+                      const amt = payment?.amount || 0;
+                      const q = (payment?.quotation && payment.quotation > 0) ? payment.quotation : (quotationBuyPrice || 0);
+                      return (amt && q > 0) ? (amt / q).toFixed(4) : "0.0000";
+                    })()} /></FormControl></FormItem>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button type="button" variant="destructive" size="sm" onClick={() => removeFinancial(index)}><Trash2 className="h-4 w-4 mr-2" /> Remover</Button>
+                  </div>
+                </div>
+              ))}
             </div>
+          </div>
         )}
 
         {metalCreditFields.length > 0 && (
-            <div className="space-y-2 pt-4">
-              <h4 className="text-md font-semibold border-b pb-2">Pagamentos com Crédito de Metal (g)</h4>
-              <div className="space-y-4">
-                {metalCreditFields.map((field, index) => (
-                  <div key={field.id} className="flex flex-col gap-4 rounded-md border p-4 bg-muted/20">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name={`metalCreditPayments.${index}.metalCreditId`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Crédito de Metal</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione..." />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {metalCredits.map((mc) => (
-                                  <SelectItem key={mc.id} value={mc.id}>
-                                    {mc.metalType} - {formatGrams(mc.grams)}g
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`metalCreditPayments.${index}.amountInGrams`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Quantidade (g)</FormLabel>
+          <div className="space-y-2 pt-4">
+            <h4 className="text-md font-semibold border-b pb-2">Pagamentos com Crédito de Metal (g)</h4>
+            <div className="space-y-4">
+              {metalCreditFields.map((field, index) => (
+                <div key={field.id} className="flex flex-col gap-4 rounded-md border p-4 bg-muted/20">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name={`metalCreditPayments.${index}.metalCreditId`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Crédito de Metal</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <Input type="number" step="0.0001" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} />
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                       <FormField control={form.control} name={`metalCreditPayments.${index}.receivedAt`} render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                       <FormField control={form.control} name={`metalCreditPayments.${index}.quotation`} render={({ field }) => (<FormItem><FormLabel>Cotação (R$/g)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
-                    </div>
-                     <div className="flex justify-end">
-                        <Button type="button" variant="destructive" size="sm" onClick={() => removeMetalCredit(index)}><Trash2 className="h-4 w-4 mr-2" /> Remover</Button>
-                    </div>
+                            <SelectContent>
+                              {metalCredits.map((mc) => (
+                                <SelectItem key={mc.id} value={mc.id}>
+                                  {mc.metalType} - {formatGrams(mc.grams)}g
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`metalCreditPayments.${index}.amountInGrams`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantidade (g)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.0001" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                ))}
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name={`metalCreditPayments.${index}.receivedAt`} render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name={`metalCreditPayments.${index}.quotation`} render={({ field }) => (<FormItem><FormLabel>Cotação (R$/g)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button type="button" variant="destructive" size="sm" onClick={() => removeMetalCredit(index)}><Trash2 className="h-4 w-4 mr-2" /> Remover</Button>
+                  </div>
+                </div>
+              ))}
             </div>
+          </div>
         )}
-        
+
         {metalFields.length > 0 && (
-            <div className="space-y-2 pt-4">
-              <h4 className="text-md font-semibold border-b pb-2">Pagamentos com Metal Físico (g)</h4>
-              <div className="space-y-4">
-                {metalFields.map((field, index) => (
-                  <div key={field.id} className="flex flex-col gap-4 rounded-md border p-4 bg-muted/20">
-                    <div className="grid grid-cols-3 gap-4">
-                      <FormField control={form.control} name={`metalPayments.${index}.metalType`} render={({ field }) => (<FormItem><FormLabel>Tipo</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="AU">Ouro</SelectItem><SelectItem value="AG">Prata</SelectItem><SelectItem value="RH">Ródio</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                      <FormField control={form.control} name={`metalPayments.${index}.amountInGrams`} render={({ field }) => (<FormItem><FormLabel>Quantidade (g)</FormLabel><FormControl><Input type="number" step="0.0001" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
-                      <FormField control={form.control} name={`metalPayments.${index}.purity`} render={({ field }) => (<FormItem><FormLabel>Pureza (%)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
-                    </div>
-                     <div className="grid grid-cols-2 gap-4">
-                       <FormField control={form.control} name={`metalPayments.${index}.receivedAt`} render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                       <FormField control={form.control} name={`metalPayments.${index}.quotation`} render={({ field }) => (<FormItem><FormLabel>Cotação (R$/g)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
-                    </div>
-                     <div className="flex justify-end">
-                        <Button type="button" variant="destructive" size="sm" onClick={() => removeMetal(index)}><Trash2 className="h-4 w-4 mr-2" /> Remover</Button>
-                    </div>
+          <div className="space-y-2 pt-4">
+            <h4 className="text-md font-semibold border-b pb-2">Pagamentos com Metal Físico (g)</h4>
+            <div className="space-y-4">
+              {metalFields.map((field, index) => (
+                <div key={field.id} className="flex flex-col gap-4 rounded-md border p-4 bg-muted/20">
+                  <div className="grid grid-cols-3 gap-4">
+                    <FormField control={form.control} name={`metalPayments.${index}.metalType`} render={({ field }) => (<FormItem><FormLabel>Tipo</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="AU">Ouro</SelectItem><SelectItem value="AG">Prata</SelectItem><SelectItem value="RH">Ródio</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name={`metalPayments.${index}.amountInGrams`} render={({ field }) => (<FormItem><FormLabel>Quantidade (g)</FormLabel><FormControl><Input type="number" step="0.0001" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name={`metalPayments.${index}.purity`} render={({ field }) => (<FormItem><FormLabel>Pureza (%)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
                   </div>
-                ))}
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name={`metalPayments.${index}.receivedAt`} render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name={`metalPayments.${index}.quotation`} render={({ field }) => (<FormItem><FormLabel>Cotação (R$/g)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value || '0'))} /></FormControl><FormMessage /></FormItem>)} />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button type="button" variant="destructive" size="sm" onClick={() => removeMetal(index)}><Trash2 className="h-4 w-4 mr-2" /> Remover</Button>
+                  </div>
+                </div>
+              ))}
             </div>
+          </div>
         )}
-        
+
         <Button
           type="button"
           variant="outline"
@@ -526,20 +526,20 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
         >
           Adicionar Pagamento
         </Button>
-        
+
         {/* Payment Summary */}
         <div className="space-y-2 rounded-md border border-dashed border-green-500 bg-green-500/10 p-4">
           <h4 className="font-medium text-sm text-green-700">Resumo deste Pagamento</h4>
           <div className="text-sm grid grid-cols-2 gap-x-4 gap-y-2">
             <span className="font-bold">Total Pago agora (R$):</span> <span className="font-bold">{formatCurrency(paymentSummary.totalPaidBRL)}</span>
             <span className="font-bold text-primary">Saldo Final Estimado (R$):</span> <span className={`font-bold ${paymentSummary.remainingBRL < 0 ? 'text-yellow-500' : 'text-primary'}`}>{formatCurrency(paymentSummary.remainingBRL)}</span>
-            
+
             <span className="font-bold text-yellow-700">Total Pago agora (Au):</span> <span className="font-bold text-yellow-700">{formatGrams(paymentSummary.totalPaidGold)}g</span>
-             <span className="font-bold text-yellow-700">Saldo Final (Au):</span> <span className={`font-bold text-yellow-700`}>{formatGrams(paymentSummary.remainingGold)}g</span>
+            <span className="font-bold text-yellow-700">Saldo Final (Au):</span> <span className={`font-bold text-yellow-700`}>{formatGrams(paymentSummary.remainingGold)}g</span>
           </div>
-           {paymentSummary.remainingBRL < 0 && <p className="text-xs text-yellow-600">Este pagamento deixará um crédito de {formatCurrency(Math.abs(paymentSummary.remainingBRL))} para o cliente.</p>}
+          {paymentSummary.remainingBRL < 0 && <p className="text-xs text-yellow-600">Este pagamento deixará um crédito de {formatCurrency(Math.abs(paymentSummary.remainingBRL))} para o cliente.</p>}
         </div>
-        
+
         <FormField
           control={form.control}
           name="finalize"
