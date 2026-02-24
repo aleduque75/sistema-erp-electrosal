@@ -230,9 +230,6 @@ export default function ContasCorrentesPage() {
     },
   ];
 
-  if (isLoading) return <p className="text-center p-10 text-foreground">Carregando...</p>;
-  if (!user)
-    return <p className="text-center p-10 text-foreground">Faça login para continuar.</p>;
 
   return (
     <>

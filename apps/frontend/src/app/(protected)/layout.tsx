@@ -8,6 +8,8 @@ import { SidebarProvider, useSidebar } from "@/context/sidebar-context";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 
+import { ProtectedRoute } from "@/components/auth/protected-route";
+
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { isMobileOpen, toggleMobileSidebar } = useSidebar();
   const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -35,10 +37,12 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ThemeProvider>
-      <SidebarProvider>
-        <LayoutContent>{children}</LayoutContent>
-      </SidebarProvider>
-    </ThemeProvider>
+    <ProtectedRoute>
+      <ThemeProvider>
+        <SidebarProvider>
+          <LayoutContent>{children}</LayoutContent>
+        </SidebarProvider>
+      </ThemeProvider>
+    </ProtectedRoute>
   );
 }
