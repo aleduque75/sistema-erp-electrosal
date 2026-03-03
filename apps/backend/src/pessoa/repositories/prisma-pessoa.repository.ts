@@ -23,7 +23,7 @@ type PessoaWithRelations = PrismaPessoa & {
 
 @Injectable()
 export class PrismaPessoaRepository implements IPessoaRepository {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // Helper to convert Prisma model to domain entity
   private toDomain(prismaPessoa: PessoaWithRelations): Pessoa {
@@ -129,10 +129,58 @@ export class PrismaPessoaRepository implements IPessoaRepository {
     throw new Error('Method not implemented.');
   }
   async create(pessoa: Pessoa, organizationId: string): Promise<Pessoa> {
-    throw new Error('Method not implemented.');
+    const data = pessoa.toObject();
+    const created = await this.prisma.pessoa.create({
+      data: {
+        id: data.id,
+        organizationId: organizationId,
+        name: data.name,
+        type: data.type,
+        cpf: data.cpf,
+        birthDate: data.birthDate,
+        gender: data.gender,
+        cnpj: data.cnpj,
+        razaoSocial: data.razaoSocial,
+        email: data.email,
+        phone: data.phone,
+        cep: data.cep,
+        logradouro: data.logradouro,
+        numero: data.numero,
+        complemento: data.complemento,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        uf: data.uf,
+      },
+    });
+    return this.toDomain(created);
   }
   async save(pessoa: Pessoa, organizationId: string): Promise<Pessoa> {
-    throw new Error('Method not implemented.');
+    const data = pessoa.toObject();
+    const updated = await this.prisma.pessoa.update({
+      where: {
+        id: data.id,
+        organizationId: organizationId,
+      },
+      data: {
+        name: data.name,
+        type: data.type,
+        cpf: data.cpf,
+        birthDate: data.birthDate,
+        gender: data.gender,
+        cnpj: data.cnpj,
+        razaoSocial: data.razaoSocial,
+        email: data.email,
+        phone: data.phone,
+        cep: data.cep,
+        logradouro: data.logradouro,
+        numero: data.numero,
+        complemento: data.complemento,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        uf: data.uf,
+      },
+    });
+    return this.toDomain(updated);
   }
   async delete(id: string, organizationId: string): Promise<void> {
     throw new Error('Method not implemented.');
