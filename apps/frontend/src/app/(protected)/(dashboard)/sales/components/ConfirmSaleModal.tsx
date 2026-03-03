@@ -44,9 +44,16 @@ export function ConfirmSaleModal({
   const [selectedAccountId, setSelectedAccountId] = useState<string | undefined>(undefined);
   const [selectedMetalType, setSelectedMetalType] = useState<TipoMetal | undefined>(undefined);
   const [keepSaleStatusPending, setKeepSaleStatusPending] = useState(false);
+  const [paymentMethodForm, setPaymentMethodForm] = useState<string>('');
 
   useEffect(() => {
-    if (open && sale?.paymentMethod === 'A_VISTA') {
+    if (sale) {
+      setPaymentMethodForm(sale.paymentMethod || '');
+    }
+  }, [sale]);
+
+  useEffect(() => {
+    if (open && paymentMethodForm === 'A_VISTA') {
       api.get('/contas-correntes?type=BANCO').then(response => {
         setAccounts(response.data);
       }).catch(() => {
@@ -57,31 +64,32 @@ export function ConfirmSaleModal({
       setSelectedAccountId(undefined);
       setSelectedMetalType(undefined);
       setKeepSaleStatusPending(false);
+      setPaymentMethodForm('');
     }
-  }, [open, sale]);
+  }, [open, paymentMethodForm]);
 
   const handleConfirm = async () => {
     if (!sale) return;
 
     setIsSubmitting(true);
     try {
-      const payload: { 
-        paymentMethod: string; 
-        contaCorrenteId?: string; 
+      const payload: {
+        paymentMethod: string;
+        contaCorrenteId?: string;
         paymentMetalType?: TipoMetal;
         keepSaleStatusPending?: boolean;
       } = {
-        paymentMethod: sale.paymentMethod,
+        paymentMethod: paymentMethodForm,
       };
 
-      if (sale.paymentMethod === 'A_VISTA') {
+      if (paymentMethodForm === 'A_VISTA') {
         if (!selectedAccountId) {
           toast.error('Por favor, selecione uma conta de destino.');
           setIsSubmitting(false);
           return;
         }
         payload.contaCorrenteId = selectedAccountId;
-      } else if (sale.paymentMethod === 'METAL') {
+      } else if (paymentMethodForm === 'METAL') {
         if (!selectedMetalType) {
           toast.error('Por favor, selecione o tipo de metal para pagamento.');
           setIsSubmitting(false);
@@ -108,10 +116,11 @@ export function ConfirmSaleModal({
     return acc + (item.quantity * productGoldValue);
   }, 0) || 0;
 
-  const isVista = sale.paymentMethod === 'A_VISTA';
-  const isMetal = sale.paymentMethod === 'METAL';
-  const isConfirmButtonDisabled = 
-    isSubmitting || 
+  const isVista = paymentMethodForm === 'A_VISTA';
+  const isMetal = paymentMethodForm === 'METAL';
+  const isConfirmButtonDisabled =
+    isSubmitting ||
+    !paymentMethodForm ||
     (isVista && !selectedAccountId) ||
     (isMetal && !selectedMetalType);
 
@@ -124,21 +133,36 @@ export function ConfirmSaleModal({
             Você confirma os detalhes desta venda? Esta ação irá gerar os lançamentos financeiros.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="space-y-2 rounded-lg border p-4">
-              <p><span className="font-semibold">Cliente:</span> {sale.pessoa.name}</p>
-              <p><span className="font-semibold">Método de Pagamento:</span> {sale.paymentMethod?.replace('_', ' ') || 'N/A'}</p>
+            <p><span className="font-semibold">Cliente:</span> {sale.pessoa.name}</p>
+
+            <div className="space-y-2 pt-2">
+              <Label htmlFor="forma-pagamento" className="font-semibold">Método de Pagamento</Label>
+              <Select value={paymentMethodForm} onValueChange={setPaymentMethodForm}>
+                <SelectTrigger id="forma-pagamento">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A_VISTA">À Vista</SelectItem>
+                  <SelectItem value="A_PRAZO">A Prazo</SelectItem>
+                  <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                  <SelectItem value="METAL">Metal</SelectItem>
+                  <SelectItem value="A_COMBINAR">A Combinar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-x-8 gap-y-4 rounded-lg border p-4">
             <h4 className="col-span-2 text-lg font-semibold text-center">Resumo do Pedido</h4>
-            
+
             <div className="text-sm">
               <p className="font-semibold">Peso Ouro (Itens):</p>
               <p className="font-mono">{formatGrams(pesoOuroItens)}</p>
             </div>
-            
+
             <div className="text-sm">
               <p className="font-semibold">Custo M.O. (g):</p>
               <p className="font-mono">{formatGrams(sale.adjustment?.costsInGrams)}</p>
