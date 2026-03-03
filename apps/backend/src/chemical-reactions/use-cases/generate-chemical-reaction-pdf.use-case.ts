@@ -71,12 +71,39 @@ export class GenerateChemicalReactionPdfUseCase {
     }
   }
 
+  private async getMediaAsBase64(mediaUrlOrPath: string): Promise<string | null> {
+    try {
+      if (mediaUrlOrPath.startsWith('http://') || mediaUrlOrPath.startsWith('https://')) {
+        const response = await fetch(mediaUrlOrPath);
+        if (!response.ok) return null;
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Image = buffer.toString('base64');
+        const mimeType = response.headers.get('content-type') || 'image/jpeg';
+        return `data:${mimeType};base64,${base64Image}`;
+      } else {
+        const filename = mediaUrlOrPath.split('/').pop() || '';
+        const localPath = path.join(process.cwd(), 'uploads', filename);
+        const imageBuffer = await fs.readFile(localPath);
+        const base64Image = imageBuffer.toString('base64');
+        const ext = path.extname(localPath).toLowerCase();
+        let mimeType = 'image/jpeg';
+        if (ext === '.png') mimeType = 'image/png';
+        return `data:${mimeType};base64,${base64Image}`;
+      }
+    } catch (error) {
+      this.logger.warn(`Erro ao processar imagem anexa para base64: ${mediaUrlOrPath}`, error);
+      return null;
+    }
+  }
+
   async execute(command: GenerateChemicalReactionPdfCommand): Promise<Buffer> {
     const { reactionId, organizationId } = command;
 
     const reaction = await this.prisma.chemical_reactions.findUnique({
       where: { id: reactionId, organizationId },
       include: {
+        medias: true,
         outputProduct: true,
         productionBatch: true,
         lots: {
@@ -96,6 +123,10 @@ export class GenerateChemicalReactionPdfUseCase {
       throw new NotFoundException(`Reação química com ID ${reactionId} não encontrada.`);
     }
 
+    const imagesBase64 = await Promise.all(
+      reaction.medias.map((m) => this.getMediaAsBase64(m.path))
+    ).then((res) => res.filter((b64) => b64 !== null));
+
     // Preparar dados para o template
     const baseDir = process.env.NODE_ENV === 'production'
       ? path.join(process.cwd(), 'dist')
@@ -106,45 +137,45 @@ export class GenerateChemicalReactionPdfUseCase {
       'templates',
       'chemical-reaction-pdf.template.html',
     );
-    
+
     let htmlTemplateString;
     try {
-        htmlTemplateString = await fs.readFile(templatePath, 'utf-8');
+      htmlTemplateString = await fs.readFile(templatePath, 'utf-8');
     } catch (e) {
-        // Fallback for dev environment path issues
-        htmlTemplateString = await fs.readFile(path.join(process.cwd(), 'apps/backend/src/templates/chemical-reaction-pdf.template.html'), 'utf-8');
+      // Fallback for dev environment path issues
+      htmlTemplateString = await fs.readFile(path.join(process.cwd(), 'apps/backend/src/templates/chemical-reaction-pdf.template.html'), 'utf-8');
     }
 
     const logoPath = path.join(baseDir, 'assets', 'images', 'logoAtual.png');
     // Em dev, pode ser que o asset esteja em outro lugar, tentar caminho relativo se falhar
     let logoUrl = await this.getImageAsBase64(logoPath);
     if (!logoUrl) {
-         // Tentar caminho alternativo comum em dev monorepo
-         const altLogoPath = path.join(process.cwd(), 'apps/backend/src/assets/images/logoAtual.png');
-         logoUrl = await this.getImageAsBase64(altLogoPath);
+      // Tentar caminho alternativo comum em dev monorepo
+      const altLogoPath = path.join(process.cwd(), 'apps/backend/src/assets/images/logoAtual.png');
+      logoUrl = await this.getImageAsBase64(altLogoPath);
     }
 
     const statusMap: Record<string, string> = {
-        STARTED: 'Iniciada',
-        PROCESSING: 'Em Processamento',
-        PENDING_PURITY: 'Aguardando Pureza',
-        PENDING_PURITY_ADJUSTMENT: 'Aguardando Ajuste',
-        COMPLETED: 'Finalizada',
-        CANCELED: 'Cancelada'
+      STARTED: 'Iniciada',
+      PROCESSING: 'Em Processamento',
+      PENDING_PURITY: 'Aguardando Pureza',
+      PENDING_PURITY_ADJUSTMENT: 'Aguardando Ajuste',
+      COMPLETED: 'Finalizada',
+      CANCELED: 'Cancelada'
     };
 
     const isCompleted = reaction.status === ChemicalReactionStatusPrisma.COMPLETED;
-    
+
     // Cálculos de totais
-    const totalOutputMetal = (Number(reaction.outputGoldGrams) || 0) + 
-                             (Number(reaction.outputBasketLeftoverGrams) || 0) + 
-                             (Number(reaction.outputDistillateLeftoverGrams) || 0);
-    
+    const totalOutputMetal = (Number(reaction.outputGoldGrams) || 0) +
+      (Number(reaction.outputBasketLeftoverGrams) || 0) +
+      (Number(reaction.outputDistillateLeftoverGrams) || 0);
+
     const inputGoldGrams = Number(reaction.inputGoldGrams) || 0;
     const balance = inputGoldGrams - totalOutputMetal;
-    const efficiency = inputGoldGrams > 0 
-        ? ((totalOutputMetal / inputGoldGrams) * 100).toFixed(2)
-        : '0.00';
+    const efficiency = inputGoldGrams > 0
+      ? ((totalOutputMetal / inputGoldGrams) * 100).toFixed(2)
+      : '0.00';
 
     const balanceColor = Math.abs(balance) < 0.01 ? 'green' : (balance > 0 ? 'red' : 'blue');
 
@@ -159,7 +190,7 @@ export class GenerateChemicalReactionPdfUseCase {
       productName: reaction.outputProduct?.name || 'Produto não definido',
       batchNumber: reaction.productionBatch?.batchNumber,
       notes: reaction.notes,
-      
+
       // Entrada
       inputGoldGrams: reaction.inputGoldGrams,
       sourceLots: reaction.lots.map(l => ({
@@ -179,11 +210,14 @@ export class GenerateChemicalReactionPdfUseCase {
       outputBasketLeftoverGrams: reaction.outputBasketLeftoverGrams,
       outputDistillateLeftoverGrams: reaction.outputDistillateLeftoverGrams,
       totalOutputMetal,
-      
+
       // Balanço
       balance,
       balanceColor,
-      efficiency
+      efficiency,
+
+      // Anexos
+      imagesBase64
     };
 
     const template = Handlebars.compile(htmlTemplateString);

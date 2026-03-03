@@ -166,6 +166,16 @@
     </p>
     {{/if}}
 
+    {{#if imagesBase64}}
+    <div style="page-break-before: always;"></div>
+    <h2>Anexos Fotográficos</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-top: 20px;">
+        {{#each imagesBase64}}
+        <img src="{{this}}" style="max-width: 48%; max-height: 400px; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; padding: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+        {{/each}}
+    </div>
+    {{/if}}
+
     <div class="footer">
         Relatório gerado automaticamente pelo Sistema ERP Electrosal
     </div>
