@@ -18,6 +18,7 @@ import {
   IMetalAccountEntryRepository,
   MetalAccountEntry,
   IPessoaRepository,
+  Pessoa,
   EmailVO,
   StatusAnaliseQuimica,
 } from '@sistema-erp-electrosal/core';
@@ -57,7 +58,7 @@ export class ProcessRecoveryFinalizationUseCase {
     private readonly transacoesService: TransacoesService,
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async execute(command: FinalizeRecoveryOrderCommand): Promise<void> {
     const { recoveryOrderId, organizationId, teorFinal } = command;
@@ -66,15 +67,20 @@ export class ProcessRecoveryFinalizationUseCase {
     const internalClientEmail = new EmailVO('interno@electrosal.com');
 
     // Buscar o cliente interno
-    const internalClient = await this.pessoaRepository.findByEmail(
+    let internalClient = await this.pessoaRepository.findByEmail(
       internalClientEmail,
       organizationId,
     );
 
     if (!internalClient) {
-      throw new NotFoundException(
-        `Cliente interno (interno@electrosal.com) não encontrado. Certifique-se de que o seed foi executado corretamente.`,
-      );
+      this.logger.log(`Cliente interno não encontrado para a organização ${organizationId}. Criando automaticamente...`);
+      const newInternalClient = Pessoa.create({
+        organizationId,
+        name: 'Cliente Interno (Resíduos)',
+        email: 'interno@electrosal.com',
+        type: 'JURIDICA',
+      });
+      internalClient = await this.pessoaRepository.create(newInternalClient, organizationId);
     }
 
     this.logger.log(`ID do cliente interno encontrado: ${internalClient.id.toString()}`);
@@ -207,7 +213,7 @@ export class ProcessRecoveryFinalizationUseCase {
 
     // --- Create Commission Account Payable ---
     if (recoveryOrder.commissionAmount && recoveryOrder.commissionAmount > 0) {
-      const salesperson = recoveryOrder.salespersonId 
+      const salesperson = recoveryOrder.salespersonId
         ? await this.pessoaRepository.findById(recoveryOrder.salespersonId, organizationId)
         : null;
 
@@ -225,7 +231,7 @@ export class ProcessRecoveryFinalizationUseCase {
       }
 
       const description = `Comissão sobre Ordem de Recuperação #${recoveryOrder.orderNumber} - ${salesperson?.name || 'Vendedor não informado'}`;
-      
+
       const quotation = await this.cotacoesService.findLatest(
         TipoMetal.AU, // Always use Gold for commissions
         organizationId,
@@ -233,8 +239,8 @@ export class ProcessRecoveryFinalizationUseCase {
       );
 
       const goldPrice = quotation ? new Decimal(quotation.sellPrice) : null;
-      const goldAmount = goldPrice && !goldPrice.isZero() 
-        ? new Decimal(recoveryOrder.commissionAmount).dividedBy(goldPrice) 
+      const goldAmount = goldPrice && !goldPrice.isZero()
+        ? new Decimal(recoveryOrder.commissionAmount).dividedBy(goldPrice)
         : null;
 
       await this.prisma.accountPay.create({
