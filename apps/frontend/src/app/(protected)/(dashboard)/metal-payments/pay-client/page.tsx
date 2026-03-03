@@ -132,7 +132,7 @@ function PayClientContent() {
                     options={
                       pureMetalLots?.map((l) => ({
                         value: l.id,
-                        label: `${l.lotNumber || l.id} (${l.metalType})`,
+                        label: `${l.lotNumber || l.id.substring(0, 8)} - ${l.description || l.notes || 'Sem descrição'} (${l.remainingGrams?.toFixed(2)}g ${l.metalType})`,
                       })) || []
                     }
                   />
