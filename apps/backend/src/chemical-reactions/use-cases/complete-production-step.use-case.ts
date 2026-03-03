@@ -18,15 +18,35 @@ export class CompleteProductionStepUseCase {
     private readonly prisma: PrismaService,
     private readonly quotationsService: QuotationsService,
     private readonly pureMetalLotsService: PureMetalLotsService,
-  ) {}
+  ) { }
 
   private async getNextBatchNumber(organizationId: string, tx: any): Promise<string> {
-    const counter = await tx.productionBatchCounter.upsert({
-      where: { organizationId },
-      update: { lastBatchNumber: { increment: 1 } },
-      create: { organizationId, lastBatchNumber: 1194 },
-    });
-    return counter.lastBatchNumber.toString();
+    let isUnique = false;
+    let batchNumber = '';
+
+    while (!isUnique) {
+      const counter = await tx.productionBatchCounter.upsert({
+        where: { organizationId },
+        update: { lastBatchNumber: { increment: 1 } },
+        create: { organizationId, lastBatchNumber: 1194 },
+      });
+      batchNumber = counter.lastBatchNumber.toString();
+
+      const existing = await tx.inventoryLot.findUnique({
+        where: {
+          organizationId_batchNumber: {
+            organizationId,
+            batchNumber,
+          },
+        },
+      });
+
+      if (!existing) {
+        isUnique = true;
+      }
+    }
+
+    return batchNumber;
   }
 
   async execute(command: CompleteProductionStepCommand): Promise<any> {
@@ -115,7 +135,7 @@ export class CompleteProductionStepUseCase {
           productId: reaction.outputProductId,
           inventoryLotId: newInventoryLot.id,
           quantity: stockQuantity, // Positive quantity for stock increase
-          type: 'ENTRADA_REACAO', // Indicates it came from a reaction
+          type: 'ENTRY', // Indicates it came from a reaction
           sourceDocument: `CRIACAO_LOTE #${batchNumber}`,
           createdAt: completionDate,
         },

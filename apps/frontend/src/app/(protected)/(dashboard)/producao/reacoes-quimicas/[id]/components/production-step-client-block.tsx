@@ -118,10 +118,10 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
                 <FormItem>
                   <FormLabel>Data de Finalização</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="date" 
-                      value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} 
-                      onChange={(e) => field.onChange(new Date(e.target.value))} 
+                    <Input
+                      type="date"
+                      value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => field.onChange(new Date(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />
@@ -148,7 +148,7 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
               <div className="p-3 bg-muted/50 rounded-lg border flex items-start gap-2 mb-2">
                 <Info className="h-4 w-4 text-primary mt-0.5" />
                 <div className="text-xs text-muted-foreground">
-                  O produto de saída configurado é: <span className="font-semibold text-foreground">{reactionDetails?.outputProduct?.name || 'Carregando...'}</span> 
+                  O produto de saída configurado é: <span className="font-semibold text-foreground">{reactionDetails?.outputProduct?.name || 'Carregando...'}</span>
                   (Teor: {((reactionDetails?.outputProduct?.goldValue || 0) * 100).toFixed(2)}% {metalSymbol})
                 </div>
               </div>
@@ -199,7 +199,7 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {loading ? (
               <p className="text-center text-muted-foreground py-4 italic">Carregando detalhes do balanço...</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-2">
@@ -208,19 +208,19 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
                   <span className="text-2xl font-bold">{Number(auUsedGrams).toFixed(4)} g</span>
                   <span className="text-[10px] text-muted-foreground">{metalSymbol} total utilizado</span>
                 </div>
-                
+
                 <div className="flex items-center justify-center text-muted-foreground">
                   <ArrowRight className="h-6 w-6 hidden md:block" />
                 </div>
 
                 <div className="flex flex-col items-center justify-center p-4 bg-background rounded-lg border shadow-sm">
-                   <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Saída Total</span>
-                   <span className="text-2xl font-bold">{totalOutputMetal.toFixed(4)} g</span>
-                   <span className="text-[10px] text-muted-foreground">Produto + Sobras</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Saída Total</span>
+                  <span className="text-2xl font-bold">{totalOutputMetal.toFixed(4)} g</span>
+                  <span className="text-[10px] text-muted-foreground">Produto + Sobras</span>
                 </div>
               </div>
             )}
-            
+
             <div className="mt-4 flex flex-col items-center">
               <div className="text-sm font-medium mb-1">Saldo Remanescente (Diferença)</div>
               <Badge variant={isBalanceZero ? "default" : "destructive"} className="text-xl py-2 px-6 font-mono">
