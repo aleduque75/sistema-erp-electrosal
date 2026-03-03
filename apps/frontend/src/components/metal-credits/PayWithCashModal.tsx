@@ -156,7 +156,7 @@ export function PayWithCashModal({ isOpen, onClose, credit }: PayWithCashModalPr
                     <FormControl>
                       <DatePicker
                         date={field.value}
-                        setDate={field.onChange}
+                        onDateChange={field.onChange}
                       />
                     </FormControl>
                     <FormMessage />

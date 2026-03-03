@@ -7,15 +7,15 @@ import { Decimal } from 'decimal.js';
 export class InitialStockSetupUseCase {
   private readonly logger = new Logger(InitialStockSetupUseCase.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async execute(organizationId: string, tecgalvanoGrams: number) {
     this.logger.log('--- INICIANDO SETUP INICIAL DE ESTOQUE ---');
 
     try {
       // 1. Atualizar o saldo do lote 1183
-      const lot1183 = await this.prisma.inventoryLot.findUnique({
-        where: { batchNumber: '1183' },
+      const lot1183 = await this.prisma.inventoryLot.findFirst({
+        where: { batchNumber: '1183', organizationId },
       });
 
       if (lot1183) {

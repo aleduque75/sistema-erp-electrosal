@@ -36,9 +36,10 @@ async function main() {
   console.log(`Produto base para o lote legado: ${reactionProduct.name}`);
 
   // 3. Criar ou encontrar o "Lote de Vendas Legadas"
-  let legacyLot = await prisma.inventoryLot.findUnique({
+  let legacyLot = await prisma.inventoryLot.findFirst({
     where: {
       batchNumber: 'LOTE-LEGADO-VENDAS',
+      organizationId: organization.id,
     },
   });
 

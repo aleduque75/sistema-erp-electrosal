@@ -252,7 +252,7 @@ model InventoryLot {
   id                String              @id @default(uuid())
   organizationId    String
   productId         String
-  batchNumber       String?             @unique
+  batchNumber       String?
   costPrice         Decimal             @db.Decimal(10, 2)
   quantity          Float
   remainingQuantity Float
@@ -268,6 +268,7 @@ model InventoryLot {
   product           Product             @relation(fields: [productId], references: [id])
   saleItemLots      SaleItemLot[]
 
+  @@unique([organizationId, batchNumber])
   @@map("inventory_lots")
   @@schema("erp")
 }
@@ -291,7 +292,7 @@ model StockMovement {
 
 model Sale {
   id                String            @id @default(uuid())
-  orderNumber       Int               @unique
+  orderNumber       Int
   totalAmount       Decimal           @db.Decimal(14, 2)
   feeAmount         Decimal?          @db.Decimal(10, 2)
   netAmount         Decimal?          @db.Decimal(14, 2)
@@ -323,6 +324,7 @@ model Sale {
   adjustment        SaleAdjustment?
   installments      SaleInstallment[]
 
+  @@unique([organizationId, orderNumber])
   @@map("Sale")
   @@schema("erp")
 }
@@ -871,7 +873,7 @@ model RecoveryOrder {
   teorFinal                    Float?
   totalBrutoEstimadoGramas     Float
   metalType                    TipoMetal                 @default(AU)
-  orderNumber                  String                    @unique
+  orderNumber                  String
   descricaoProcesso            String?
   dataCriacao                  DateTime                  @default(now()) @map("createdAt")
   dataAtualizacao              DateTime                  @updatedAt @map("updatedAt")

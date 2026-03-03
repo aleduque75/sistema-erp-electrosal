@@ -84,7 +84,7 @@ export class ImportSalesUseCase {
   constructor(
     private prisma: PrismaService,
     private createSaleUseCase: CreateSaleUseCase,
-  ) {}
+  ) { }
 
   private parseNumber(value: string): number {
     if (!value) return 0;
@@ -114,41 +114,42 @@ export class ImportSalesUseCase {
 
     // Find or create the legacy lot
     const reactionProduct = await this.prisma.product.findFirst({
-        where: {
-            organizationId: organizationId,
-            name: {
-                contains: '68',
-            },
-            productGroup: {
-                isReactionProductGroup: true,
-            },
+      where: {
+        organizationId: organizationId,
+        name: {
+          contains: '68',
         },
+        productGroup: {
+          isReactionProductGroup: true,
+        },
+      },
     });
 
     if (!reactionProduct) {
-        throw new Error('Reaction product (like Sal 68%) not found for associating with the legacy lot.');
+      throw new Error('Reaction product (like Sal 68%) not found for associating with the legacy lot.');
     }
 
-    let legacyLot = await this.prisma.inventoryLot.findUnique({
-        where: {
-            batchNumber: 'LOTE-LEGADO-VENDAS',
-        },
+    let legacyLot = await this.prisma.inventoryLot.findFirst({
+      where: {
+        batchNumber: 'LOTE-LEGADO-VENDAS',
+        organizationId: organizationId,
+      },
     });
 
     if (!legacyLot) {
-        legacyLot = await this.prisma.inventoryLot.create({
-            data: {
-                organizationId: organizationId,
-                productId: reactionProduct.id,
-                batchNumber: 'LOTE-LEGADO-VENDAS',
-                costPrice: new Decimal(0),
-                quantity: 999999,
-                remainingQuantity: 999999,
-                sourceType: 'MIGRATION',
-                sourceId: 'SCRIPT-IMPORT-SALES',
-                notes: 'Virtual lot to associate with sale items imported from the old system.',
-            },
-        });
+      legacyLot = await this.prisma.inventoryLot.create({
+        data: {
+          organizationId: organizationId,
+          productId: reactionProduct.id,
+          batchNumber: 'LOTE-LEGADO-VENDAS',
+          costPrice: new Decimal(0),
+          quantity: 999999,
+          remainingQuantity: 999999,
+          sourceType: 'MIGRATION',
+          sourceId: 'SCRIPT-IMPORT-SALES',
+          notes: 'Virtual lot to associate with sale items imported from the old system.',
+        },
+      });
     }
 
 

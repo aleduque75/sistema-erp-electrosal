@@ -87,11 +87,8 @@ export function CreateRecoveryOrderModal({
   });
 
   const selectedMetalType = form.watch('metalType');
-  
-  useEffect(() => {
-    form.setValue('dataInicio', new Date());
-  }, [isOpen, form]);
-  
+
+
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsLoadingAnalyses(true);
@@ -101,7 +98,7 @@ export function CreateRecoveryOrderModal({
           api.get("/pessoas?role=FUNCIONARIO"),
           api.get("/raw-materials")
         ]);
-        
+
         const filtered = fetchedAnalyses.filter(
           (analise) => analise.status === 'APROVADO_PARA_RECUPERACAO'
         );
@@ -191,7 +188,7 @@ export function CreateRecoveryOrderModal({
                     <FormControl>
                       <DatePicker
                         date={field.value}
-                        setDate={field.onChange}
+                        onDateChange={field.onChange}
                         placeholder="Selecione a data de início"
                       />
                     </FormControl>
@@ -257,17 +254,17 @@ export function CreateRecoveryOrderModal({
             <div className="border rounded-md p-4 space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
                 <h3 className="font-medium text-sm">Matérias-Primas do Estoque</h3>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => append({ rawMaterialId: "", quantity: 0 })}
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Adicionar
                 </Button>
               </div>
-              
+
               {fields.length === 0 && (
                 <p className="text-xs text-muted-foreground italic text-center py-2">
                   Nenhuma matéria-prima adicionada para esta ordem.
@@ -308,10 +305,10 @@ export function CreateRecoveryOrderModal({
                         </FormItem>
                       )}
                     />
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => remove(index)}
                       className="text-destructive"
                     >
@@ -357,10 +354,10 @@ export function CreateRecoveryOrderModal({
                                       return checked
                                         ? field.onChange([...field.value, analise.id])
                                         : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== analise.id
-                                            )
-                                          );
+                                          field.value?.filter(
+                                            (value) => value !== analise.id
+                                          )
+                                        );
                                     }}
                                   />
                                 </FormControl>

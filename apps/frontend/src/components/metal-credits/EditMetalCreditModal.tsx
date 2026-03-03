@@ -87,7 +87,7 @@ export function EditMetalCreditModal({ isOpen, onClose, credit }: EditMetalCredi
                     <FormControl>
                       <DatePicker
                         date={field.value}
-                        setDate={field.onChange}
+                        onDateChange={field.onChange}
                       />
                     </FormControl>
                     <FormMessage />

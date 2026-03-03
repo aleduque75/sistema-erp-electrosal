@@ -42,7 +42,7 @@ export class CreateRecoveryOrderUseCase {
     private readonly generateNextNumberUseCase: GenerateNextNumberUseCase,
     private readonly addRawMaterialUseCase: AddRawMaterialToRecoveryOrderUseCase,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async execute(command: CreateRecoveryOrderCommand): Promise<RecoveryOrder> {
     const {
@@ -89,6 +89,7 @@ export class CreateRecoveryOrderUseCase {
         analise.status !== StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO,
     );
     if (invalidStatusAnalyses.length > 0) {
+      console.error(`[CREATE_RECOVERY_ORDER] Conflict: Analyses not in APROVADO_PARA_RECUPERACAO status. IDs: ${invalidStatusAnalyses.map(a => a.id).join(', ')}`);
       throw new ConflictException(
         'Algumas análises químicas não estão com o status APROVADO_PARA_RECUPERACAO.',
       );
@@ -96,16 +97,20 @@ export class CreateRecoveryOrderUseCase {
 
     // New validation: Prevent using an analysis that is already a residue
     // This validation is skipped if allowResidueAnalyses is true in the command
+    // Validation for residue analyses is disabled to allow re-processing of residues.
+    /*
     if (!command.allowResidueAnalyses) {
       const residueAnalyses = analyses.filter(
         (analise) => analise.props.recoveryOrderAsResidue != null,
       );
       if (residueAnalyses.length > 0) {
+        console.error(`[CREATE_RECOVERY_ORDER] Conflict: Analyses already marked as residue. IDs: ${residueAnalyses.map(a => a.id).join(', ')}`);
         throw new ConflictException(
           'Não é possível criar uma ordem de recuperação a partir de uma análise que já é um resíduo.',
         );
       }
     }
+    */
 
     // Validate that all analyses have the same metalType as the one provided
     const mismatchedMetalTypeAnalyses = analyses.filter(

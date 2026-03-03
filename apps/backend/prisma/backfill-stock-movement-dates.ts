@@ -26,8 +26,8 @@ async function main() {
 
     const orderNumber = parseInt(orderNumberMatch[1], 10);
 
-    const sale = await prisma.sale.findUnique({
-      where: { orderNumber },
+    const sale = await prisma.sale.findFirst({
+      where: { orderNumber, organizationId: movement.organizationId },
     });
 
     if (!sale) {

@@ -4,7 +4,7 @@ import { EntityType } from '@prisma/client';
 
 @Injectable()
 export class GenerateNextNumberUseCase {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async execute(organizationId: string, entityType: EntityType, prefix: string, initialNumber: number = 1): Promise<string> {
     const counter = await this.prisma.entityCounter.upsert({
@@ -15,6 +15,6 @@ export class GenerateNextNumberUseCase {
 
     // Format the number with leading zeros, e.g., 001, 010, 100
     const formattedNumber = String(counter.lastNumber).padStart(3, '0');
-    return `${prefix}-${formattedNumber}`;
+    return `${prefix}${formattedNumber}`;
   }
 }

@@ -12,7 +12,7 @@ import { QuotationsService } from '../quotations/quotations.service';
 export class SalesMovementImportUseCase {
   private readonly logger = new Logger(SalesMovementImportUseCase.name);
 
-  constructor(private prisma: PrismaService, private readonly generateNextNumberUseCase: GenerateNextNumberUseCase, private readonly quotationsService: QuotationsService) {}
+  constructor(private prisma: PrismaService, private readonly generateNextNumberUseCase: GenerateNextNumberUseCase, private readonly quotationsService: QuotationsService) { }
 
   private parseDecimal(value: string | number): number {
     if (typeof value === 'number') {
@@ -65,62 +65,62 @@ export class SalesMovementImportUseCase {
 
     // Caso especial: Saldo inicial do lote 1094
     const lote1094InitialBalanceRow = rows.find(row => {
-        const loteValue = row['N_DO_LOTE'];
-        const estoqueFinoValue = row['ESTOQUE DE SAL EM FINO AU'];
-        return (String(loteValue).trim() === '1094' && this.parseDecimal(String(estoqueFinoValue)) > 0 && !row['N_DO_PEDIDO']);
+      const loteValue = row['N_DO_LOTE'];
+      const estoqueFinoValue = row['ESTOQUE DE SAL EM FINO AU'];
+      return (String(loteValue).trim() === '1094' && this.parseDecimal(String(estoqueFinoValue)) > 0 && !row['N_DO_PEDIDO']);
     });
 
     if (lote1094InitialBalanceRow) {
-        const initialGold = this.parseDecimal(String(lote1094InitialBalanceRow['ESTOQUE DE SAL EM FINO AU']));
-        const dateStr = String(lote1094InitialBalanceRow['DATA DA ENTREGA']);
-        const dateParts = dateStr.split('/');
-        const creationDate = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+      const initialGold = this.parseDecimal(String(lote1094InitialBalanceRow['ESTOQUE DE SAL EM FINO AU']));
+      const dateStr = String(lote1094InitialBalanceRow['DATA DA ENTREGA']);
+      const dateParts = dateStr.split('/');
+      const creationDate = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
 
-        lotesCreationInfo.set('1094', {
-            creationGoldGrams: initialGold,
-            creationDate: creationDate
-        });
-        this.logger.log(`Saldo inicial do Lote 1094 identificado: ${initialGold}g de ouro em ${creationDate.toISOString()}`);
+      lotesCreationInfo.set('1094', {
+        creationGoldGrams: initialGold,
+        creationDate: creationDate
+      });
+      this.logger.log(`Saldo inicial do Lote 1094 identificado: ${initialGold}g de ouro em ${creationDate.toISOString()}`);
     }
 
     for (const [index, row] of (rows as any[]).entries()) {
-        const loteValue = row['N_DO_LOTE'];
-        const lote = (typeof loteValue === 'string' || typeof loteValue === 'number') ? String(loteValue).trim() : undefined;
-        const entradaFinoValue = row['ENTRADA DE SAL EM FINO'];
-        const goldGrams = this.parseDecimal(typeof entradaFinoValue === 'string' || typeof entradaFinoValue === 'number' ? String(entradaFinoValue) : '0');
+      const loteValue = row['N_DO_LOTE'];
+      const lote = (typeof loteValue === 'string' || typeof loteValue === 'number') ? String(loteValue).trim() : undefined;
+      const entradaFinoValue = row['ENTRADA DE SAL EM FINO'];
+      const goldGrams = this.parseDecimal(typeof entradaFinoValue === 'string' || typeof entradaFinoValue === 'number' ? String(entradaFinoValue) : '0');
 
-        if (!lote) continue;
+      if (!lote) continue;
 
-        this.logger.log(`[DEBUG LOTE - Linha CSV ${index + 2}] Lote: ${lote}, GoldGrams: ${goldGrams}, Já existe no Map: ${lotesCreationInfo.has(lote)}`);
+      this.logger.log(`[DEBUG LOTE - Linha CSV ${index + 2}] Lote: ${lote}, GoldGrams: ${goldGrams}, Já existe no Map: ${lotesCreationInfo.has(lote)}`);
 
-        if (goldGrams > 0) {
-          if (!lotesCreationInfo.has(lote)) {
-            let dateStr = String(row['DATA DA ENTREGA'] || '');
-            let dateParts = dateStr.split('/');
+      if (goldGrams > 0) {
+        if (!lotesCreationInfo.has(lote)) {
+          let dateStr = String(row['DATA DA ENTREGA'] || '');
+          let dateParts = dateStr.split('/');
 
-            // Fallback para a coluna 'data' se a primeira estiver vazia ou for inválida
-            if (dateParts.length !== 3) {
-              dateStr = String(row['data'] || '');
-              dateParts = dateStr.split('/');
-            }
+          // Fallback para a coluna 'data' se a primeira estiver vazia ou for inválida
+          if (dateParts.length !== 3) {
+            dateStr = String(row['data'] || '');
+            dateParts = dateStr.split('/');
+          }
 
-            if (dateParts.length === 3) {
-                // Constrói a data assumindo que o ano atual é o correto se não especificado
-                const day = dateParts[0];
-                const month = dateParts[1];
-                const year = dateParts[2] || new Date().getFullYear();
-                const creationDate = new Date(`${year}-${month}-${day}`);
+          if (dateParts.length === 3) {
+            // Constrói a data assumindo que o ano atual é o correto se não especificado
+            const day = dateParts[0];
+            const month = dateParts[1];
+            const year = dateParts[2] || new Date().getFullYear();
+            const creationDate = new Date(`${year}-${month}-${day}`);
 
-                lotesCreationInfo.set(lote, {
-                    creationGoldGrams: goldGrams,
-                    creationDate: creationDate
-                });
-                this.logger.log(`[DEBUG LOTE] Lote ${lote} ADICIONADO ao Map para criação.`);
-            } else {
-                this.logger.warn(`[DEBUG LOTE] Lote ${lote} tem data inválida: ${dateStr}`);
-            }
+            lotesCreationInfo.set(lote, {
+              creationGoldGrams: goldGrams,
+              creationDate: creationDate
+            });
+            this.logger.log(`[DEBUG LOTE] Lote ${lote} ADICIONADO ao Map para criação.`);
+          } else {
+            this.logger.warn(`[DEBUG LOTE] Lote ${lote} tem data inválida: ${dateStr}`);
           }
         }
+      }
     }
 
     // --- ETAPA 1.2: CRIAÇÃO DOS LOTES DE PRODUÇÃO COM BASE NOS DADOS CORRETOS ---
@@ -135,8 +135,8 @@ export class SalesMovementImportUseCase {
 
     let createdLotsCount = 0;
     for (const [loteNumber, info] of lotesCreationInfo.entries()) {
-      const existingLot = await this.prisma.inventoryLot.findUnique({
-        where: { batchNumber: loteNumber.toString() },
+      const existingLot = await this.prisma.inventoryLot.findFirst({
+        where: { batchNumber: loteNumber.toString(), organizationId },
       });
 
       if (existingLot) {
@@ -226,7 +226,7 @@ export class SalesMovementImportUseCase {
       const orderNumber = (typeof nDoPedidoValue === 'string' || typeof nDoPedidoValue === 'number') ? parseInt(String(nDoPedidoValue), 10) : NaN;
       const nDoLoteValue = row['N_DO_LOTE'];
       const loteNumber = (typeof nDoLoteValue === 'string' || typeof nDoLoteValue === 'number') ? String(nDoLoteValue) : undefined;
-      
+
       const pedidosEmSalValue = row['PEDIDOS_EM_SAL'];
       const saltQty = new Decimal(this.parseDecimal(
         typeof pedidosEmSalValue === 'string' || typeof pedidosEmSalValue === 'number' ? String(pedidosEmSalValue) : '0',
@@ -241,8 +241,8 @@ export class SalesMovementImportUseCase {
         continue;
       }
 
-      const sale = await this.prisma.sale.findUnique({
-        where: { orderNumber },
+      const sale = await this.prisma.sale.findFirst({
+        where: { orderNumber, organizationId },
         include: { saleItems: true },
       });
 
@@ -264,8 +264,8 @@ export class SalesMovementImportUseCase {
         continue;
       }
 
-      const inventoryLot = await this.prisma.inventoryLot.findUnique({
-        where: { batchNumber: loteNumber },
+      const inventoryLot = await this.prisma.inventoryLot.findFirst({
+        where: { batchNumber: loteNumber, organizationId },
       });
 
       if (!inventoryLot) {
@@ -337,58 +337,58 @@ export class SalesMovementImportUseCase {
 
       if (installments.length > 0) {
         const installmentToPay = installments[0];
-        
+
         if (new Decimal(installmentToPay.amount).isZero()) {
-            this.logger.warn(`Parcela #${installmentToPay.installmentNumber} da venda #${orderNumber} tem valor zero. Pulando conciliação.`);
+          this.logger.warn(`Parcela #${installmentToPay.installmentNumber} da venda #${orderNumber} tem valor zero. Pulando conciliação.`);
         } else {
-            const paymentDate = installmentToPay.dueDate;
+          const paymentDate = installmentToPay.dueDate;
 
-            // Buscar cotação para a data do pagamento
-            const quotation = await this.quotationsService.findByDate(
-              paymentDate,
-              'AU', // Assumindo que a transação é sempre em ouro
-              organizationId,
-            );
+          // Buscar cotação para a data do pagamento
+          const quotation = await this.quotationsService.findByDate(
+            paymentDate,
+            'AU', // Assumindo que a transação é sempre em ouro
+            organizationId,
+          );
 
-            let goldAmount = new Decimal(0);
-            let goldPrice = new Decimal(0);
+          let goldAmount = new Decimal(0);
+          let goldPrice = new Decimal(0);
 
-            if (quotation) {
-              goldPrice = quotation.buyPrice;
-              goldAmount = new Decimal(installmentToPay.amount).dividedBy(goldPrice);
-            } else {
-              this.logger.warn(`Cotação não encontrada para a data ${paymentDate.toISOString()} para a venda #${orderNumber}. goldAmount será 0.`);
-            }
+          if (quotation) {
+            goldPrice = quotation.buyPrice;
+            goldAmount = new Decimal(installmentToPay.amount).dividedBy(goldPrice);
+          } else {
+            this.logger.warn(`Cotação não encontrada para a data ${paymentDate.toISOString()} para a venda #${orderNumber}. goldAmount será 0.`);
+          }
 
-            await this.prisma.saleInstallment.update({
-              where: { id: installmentToPay.id },
-              data: { status: 'PAID', paidAt: paymentDate },
+          await this.prisma.saleInstallment.update({
+            where: { id: installmentToPay.id },
+            data: { status: 'PAID', paidAt: paymentDate },
+          });
+
+          if (installmentToPay.accountRecId) {
+            await this.prisma.accountRec.update({
+              where: { id: installmentToPay.accountRecId },
+              data: { received: true, receivedAt: paymentDate },
             });
 
-            if (installmentToPay.accountRecId) {
-              await this.prisma.accountRec.update({
-                where: { id: installmentToPay.accountRecId },
-                data: { received: true, receivedAt: paymentDate },
-              });
-
-              // Criar Transacao
-              await this.prisma.transacao.create({
-                data: {
-                  organizationId,
-                  tipo: 'CREDITO',
-                  valor: new Decimal(installmentToPay.amount),
-                  moeda: 'BRL',
-                  descricao: `Pagamento Parcela ${installmentToPay.installmentNumber} Venda #${orderNumber}`,
-                  dataHora: paymentDate,
-                  contaContabilId: userSettings?.defaultReceitaContaId || 'default', // Usar ID da UserSettings
-                  contaCorrenteId: userSettings?.defaultCaixaContaId || 'default', // Usar ID da UserSettings
-                  goldAmount: goldAmount,
-                  goldPrice: goldPrice,
-                  accountRecId: installmentToPay.accountRecId,
-                },
-              });
-            }
-            this.logger.log(`Parcela #${installmentToPay.installmentNumber} da venda #${orderNumber} conciliada.`);
+            // Criar Transacao
+            await this.prisma.transacao.create({
+              data: {
+                organizationId,
+                tipo: 'CREDITO',
+                valor: new Decimal(installmentToPay.amount),
+                moeda: 'BRL',
+                descricao: `Pagamento Parcela ${installmentToPay.installmentNumber} Venda #${orderNumber}`,
+                dataHora: paymentDate,
+                contaContabilId: userSettings?.defaultReceitaContaId || 'default', // Usar ID da UserSettings
+                contaCorrenteId: userSettings?.defaultCaixaContaId || 'default', // Usar ID da UserSettings
+                goldAmount: goldAmount,
+                goldPrice: goldPrice,
+                accountRecId: installmentToPay.accountRecId,
+              },
+            });
+          }
+          this.logger.log(`Parcela #${installmentToPay.installmentNumber} da venda #${orderNumber} conciliada.`);
         }
       }
 
