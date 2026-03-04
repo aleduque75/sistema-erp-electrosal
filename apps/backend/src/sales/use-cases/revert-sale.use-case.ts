@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SaleStatus, TipoTransacaoPrisma, SaleInstallmentStatus } from '@prisma/client';
+import { Decimal } from 'decimal.js';
 
 @Injectable()
 export class RevertSaleUseCase {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async execute(organizationId: string, saleId: string) {
     return this.prisma.$transaction(async (tx) => {
@@ -57,18 +58,30 @@ export class RevertSaleUseCase {
       for (const ar of accountsRec) {
         if (ar.received) {
           for (const transacao of ar.transacoes) {
-            await tx.transacao.create({
-              data: {
-                organizationId,
-                tipo: TipoTransacaoPrisma.DEBITO,
-                valor: transacao.valor,
-                moeda: transacao.moeda,
-                descricao: `Estorno: ${transacao.descricao}`,
-                contaContabilId: transacao.contaContabilId,
-                contaCorrenteId: transacao.contaCorrenteId,
-                dataHora: new Date(),
-              },
+            // Check if this transaction has already been reversed to avoid double reversal
+            const alreadyReversed = await tx.transacao.findFirst({
+              where: { linkedTransactionId: transacao.id, tipo: TipoTransacaoPrisma.DEBITO }
             });
+
+            if (!alreadyReversed) {
+              await tx.transacao.create({
+                data: {
+                  organizationId,
+                  tipo: TipoTransacaoPrisma.DEBITO,
+                  valor: transacao.valor,
+                  moeda: transacao.moeda,
+                  descricao: `Estorno Venda #${sale.orderNumber}: ${transacao.descricao}`,
+                  contaContabilId: transacao.contaContabilId,
+                  contaCorrenteId: transacao.contaCorrenteId,
+                  goldAmount: transacao.goldAmount,
+                  goldPrice: transacao.goldPrice,
+                  fitId: String(sale.orderNumber),
+                  linkedTransactionId: transacao.id,
+                  accountRecId: transacao.accountRecId, // Link to same AccountRec so adjustment calculator finds it
+                  dataHora: new Date(),
+                },
+              });
+            }
           }
         }
 
@@ -83,23 +96,38 @@ export class RevertSaleUseCase {
         data: { status: SaleInstallmentStatus.PENDING, paidAt: null },
       });
 
-      if (sale.paymentMethod === 'METAL') {
+      // 3. Reverse Metal Payments and Account Entries
+      if (sale.paymentMethod === 'METAL' || true) { // Check for metal entries regardless of current paymentMethod for safety
         await tx.pure_metal_lots.deleteMany({ where: { saleId: sale.id } });
-        const metalEntry = await tx.metalAccountEntry.findFirst({ where: { sourceId: sale.id, type: 'SALE_PAYMENT' } });
-        if(metalEntry) {
-            const clientAccount = await tx.metalAccount.findUnique({where: {id: metalEntry.metalAccountId}});
-            if(clientAccount) {
-                await tx.metalAccountEntry.create({
-                    data: {
-                        metalAccountId: clientAccount.id,
-                        date: new Date(),
-                        description: `Estorno Pagamento Venda #${sale.orderNumber}`,
-                        grams: -metalEntry.grams, // Credit back the amount
-                        type: 'SALE_REVERTED',
-                        sourceId: sale.id,
-                    }
-                });
-            }
+
+        const metalEntries = await tx.metalAccountEntry.findMany({
+          where: {
+            OR: [
+              { sourceId: sale.id },
+              { description: { contains: `Venda #${sale.orderNumber}` } }
+            ],
+            type: { not: 'SALE_REVERTED' }
+          }
+        });
+
+        for (const metalEntry of metalEntries) {
+          // Check if already reversed
+          const alreadyReversed = await tx.metalAccountEntry.findFirst({
+            where: { sourceId: sale.id, type: 'SALE_REVERTED', description: { contains: metalEntry.id } }
+          });
+
+          if (!alreadyReversed) {
+            await tx.metalAccountEntry.create({
+              data: {
+                metalAccountId: metalEntry.metalAccountId,
+                date: new Date(),
+                description: `Estorno (Ref: ${metalEntry.id}): Venda #${sale.orderNumber}`,
+                grams: new Decimal(metalEntry.grams).negated(), // Reverse the grams
+                type: 'SALE_REVERTED',
+                sourceId: sale.id,
+              }
+            });
+          }
         }
       }
 

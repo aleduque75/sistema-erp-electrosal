@@ -9,7 +9,7 @@ type PrismaTransactionClient = Prisma.TransactionClient;
 export class CalculateSaleAdjustmentUseCase {
   private readonly logger = new Logger(CalculateSaleAdjustmentUseCase.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async execute(
     saleId: string,
@@ -91,34 +91,40 @@ export class CalculateSaleAdjustmentUseCase {
     const allTransactions = Array.from(uniqueTransactionsMap.values());
 
     const paymentReceivedBRL = allTransactions.reduce(
-      (sum, t) => sum.plus(t.valor || 0),
+      (sum, t) => {
+        const val = new Decimal(t.valor || 0);
+        return t.tipo === 'DEBITO' ? sum.minus(val) : sum.plus(val);
+      },
       new Decimal(0),
     );
     let paymentEquivalentGrams = allTransactions.reduce(
-      (sum, t) => sum.plus(t.goldAmount || 0),
+      (sum, t) => {
+        const val = new Decimal(t.goldAmount || 0);
+        return t.tipo === 'DEBITO' ? sum.minus(val) : sum.plus(val);
+      },
       new Decimal(0),
     );
 
     // --- SILVER DETECTION LOGIC ---
     const silverKeywords = ['prata', 'silver', 'ag '];
     const isSilverSale = sale.saleItems.length > 0 && sale.saleItems.every(item => {
-       const name = (item.product.name + ' ' + (item.product.productGroup?.name || '')).toLowerCase();
-       return silverKeywords.some(kw => name.includes(kw));
+      const name = (item.product.name + ' ' + (item.product.productGroup?.name || '')).toLowerCase();
+      return silverKeywords.some(kw => name.includes(kw));
     });
 
     let silverPrice: Decimal | null = null;
     let goldPrice: Decimal | null = null;
 
     if (isSilverSale) {
-        silverPrice = await this.getSilverPrice(prismaClient, organizationId, sale.createdAt);
-        goldPrice = await this.getGoldPrice(prismaClient, organizationId, sale.createdAt);
+      silverPrice = await this.getSilverPrice(prismaClient, organizationId, sale.createdAt);
+      goldPrice = await this.getGoldPrice(prismaClient, organizationId, sale.createdAt);
 
-        if (silverPrice) {
-            this.logger.log(`[SALE_ADJUSTMENT] Detected Silver Sale. Silver Price: ${silverPrice.toFixed(4)} BRL/g`);
-        }
-        if (goldPrice) {
-             this.logger.log(`[SALE_ADJUSTMENT] Detected Silver Sale. Gold Price: ${goldPrice.toFixed(4)} BRL/g`);
-        }
+      if (silverPrice) {
+        this.logger.log(`[SALE_ADJUSTMENT] Detected Silver Sale. Silver Price: ${silverPrice.toFixed(4)} BRL/g`);
+      }
+      if (goldPrice) {
+        this.logger.log(`[SALE_ADJUSTMENT] Detected Silver Sale. Gold Price: ${goldPrice.toFixed(4)} BRL/g`);
+      }
     }
     // -----------------------------
 
@@ -126,21 +132,21 @@ export class CalculateSaleAdjustmentUseCase {
     let paymentQuotation: Decimal | null = null;
 
     if (isSilverSale && goldPrice && silverPrice) {
-        // For Silver sales, we Normalize EVERYTHING to GOLD.
-        // So Payment Quotation is the GOLD Price.
-        paymentQuotation = goldPrice;
+      // For Silver sales, we Normalize EVERYTHING to GOLD.
+      // So Payment Quotation is the GOLD Price.
+      paymentQuotation = goldPrice;
 
-        // Payment Equivalent Grams is strictly Payment / GoldPrice
-        if (!paymentReceivedBRL.isZero()) {
-            paymentEquivalentGrams = paymentReceivedBRL.dividedBy(goldPrice);
-        }
+      // Payment Equivalent Grams is strictly Payment / GoldPrice
+      if (!paymentReceivedBRL.isZero()) {
+        paymentEquivalentGrams = paymentReceivedBRL.dividedBy(goldPrice);
+      }
     } else {
-        // Standard Gold Logic
-        if (!paymentReceivedBRL.isZero() && !paymentEquivalentGrams.isZero()) {
-            paymentQuotation = paymentReceivedBRL.dividedBy(paymentEquivalentGrams);
-        } else {
-            paymentQuotation = sale.goldPrice; // Fallback to sale quotation
-        }
+      // Standard Gold Logic
+      if (!paymentReceivedBRL.isZero() && !paymentEquivalentGrams.isZero()) {
+        paymentQuotation = paymentReceivedBRL.dividedBy(paymentEquivalentGrams);
+      } else {
+        paymentQuotation = sale.goldPrice; // Fallback to sale quotation
+      }
     }
 
     // 3. Calculate Expected Grams (Metal Content) and Total Cost
@@ -166,9 +172,9 @@ export class CalculateSaleAdjustmentUseCase {
           break;
       }
       if (isSilverSale && silverPrice && goldPrice) {
-           const valueBRL = itemExpectedGrams.times(silverPrice);
-           const itemExpectedGramsAu = valueBRL.dividedBy(goldPrice);
-           itemExpectedGrams = itemExpectedGramsAu;
+        const valueBRL = itemExpectedGrams.times(silverPrice);
+        const itemExpectedGramsAu = valueBRL.dividedBy(goldPrice);
+        itemExpectedGrams = itemExpectedGramsAu;
       }
       saleExpectedGrams = saleExpectedGrams.plus(itemExpectedGrams);
       if (item.laborPercentage) {
@@ -176,7 +182,7 @@ export class CalculateSaleAdjustmentUseCase {
         itemsLaborGrams = itemsLaborGrams.plus(itemLabor);
       }
     }
-    
+
     let totalCostBRL = new Decimal(0);
     const primaryCalcMethod = sale.saleItems[0]?.product.productGroup?.adjustmentCalcMethod; // Assuming uniform calc method for simplicity
 
@@ -233,7 +239,7 @@ export class CalculateSaleAdjustmentUseCase {
           ? new Decimal(0)
           : otherCostsBRL.dividedBy(paymentQuotation);
     }
-    
+
     // 5. Calculate Profits
     const laborCostInBRL =
       paymentQuotation && !paymentQuotation.isZero()
@@ -268,7 +274,7 @@ export class CalculateSaleAdjustmentUseCase {
 
     // --- SILVER TO GOLD CONVERSION BLOCK REMOVED (Handled natively above) ---
     // ---------------------------------------------
-    
+
     // 6. Save Adjustment
     const adjustmentData = {
       saleId,
@@ -288,7 +294,7 @@ export class CalculateSaleAdjustmentUseCase {
       otherCostsBRL,
       commissionBRL,
       netProfitBRL,
-    };    
+    };
 
     this.logger.log(`Dados do ajuste: ${JSON.stringify(adjustmentData, null, 2)}`);
 
@@ -317,7 +323,7 @@ export class CalculateSaleAdjustmentUseCase {
         this.logger.log(`[SALE_ADJUSTMENT] AccountRec ${primaryAccountRec.id} ajustado para o valor pago (Grams Satisfied) sem criar transação de perda.`);
         return;
       }
-      
+
       // TODO: Implementar lógica para quando o BRL está pendente e o ouro NÃO foi totalmente satisfeito.
     };
 
@@ -377,21 +383,21 @@ export class CalculateSaleAdjustmentUseCase {
     endOfDay.setHours(23, 59, 59, 999);
 
     const quotation = await client.quotation.findFirst({
-        where: {
-            organizationId,
-            date: { gte: startOfDay, lte: endOfDay },
-            metal: 'AU',
-        }
+      where: {
+        organizationId,
+        date: { gte: startOfDay, lte: endOfDay },
+        metal: 'AU',
+      }
     });
 
     if (quotation) {
-        // Use sellPrice as the reference for profit calculation? Or buyPrice?
-        // Usually profit is realized when selling, so maybe SellPrice.
-        // But users often use the "Cotacao do Dia" which might be Buy Price depending on context.
-        // Let's use SellPrice as it's typically higher and represents what the company sells gold for.
-        // However, if we want to be conservative or if this is about "value of gold we have", it might be BuyPrice.
-        // Let's use SellPrice for now as it's the standard "Price".
-        return quotation.sellPrice;
+      // Use sellPrice as the reference for profit calculation? Or buyPrice?
+      // Usually profit is realized when selling, so maybe SellPrice.
+      // But users often use the "Cotacao do Dia" which might be Buy Price depending on context.
+      // Let's use SellPrice as it's typically higher and represents what the company sells gold for.
+      // However, if we want to be conservative or if this is about "value of gold we have", it might be BuyPrice.
+      // Let's use SellPrice for now as it's the standard "Price".
+      return quotation.sellPrice;
     }
 
     // 2. Fallback to MarketData
