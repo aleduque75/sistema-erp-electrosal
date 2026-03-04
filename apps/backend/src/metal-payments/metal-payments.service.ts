@@ -16,7 +16,7 @@ export class MetalPaymentsService {
     private readonly transacoesService: TransacoesService,
     private readonly quotationsService: QuotationsService,
     private readonly settingsService: SettingsService,
-  ) {}
+  ) { }
 
   async payClientWithMetal(organizationId: string, userId: string, dto: PayClientWithMetalDto) {
     const { clientId, pureMetalLotId, grams, notes, data } = dto;
@@ -98,6 +98,14 @@ export class MetalPaymentsService {
         },
         orderBy: { date: 'asc' },
       });
+
+      if (dto.metalCreditId) {
+        const specificIndex = openCredits.findIndex(c => c.id === dto.metalCreditId);
+        if (specificIndex > -1) {
+          const [specificCredit] = openCredits.splice(specificIndex, 1);
+          openCredits.unshift(specificCredit);
+        }
+      }
 
       for (const credit of openCredits) {
         if (remainingGramsToDeduct.lessThanOrEqualTo(0)) break;

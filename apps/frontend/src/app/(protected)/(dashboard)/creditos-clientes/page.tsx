@@ -104,7 +104,7 @@ export default function CreditosClientesPage() {
     const matchesMetalType = metalTypeFilter === "ALL" || credit.metalType === metalTypeFilter;
     const matchesStatus = statusFilter === "ALL" || credit.status === statusFilter;
     const isNotZeroed = !hideZeroed || Number(credit.grams) > 0.0001;
-    
+
     let matchesDate = true;
     if (dateRange?.from) {
       const creditDate = new Date(credit.date);
@@ -156,8 +156,8 @@ export default function CreditosClientesPage() {
         const statusInfo = statusConfig[row.original.status] || { label: row.original.status, color: 'bg-gray-100', dot: 'bg-gray-400' };
         return (
           <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color} border`}>
-             <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${statusInfo.dot}`} />
-             {statusInfo.label}
+            <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${statusInfo.dot}`} />
+            {statusInfo.label}
           </div>
         );
       },
@@ -185,11 +185,11 @@ export default function CreditosClientesPage() {
               <DropdownMenuSeparator />
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                    <Wallet className="mr-2 h-4 w-4" /> Pagar
+                  <Wallet className="mr-2 h-4 w-4" /> Pagar
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuItem asChild>
-                    <Link href={`/metal-payments/pay-client?clientId=${credit.clientId}&metalType=${credit.metalType}&grams=${credit.grams}`}>
+                    <Link href={`/metal-payments/pay-client?clientId=${credit.clientId}&metalType=${credit.metalType}&grams=${credit.grams}&creditId=${credit.id}`}>
                       <CreditCard className="mr-2 h-4 w-4" /> Pagar com Metal
                     </Link>
                   </DropdownMenuItem>
@@ -218,56 +218,56 @@ export default function CreditosClientesPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center space-x-2 bg-muted/50 p-2 rounded-lg mr-2">
-              <Checkbox
-                id="hide-zeroed"
-                checked={hideZeroed}
-                onCheckedChange={(checked) => setHideZeroed(checked as boolean)}
-              />
-              <Label htmlFor="hide-zeroed" className="text-sm whitespace-nowrap cursor-pointer">Ocultar zerados</Label>
-            </div>
+          <div className="flex items-center space-x-2 bg-muted/50 p-2 rounded-lg mr-2">
+            <Checkbox
+              id="hide-zeroed"
+              checked={hideZeroed}
+              onCheckedChange={(checked) => setHideZeroed(checked as boolean)}
+            />
+            <Label htmlFor="hide-zeroed" className="text-sm whitespace-nowrap cursor-pointer">Ocultar zerados</Label>
+          </div>
 
-            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
-            
-            <Select value={metalTypeFilter} onValueChange={setMetalTypeFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Metal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos Metais</SelectItem>
-                  <SelectItem value="AU">Ouro (AU)</SelectItem>
-                  <SelectItem value="AG">Prata (AG)</SelectItem>
-                  <SelectItem value="RH">Ródio (RH)</SelectItem>
-                </SelectContent>
-            </Select>
+          <DateRangePicker date={dateRange} onDateChange={setDateRange} />
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos Status</SelectItem>
-                  <SelectItem value="PENDING">Disponível</SelectItem>
-                  <SelectItem value="PARTIALLY_PAID">Parcialmente Usado</SelectItem>
-                  <SelectItem value="PAID">Esgotado / Pago</SelectItem>
-                  <SelectItem value="CANCELED">Cancelado</SelectItem>
-                </SelectContent>
-            </Select>
+          <Select value={metalTypeFilter} onValueChange={setMetalTypeFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Metal" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todos Metais</SelectItem>
+              <SelectItem value="AU">Ouro (AU)</SelectItem>
+              <SelectItem value="AG">Prata (AG)</SelectItem>
+              <SelectItem value="RH">Ródio (RH)</SelectItem>
+            </SelectContent>
+          </Select>
 
-            {(metalTypeFilter !== "ALL" || statusFilter !== "ALL" || dateRange) && (
-                <Button variant="ghost" size="icon" onClick={clearFilters} title="Limpar Filtros">
-                  <X className="h-4 w-4" />
-                </Button>
-            )}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todos Status</SelectItem>
+              <SelectItem value="PENDING">Disponível</SelectItem>
+              <SelectItem value="PARTIALLY_PAID">Parcialmente Usado</SelectItem>
+              <SelectItem value="PAID">Esgotado / Pago</SelectItem>
+              <SelectItem value="CANCELED">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {(metalTypeFilter !== "ALL" || statusFilter !== "ALL" || dateRange) && (
+            <Button variant="ghost" size="icon" onClick={clearFilters} title="Limpar Filtros">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           {isFetching ? (
-             <div className="text-center py-12 text-muted-foreground">
-                <p>Carregando créditos...</p>
-             </div>
+            <div className="text-center py-12 text-muted-foreground">
+              <p>Carregando créditos...</p>
+            </div>
           ) : (
             <DataTable
               columns={columns}

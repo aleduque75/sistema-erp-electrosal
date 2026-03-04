@@ -13,6 +13,10 @@ export class PayClientWithMetalDto {
 
   @IsOptional()
   @IsString()
+  metalCreditId?: string;
+
+  @IsOptional()
+  @IsString()
   notes?: string;
 
   @IsDateString()

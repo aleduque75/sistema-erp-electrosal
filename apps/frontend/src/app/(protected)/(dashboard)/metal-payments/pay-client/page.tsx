@@ -43,6 +43,7 @@ function PayClientContent() {
   const paramClientId = searchParams.get("clientId");
   const paramMetalType = searchParams.get("metalType");
   const paramGrams = searchParams.get("grams");
+  const paramCreditId = searchParams.get("creditId");
 
   const { data: clients, isLoading: isLoadingClients } = useQuery<any[]>({
     queryKey: ["clients"],
@@ -63,6 +64,7 @@ function PayClientContent() {
     grams: z.coerce.number().min(0.01),
     notes: z.string().optional(),
     data: z.string().min(1),
+    metalCreditId: z.string().optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -73,6 +75,7 @@ function PayClientContent() {
       grams: paramGrams ? Number(paramGrams) : 0,
       notes: "",
       data: new Date().toISOString().split("T")[0],
+      metalCreditId: paramCreditId || undefined,
     },
   });
 
