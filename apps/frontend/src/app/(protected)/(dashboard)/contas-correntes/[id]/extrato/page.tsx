@@ -645,7 +645,7 @@ export default function ExtratoPage() {
 
                 <div className="flex flex-col items-center md:items-start p-3 bg-background rounded-lg border shadow-sm">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saldo Final do Período </span>
-                  <p className="text-xl text-primary">
+                  <p className="font-black text-xl text-foreground">
                     {currencyView === "BRL"
                       ? formatCurrency(extrato.saldoFinalBRL)
                       : formatGold(extrato.saldoFinalGold)}
