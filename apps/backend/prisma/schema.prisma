@@ -13,9 +13,9 @@ datasource db {
 model Organization {
   id                      String                   @id @default(uuid())
   name                    String
-  active                  Boolean                  @default(true)
   absorbCreditCardFee     Boolean                  @default(false)
   creditCardReceiveDays   Int?                     @default(30)
+  active                  Boolean                  @default(true)
   accountsRec             AccountRec[]
   appearanceSettings      AppearanceSettings?      @relation("AppearanceToOrganization")
   landingPages            LandingPage[]
@@ -76,7 +76,7 @@ model User {
   organizationId String
   pessoaId       String?       @unique
   role           Role          @default(USER)
-  active         Boolean  @default(true)
+  active         Boolean       @default(true)
   organization   Organization  @relation(fields: [organizationId], references: [id])
   pessoa         Pessoa?       @relation("UserToPessoa", fields: [pessoaId], references: [id])
   settings       UserSettings?
@@ -89,14 +89,14 @@ model User {
 model UserSettings {
   id                          String  @id @default(uuid())
   userId                      String  @unique
-  theme                       String  @default("system")
-  language                    String  @default("pt-BR")
   defaultCaixaContaId         String?
   defaultDespesaContaId       String?
   defaultReceitaContaId       String?
   metalCreditPayableAccountId String?
   metalStockAccountId         String?
   productionCostAccountId     String?
+  language                    String  @default("pt-BR")
+  theme                       String  @default("system")
   user                        User    @relation(fields: [userId], references: [id])
 
   @@map("UserSettings")
@@ -663,9 +663,9 @@ model LandingPage {
   updatedAt       DateTime      @updatedAt
   logoImageId     String?
   logoText        String?
-  highlights      Json?         @default("[]")
   organizationId  String?
   themePreference String?       @default("dark")
+  highlights      Json?         @default("[]")
   logoImage       Media?        @relation(fields: [logoImageId], references: [id])
   organization    Organization? @relation(fields: [organizationId], references: [id])
   sections        Section[]
@@ -690,29 +690,29 @@ model Section {
 }
 
 model Media {
-  id                     String              @id @default(uuid())
-  filename               String              @unique
-  mimetype               String
-  size                   Int
-  path                   String              @unique
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
-  organizationId         String?
-  height                 Int?
-  width                  Int?
-  recoveryOrderId        String?
-  analiseQuimicaId       String?
-  transacaoId            String?
-  chemicalReactionId     String?
+  id                            String               @id @default(uuid())
+  filename                      String               @unique
+  mimetype                      String
+  size                          Int
+  path                          String               @unique
+  createdAt                     DateTime             @default(now())
+  updatedAt                     DateTime             @updatedAt
+  organizationId                String?
+  height                        Int?
+  width                         Int?
+  recoveryOrderId               String?
+  analiseQuimicaId              String?
+  transacaoId                   String?
+  chemicalReactionId            String?
+  appearanceSettingsFavicon     AppearanceSettings[] @relation("AppearanceFavicon")
   appearanceSettingsLogo        AppearanceSettings[] @relation("AppearanceLogo")
   appearanceSettingsSidebarLogo AppearanceSettings[] @relation("AppearanceSidebarLogo")
-  appearanceSettingsFavicon     AppearanceSettings[] @relation("AppearanceFavicon")
   landingPageLogos              LandingPage[]
-  analiseQuimica         AnaliseQuimica?     @relation(fields: [analiseQuimicaId], references: [id])
-  chemicalReaction       chemical_reactions? @relation(fields: [chemicalReactionId], references: [id])
-  organization           Organization?       @relation(fields: [organizationId], references: [id])
-  recoveryOrder          RecoveryOrder?      @relation(fields: [recoveryOrderId], references: [id])
-  transacao              Transacao?          @relation("TransacaoToMedia", fields: [transacaoId], references: [id])
+  analiseQuimica                AnaliseQuimica?      @relation(fields: [analiseQuimicaId], references: [id])
+  chemicalReaction              chemical_reactions?  @relation(fields: [chemicalReactionId], references: [id])
+  organization                  Organization?        @relation(fields: [organizationId], references: [id])
+  recoveryOrder                 RecoveryOrder?       @relation(fields: [recoveryOrderId], references: [id])
+  transacao                     Transacao?           @relation("TransacaoToMedia", fields: [transacaoId], references: [id])
 
   @@map("Media")
   @@schema("erp")
@@ -1203,17 +1203,17 @@ model AppearanceSettings {
   id             String       @id @default(uuid())
   organizationId String       @unique
   themeName      String?
-  sidebarTheme   Json?
   customTheme    Json?
+  sidebarTheme   Json?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   logoId         String?
-  sidebarLogoId  String?
   faviconId      String?
-  logo           Media?       @relation("AppearanceLogo", fields: [logoId], references: [id])
-  sidebarLogo    Media?       @relation("AppearanceSidebarLogo", fields: [sidebarLogoId], references: [id])
+  sidebarLogoId  String?
   favicon        Media?       @relation("AppearanceFavicon", fields: [faviconId], references: [id])
+  logo           Media?       @relation("AppearanceLogo", fields: [logoId], references: [id])
   organization   Organization @relation("AppearanceToOrganization", fields: [organizationId], references: [id])
+  sidebarLogo    Media?       @relation("AppearanceSidebarLogo", fields: [sidebarLogoId], references: [id])
 
   @@map("AppearanceSettings")
   @@schema("erp")

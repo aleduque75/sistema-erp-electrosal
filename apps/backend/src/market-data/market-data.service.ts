@@ -184,7 +184,8 @@ export class MarketDataService {
       const response = await axios.get(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0'
-        }
+        },
+        timeout: 10000
       });
       const result = response.data.chart.result[0];
       const timestamps = result.timestamp;
