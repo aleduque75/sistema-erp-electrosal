@@ -149,6 +149,7 @@ export class SalesController {
   @Get()
   findAll(
     @CurrentUser('orgId') organizationId: string,
+    @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('status') status?: SaleStatus,
     @Query('orderNumber') orderNumber?: string,
@@ -157,7 +158,8 @@ export class SalesController {
     @Query('clientId') clientId?: string,
   ) {
     return this.salesService.findAll(organizationId, {
-      limit: limit ? +limit : undefined,
+      page: page ? +page : 1,
+      limit: limit ? +limit : 50,
       status,
       orderNumber,
       startDate,

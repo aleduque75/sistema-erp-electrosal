@@ -22,6 +22,7 @@ export class SalesService {
   async findAll(
     organizationId: string,
     options: {
+      page?: number;
       limit?: number;
       status?: SaleStatus;
       orderNumber?: string;
@@ -29,8 +30,9 @@ export class SalesService {
       endDate?: string;
       clientId?: string;
     } = {},
-  ): Promise<Sale[]> {
-    const { limit, status, orderNumber, startDate, endDate, clientId } = options;
+  ): Promise<{ data: any[]; total: number }> {
+    const { page = 1, limit = 50, status, orderNumber, startDate, endDate, clientId } = options;
+    const skip = (page - 1) * limit;
 
     const whereClause: Prisma.SaleWhereInput = { organizationId };
     if (status) {
@@ -49,40 +51,52 @@ export class SalesService {
       whereClause.pessoaId = clientId;
     }
 
-    const prismaSales = await this.prisma.sale.findMany({
-      where: whereClause,
-      include: {
-        pessoa: true, // Inclui o nome do cliente na listagem
-        paymentTerm: true, // Inclui os dados do prazo de pagamento
-        saleItems: {
-          include: {
-            product: true, // Inclui detalhes do produto em cada item
-            saleItemLots: { // MODIFICADO
-              include: {
-                inventoryLot: true,
+    const [total, prismaSales] = await Promise.all([
+      this.prisma.sale.count({ where: whereClause }),
+      this.prisma.sale.findMany({
+        where: whereClause,
+        include: {
+          pessoa: true, // Necessário para o nome do cliente
+          saleItems: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
+            take: 10, // Otimização: limitar itens na listagem se houver muitos
           },
-        },
-        adjustment: true, // Include the sale adjustment data
-        installments: true, // Include the sale installments for details view
-        accountsRec: {
-          include: {
-            transacoes: {
-              include: {
-                contaCorrente: true,
-              },
+          adjustment: {
+            select: {
+              paymentReceivedBRL: true,
+              netDiscrepancyGrams: true,
             },
           },
+          accountsRec: {
+            include: {
+              transacoes: {
+                include: {
+                  contaCorrente: {
+                    select: { nome: true },
+                  },
+                },
+                take: 1,
+              },
+            },
+            take: 1,
+          },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: limit,
-    });
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+    ]);
 
-    const result = prismaSales.map(sale => {
+    const data = prismaSales.map(sale => {
       const paymentAccountName = sale.accountsRec[0]?.transacoes[0]?.contaCorrente?.nome || null;
 
       return {
@@ -90,18 +104,13 @@ export class SalesService {
         paymentAccountName,
         saleItems: sale.saleItems.map((item) => ({
           ...item,
-          price: item.price.toNumber(),
-          product: item.product
-            ? { id: item.product.id, name: item.product.name, goldValue: item.product.goldValue }
-            : null,
-          // A lógica para exibir os lotes precisará ser ajustada no frontend
-          // Aqui, apenas garantimos que os dados sejam passados
-          saleItemLots: (item as any).saleItemLots,
+          price: (item.price as any).toNumber(),
+          product: item.product,
         })),
       };
     });
 
-    return result;
+    return { data, total };
   }
 
   async getNextOrderNumber(organizationId: string): Promise<number> {

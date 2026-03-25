@@ -59,6 +59,9 @@ export default function SalesPage() {
   };
 
   const [sales, setSales] = useState<Sale[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(50);
   const [loading, setIsPageLoading] = useState(true);
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
@@ -94,11 +97,14 @@ export default function SalesPage() {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const fetchSales = async (filterOverride?: typeof filters) => {
+  const fetchSales = async (filterOverride?: typeof filters, pageOverride?: number) => {
     setIsPageLoading(true);
     try {
       const activeFilters = filterOverride ?? filters;
+      const activePage = pageOverride ?? page;
       const params = new URLSearchParams();
+      params.append('page', activePage.toString());
+      params.append('limit', limit.toString());
       if (activeFilters.startDate) params.append('startDate', activeFilters.startDate);
       if (activeFilters.endDate) params.append('endDate', activeFilters.endDate);
       if (activeFilters.orderNumber) params.append('orderNumber', activeFilters.orderNumber);
@@ -106,7 +112,8 @@ export default function SalesPage() {
       if (activeFilters.status) params.append('status', activeFilters.status);
 
       const response = await api.get(`/sales?${params.toString()}`);
-      setSales(response.data);
+      setSales(response.data.data);
+      setTotal(response.data.total);
     } catch (err) {
       toast.error('Falha ao buscar vendas.');
     } finally {
@@ -117,11 +124,12 @@ export default function SalesPage() {
   useEffect(() => {
     fetchClients();
     fetchSales(); // Initial fetch
-  }, []);
+  }, [page]); // Re-fetch when page changes
 
   const handleFilterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchSales();
+    setPage(1); // Reset to first page when filtering
+    fetchSales(filters, 1);
   };
 
   const handleClearFilters = () => {
@@ -133,7 +141,8 @@ export default function SalesPage() {
       status: '',
     };
     setFilters(initialFilters);
-    fetchSales(initialFilters);
+    setPage(1);
+    fetchSales(initialFilters, 1);
   };
 
   const handleDownloadPdf = async (sale: Sale) => {
@@ -479,7 +488,12 @@ ${itemsText}`;
   return (
     <div className="space-y-4 p-1 md:p-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Vendas</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold">Vendas</h1>
+          <Badge variant="secondary" className="h-6">
+            {total} {total === 1 ? 'registro' : 'registros'}
+          </Badge>
+        </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => fetchSales()} title="Atualizar lista">
             <RotateCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -571,6 +585,33 @@ ${itemsText}`;
               rowSelection={rowSelection}
               onRowSelectionChange={setRowSelection}
             />
+          </div>
+
+          <div className="flex items-center justify-between py-4 border-t">
+            <div className="text-sm text-muted-foreground italic">
+              Mostrando {sales.length} de {total} registros
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                disabled={page <= 1 || loading}
+              >
+                Anterior
+              </Button>
+              <div className="text-sm font-medium">
+                Página {page} de {Math.ceil(total / limit) || 1}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(prev => prev + 1)}
+                disabled={page >= Math.ceil(total / limit) || loading}
+              >
+                Próximo
+              </Button>
+            </div>
           </div>
 
           {/* Mobile View */}

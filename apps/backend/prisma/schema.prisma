@@ -325,6 +325,8 @@ model Sale {
   installments      SaleInstallment[]
 
   @@unique([organizationId, orderNumber])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, status])
   @@map("Sale")
   @@schema("erp")
 }
