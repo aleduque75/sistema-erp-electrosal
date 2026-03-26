@@ -110,10 +110,12 @@ export function TotalSalesChart() {
         setData(summary);
 
         const years = new Set<string>();
-        summary.monthly.forEach(item => {
-            const year = item.period.split('/')[1];
-            if(year) years.add(`20${year}`);
-        });
+        if (summary && Array.isArray(summary.monthly)) {
+          summary.monthly.forEach(item => {
+              const year = item.period.split('/')[1];
+              if(year) years.add(`20${year}`);
+          });
+        }
         const sortedYears = Array.from(years).sort((a, b) => b.localeCompare(a));
         setAvailableYears(sortedYears);
         if (sortedYears.length > 0) {
@@ -223,7 +225,7 @@ export function TotalSalesChart() {
             return (
               <div className="bg-background border p-2 rounded-md shadow-md">
                 <p className="label font-bold">{`${label}`}</p>
-                {payload.map((p, i) => <p key={i} style={{ color: p.fill }}>{`${p.name}: ${Number(p.value).toFixed(4)}g`}</p>)}
+                {Array.isArray(payload) && payload.map((p, i) => <p key={i} style={{ color: p.fill }}>{`${p.name}: ${Number(p.value).toFixed(4)}g`}</p>)}
               </div>
             );
           }
@@ -280,8 +282,8 @@ export function TotalSalesChart() {
                   <Table>
                     <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Pedido</TableHead><TableHead className="text-right">Valor (Au)</TableHead><TableHead className="text-right">Lucro (Au)</TableHead></TableRow></TableHeader>
                     <TableBody>
-                      {selectedPeriodDetails?.sales.map((sale, i) => <TableRow key={`sale-${i}`}><TableCell>{new Date(sale.createdAt).toLocaleDateString()}</TableCell><TableCell>{sale.orderNumber}</TableCell><TableCell className="text-right">{Number(sale.goldValue).toFixed(4)}g</TableCell><TableCell className="text-right">{Number(sale.profitGold).toFixed(4)}g</TableCell></TableRow>)}
-                      {selectedPeriodDetails?.sales.length === 0 && <TableRow><TableCell colSpan={4} className="text-center">Nenhuma venda neste período.</TableCell></TableRow>}
+                      {Array.isArray(selectedPeriodDetails?.sales) && selectedPeriodDetails!.sales.map((sale, i) => <TableRow key={`sale-${i}`}><TableCell>{new Date(sale.createdAt).toLocaleDateString()}</TableCell><TableCell>{sale.orderNumber}</TableCell><TableCell className="text-right">{Number(sale.goldValue).toFixed(4)}g</TableCell><TableCell className="text-right">{Number(sale.profitGold).toFixed(4)}g</TableCell></TableRow>)}
+                      {(!selectedPeriodDetails?.sales || selectedPeriodDetails.sales.length === 0) && <TableRow><TableCell colSpan={4} className="text-center">Nenhuma venda neste período.</TableCell></TableRow>}
                     </TableBody>
                     <TableFooter><TableRow><TableCell colSpan={2}>Total</TableCell><TableCell className="text-right">{salesTotal.toFixed(4)}g</TableCell><TableCell className="text-right">{profitTotal.toFixed(4)}g</TableCell></TableRow></TableFooter>
                   </Table>
@@ -291,8 +293,8 @@ export function TotalSalesChart() {
                   <Table>
                     <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor (Au)</TableHead></TableRow></TableHeader>
                     <TableBody>
-                      {selectedPeriodDetails?.expenses.map((exp, i) => <TableRow key={`exp-${i}`}><TableCell>{new Date(exp.dataHora).toLocaleDateString()}</TableCell><TableCell>{exp.descricao}</TableCell><TableCell className="text-right">{Number(exp.goldAmount).toFixed(4)}g</TableCell></TableRow>)}
-                      {selectedPeriodDetails?.expenses.length === 0 && <TableRow><TableCell colSpan={3} className="text-center">Nenhuma despesa neste período.</TableCell></TableRow>}
+                      {Array.isArray(selectedPeriodDetails?.expenses) && selectedPeriodDetails!.expenses.map((exp, i) => <TableRow key={`exp-${i}`}><TableCell>{new Date(exp.dataHora).toLocaleDateString()}</TableCell><TableCell>{exp.descricao}</TableCell><TableCell className="text-right">{Number(exp.goldAmount).toFixed(4)}g</TableCell></TableRow>)}
+                      {(!selectedPeriodDetails?.expenses || selectedPeriodDetails.expenses.length === 0) && <TableRow><TableCell colSpan={3} className="text-center">Nenhuma despesa neste período.</TableCell></TableRow>}
                     </TableBody>
                     <TableFooter><TableRow><TableCell colSpan={2}>Total</TableCell><TableCell className="text-right">{expensesTotal.toFixed(4)}g</TableCell></TableRow></TableFooter>
                   </Table>

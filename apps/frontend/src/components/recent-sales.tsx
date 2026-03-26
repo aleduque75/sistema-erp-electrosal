@@ -49,7 +49,7 @@ export function RecentSales({ data }: RecentSalesProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data &&
+            {Array.isArray(data) &&
               data.map((sale) => (
                 <TableRow key={sale.id}>
                   <TableCell>

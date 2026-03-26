@@ -25,6 +25,7 @@ interface GoldBalanceData {
     emprestimos: number;
     emprestimosDetails: { name: string; balanceAu: number; originalBalance: string }[];
     clientesAReceber: number;
+    clientesAReceberDetails: { name: string; balanceAu: number; originalBalance: string }[];
   };
   stock: {
     products: number;
@@ -129,7 +130,7 @@ export function GoldBalanceTab() {
               {formatGold(data.balances.caixaBancos)}
             </div>
             <div className="max-h-[150px] overflow-y-auto space-y-1 pr-1">
-                {data.balances.caixaBancosDetails.map((acc, idx) => (
+                {Array.isArray(data.balances.caixaBancosDetails) && data.balances.caixaBancosDetails.map((acc, idx) => (
                     <div key={idx} className="flex justify-between text-xs border-b pb-1 last:border-0">
                         <span title={acc.name} className="truncate max-w-[120px]">{acc.name}</span>
                         <span className={acc.balanceAu < 0 ? 'text-red-500' : ''}>{formatGold(acc.balanceAu)}</span>
@@ -151,7 +152,7 @@ export function GoldBalanceTab() {
               {formatGold(data.balances.clientesAReceber)}
             </div>
             <div className="max-h-[150px] overflow-y-auto space-y-1 pr-1">
-                {data.balances.clientesAReceberDetails && data.balances.clientesAReceberDetails.length > 0 ? (
+                {Array.isArray(data.balances.clientesAReceberDetails) && data.balances.clientesAReceberDetails.length > 0 ? (
                     data.balances.clientesAReceberDetails.map((client, idx) => (
                         <div key={idx} className="flex justify-between text-xs border-b pb-1 last:border-0">
                             <span title={client.name} className="truncate max-w-[120px]">{client.name}</span>
@@ -200,7 +201,7 @@ export function GoldBalanceTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.salesThisMonth.length > 0 ? (
+                {Array.isArray(data.salesThisMonth) && data.salesThisMonth.length > 0 ? (
                   data.salesThisMonth.map((sale, i) => (
                     <TableRow key={i}>
                       <TableCell>{sale.productName}</TableCell>
@@ -241,7 +242,7 @@ export function GoldBalanceTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                     {data.stock.productsDetails.length > 0 ? (
+                     {Array.isArray(data.stock.productsDetails) && data.stock.productsDetails.length > 0 ? (
                         data.stock.productsDetails.map((item, i) => (
                           <TableRow key={i}>
                             <TableCell>{item.productName}</TableCell>
@@ -323,7 +324,7 @@ export function GoldBalanceTab() {
                             <span className="font-bold">{formatGold(data.stock.metalsDetails.prataConvertidaAu)}</span>
                         </div>
                     )}
-                    {data.stock.metalsDetails.outros.map((m, i) => (
+                    {Array.isArray(data.stock.metalsDetails.outros) && data.stock.metalsDetails.outros.map((m, i) => (
                         <div key={i} className="flex justify-between items-center p-2 border-b text-sm">
                            <span>{m.name}</span>
                            <span className="text-muted-foreground">{m.quantity} un/g</span>
@@ -348,7 +349,7 @@ export function GoldBalanceTab() {
                   {formatGold(data.balances.fornecedores)}
                </div>
                <div className="space-y-1">
-                    {data.balances.fornecedoresDetails.map((acc, idx) => (
+                    {Array.isArray(data.balances.fornecedoresDetails) && data.balances.fornecedoresDetails.map((acc, idx) => (
                         <div key={idx} className="flex justify-between text-sm border-b border-red-200 dark:border-red-800 pb-1 last:border-0">
                             <span title={acc.name} className="truncate">{acc.name}</span>
                             <span className="font-medium">{formatGold(acc.balanceAu)}</span>
@@ -370,7 +371,7 @@ export function GoldBalanceTab() {
                   {formatGold(data.balances.emprestimos)}
                </div>
                <div className="space-y-1">
-                    {data.balances.emprestimosDetails.map((acc, idx) => (
+                    {Array.isArray(data.balances.emprestimosDetails) && data.balances.emprestimosDetails.map((acc, idx) => (
                         <div key={idx} className="flex justify-between text-sm border-b border-orange-200 dark:border-orange-800 pb-1 last:border-0">
                             <span title={acc.name} className="truncate">{acc.name}</span>
                             <span className="font-medium">{formatGold(acc.balanceAu)}</span>

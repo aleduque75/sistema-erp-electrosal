@@ -60,6 +60,11 @@ export function QuotationChart() {
         const response = await api.get("/quotations");
         const rawQuotations: RawQuotation[] = response.data;
 
+        if (!Array.isArray(rawQuotations)) {
+          setData([]);
+          return;
+        }
+
         const groupedByMonth = rawQuotations
           .filter(
             (q) =>

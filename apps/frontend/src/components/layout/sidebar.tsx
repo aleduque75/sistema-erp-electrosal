@@ -58,7 +58,7 @@ export function Sidebar() {
       const Icon = IconMap[item.icon] || MoreHorizontal;
       const active =
         pathname === item.href ||
-        item.subItems?.some((s: any) => pathname === s.href);
+        (Array.isArray(item.subItems) && item.subItems.some((s: any) => pathname === s.href));
       const isOpen = openSub === item.id;
 
       return (
@@ -75,7 +75,7 @@ export function Sidebar() {
               href={item.href}
               className="flex items-center w-full gap-3 p-2 outline-none"
               onClick={(e) => {
-                if (item.subItems?.length > 0) {
+                if (Array.isArray(item.subItems) && item.subItems.length > 0) {
                   e.preventDefault();
                   setOpenSub(isOpen ? null : item.id);
                 }
@@ -87,7 +87,7 @@ export function Sidebar() {
                   <span className="text-sm font-medium flex-1 truncate">
                     {item.title}
                   </span>
-                  {item.subItems?.length > 0 && (
+                  {Array.isArray(item.subItems) && item.subItems.length > 0 && (
                     <ChevronDown
                       className={cn(
                         "size-4 transition-transform",
