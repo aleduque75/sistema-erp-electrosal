@@ -133,7 +133,7 @@ const ModalContent = ({
 }: any) => {
 
   const hasResultados = currentAnalise.resultado && Object.values(currentAnalise.resultado).some((v: any) => v != null);
-  const hasValoresFinais = currentAnalise.auEstimadoBrutoGramas || currentAnalise.auLiquidoParaClienteGramas;
+  const hasValoresFinais = (currentAnalise.volumeOuPesoEntrada > 0) && (currentAnalise.auEstimadoBrutoGramas || currentAnalise.auLiquidoParaClienteGramas);
 
   return (
     <>
@@ -267,7 +267,7 @@ const ModalContent = ({
                 </div>
               </CardContent>
             </Card>
-            {(currentAnalise.auEstimadoBrutoGramas != null || hasValoresFinais) && (
+            {hasValoresFinais && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2"><DollarSign className="h-5 w-5" />Detalhamento Financeiro</CardTitle>

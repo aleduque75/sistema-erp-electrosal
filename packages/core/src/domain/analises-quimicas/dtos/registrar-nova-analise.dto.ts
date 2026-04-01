@@ -18,7 +18,7 @@ export class RegistrarNovaAnaliseDto {
   descricaoMaterial!: string;
 
   @IsNumber()
-  @Min(0.001)
+  @Min(0)
   volumeOuPesoEntrada!: number;
 
   @IsString()

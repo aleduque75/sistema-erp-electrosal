@@ -31,7 +31,7 @@ const formSchema = z.object({
   metalType: z.enum(['AU', 'AG', 'RH'], { required_error: "O tipo de metal é obrigatório." }),
   dataEntrada: z.date({ required_error: "A data de entrada é obrigatória." }),
   descricaoMaterial: z.string().min(1, { message: "A descrição do material é obrigatória." }),
-  volumeOuPesoEntrada: z.coerce.number().min(0.001, { message: "O valor deve ser maior que zero." }),
+  volumeOuPesoEntrada: z.coerce.number().min(0, { message: "O valor deve ser no mínimo zero." }),
   unidadeEntrada: z.string().min(1, { message: "A unidade é obrigatória." }),
   observacoes: z.string().optional(),
 });
