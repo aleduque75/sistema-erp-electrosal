@@ -4,6 +4,7 @@ import { TipoMetal } from '@prisma/client';
 import { PureMetalLotsService } from './pure-metal-lots.service';
 import { CreatePureMetalLotDto } from './dto/create-pure-metal-lot.dto';
 import { UpdatePureMetalLotDto } from './dto/update-pure-metal-lot.dto';
+import { SellPureMetalLotDto } from './dto/sell-pure-metal-lot.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Request, Response } from 'express';
 import { GerarPdfPureMetalLotUseCase } from './use-cases/gerar-pdf-pure-metal-lot.use-case';
@@ -53,6 +54,13 @@ export class PureMetalLotsController {
   update(@Req() req: Request, @Param('id') id: string, @Body() updatePureMetalLotDto: UpdatePureMetalLotDto) {
     const organizationId = req.user['organizationId'];
     return this.pureMetalLotsService.update(organizationId, id, updatePureMetalLotDto);
+  }
+
+  @Post(':id/sell')
+  sell(@Req() req: Request, @Param('id') id: string, @Body() sellDto: SellPureMetalLotDto) {
+    const organizationId = req.user['organizationId'];
+    const userId = req.user['id'];
+    return this.pureMetalLotsService.sell(organizationId, userId, id, sellDto);
   }
 
   @Delete(':id')

@@ -264,17 +264,35 @@ export class TransacoesService {
       const transacao = await this.findOne(id, organizationId, tx);
       const { mediaIds, ...restData } = data;
 
+      // Filter fields to avoid unique constraint errors (like linkedTransactionId)
+      // or other non-editable internal fields.
+      const allowedFields = [
+        'valor',
+        'goldAmount',
+        'goldPrice',
+        'dataHora',
+        'descricao',
+        'contaContabilId',
+        'fornecedorId',
+      ];
+      const filteredData: any = {};
+      Object.keys(restData).forEach((key) => {
+        if (allowedFields.includes(key)) {
+          filteredData[key] = restData[key];
+        }
+      });
+
       if (transacao.linkedTransactionId) {
         const linkedTransactionId = transacao.linkedTransactionId;
 
         const linkedData: Prisma.TransacaoUpdateInput = {};
-        if (restData.valor !== undefined) linkedData.valor = restData.valor;
-        if (restData.goldAmount !== undefined) linkedData.goldAmount = restData.goldAmount;
-        if (restData.goldPrice !== undefined) linkedData.goldPrice = restData.goldPrice;
-        if (restData.dataHora !== undefined) linkedData.dataHora = restData.dataHora;
-        if (restData.descricao !== undefined) linkedData.descricao = restData.descricao;
+        if (filteredData.valor !== undefined) linkedData.valor = filteredData.valor;
+        if (filteredData.goldAmount !== undefined) linkedData.goldAmount = filteredData.goldAmount;
+        if (filteredData.goldPrice !== undefined) linkedData.goldPrice = filteredData.goldPrice;
+        if (filteredData.dataHora !== undefined) linkedData.dataHora = filteredData.dataHora;
+        if (filteredData.descricao !== undefined) linkedData.descricao = filteredData.descricao;
 
-        await tx.transacao.update({ where: { id }, data: restData });
+        await tx.transacao.update({ where: { id }, data: filteredData });
 
         if (Object.keys(linkedData).length > 0) {
           await tx.transacao.update({
@@ -283,7 +301,7 @@ export class TransacoesService {
           });
         }
       } else {
-        await tx.transacao.update({ where: { id }, data: restData });
+        await tx.transacao.update({ where: { id }, data: filteredData });
       }
 
       const updatedTransacao = await this.findOne(id, organizationId, tx);

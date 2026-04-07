@@ -52,5 +52,18 @@ export class CreatePureMetalLotDto {
 
   @IsString()
   @IsOptional()
+  supplierId?: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  purchaseAmount?: number;
+
+  @IsDateString()
+  @IsOptional()
+  purchaseDueDate?: string;
+
+  @IsString()
+  @IsOptional()
   description?: string;
 }

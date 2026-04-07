@@ -57,3 +57,8 @@ export const updatePureMetalLotMovement = async (id: string, data: Partial<PureM
 export const deletePureMetalLotMovement = async (id: string): Promise<void> => {
   await api.delete(`/pure-metal-lot-movements/${id}`);
 };
+
+export const sellPureMetalLot = async (id: string, data: any): Promise<any> => {
+  const response = await api.post(`/pure-metal-lots/${id}/sell`, data);
+  return response.data;
+};

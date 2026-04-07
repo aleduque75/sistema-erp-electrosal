@@ -34,8 +34,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Package, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Eye, Package, Edit, Trash2, DollarSign } from 'lucide-react';
 import { PureMetalLotDetailsDialog } from './components/pure-metal-lot-details-dialog';
+import { SellPureMetalLotDialog } from './components/sell-pure-metal-lot-dialog';
 import {
   Card,
   CardContent,
@@ -62,6 +63,9 @@ const formSchema = z.object({
   sourceType: z.string().min(1, { message: "Tipo de origem é obrigatório." }),
   sourceId: z.string().optional(),
   clientId: z.string().optional(),
+  supplierId: z.string().optional(),
+  purchaseAmount: z.coerce.number().optional(),
+  purchaseDueDate: z.string().optional(),
   metalType: z.enum(["AU", "AG", "RH"], { message: "Tipo de metal é obrigatório." }),
   initialGrams: z.coerce.number().min(0.01, { message: "Gramas iniciais devem ser maiores que 0." }),
   purity: z.coerce.number().min(0.01, { message: "Pureza é obrigatória." }),
@@ -87,10 +91,13 @@ export default function PureMetalLotsPage() {
   const [metalTypeFilter, setMetalTypeFilter] = useState<string | 'all'>('all');
   const [sourceTypeFilter, setSourceTypeFilter] = useState<string | 'all'>('all');
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
+  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [selectedLotForSell, setSelectedLotForSell] = useState<PureMetalLot | null>(null);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       entryDate: new Date().toISOString().split('T')[0],
       sourceType: "OUTROS",
@@ -98,6 +105,10 @@ export default function PureMetalLotsPage() {
       initialGrams: 0,
       purity: 0,
       notes: "",
+      clientId: "",
+      supplierId: "",
+      purchaseAmount: 0,
+      purchaseDueDate: new Date().toISOString().split('T')[0],
     },
   });
 
@@ -109,6 +120,15 @@ export default function PureMetalLotsPage() {
       setClients(response.data);
     } catch (err) {
       console.error("Failed to fetch clients", err);
+    }
+  };
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await api.get('/pessoas?role=SUPPLIER');
+      setSuppliers(response.data);
+    } catch (err) {
+      console.error("Failed to fetch suppliers", err);
     }
   };
 
@@ -132,6 +152,7 @@ export default function PureMetalLotsPage() {
   useEffect(() => {
     fetchPureMetalLots();
     fetchClients();
+    fetchSuppliers();
   }, [hideZeroedLots, metalTypeFilter, sourceTypeFilter]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -142,10 +163,10 @@ export default function PureMetalLotsPage() {
       };
 
       if (editingLot) {
-        await updatePureMetalLot(editingLot.id, payload);
+        await updatePureMetalLot(editingLot.id, payload as any);
         toast.success('Lote de metal puro atualizado com sucesso!');
       } else {
-        await createPureMetalLot(payload);
+        await createPureMetalLot(payload as any);
         toast.success('Lote de metal puro criado com sucesso!');
       }
       form.reset();
@@ -164,11 +185,17 @@ export default function PureMetalLotsPage() {
       entryDate: new Date(lot.entryDate).toISOString().split('T')[0],
       sourceType: lot.sourceType,
       sourceId: lot.sourceId,
-      metalType: lot.metalType,
+      metalType: lot.metalType as any,
       initialGrams: lot.initialGrams,
       purity: lot.purity,
       notes: lot.notes || "",
       clientId: lot.sourceType === 'ADIANTAMENTO_CLIENTE' ? lot.sourceId : undefined,
+      // @ts-ignore
+      supplierId: lot.supplierId,
+      // @ts-ignore
+      purchaseAmount: lot.purchaseAmount,
+      // @ts-ignore
+      purchaseDueDate: lot.purchaseDueDate ? new Date(lot.purchaseDueDate).toISOString().split('T')[0] : undefined,
     });
     setIsModalOpen(true);
   };
@@ -189,6 +216,11 @@ export default function PureMetalLotsPage() {
   const handleViewDetails = (lot: PureMetalLot) => {
     setSelectedLotForDetails(lot);
     setIsDetailsModalOpen(true);
+  };
+
+  const handleSell = (lot: PureMetalLot) => {
+    setSelectedLotForSell(lot);
+    setIsSellModalOpen(true);
   };
 
   const columns: ColumnDef<PureMetalLot>[] = [
@@ -265,6 +297,14 @@ export default function PureMetalLotsPage() {
               <DropdownMenuItem onClick={() => handleViewDetails(lot)}>
                 <Eye className="w-4 h-4 mr-2" />
                 Visualizar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => handleSell(lot)}
+                disabled={lot.remainingGrams <= 0}
+              >
+                <DollarSign className="w-4 h-4 mr-2" />
+                Vender Metal
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleEdit(lot)}>
@@ -413,6 +453,57 @@ export default function PureMetalLotsPage() {
                       </FormItem>
                     )}
                   />
+                ) : sourceType === 'COMPRA' ? (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="supplierId"
+                      render={({ field }) => (
+                        <FormItem className="col-span-1 md:col-span-2">
+                          <FormLabel>Fornecedor</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o fornecedor" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {suppliers.map((supplier) => (
+                                <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="purchaseAmount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor da Compra (R$)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="purchaseDueDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data de Vencimento</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
                 ) : (
                   <FormField
                     control={form.control}
@@ -510,6 +601,13 @@ export default function PureMetalLotsPage() {
         lot={selectedLotForDetails}
         isOpen={isDetailsModalOpen}
         onOpenChange={setIsDetailsModalOpen}
+      />
+
+      <SellPureMetalLotDialog
+        lot={selectedLotForSell}
+        isOpen={isSellModalOpen}
+        onOpenChange={setIsSellModalOpen}
+        onSuccess={fetchPureMetalLots}
       />
     </div>
   );

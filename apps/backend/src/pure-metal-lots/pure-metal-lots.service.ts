@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreatePureMetalLotDto } from './dto/create-pure-metal-lot.dto';
 import { UpdatePureMetalLotDto } from './dto/update-pure-metal-lot.dto';
+import { SellPureMetalLotDto } from './dto/sell-pure-metal-lot.dto';
 import { PureMetalLotsRepository } from './pure-metal-lots.repository';
 import { EntityCounterService } from '../common/services/entity-counter.service';
 import { EntityType, TipoMetal, Prisma } from '@prisma/client'; // Adicionado Prisma
@@ -40,9 +41,24 @@ export class PureMetalLotsService {
   ) {}
 
   async create(organizationId: string, createPureMetalLotDto: CreatePureMetalLotDto, tx?: any) {
-    const { initialGrams, remainingGrams, entryDate, clientId, ...rest } = createPureMetalLotDto;
+    const { 
+      initialGrams, 
+      remainingGrams, 
+      entryDate, 
+      clientId, 
+      supplierId, 
+      purchaseAmount, 
+      purchaseDueDate, 
+      sourceId, 
+      ...rest 
+    } = createPureMetalLotDto;
+    
     const nextLotNumber = await this.entityCounterService.getNextNumber(EntityType.PURE_METAL_LOT, organizationId);
     const lotNumber = `LMP-${String(nextLotNumber).padStart(6, '0')}`;
+    const prisma = tx || this.prisma;
+
+    // Use default sourceId for purchases if missing
+    const finalSourceId = sourceId || (rest.sourceType === 'COMPRA' ? 'COMPRA' : '');
 
     const entryDateObject = entryDate
       ? entryDate.includes('T')
@@ -50,11 +66,10 @@ export class PureMetalLotsService {
         : new Date(`${entryDate}T12:00:00`)
       : new Date();
 
-    const prisma = tx || this.prisma;
-
     const lot = await prisma.pure_metal_lots.create({
       data: {
         ...rest,
+        sourceId: finalSourceId,
         lotNumber,
         organizationId,
         initialGrams,
@@ -125,6 +140,36 @@ export class PureMetalLotsService {
           }
         });
       }
+    }
+
+    // Handle Metal Purchase (create AccountPay)
+    if (rest.sourceType === 'COMPRA' && createPureMetalLotDto.supplierId && createPureMetalLotDto.purchaseAmount) {
+      // Ensure supplier has Fornecedor role
+      const dbSupplier = await prisma.pessoa.findUnique({
+        where: { id: createPureMetalLotDto.supplierId },
+        include: { fornecedor: true }
+      });
+
+      if (dbSupplier && !dbSupplier.fornecedor) {
+        await prisma.fornecedor.create({
+          data: { 
+            pessoaId: dbSupplier.id, 
+            organizationId 
+          }
+        });
+      }
+
+      await prisma.accountPay.create({
+        data: {
+          description: `Compra de Metal - Lote ${lotNumber}`,
+          amount: new Prisma.Decimal(createPureMetalLotDto.purchaseAmount),
+          dueDate: createPureMetalLotDto.purchaseDueDate 
+            ? new Date(`${createPureMetalLotDto.purchaseDueDate}T12:00:00`) 
+            : new Date(),
+          organizationId,
+          fornecedorId: createPureMetalLotDto.supplierId,
+        },
+      });
     }
 
     return lot;
@@ -254,5 +299,82 @@ export class PureMetalLotsService {
     });
 
     return movement;
+  }
+
+  async sell(organizationId: string, userId: string, id: string, dto: SellPureMetalLotDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const lot = await tx.pure_metal_lots.findUnique({
+        where: { id },
+      });
+
+      if (!lot) {
+        throw new NotFoundException(`Lote de metal puro com ID ${id} não encontrado.`);
+      }
+
+      if (lot.remainingGrams < dto.grams) {
+        throw new BadRequestException(`Quantidade insuficiente no lote. Disponível: ${lot.remainingGrams}g.`);
+      }
+
+      // 1. Get next order number for Sale
+      const lastSale = await tx.sale.findFirst({
+        where: { organizationId },
+        orderBy: { orderNumber: 'desc' },
+      });
+      const nextOrderNumber = (lastSale?.orderNumber || 31700) + 1;
+
+      // 2. Create Sale
+      const sale = await tx.sale.create({
+        data: {
+          organizationId,
+          pessoaId: dto.clientId,
+          orderNumber: nextOrderNumber,
+          totalAmount: dto.totalAmount,
+          status: 'FINALIZADO',
+          observation: dto.notes || `Venda de Metal - Lote ${lot.lotNumber}`,
+          createdAt: dto.date ? new Date(dto.date) : new Date(),
+        },
+      });
+
+      // 3. Create AccountRec
+      await tx.accountRec.create({
+        data: {
+          organizationId,
+          saleId: sale.id,
+          description: `Venda de Metal - Lote ${lot.lotNumber}`,
+          amount: dto.totalAmount,
+          dueDate: dto.date ? new Date(dto.date) : new Date(),
+        },
+      });
+
+      // 4. Create Movement
+      await tx.pureMetalLotMovement.create({
+        data: {
+          organizationId,
+          pureMetalLotId: id,
+          type: 'EXIT',
+          grams: dto.grams,
+          date: dto.date ? new Date(dto.date) : new Date(),
+          notes: dto.notes || `Venda vinculada ao pedido #${nextOrderNumber}`,
+        },
+      });
+
+      // 5. Update Lot
+      const newRemainingGrams = lot.remainingGrams - dto.grams;
+      let newStatus = lot.status;
+      if (newRemainingGrams <= 0) {
+        newStatus = 'USED';
+      } else if (newRemainingGrams < lot.initialGrams) {
+        newStatus = 'PARTIALLY_USED';
+      }
+
+      return tx.pure_metal_lots.update({
+        where: { id },
+        data: {
+          remainingGrams: newRemainingGrams,
+          status: newStatus as any,
+          saleId: sale.id, // Vínculo com a venda
+        },
+      });
+    });
   }
 }
