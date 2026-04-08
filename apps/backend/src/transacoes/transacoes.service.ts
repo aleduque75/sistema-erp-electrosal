@@ -197,11 +197,14 @@ export class TransacoesService {
     tx?: any,
   ): Promise<Transacao> {
     return this.prisma.$transaction(async (prisma) => {
-      const { valor, goldAmount, goldPrice, mediaIds, fornecedorId, tipo, ...restData } = data;
+      const { valor, goldAmount, goldPrice, mediaIds, fornecedorId, tipo, dataHora, ...restData } = data;
+
+      const dataHoraDate = dataHora ? new Date(dataHora) : new Date();
 
       const newTransacao = await prisma.transacao.create({
         data: {
           ...restData,
+          dataHora: dataHoraDate,
           tipo,
           fornecedorId,
           valor: valor ?? 0,
@@ -213,14 +216,14 @@ export class TransacoesService {
       });
 
       if (tipo === 'DEBITO' && fornecedorId) {
-        const newAccountPay = await prisma.accountPay.create({
+        await prisma.accountPay.create({
           data: {
             organizationId,
             description: data.descricao,
             amount: data.valor ?? 0,
-            dueDate: data.dataHora,
+            dueDate: dataHoraDate,
             paid: true,
-            paidAt: data.dataHora,
+            paidAt: dataHoraDate,
             fornecedorId: fornecedorId,
             contaContabilId: data.contaContabilId,
             transacaoId: newTransacao.id,
@@ -281,6 +284,10 @@ export class TransacoesService {
           filteredData[key] = restData[key];
         }
       });
+
+      if (filteredData.dataHora) {
+        filteredData.dataHora = new Date(filteredData.dataHora);
+      }
 
       if (transacao.linkedTransactionId) {
         const linkedTransactionId = transacao.linkedTransactionId;
