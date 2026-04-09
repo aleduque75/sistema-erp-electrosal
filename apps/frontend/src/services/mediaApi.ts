@@ -5,48 +5,48 @@ export const uploadMediaForAnaliseQuimica = async (file: File, analiseQuimicaId:
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await api.post<Media>(`/media/upload?analiseQuimicaId=${analiseQuimicaId}`, formData, {
+  const response = await api.post<{ message: string; media: Media }>(`/media/upload?analiseQuimicaId=${analiseQuimicaId}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-  return response.data;
+  return response.data.media;
 };
 
 export const uploadMediaForRecoveryOrder = async (file: File, recoveryOrderId: string): Promise<Media> => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await api.post<Media>(`/media/upload?recoveryOrderId=${recoveryOrderId}`, formData, {
+  const response = await api.post<{ message: string; media: Media }>(`/media/upload?recoveryOrderId=${recoveryOrderId}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-  return response.data;
+  return response.data.media;
 };
 
 export const uploadMediaForTransacao = async (file: File, transacaoId: string): Promise<Media> => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await api.post<Media>(`/media/upload?transacaoId=${transacaoId}`, formData, {
+  const response = await api.post<{ message: string; media: Media }>(`/media/upload?transacaoId=${transacaoId}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-  return response.data;
+  return response.data.media;
 };
 
 export const uploadMediaForChemicalReaction = async (file: File, chemicalReactionId: string): Promise<Media> => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await api.post<Media>(`/media/upload?chemicalReactionId=${chemicalReactionId}`, formData, {
+  const response = await api.post<{ message: string; media: Media }>(`/media/upload?chemicalReactionId=${chemicalReactionId}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-  return response.data;
+  return response.data.media;
 };
 
 export const getMediaForAnaliseQuimica = async (analiseQuimicaId: string): Promise<Media[]> => {

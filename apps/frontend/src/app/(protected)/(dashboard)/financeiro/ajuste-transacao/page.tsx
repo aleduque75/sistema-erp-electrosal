@@ -149,7 +149,7 @@ export default function AdjustTransactionPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {sale.accountsRec?.flatMap(ar => ar.transacao ? [ar.transacao] : []).map(transacao => (
+                  {sale.accountsRec?.flatMap(ar => ar.transacoes || []).map(transacao => (
                     <tr key={transacao.id}>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">{transacao.descricao}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{formatDate(transacao.dataHora)}</td>
@@ -183,7 +183,7 @@ export default function AdjustTransactionPage() {
                   <Combobox 
                     options={contas}
                     value={newContaCorrenteId}
-                    onChange={setNewContaCorrenteId}
+                    onChange={(val) => setNewContaCorrenteId(val || '')}
                     placeholder="Selecione a nova conta..."
                   />
                 </div>

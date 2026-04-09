@@ -7,6 +7,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 
 import { InstallmentList } from '@/components/sales/InstallmentList';
+import { Sale } from '@/types/sale';
 
 export default function SaleDetailPage() {
   const { user, isLoading } = useAuth();
@@ -83,7 +84,7 @@ export default function SaleDetailPage() {
           </tr>
         </thead>
         <tbody>
-          {sale.saleItems.map((item) => (
+          {sale.saleItems?.map((item: any) => (
             <tr key={item.id}>
               <td>{item.product.name}</td>
               <td>{item.quantity}</td>
@@ -95,10 +96,14 @@ export default function SaleDetailPage() {
       </table>
 
       {sale.installments && sale.installments.length > 0 && (
-        <InstallmentList installments={sale.installments} />
+        <InstallmentList 
+          installments={sale.installments as any} 
+          saleId={sale.id} 
+          onInstallmentPaid={() => fetchSale()} 
+        />
       )}
 
-      <h2 class="text-xl font-bold mt-6 mb-2">Recebimentos</h2>
+      <h2 className="text-xl font-bold mt-6 mb-2">Recebimentos</h2>
       <table className="table-auto mb-4">
         <thead>
           <tr>
@@ -109,14 +114,50 @@ export default function SaleDetailPage() {
           </tr>
         </thead>
         <tbody>
-          {sale.accountsRec.map((rec) => (
-            <tr key={rec.id}>
-              <td>{rec.receivedAt ? new Date(rec.receivedAt).toLocaleDateString() : 'Pendente'}</td>
-              <td>{rec.transacao?.contaCorrente?.nome}</td>
-              <td>{rec.transacao?.valor.toFixed(2)}</td>
-              <td>{rec.transacao?.goldAmount?.toFixed(4)}</td>
-            </tr>
-          ))}
+          {(() => {
+            const uniqueMap = new Map();
+            const sources = [
+              ...(sale.accountsRec || []),
+              ...(sale.installments?.map((i: any) => i.accountRec) || [])
+            ].filter(Boolean);
+
+            sources.forEach((ar: any) => {
+              const txsRaw = ar.transacoes || ar.transacao || [];
+              const txList = Array.isArray(txsRaw) ? txsRaw : [txsRaw];
+              
+              if (txList.length > 0) {
+                txList.forEach((t: any) => {
+                  if (t && t.id && !uniqueMap.has(t.id)) {
+                    uniqueMap.set(t.id, {
+                      ...t,
+                      displayAccount: t.contaCorrente?.nome || ar.contaCorrente?.nome || 'N/A'
+                    });
+                  }
+                });
+              } else if (ar.received) {
+                const virtualId = `virtual-${ar.id}`;
+                if (!uniqueMap.has(virtualId)) {
+                  uniqueMap.set(virtualId, {
+                    id: virtualId,
+                    dataHora: ar.receivedAt || ar.dueDate,
+                    valor: ar.amountPaid || ar.amount,
+                    goldAmount: ar.goldAmountPaid || ar.goldAmount,
+                    displayAccount: ar.contaCorrente?.nome || 'Crédito de Metal/Outro',
+                    isVirtual: true
+                  });
+                }
+              }
+            });
+
+            return Array.from(uniqueMap.values()).map((transacao: any) => (
+              <tr key={transacao.id}>
+                <td>{transacao.dataHora ? new Date(transacao.dataHora).toLocaleDateString() : 'N/A'}</td>
+                <td>{transacao.displayAccount}</td>
+                <td>{Number(transacao.valor).toFixed(2)}</td>
+                <td>{Number(transacao.goldAmount).toFixed(4)}</td>
+              </tr>
+            ));
+          })()}
         </tbody>
       </table>
 

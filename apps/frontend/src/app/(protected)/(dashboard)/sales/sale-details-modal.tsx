@@ -68,8 +68,16 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
     const receivedAccounts = sale.accountsRec?.filter(ar => ar.received) || [];
 
     if (receivedAccounts.length > 0) {
-      const accountNames = receivedAccounts.map(ar => ar.transacao?.contaCorrente?.nome).filter(Boolean).join(', ');
-      return `Recebido em: ${accountNames}`;
+      const accountNames = receivedAccounts
+        .map(ar => {
+          const txs = (ar as any).transacoes || (ar as any).transacao || [];
+          const txList = Array.isArray(txs) ? txs : [txs];
+          const firstTxName = txList[0]?.contaCorrente?.nome;
+          return firstTxName || ar.contaCorrente?.nome;
+        })
+        .filter(Boolean)
+        .join(', ');
+      return `Recebido em: ${accountNames || 'N/A'}`;
     }
 
     if (!sale.installments || sale.installments.length === 0) {
@@ -94,15 +102,42 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
   const uniqueTransactions = useMemo(() => {
     if (!sale) return [];
 
-    const transactions = [
-      ...(sale.accountsRec?.map(ar => ar.transacao) || []),
-      ...(sale.installments?.map(inst => (inst as any).accountRec?.transacao) || [])
+    const transactions: any[] = [];
+    const uniqueMap = new Map();
+
+    // Aggregates transactions from direct receivables and installments
+    const sources = [
+      ...(sale.accountsRec || []),
+      ...(sale.installments?.map(i => (i as any).accountRec) || [])
     ].filter(Boolean);
 
-    const uniqueMap = new Map();
-    transactions.forEach(t => {
-      if (t && t.id) {
-        uniqueMap.set(t.id, t);
+    sources.forEach(ar => {
+      const txsRaw = (ar as any).transacoes || (ar as any).transacao || [];
+      const txList = Array.isArray(txsRaw) ? txsRaw : [txsRaw];
+      
+      if (txList.length > 0) {
+        txList.forEach(t => {
+          if (t && t.id && !uniqueMap.has(t.id)) {
+            uniqueMap.set(t.id, {
+              ...t,
+              // Fallback for account name if missing from transaction
+              displayAccount: t.contaCorrente?.nome || ar.contaCorrente?.nome || 'N/A'
+            });
+          }
+        });
+      } else if (ar.received) {
+        // Fallback: If received but no linked transactions, show a virtual one
+        const virtualId = `virtual-${ar.id}`;
+        if (!uniqueMap.has(virtualId)) {
+          uniqueMap.set(virtualId, {
+            id: virtualId,
+            dataHora: ar.receivedAt || ar.dueDate,
+            valor: ar.amountPaid || ar.amount,
+            goldAmount: ar.goldAmountPaid || ar.goldAmount,
+            displayAccount: ar.contaCorrente?.nome || 'Crédito de Metal/Outro',
+            isVirtual: true
+          });
+        }
       }
     });
 
@@ -273,9 +308,9 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                       {uniqueTransactions.map((transacao) => (
                         <TableRow key={transacao.id}>
                           <TableCell>{formatDate(transacao.dataHora)}</TableCell>
-                          <TableCell>{transacao.contaCorrente?.nome || 'N/A'}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(transacao.valor)}</TableCell>
-                          <TableCell className="text-right">{formatGrams(transacao.goldAmount)} g</TableCell>
+                          <TableCell>{transacao.displayAccount || 'N/A'}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(Number(transacao.valor))}</TableCell>
+                          <TableCell className="text-right">{formatGrams(Number(transacao.goldAmount))} g</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -291,8 +326,8 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                         <span>{transacao.contaCorrente?.nome || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between items-baseline">
-                        <span className="text-lg font-black text-zinc-950 font-mono tracking-tighter">{formatCurrency(transacao.valor)}</span>
-                        <span className="text-xs text-amber-600 font-bold">{formatGrams(transacao.goldAmount)} g</span>
+                        <span className="text-lg font-black text-zinc-950 font-mono tracking-tighter">{formatCurrency(Number(transacao.valor))}</span>
+                        <span className="text-xs text-amber-600 font-bold">{formatGrams(Number(transacao.goldAmount))} g</span>
                       </div>
                     </div>
                   ))}

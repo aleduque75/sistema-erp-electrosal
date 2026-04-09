@@ -49,6 +49,19 @@ export interface SaleInstallment {
   dueDate: string;
   status: 'PENDING' | 'PAID' | 'OVERDUE';
   paidAt?: string;
+  accountRec?: {
+    id: string;
+    received: boolean;
+    receivedAt: string | null;
+    amount: number;
+    amountPaid: number;
+    goldAmount?: number;
+    goldAmountPaid?: number;
+    description: string;
+    dueDate: string;
+    contaCorrente?: { nome: string } | null;
+    transacoes?: (Transacao & { contaCorrente?: { nome: string }; sale?: { goldPrice?: number } })[];
+  } | null;
 }
 
 export interface PaymentTerm {
@@ -98,7 +111,12 @@ export interface Sale {
     description: string;
     received: boolean;
     receivedAt: string | null;
-    transacao?: Transacao & { contaCorrente?: { nome: string }; sale?: { goldPrice?: number } };
+    amountPaid?: number;
+    goldAmount?: number;
+    goldAmountPaid?: number;
+    dueDate: string;
+    contaCorrente?: { nome: string } | null;
+    transacoes?: (Transacao & { contaCorrente?: { nome: string }; sale?: { goldPrice?: number } })[];
   }[];
   saleItems?: {
     id: string;
