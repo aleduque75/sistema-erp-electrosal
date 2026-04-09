@@ -1,12 +1,18 @@
-import { Controller, Post, Body, UseGuards, Req, ValidationPipe } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req, ValidationPipe, Patch, Param } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdjustStockUseCase } from './use-cases/adjust-stock.use-case';
+import { ListInventoryLotsUseCase } from './use-cases/list-inventory-lots.use-case';
+import { UpdateInventoryLotUseCase } from './use-cases/update-inventory-lot.use-case';
 import { AdjustStockDto } from './dto/adjust-stock.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('stock')
 export class StockController {
-  constructor(private readonly adjustStockUseCase: AdjustStockUseCase) {}
+  constructor(
+    private readonly adjustStockUseCase: AdjustStockUseCase,
+    private readonly listInventoryLotsUseCase: ListInventoryLotsUseCase,
+    private readonly updateInventoryLotUseCase: UpdateInventoryLotUseCase,
+  ) {}
 
   @Post('adjust')
   async adjustStock(@Body(new ValidationPipe()) dto: AdjustStockDto, @Req() req) {
@@ -20,5 +26,17 @@ export class StockController {
       notes: dto.notes,
     };
     return this.adjustStockUseCase.execute(command);
+  }
+
+  @Get('lots')
+  async findAll(@Req() req) {
+    const organizationId = req.user?.organizationId;
+    return this.listInventoryLotsUseCase.execute(organizationId);
+  }
+
+  @Patch('lots/:id')
+  async update(@Req() req, @Param('id') id: string, @Body() body: any) {
+    const organizationId = req.user?.organizationId;
+    return this.updateInventoryLotUseCase.execute(organizationId, id, body);
   }
 }

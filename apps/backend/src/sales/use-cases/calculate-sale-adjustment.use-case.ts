@@ -132,13 +132,12 @@ export class CalculateSaleAdjustmentUseCase {
     let paymentQuotation: Decimal | null = null;
 
     if (isSilverSale && goldPrice && silverPrice) {
-      // For Silver sales, we Normalize EVERYTHING to GOLD.
-      // So Payment Quotation is the GOLD Price.
-      paymentQuotation = goldPrice;
+      // For Silver sales, the reference quotation for "Profit in Metal" is the SILVER price.
+      paymentQuotation = silverPrice;
 
-      // Payment Equivalent Grams is strictly Payment / GoldPrice
+      // Payment Equivalent Grams is strictly Payment / Quotation (Silver Price in this case)
       if (!paymentReceivedBRL.isZero()) {
-        paymentEquivalentGrams = paymentReceivedBRL.dividedBy(goldPrice);
+        paymentEquivalentGrams = paymentReceivedBRL.dividedBy(silverPrice);
       }
     } else {
       // Standard Gold Logic
