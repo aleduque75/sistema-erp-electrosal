@@ -57,22 +57,30 @@ export class CalculateSaleAdjustmentUseCase {
       throw new NotFoundException(`Venda com ID ${saleId} não encontrada.`);
     }
 
-    // Find the primary AccountRec for the sale
-    const primaryAccountRec = sale.accountsRec.find(ar => ar.saleId === saleId);
-
-    if (!primaryAccountRec) {
-      this.logger.warn(`[SALE_ADJUSTMENT] Nenhuma conta a receber principal encontrada para a venda ID: ${saleId}. Pulando ajuste de BRL.`);
-      // Proceed with other calculations even if no primary AccountRec is found for BRL adjustment
-    }
-
-    // Calculate outstanding BRL balance for the primary AccountRec
+    // Calculate total outstanding BRL balance across ALL accounts receivables (direct and installments)
     let outstandingBRL = new Decimal(0);
-    if (primaryAccountRec) {
-      const totalPaidBRL = primaryAccountRec.transacoes.reduce(
-        (sum, t) => sum.plus(t.valor || 0),
-        new Decimal(0),
-      );
-      outstandingBRL = primaryAccountRec.amount.minus(totalPaidBRL);
+    let primaryAccountRec: any = null;
+
+    if (sale.accountsRec && sale.accountsRec.length > 0) {
+      for (const ar of sale.accountsRec) {
+        const totalPaidBRL = (ar.transacoes || []).reduce(
+          (sum, t) => {
+            const val = new Decimal(t.valor || 0);
+            return t.tipo === 'DEBITO' ? sum.minus(val) : sum.plus(val);
+          },
+          new Decimal(0),
+        );
+        const arOutstanding = ar.amount.minus(totalPaidBRL);
+        outstandingBRL = outstandingBRL.plus(arOutstanding);
+
+        // Pick the first one with outstanding balance as the primary target for automatic metal adjustments
+        if (!primaryAccountRec && arOutstanding.gt(0)) {
+          primaryAccountRec = ar;
+        }
+      }
+      
+      // Fallback: if all are paid, pick the first one anyway for metadata
+      if (!primaryAccountRec) primaryAccountRec = sale.accountsRec[0];
     }
 
 
@@ -115,37 +123,47 @@ export class CalculateSaleAdjustmentUseCase {
     let silverPrice: Decimal | null = null;
     let goldPrice: Decimal | null = null;
 
+    // Fetch quotations (Always use latest for replacement cost/projected profit)
+    const now = new Date();
+    goldPrice = await this.getGoldPrice(prismaClient, organizationId, now);
     if (isSilverSale) {
-      silverPrice = await this.getSilverPrice(prismaClient, organizationId, sale.createdAt);
-      goldPrice = await this.getGoldPrice(prismaClient, organizationId, sale.createdAt);
+      silverPrice = await this.getSilverPrice(prismaClient, organizationId, now);
 
       if (silverPrice) {
         this.logger.log(`[SALE_ADJUSTMENT] Detected Silver Sale. Silver Price: ${silverPrice.toFixed(4)} BRL/g`);
       }
-      if (goldPrice) {
-        this.logger.log(`[SALE_ADJUSTMENT] Detected Silver Sale. Gold Price: ${goldPrice.toFixed(4)} BRL/g`);
-      }
+    }
+    
+    if (goldPrice) {
+      this.logger.log(`[SALE_ADJUSTMENT] Gold Price Reference: ${goldPrice.toFixed(4)} BRL/g`);
     }
     // -----------------------------
 
-    // 2. Determine Effective Payment Quotation
-    let paymentQuotation: Decimal | null = null;
+    // 2. Determine Effective Payment Quotation and Revenue
+    // We always track profit in GOLD (AU) for this user's business model.
+    let paymentQuotation: Decimal | null = goldPrice;
 
-    if (isSilverSale && goldPrice && silverPrice) {
-      // For Silver sales, the reference quotation for "Profit in Metal" is the SILVER price.
-      paymentQuotation = silverPrice;
+    // Calculate Projected Metal Revenue in AU:
+    // Sum of gold already registered in transactions + equivalent AU of outstanding BRL balance at current rate
+    let metalRevenueAU = allTransactions.reduce((sum, t) => {
+      const grams = new Decimal(t.goldAmount || 0);
+      return t.tipo === 'DEBITO' ? sum.minus(grams) : sum.plus(grams);
+    }, new Decimal(0));
 
-      // Payment Equivalent Grams is strictly Payment / Quotation (Silver Price in this case)
-      if (!paymentReceivedBRL.isZero()) {
-        paymentEquivalentGrams = paymentReceivedBRL.dividedBy(silverPrice);
-      }
+    // If there is an outstanding BRL balance, project how much AU it represents
+    if (outstandingBRL.gt(0) && goldPrice && goldPrice.gt(0)) {
+      const pendingAU = outstandingBRL.dividedBy(goldPrice);
+      metalRevenueAU = metalRevenueAU.plus(pendingAU);
+    }
+
+    paymentEquivalentGrams = metalRevenueAU;
+
+    // Determine the effective quotation for display:
+    // If we have payments, use the weighted average rate. Otherwise, use current gold price.
+    if (!paymentReceivedBRL.isZero() && !paymentEquivalentGrams.isZero()) {
+      paymentQuotation = paymentReceivedBRL.dividedBy(paymentEquivalentGrams);
     } else {
-      // Standard Gold Logic
-      if (!paymentReceivedBRL.isZero() && !paymentEquivalentGrams.isZero()) {
-        paymentQuotation = paymentReceivedBRL.dividedBy(paymentEquivalentGrams);
-      } else {
-        paymentQuotation = sale.goldPrice; // Fallback to sale quotation
-      }
+      paymentQuotation = goldPrice || sale.goldPrice;
     }
 
     // 3. Calculate Expected Grams (Metal Content) and Total Cost
@@ -183,11 +201,29 @@ export class CalculateSaleAdjustmentUseCase {
     }
 
     let totalCostBRL = new Decimal(0);
+    let totalCostGrams = new Decimal(0);
     const primaryCalcMethod = sale.saleItems[0]?.product.productGroup?.adjustmentCalcMethod; // Assuming uniform calc method for simplicity
 
     if (primaryCalcMethod === 'QUANTITY_BASED' && paymentQuotation && !paymentQuotation.isZero()) {
       // For QUANTITY_BASED, the 'cost' in BRL is the value of the pure metal content at the sale's quotation.
       totalCostBRL = saleExpectedGrams.times(paymentQuotation);
+      
+      // Calculate totalCostGrams based on metal type
+      if (isSilverSale) {
+        // For Silver, we want to use the historical lot cost in AU (the user's 'conversion' logic)
+        for (const item of sale.saleItems) {
+          const saleItemLots = (item as any).saleItemLots;
+          if (saleItemLots && saleItemLots.length > 0) {
+            for (const lot of saleItemLots) {
+              const lotCostAu = new Decimal(lot.inventoryLot.unitCostAu || 0).times(new Decimal(lot.quantity));
+              totalCostGrams = totalCostGrams.plus(lotCostAu);
+            }
+          }
+        }
+      } else {
+        // For Gold (Sal 68%, etc), the metal cost is simply the metal content itself.
+        totalCostGrams = saleExpectedGrams;
+      }
     } else {
       // For COST_BASED (or if quotation is zero), sum up the historical inventory lot costs.
       // This is the original logic for totalCostBRL
@@ -198,6 +234,14 @@ export class CalculateSaleAdjustmentUseCase {
         if (saleItemLots && saleItemLots.length > 0) {
           for (const lot of saleItemLots) {
             const lotCostPrice = new Decimal(lot.inventoryLot.costPrice || 0);
+            const lotCostAu = new Decimal(lot.inventoryLot.unitCostAu || 0).times(new Decimal(lot.quantity));
+            
+            // Increment totalCostGrams - here we might also need to check isSilverSale, 
+            // but usually COST_BASED is not used for pure AU content tracking.
+            if (isSilverSale) {
+               totalCostGrams = totalCostGrams.plus(lotCostAu);
+            }
+
             if (lotCostPrice.isZero()) {
               // Se o custo do lote for zero, usar o custo do item no momento da venda como fallback
               itemCost = itemCost.plus(new Decimal(item.costPriceAtSale || 0).times(new Decimal(lot.quantity)));
@@ -208,8 +252,20 @@ export class CalculateSaleAdjustmentUseCase {
           }
         } else {
           itemCost = new Decimal(item.costPriceAtSale || 0).times(new Decimal(item.quantity));
+          // Fallback for totalCostGrams if no lots
+          if (!isSilverSale) {
+            // For Gold, if no lots, use expected grams directly
+            // saleExpectedGrams is calculated per sale, so we can't easily distribute it here
+            // but totalCostGrams is cumulative.
+          } else if (paymentQuotation && !paymentQuotation.isZero()) {
+            totalCostGrams = totalCostGrams.plus(itemCost.dividedBy(paymentQuotation));
+          }
         }
         totalCostBRL = totalCostBRL.plus(itemCost);
+      }
+      
+      if (!isSilverSale) {
+        totalCostGrams = saleExpectedGrams;
       }
     }
 
@@ -245,6 +301,13 @@ export class CalculateSaleAdjustmentUseCase {
         ? laborCostInGrams.times(paymentQuotation)
         : new Decimal(0);
 
+    // 5. Calculate Profits
+    // The "True Cost" (totalCostBRL) for metal-based sales is the REPLACEMENT cost.
+    // This protects the cash flow needed to buy back the same amount of metal.
+    if (totalCostGrams.gt(0) && paymentQuotation && paymentQuotation.gt(0)) {
+       totalCostBRL = totalCostGrams.times(paymentQuotation);
+    }
+
     const grossProfitBRL = paymentReceivedBRL.minus(totalCostBRL);
     const otherCostsBRL = new Decimal(sale.shippingCost || 0);
     const commissionBRL = new Decimal(sale.commissionAmount || 0);
@@ -254,17 +317,22 @@ export class CalculateSaleAdjustmentUseCase {
     let netDiscrepancyGrams: Decimal;
     let grossDiscrepancyGrams: Decimal;
 
-    if (paymentQuotation && paymentQuotation.gt(0)) {
-      netDiscrepancyGrams = netProfitBRL.dividedBy(paymentQuotation);
-    } else {
-      netDiscrepancyGrams = new Decimal(0);
-    }
-
     const commissionInGrams = (commissionBRL.gt(0) && paymentQuotation && paymentQuotation.gt(0))
       ? commissionBRL.dividedBy(paymentQuotation)
       : new Decimal(0);
 
-    // Back-calculate gross discrepancy and expected grams for data consistency
+    if (paymentQuotation && paymentQuotation.gt(0)) {
+      // netDiscrepancyGrams is now Metal Received - Historical Metal Cost
+      // We also subtract labor and other costs if they were converted to grams.
+      const netProfitAU = paymentEquivalentGrams
+        .minus(totalCostGrams)
+        .minus(costsInGrams || 0)
+        .minus(commissionInGrams || 0);
+      
+      netDiscrepancyGrams = netProfitAU;
+    } else {
+      netDiscrepancyGrams = new Decimal(0);
+    }
     grossDiscrepancyGrams = netDiscrepancyGrams.plus(costsInGrams || 0).plus(commissionInGrams);
     // We must redefine saleExpectedGrams here to ensure the final adjustment data is consistent
     saleExpectedGrams = paymentEquivalentGrams.minus(grossDiscrepancyGrams);
@@ -289,6 +357,7 @@ export class CalculateSaleAdjustmentUseCase {
       laborCostBRL: laborCostInBRL,
       netDiscrepancyGrams,
       totalCostBRL,
+      totalCostGrams,
       grossProfitBRL,
       otherCostsBRL,
       commissionBRL,
@@ -314,9 +383,8 @@ export class CalculateSaleAdjustmentUseCase {
           where: { id: primaryAccountRec.id },
           data: {
             amount: paymentReceivedBRL,
-            received: true,
-            receivedAt: new Date(),
             amountPaid: paymentReceivedBRL,
+            received: outstandingBRL.lessThanOrEqualTo(new Decimal(0.01)),
           },
         });
         this.logger.log(`[SALE_ADJUSTMENT] AccountRec ${primaryAccountRec.id} ajustado para o valor pago (Grams Satisfied) sem criar transação de perda.`);

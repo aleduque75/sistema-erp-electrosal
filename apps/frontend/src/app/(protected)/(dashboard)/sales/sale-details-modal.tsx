@@ -125,16 +125,21 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
             });
           }
         });
-      } else if (ar.received) {
+      } else if (ar.received && (Number(ar.goldAmountPaid || 0) > 0 || Number(ar.amountPaid || 0) > 0)) {
         // Fallback: If received but no linked transactions, show a virtual one
+        // BUT only if it actually has values, and prioritize metal credits
         const virtualId = `virtual-${ar.id}`;
         if (!uniqueMap.has(virtualId)) {
+          // If it's a BRL-only payment and we don't have a transaction, 
+          // we might want to hide it if there's a pending installment, 
+          // but if it's mark as RECEIVED, we should show something.
+          // However, avoid showing "Credit of Metal" for BRL payments.
           uniqueMap.set(virtualId, {
             id: virtualId,
-            dataHora: ar.receivedAt || ar.dueDate,
+            data_hora: ar.receivedAt || ar.dueDate,
             valor: ar.amountPaid || ar.amount,
             goldAmount: ar.goldAmountPaid || ar.goldAmount,
-            displayAccount: ar.contaCorrente?.nome || 'Crédito de Metal/Outro',
+            displayAccount: ar.contaCorrente?.nome || (Number(ar.goldAmountPaid || 0) > 0 ? 'Crédito de Metal' : 'Recebimento Direto'),
             isVirtual: true
           });
         }
@@ -212,6 +217,10 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Mão de Obra (Au):</span>
                         <span className="font-medium text-foreground">{formatGrams(Number(sale.adjustment.laborCostGrams || 0))} g</span>
+                      </div>
+                      <div className="flex justify-between border-t border-primary/5 pt-1 mt-1">
+                        <span className="text-muted-foreground font-medium">Custo Histórico Lotes (Au):</span>
+                        <span className="font-medium text-red-500">{formatGrams(Number(sale.adjustment.totalCostGrams || 0))} g</span>
                       </div>
                     </div>
                   )}

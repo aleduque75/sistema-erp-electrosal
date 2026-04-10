@@ -4,6 +4,7 @@ import { Decimal } from 'decimal.js';
 import { Prisma, PurchaseOrder, PurchaseOrderStatus } from '@prisma/client';
 import { CreatePurchaseOrderDto, UpdatePurchaseOrderDto } from './dtos/purchase-order.dto';
 import { addDays } from 'date-fns';
+import { QuotationsService } from '../quotations/quotations.service';
 
 type PurchaseOrderWithItems = Prisma.PurchaseOrderGetPayload<{
   include: { items: true };
@@ -12,7 +13,10 @@ type PurchaseOrderWithItems = Prisma.PurchaseOrderGetPayload<{
 @Injectable()
 export class PurchaseOrdersService {
   private readonly logger = new Logger(PurchaseOrdersService.name);
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private quotationsService: QuotationsService,
+  ) { }
 
   async create(organizationId: string, data: CreatePurchaseOrderDto): Promise<PurchaseOrder> {
     const { items, fornecedorId, paymentTermId, ...orderData } = data;
@@ -278,11 +282,20 @@ export class PurchaseOrdersService {
         }
 
         if (item.productId) {
+          // Fetch gold quotation for the reception date
+          const goldQuote = await this.quotationsService.findLatest('AU', organizationId, receptionDate);
+          let unitCostAu: Decimal | null = null;
+          if (goldQuote && goldQuote.buyPrice) {
+            unitCostAu = new Decimal(item.price).dividedBy(goldQuote.buyPrice);
+          }
+
           const createdLot = await tx.inventoryLot.create({
             data: {
               organizationId: organizationId,
               productId: item.productId,
               costPrice: item.price, // Cost price from purchase order item
+              unitCostAu: unitCostAu,
+              goldQuotationAtAcquisition: goldQuote?.buyPrice,
               quantity: quantityToStock,
               remainingQuantity: quantityToStock,
               sourceType: 'PURCHASE_ORDER',

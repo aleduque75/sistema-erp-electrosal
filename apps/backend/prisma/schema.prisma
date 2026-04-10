@@ -253,9 +253,11 @@ model InventoryLot {
   organizationId    String
   productId         String
   batchNumber       String?
-  costPrice         Decimal             @db.Decimal(10, 2)
-  quantity          Float
-  remainingQuantity Float
+  costPrice                 Decimal             @db.Decimal(10, 2)
+  unitCostAu                Decimal?            @db.Decimal(12, 6)
+  goldQuotationAtAcquisition Decimal?            @db.Decimal(10, 2)
+  quantity                  Float
+  remainingQuantity         Float
   sourceType        String
   sourceId          String
   notes             String?
@@ -1137,6 +1139,7 @@ model SaleAdjustment {
   netProfitBRL           Decimal?     @db.Decimal(14, 2)
   otherCostsBRL          Decimal?     @db.Decimal(14, 2)
   totalCostBRL           Decimal?     @db.Decimal(14, 2)
+  totalCostGrams         Decimal?     @db.Decimal(12, 4)
   laborCostBRL           Decimal?     @db.Decimal(14, 2)
   laborCostGrams         Decimal?     @db.Decimal(12, 4)
   commissionBRL          Decimal?     @db.Decimal(14, 2)

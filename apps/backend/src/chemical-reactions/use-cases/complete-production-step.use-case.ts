@@ -104,6 +104,14 @@ export class CompleteProductionStepUseCase {
       }
       const totalCost = totalGoldGrams.times(metalQuote.buyPrice);
       const costPricePerGramOfProduct = goldInOutputProduct.gt(0) ? totalCost.dividedBy(outputProductGrams) : new Decimal(0);
+      
+      // Calculate unit AU cost: Grams of AU used / Grams of Product produced
+      // OR costPriceInBrl / goldQuotation. 
+      // Using costPrice / goldQuotation for consistency with purchase logic if it includes other costs.
+      const goldQuote = await this.quotationsService.findLatest('AU', organizationId);
+      const unitCostAu = (goldQuote && goldQuote.buyPrice && !goldQuote.buyPrice.isZero()) 
+        ? costPricePerGramOfProduct.dividedBy(goldQuote.buyPrice)
+        : null;
 
       // Determine the quantity to save based on the product's stock unit
       let stockQuantity: number;
@@ -122,6 +130,8 @@ export class CompleteProductionStepUseCase {
           quantity: stockQuantity,
           remainingQuantity: stockQuantity,
           costPrice: costPricePerGramOfProduct.toDecimalPlaces(2),
+          unitCostAu: unitCostAu,
+          goldQuotationAtAcquisition: goldQuote?.buyPrice,
           sourceType: 'REACTION',
           sourceId: reaction.id,
           receivedDate: completionDate,

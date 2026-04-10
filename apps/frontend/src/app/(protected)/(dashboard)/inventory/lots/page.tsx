@@ -37,6 +37,8 @@ interface InventoryLot {
   sourceType: string;
   sourceId: string;
   receivedDate: string;
+  unitCostAu?: number;
+  goldQuotationAtAcquisition?: number;
   product: {
     name: string;
     stockUnit?: string;
@@ -158,6 +160,7 @@ export default function InventoryLotsPage() {
                     <TableHead className="font-bold text-foreground">Lote / Batch</TableHead>
                     <TableHead className="font-bold text-foreground">Origem</TableHead>
                     <TableHead className="text-right font-bold text-foreground">Custo Unitário</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">Custo (AU)</TableHead>
                     <TableHead className="text-right font-bold text-foreground">Saldo Atual</TableHead>
                     <TableHead className="text-right font-bold text-foreground">Data Entrada</TableHead>
                     <TableHead className="text-right font-bold text-foreground px-4">Ação</TableHead>
@@ -181,6 +184,9 @@ export default function InventoryLotsPage() {
                         </TableCell>
                         <TableCell className="text-right font-semibold text-foreground">
                           {formatCurrency(Number(lot.costPrice), displayUnit)}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-amber-600">
+                          {lot.unitCostAu ? `${Number(lot.unitCostAu).toFixed(6)} g` : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
                           <span className={`px-2 py-1 rounded text-xs font-bold ${lot.remainingQuantity > 0 ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
