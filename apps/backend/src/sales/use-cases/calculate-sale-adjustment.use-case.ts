@@ -50,6 +50,13 @@ export class CalculateSaleAdjustmentUseCase {
             },
           },
         },
+        pureMetalLots: {
+          include: {
+            movements: {
+              where: { type: 'EXIT' }
+            }
+          }
+        }
       },
     });
 
@@ -115,10 +122,11 @@ export class CalculateSaleAdjustmentUseCase {
 
     // --- SILVER DETECTION LOGIC ---
     const silverKeywords = ['prata', 'silver', 'ag '];
-    const isSilverSale = sale.saleItems.length > 0 && sale.saleItems.every(item => {
+    const includesSilverLot = (sale as any).pureMetalLots?.some(l => l.metalType === 'AG');
+    const isSilverSale = (sale.saleItems.length > 0 && sale.saleItems.every(item => {
       const name = (item.product.name + ' ' + (item.product.productGroup?.name || '')).toLowerCase();
       return silverKeywords.some(kw => name.includes(kw));
-    });
+    })) || (sale.saleItems.length === 0 && includesSilverLot);
 
     let silverPrice: Decimal | null = null;
     let goldPrice: Decimal | null = null;
@@ -169,6 +177,8 @@ export class CalculateSaleAdjustmentUseCase {
     // 3. Calculate Expected Grams (Metal Content) and Total Cost
     let saleExpectedGrams = new Decimal(0);
     let itemsLaborGrams = new Decimal(0);
+    let totalCostBRL = new Decimal(0);
+    let totalCostGrams = new Decimal(0);
 
     for (const item of sale.saleItems) {
       let itemExpectedGrams = new Decimal(0);
@@ -200,8 +210,34 @@ export class CalculateSaleAdjustmentUseCase {
       }
     }
 
-    let totalCostBRL = new Decimal(0);
-    let totalCostGrams = new Decimal(0);
+    // --- RECOUP PREVIOUS BLANK SALES (LMP Rule) ---
+    // Se a venda não tem itens mas está vinculada a lotes de metal puro (vendas antigas de metal)
+    if (sale.saleItems.length === 0 && (sale as any).pureMetalLots?.length > 0) {
+      this.logger.log(`[SALE_ADJUSTMENT] Venda ${saleId} detectada como venda de Lote de Metal Puro sem itens. Aplicando regra de recuperação.`);
+      for (const lot of (sale as any).pureMetalLots) {
+        const exitMovements = lot.movements || [];
+        const lotGrams = exitMovements.length > 0 ? new Decimal(exitMovements[0].grams) : new Decimal(lot.initialGrams);
+        
+        let itemExpectedGrams = lotGrams;
+        
+        // Se o lote for de prata, aplicar conversão
+        if (lot.metalType === 'AG' && silverPrice && goldPrice) {
+          const valueBRL = itemExpectedGrams.times(silverPrice);
+          itemExpectedGrams = valueBRL.dividedBy(goldPrice);
+        }
+        
+        saleExpectedGrams = saleExpectedGrams.plus(itemExpectedGrams);
+      }
+
+      // Preencher custos para vendas em branco ( LMP Rule )
+      totalCostGrams = saleExpectedGrams;
+      if (paymentQuotation && !paymentQuotation.isZero()) {
+        totalCostBRL = saleExpectedGrams.times(paymentQuotation);
+      }
+    }
+    // ----------------------------------------------
+
+
     const primaryCalcMethod = sale.saleItems[0]?.product.productGroup?.adjustmentCalcMethod; // Assuming uniform calc method for simplicity
 
     if (primaryCalcMethod === 'QUANTITY_BASED' && paymentQuotation && !paymentQuotation.isZero()) {

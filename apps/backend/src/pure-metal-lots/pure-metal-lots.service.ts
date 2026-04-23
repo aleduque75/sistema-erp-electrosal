@@ -301,6 +301,43 @@ export class PureMetalLotsService {
     return movement;
   }
 
+  private async ensurePureMetalProduct(organizationId: string, metalType: TipoMetal, tx: Prisma.TransactionClient) {
+    const productName = metalType === TipoMetal.AU ? 'Ouro Puro (LMP)' : 'Prata Pura (LMP)';
+    
+    // 1. Tentar encontrar por nome exato
+    let product = await tx.product.findFirst({
+      where: { 
+        organizationId,
+        name: { equals: productName, mode: 'insensitive' }
+      }
+    });
+
+    if (product) return product;
+
+    // 2. Se não encontrar, tentar encontrar um que tenha goldValue = 1.0 (para Ouro)
+    if (metalType === TipoMetal.AU) {
+      product = await tx.product.findFirst({
+        where: {
+          organizationId,
+          goldValue: 1.0
+        }
+      });
+      if (product) return product;
+    }
+
+    // 3. Se ainda não encontrar, criar um novo
+    return tx.product.create({
+      data: {
+        organizationId,
+        name: productName,
+        price: 0,
+        stockUnit: 'GRAMS',
+        goldValue: 1.0,
+        description: `Produto automático para venda de metal puro (${metalType})`
+      }
+    });
+  }
+
   async sell(organizationId: string, userId: string, id: string, dto: SellPureMetalLotDto) {
     return this.prisma.$transaction(async (tx) => {
       const lot = await tx.pure_metal_lots.findUnique({
@@ -322,7 +359,10 @@ export class PureMetalLotsService {
       });
       const nextOrderNumber = (lastSale?.orderNumber || 31700) + 1;
 
-      // 2. Create Sale
+      // 2. Garantir que o produto de metal puro existe
+      const metalProduct = await this.ensurePureMetalProduct(organizationId, lot.metalType, tx);
+
+      // 3. Create Sale
       const sale = await tx.sale.create({
         data: {
           organizationId,
@@ -335,7 +375,19 @@ export class PureMetalLotsService {
         },
       });
 
-      // 3. Create AccountRec
+      // 4. Create SaleItem (NOVO: Para evitar pedido em branco e calcular lucro)
+      const itemPrice = dto.grams > 0 ? (dto.totalAmount / dto.grams) : 0;
+      await tx.saleItem.create({
+        data: {
+          saleId: sale.id,
+          productId: metalProduct.id,
+          quantity: dto.grams,
+          price: itemPrice,
+          costPriceAtSale: 0, // O custo em gramas será determinado pelo goldValue do produto
+        }
+      });
+
+      // 5. Create AccountRec
       await tx.accountRec.create({
         data: {
           organizationId,
@@ -346,7 +398,7 @@ export class PureMetalLotsService {
         },
       });
 
-      // 4. Create Movement
+      // 6. Create Movement
       await tx.pureMetalLotMovement.create({
         data: {
           organizationId,
@@ -358,7 +410,7 @@ export class PureMetalLotsService {
         },
       });
 
-      // 5. Update Lot
+      // 7. Update Lot
       const newRemainingGrams = lot.remainingGrams - dto.grams;
       let newStatus = lot.status;
       if (newRemainingGrams <= 0) {
