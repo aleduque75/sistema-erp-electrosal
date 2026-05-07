@@ -65,6 +65,15 @@ export class SalesService {
                   name: true,
                 },
               },
+              saleItemLots: {
+                include: {
+                  inventoryLot: {
+                    select: {
+                      batchNumber: true,
+                    },
+                  },
+                },
+              },
             },
             take: 10, // Otimização: limitar itens na listagem se houver muitos
           },

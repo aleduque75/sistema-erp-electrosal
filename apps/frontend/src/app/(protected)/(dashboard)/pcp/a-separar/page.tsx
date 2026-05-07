@@ -59,6 +59,10 @@ export interface Sale {
     product: { name: string };
     inventoryLotId?: string;
     inventoryLot?: { batchNumber: string };
+    saleItemLots?: {
+      inventoryLot: { batchNumber: string };
+      quantity: number;
+    }[];
   }[];
   installments: SaleInstallment[]; // Added installments
   paymentTerm?: PaymentTerm; // Added paymentTerm
@@ -76,7 +80,7 @@ export default function PcpPickingPage() {
     setIsPageLoading(true);
     try {
       const response = await api.get('/sales?status=A_SEPARAR');
-      setOrders(response.data);
+      setOrders(response.data.data);
     } catch (err) {
       toast.error('Falha ao buscar pedidos para separação.');
     } finally {
@@ -146,7 +150,10 @@ export default function PcpPickingPage() {
             {row.original.saleItems.map(item => (
               <li key={item.id}>
                 {item.quantity}x {item.product.name}
-                {item.inventoryLot?.batchNumber && ` (Lote: ${item.inventoryLot.batchNumber})`}
+                {item.saleItemLots && item.saleItemLots.length > 0 
+                  ? ` (Lote${item.saleItemLots.length > 1 ? 's' : ''}: ${item.saleItemLots.map(sil => sil.inventoryLot.batchNumber).join(', ')})`
+                  : <span className="text-red-500 ml-1 font-semibold">(Sem lote)</span>
+                }
               </li>
             ))}
           </ul>

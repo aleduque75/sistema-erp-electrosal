@@ -199,6 +199,12 @@ export function SeparationDialog({ saleId, isOpen, onOpenChange, onSeparationCon
                   <CardTitle>Detalhes do Romaneio</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {sale.saleItems.some(item => !item.saleItemLots || item.saleItemLots.length === 0) && (
+                    <div className="bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-400 p-4 rounded-md border border-red-200 dark:border-red-900/50 mb-4 font-medium flex items-start gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-triangle h-5 w-5 shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                      Atenção: Há itens neste pedido sem lote vinculado. Clique em "Vincular Lotes" na tabela abaixo antes de tentar confirmar a separação.
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div><span className="font-semibold">Cliente:</span> {sale.pessoa.name}</div>
                     <div><span className="font-semibold">Data da Venda:</span> {new Date(sale.createdAt).toLocaleDateString('pt-BR')}</div>
@@ -235,9 +241,9 @@ export function SeparationDialog({ saleId, isOpen, onOpenChange, onSeparationCon
                         <TableRow key={item.id}>
                           <TableCell>{item.product.name}</TableCell>
                           <TableCell>
-                            {item.saleItemLots.length > 0
+                            {item.saleItemLots && item.saleItemLots.length > 0
                               ? item.saleItemLots.map(sil => `Lote: ${sil.inventoryLot.batchNumber} (Qtd: ${sil.quantity})`).join(', ')
-                              : 'N/A'}
+                              : <span className="text-red-500 font-semibold">(Sem lote selecionado)</span>}
                           </TableCell>
                           <TableCell className="text-right">{item.quantity.toFixed(4)}</TableCell>
                           <TableCell>

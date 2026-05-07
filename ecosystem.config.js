@@ -21,10 +21,10 @@ module.exports = {
       name: isProduction ? "erp-frontend" : "erp-frontend-homologation",
       cwd: path.join(rootPath, "apps/frontend"),
       script: "node_modules/next/dist/bin/next",
-      args: `start -p ${isProduction ? "3000" : "4000"}`,
+      args: `start -p ${isProduction ? "3000" : "3003"}`,
       env: {
         NODE_ENV: "production",
-        PORT: isProduction ? "3000" : "4000",
+        PORT: isProduction ? "3000" : "3003",
       }
     }
   ]
