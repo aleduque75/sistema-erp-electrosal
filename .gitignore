@@ -68,3 +68,14 @@ data/xml/
 
 .aider*
 apps/backend/backup_producao.sql
+
+# Proxy and LetsEncrypt logs
+npm/
+letsencrypt/
+data/
+*.bak
+
+# Temporary PM2 and backup logs
+pm2_backend.log
+backend_recent.log
+backup_pre_migration_*.sql
