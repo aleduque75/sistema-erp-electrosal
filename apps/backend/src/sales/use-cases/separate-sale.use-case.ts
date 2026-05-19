@@ -54,8 +54,15 @@ export class SeparateSaleUseCase {
             throw new BadRequestException(`O item ${item.product.name} não possui lotes de estoque associados.`);
           }
 
-          // Primeiro, decrementa o estoque dos lotes individuais
+          let quantityToDecrementFromTotalStock = new Decimal(0);
+
+          // Primeiro, decrementa o estoque dos lotes individuais que ainda não foram baixados
           for (const saleItemLot of (item as any).saleItemLots) {
+            if (saleItemLot.isStockDeducted) {
+              this.logger.log(`Stock for lot ${saleItemLot.inventoryLotId} already deducted, skipping.`);
+              continue;
+            }
+
             const lotQuantityToDecrement = new Decimal(saleItemLot.quantity).toNumber();
 
             this.logger.log(`Decrementing stock for item ${item.id} from lot ${saleItemLot.inventoryLotId} by ${lotQuantityToDecrement}`);
@@ -76,15 +83,25 @@ export class SeparateSaleUseCase {
                 createdAt: separationDate || saleWithItems.createdAt,
               }
             });
+
+            // Marca o lote como baixado
+            await tx.saleItemLot.update({
+              where: { id: saleItemLot.id },
+              data: { isStockDeducted: true },
+            });
+
+            quantityToDecrementFromTotalStock = quantityToDecrementFromTotalStock.plus(lotQuantityToDecrement);
           }
 
-          // Depois, decrementa o estoque total do produto uma única vez
-          const totalItemQuantityToDecrement = new Decimal(item.quantity).toNumber();
-          this.logger.log(`Decrementing total product stock for item ${item.id} by ${totalItemQuantityToDecrement}`);
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: totalItemQuantityToDecrement } },
-          });
+          // Depois, decrementa o estoque total do produto apenas pela quantidade que foi baixada agora
+          if (quantityToDecrementFromTotalStock.greaterThan(0)) {
+            const totalToDecrement = quantityToDecrementFromTotalStock.toNumber();
+            this.logger.log(`Decrementing total product stock for item ${item.id} by ${totalToDecrement}`);
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: totalToDecrement } },
+            });
+          }
         }
 
         this.logger.log(`Updating sale ${saleId} status to SEPARADO`);

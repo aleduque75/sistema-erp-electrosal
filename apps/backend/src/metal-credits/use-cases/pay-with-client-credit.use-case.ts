@@ -8,6 +8,7 @@ import { Decimal } from 'decimal.js';
 import { PayWithClientCreditDto } from '../dtos/pay-with-client-credit.dto';
 import { CreateMetalAccountEntryUseCase } from '../../metal-accounts/use-cases/create-metal-account-entry.use-case';
 import { CreateMetalAccountUseCase } from '../../metal-accounts/use-cases/create-metal-account.use-case';
+import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
 
 @Injectable()
 export class PayWithClientCreditUseCase {
@@ -18,6 +19,7 @@ export class PayWithClientCreditUseCase {
     private readonly settingsService: SettingsService,
     private readonly createMetalAccountEntryUseCase: CreateMetalAccountEntryUseCase,
     private readonly createMetalAccountUseCase: CreateMetalAccountUseCase,
+    private readonly pureMetalLotsService: PureMetalLotsService,
   ) {}
 
   async execute(organizationId: string, userId: string, dto: PayWithClientCreditDto) {
@@ -160,6 +162,20 @@ export class PayWithClientCreditUseCase {
           sourceId: debitTransaction.id,
         }
       });
+      
+      // 8. Deduct from Pure Metal Lot if linked
+      if (metalCredit.pureMetalLotId) {
+        await this.pureMetalLotsService.createPureMetalLotMovement(
+          organizationId,
+          metalCredit.pureMetalLotId,
+          {
+            type: 'EXIT',
+            grams: gramsToSettle.toNumber(),
+            notes: `Baixa por pagamento de crédito de cliente - Transação: ${debitTransaction.id}`,
+          },
+          tx
+        );
+      }
     });
   }
 }

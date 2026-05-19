@@ -23,6 +23,14 @@ export interface Product {
   };
 }
 
+export interface SaleItemLot {
+  id: string;
+  saleItemId: string;
+  inventoryLotId: string;
+  quantity: number;
+  inventoryLot?: InventoryLot;
+}
+
 export interface SaleItem {
   id: string;
   productId: string;
@@ -34,12 +42,8 @@ export interface SaleItem {
   entryUnit?: string;
   entryQuantity?: number;
   stock?: number;
-  name?: string; // NewSaleForm uses .name in its items
-}
-
-export interface SaleItemLot {
-  inventoryLotId: string;
-  quantity: number;
+  name?: string;
+  saleItemLots?: SaleItemLot[];
 }
 
 export interface SaleInstallment {
@@ -60,7 +64,7 @@ export interface SaleInstallment {
     description: string;
     dueDate: string;
     contaCorrente?: { nome: string } | null;
-    transacoes?: (Transacao & { contaCorrente?: { nome: string }; sale?: { goldPrice?: number } })[];
+    transacoes?: (Transacao & { contaCorrente?: { nome: string }; sale?: { goldPrice?: number }; contaContabil?: { nome: string } })[];
   } | null;
 }
 
@@ -75,7 +79,7 @@ export type SaleStatus = 'PENDENTE' | 'CONFIRMADO' | 'A_SEPARAR' | 'SEPARADO' | 
 export interface Sale {
   id: string;
   orderNumber: number;
-  pessoa: Pessoa; // Assuming Pessoa interface is imported
+  pessoa: Pessoa;
   totalAmount: number;
   feeAmount?: number;
   netAmount: number;
@@ -104,6 +108,7 @@ export interface Sale {
     commissionBRL?: number;
     netProfitBRL?: number;
     paymentQuotation?: number;
+    totalCostGrams?: number;
   };
   accountsRec?: {
     id: string;
@@ -116,17 +121,10 @@ export interface Sale {
     goldAmountPaid?: number;
     dueDate: string;
     contaCorrente?: { nome: string } | null;
-    transacoes?: (Transacao & { contaCorrente?: { nome: string }; sale?: { goldPrice?: number } })[];
+    transacoes?: (Transacao & { contaCorrente?: { nome: string }; sale?: { goldPrice?: number }; contaContabil?: { nome: string } })[];
   }[];
-  saleItems?: {
-    id: string;
-    productId: string;
-    quantity: number;
-    price: number;
-    product: { name: string; goldValue?: number };
-    inventoryLotId?: string;
-    laborPercentage?: number;
-  }[];
+  saleItems?: SaleItem[];
   installments?: SaleInstallment[];
   paymentTerm?: PaymentTerm;
+  observation?: string;
 }

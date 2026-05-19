@@ -153,8 +153,7 @@ export function AddItemModal({
       : (selectedProduct.stock || 0);
 
     if (finalQuantity > totalStockAvailable + 0.01) {
-      toast.error(`Estoque insuficiente. Total disponível: ${totalStockAvailable.toFixed(2)}`);
-      return;
+      toast.warning(`Estoque insuficiente. Total disponível: ${totalStockAvailable.toFixed(2)}. O item será marcado para separação posterior.`);
     }
 
     const lotIdToUse = selectedLot === 'none' ? undefined : selectedLot;

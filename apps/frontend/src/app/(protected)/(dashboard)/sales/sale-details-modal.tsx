@@ -25,6 +25,15 @@ const formatDate = (dateString?: string | null) => {
   return new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 };
 
+const getMetalLabel = (name: string = '') => {
+  const n = name.toUpperCase();
+  if (n.includes('AG')) return 'Ag';
+  if (n.includes('RH')) return 'Rh';
+  return 'Au'; // Default to Au for Sal products or others
+};
+
+const isSalProduct = (name: string = '') => name.toUpperCase().includes('SAL');
+
 interface SaleDetailsModalProps {
   sale: Sale | null;
   open: boolean;
@@ -72,7 +81,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
         .map(ar => {
           const txs = (ar as any).transacoes || (ar as any).transacao || [];
           const txList = Array.isArray(txs) ? txs : [txs];
-          const firstTxName = txList[0]?.contaCorrente?.nome;
+          const firstTxName = txList[0]?.contaCorrente?.nome || txList[0]?.contaContabil?.nome;
           return firstTxName || ar.contaCorrente?.nome;
         })
         .filter(Boolean)
@@ -121,7 +130,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
             uniqueMap.set(t.id, {
               ...t,
               // Fallback for account name if missing from transaction
-              displayAccount: t.contaCorrente?.nome || ar.contaCorrente?.nome || 'N/A'
+              displayAccount: t.contaCorrente?.nome || t.contaContabil?.nome || ar.contaCorrente?.nome || 'N/A'
             });
           }
         });
@@ -332,7 +341,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                     <div key={transacao.id} className="p-4 space-y-2">
                       <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-tighter">
                         <span>{formatDate(transacao.dataHora)}</span>
-                        <span>{transacao.contaCorrente?.nome || 'N/A'}</span>
+                        <span>{transacao.displayAccount}</span>
                       </div>
                       <div className="flex justify-between items-baseline">
                         <span className="text-lg font-black text-zinc-950 font-mono tracking-tighter">{formatCurrency(Number(transacao.valor))}</span>
@@ -368,8 +377,19 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                       {sale.saleItems?.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell>{item.product.name}</TableCell>
-                          <TableCell>{item.inventoryLotId || 'N/A'}</TableCell>
-                          <TableCell className="text-center">{item.quantity}</TableCell>
+                          <TableCell>
+                            {item.saleItemLots && item.saleItemLots.length > 0
+                              ? item.saleItemLots.map((sl: any) => sl.inventoryLot?.batchNumber).filter(Boolean).join(', ')
+                              : item.inventoryLotId || 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.quantity}
+                            {isSalProduct(item.product?.name) && item.product?.goldValue ? item.product.goldValue > 0 && (
+                              <div className="text-[10px] text-amber-600 font-bold">
+                                ({formatGrams(item.quantity * item.product.goldValue)} {getMetalLabel(item.product?.name)})
+                              </div>
+                            ) : null}
+                          </TableCell>
                           <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
                         </TableRow>
                       ))}
@@ -383,10 +403,21 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                     <div key={item.id} className="p-4 gap-1 flex flex-col">
                       <div className="flex justify-between items-start">
                         <span className="font-black text-zinc-900 leading-tight uppercase tracking-tight">{item.product.name}</span>
-                        <span className="text-[10px] bg-zinc-100 px-2 py-0.5 rounded-full font-bold text-zinc-500 uppercase">LT: {item.inventoryLotId || 'N/A'}</span>
+                        <span className="text-[10px] bg-zinc-100 px-2 py-0.5 rounded-full font-bold text-zinc-500 uppercase">
+                          LT: {item.saleItemLots && item.saleItemLots.length > 0
+                            ? item.saleItemLots.map((sl: any) => sl.inventoryLot?.batchNumber).filter(Boolean).join(', ')
+                            : item.inventoryLotId || 'N/A'}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center mt-1">
-                        <span className="text-xs text-zinc-500 font-bold">QTD: {item.quantity}</span>
+                        <span className="text-xs text-zinc-500 font-bold">
+                          QTD: {item.quantity}
+                          {isSalProduct(item.product?.name) && item.product?.goldValue ? item.product.goldValue > 0 && (
+                            <span className="text-amber-600 ml-1">
+                              ({formatGrams(item.quantity * item.product.goldValue)} {getMetalLabel(item.product?.name)})
+                            </span>
+                          ) : null}
+                        </span>
                         <span className="font-bold text-zinc-950">{formatCurrency(item.price * item.quantity)}</span>
                       </div>
                     </div>

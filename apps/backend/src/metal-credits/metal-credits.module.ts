@@ -9,10 +9,11 @@ import { TransacoesModule } from '../transacoes/transacoes.module';
 import { QuotationsModule } from '../quotations/quotations.module';
 import { SettingsModule } from '../settings/settings.module';
 import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
+import { PureMetalLotsModule } from '../pure-metal-lots/pure-metal-lots.module';
 import { GerarPdfMetalCreditUseCase } from './use-cases/gerar-pdf-metal-credit.use-case';
 
 @Module({
-  imports: [PrismaModule, TransacoesModule, QuotationsModule, SettingsModule, MetalAccountsModule],
+  imports: [PrismaModule, TransacoesModule, QuotationsModule, SettingsModule, MetalAccountsModule, PureMetalLotsModule],
   controllers: [MetalCreditsController],
   providers: [
     {

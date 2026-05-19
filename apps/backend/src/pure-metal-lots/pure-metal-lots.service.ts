@@ -136,6 +136,7 @@ export class PureMetalLotsService {
             date: entryDateObject,
             status: 'PENDING',
             settledGrams: 0,
+            pureMetalLotId: lot.id,
             // chemicalAnalysisId is null by default now
           }
         });

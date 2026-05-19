@@ -90,6 +90,9 @@ export class SalesService {
                   contaCorrente: {
                     select: { nome: true },
                   },
+                  contaContabil: {
+                    select: { nome: true },
+                  },
                 },
                 take: 1,
               },
@@ -155,6 +158,7 @@ export class SalesService {
                 transacoes: {
                   include: {
                     contaCorrente: true,
+                    contaContabil: true,
                   },
                 },
               },
@@ -177,6 +181,7 @@ export class SalesService {
             transacoes: { // Para cada recebível, inclui a transação
               include: {
                 contaCorrente: true, // Para cada transação, inclui a conta corrente
+                contaContabil: true, // Inclui a conta contábil para histórico de metal
               },
             },
           },

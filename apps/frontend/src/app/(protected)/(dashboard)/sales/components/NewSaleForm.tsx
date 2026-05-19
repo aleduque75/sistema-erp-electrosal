@@ -302,7 +302,6 @@ export function NewSaleForm({ onSave }: any) {
   const onFinalizeSale = async (formData: any) => {
     if (items.length === 0) return toast.error("Adicione pelo menos um item à venda.");
     if (items.some(item => !item.productId)) return toast.error("Todos os itens devem ter um produto selecionado.");
-    if (items.some(item => item.lots.length === 0)) return toast.error("Todos os itens devem ter lotes selecionados.");
 
     const isAVista = selectedPaymentCondition?.label.toLowerCase().includes('vista');
     if (isAVista && !formData.contaCorrenteId) return toast.error("Para vendas à vista, selecione a conta de destino.");

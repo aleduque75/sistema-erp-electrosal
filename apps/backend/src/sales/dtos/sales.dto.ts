@@ -57,9 +57,10 @@ class SaleItemDto {
   entryQuantity?: number;
 
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => SaleItemLotDto)
-  lots: SaleItemLotDto[];
+  lots?: SaleItemLotDto[];
 }
 
 export class CreateSaleDto {

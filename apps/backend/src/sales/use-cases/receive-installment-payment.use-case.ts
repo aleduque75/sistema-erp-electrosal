@@ -142,6 +142,38 @@ export class ReceiveInstallmentPaymentUseCase {
           data: { grams: new Decimal(metalCredit.grams).minus(amountInGrams).toNumber() },
         });
 
+        // 1. Deduct from Pure Metal Lot if linked
+        if (metalCredit.pureMetalLotId) {
+          await this.pureMetalLotsService.createPureMetalLotMovement(
+            organizationId,
+            metalCredit.pureMetalLotId,
+            {
+              type: 'EXIT',
+              grams: new Decimal(amountInGrams).toNumber(),
+              notes: `Baixa por pagamento de parcela - Venda #${installment.sale.orderNumber}`,
+            },
+            tx,
+          );
+        }
+
+        // 2. Create financial transaction for history
+        if (settings.metalCreditPayableAccountId) {
+          await tx.transacao.create({
+            data: {
+              organizationId,
+              tipo: TipoTransacaoPrisma.CREDITO,
+              valor: finalAmountReceivedBRL,
+              moeda: 'BRL',
+              descricao: `Recebimento com Crédito de Metal (${installment.sale.pessoa.name}) - Venda #${installment.sale.orderNumber}`,
+              contaContabilId: settings.metalCreditPayableAccountId,
+              dataHora: paymentDate,
+              goldAmount: finalAmountReceivedGold,
+              goldPrice: finalQuotation,
+              accountRecId: installment.accountRecId,
+            },
+          });
+        }
+
         // Fetch the MetalAccount for the client
         const clientMetalAccount = await tx.metalAccount.findFirst({
           where: { personId: installment.sale.pessoa.id, type: metalCredit.metalType, organizationId },

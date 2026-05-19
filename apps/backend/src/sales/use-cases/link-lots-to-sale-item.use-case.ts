@@ -53,6 +53,7 @@ export class LinkLotsToSaleItemUseCase {
           saleItemId: saleItemId,
           inventoryLotId: lot.inventoryLotId,
           quantity: lot.quantity,
+          isStockDeducted: false, // PCP always links as NOT deducted
         })),
       });
 

@@ -66,29 +66,34 @@ export class CreateSaleUseCase {
       this.validateLotQuantities(item, product.name);
 
       let itemTotalCost = new Decimal(0);
-      const saleItemLotsToCreate: Prisma.SaleItemLotCreateManySaleItemInput[] = [];
+      const saleItemLotsToCreate: any[] = []; // Changed to any to allow isStockDeducted
 
-      for (const lot of item.lots) {
-        const inventoryLot = inventoryLotsMap.get(lot.inventoryLotId);
-        if (!inventoryLot) throw new NotFoundException(`Lote de inventário com ID ${lot.inventoryLotId} não encontrado.`);
+      const isSeparationFlow = items.some(i => !i.lots || i.lots.length === 0);
 
-        const lotQuantity = new Decimal(lot.quantity);
-        if (lotQuantity.greaterThan(new Decimal(inventoryLot.remainingQuantity))) {
-          throw new BadRequestException(`Quantidade insuficiente no lote ${inventoryLot.batchNumber} para o produto ${product.name}. Disponível: ${inventoryLot.remainingQuantity}, Solicitado: ${lotQuantity}.`);
+      if (item.lots && item.lots.length > 0) {
+        for (const lot of item.lots) {
+          const inventoryLot = inventoryLotsMap.get(lot.inventoryLotId);
+          if (!inventoryLot) throw new NotFoundException(`Lote de inventário com ID ${lot.inventoryLotId} não encontrado.`);
+
+          const lotQuantity = new Decimal(lot.quantity);
+          if (lotQuantity.greaterThan(new Decimal(inventoryLot.remainingQuantity))) {
+            throw new BadRequestException(`Quantidade insuficiente no lote ${inventoryLot.batchNumber} para o produto ${product.name}. Disponível: ${inventoryLot.remainingQuantity}, Solicitado: ${lotQuantity}.`);
+          }
+
+          const lotCostPrice = new Decimal(inventoryLot.costPrice);
+          itemTotalCost = itemTotalCost.plus(lotCostPrice.times(lotQuantity));
+          
+          saleItemLotsToCreate.push({
+            inventoryLotId: lot.inventoryLotId,
+            quantity: lot.quantity,
+            isStockDeducted: !isSeparationFlow,
+          });
+
+          inventoryLotUpdates.push({
+            id: lot.inventoryLotId,
+            quantity: lot.quantity,
+          });
         }
-
-        const lotCostPrice = new Decimal(inventoryLot.costPrice);
-        itemTotalCost = itemTotalCost.plus(lotCostPrice.times(lotQuantity));
-        
-        saleItemLotsToCreate.push({
-          inventoryLotId: lot.inventoryLotId,
-          quantity: lot.quantity,
-        });
-
-        inventoryLotUpdates.push({
-          id: lot.inventoryLotId,
-          quantity: lot.quantity,
-        });
       }
 
       totalAmount = totalAmount.plus(itemPrice.times(itemQuantity));
@@ -139,6 +144,7 @@ export class CreateSaleUseCase {
         observation: createSaleDto.observation,
         paymentMethod,
         paymentTermId,
+        status: items.some(item => !item.lots || item.lots.length === 0) ? 'A_SEPARAR' : 'PENDENTE',
         commissionAmount: totalCommissionAmount,
         commissionDetails: commissionDetails,
         saleItems: { create: saleItemsToCreate },
@@ -153,7 +159,10 @@ export class CreateSaleUseCase {
       },
     });
 
-    await this.updateInventoryAndCreateStockMovements(inventoryLotUpdates, sale);
+    const isSeparationFlow = items.some(item => !item.lots || item.lots.length === 0);
+    if (!isSeparationFlow) {
+      await this.updateInventoryAndCreateStockMovements(inventoryLotUpdates, sale);
+    }
 
     if (paymentMethod === 'A_COMBINAR') {
       const confirmSaleDto: ConfirmSaleDto = {
@@ -193,7 +202,7 @@ export class CreateSaleUseCase {
 
   private async fetchProductsAndLots(items: CreateSaleDto['items'], organizationId: string) {
     const productIds = items.map((item) => item.productId);
-    const allInventoryLotIds = items.flatMap((item) => item.lots.map((lot) => lot.inventoryLotId));
+    const allInventoryLotIds = items.flatMap((item) => item.lots?.map((lot) => lot.inventoryLotId) || []);
 
     const [rawProductsInDb, inventoryLotsInDb] = await Promise.all([
       this.prisma.product.findMany({
@@ -212,6 +221,10 @@ export class CreateSaleUseCase {
   }
 
   private validateLotQuantities(item: CreateSaleDto['items'][0], productName: string) {
+    if (!item.lots || item.lots.length === 0) {
+      return;
+    }
+    
     const totalLotQuantity = item.lots.reduce((sum, lot) => sum.plus(new Decimal(lot.quantity)), new Decimal(0));
     
     // Round the total lot quantity to 2 decimal places for comparison, as the item.quantity seems to follow this precision.

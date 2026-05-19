@@ -375,6 +375,7 @@ model SaleItemLot {
   saleItemId     String
   inventoryLotId String
   quantity       Float
+  isStockDeducted Boolean      @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   inventoryLot   InventoryLot @relation(fields: [inventoryLotId], references: [id])
@@ -812,7 +813,9 @@ model MetalCredit {
   metalType          TipoMetal         @default(AU)
   settledGrams       Decimal?          @default(0) @db.Decimal(10, 4)
   status             MetalCreditStatus @default(PENDING)
+  pureMetalLotId     String?
   chemicalAnalysis   AnaliseQuimica?   @relation(fields: [chemicalAnalysisId], references: [id])
+  pureMetalLot       pure_metal_lots?  @relation(fields: [pureMetalLotId], references: [id])
   client             Pessoa            @relation(fields: [clientId], references: [id])
   organization       Organization      @relation(fields: [organizationId], references: [id])
 
@@ -1050,6 +1053,7 @@ model pure_metal_lots {
   description       String?
   chemicalReactions ChemicalReactionLot[]
   movements         PureMetalLotMovement[]
+  metalCredits      MetalCredit[]
   Organization      Organization           @relation(fields: [organizationId], references: [id])
   sale              Sale?                  @relation(fields: [saleId], references: [id])
 

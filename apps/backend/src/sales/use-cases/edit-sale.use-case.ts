@@ -75,7 +75,8 @@ export class EditSaleUseCase {
 
       // Calculate Item Gold from (updated) sale items
       const itemGold = sale.saleItems.reduce((sum, item) => {
-        return sum.plus(new Decimal(item.quantity));
+        const productGoldValue = new Decimal(item.product.goldValue || 0);
+        return sum.plus(new Decimal(item.quantity).times(productGoldValue));
       }, new Decimal(0));
 
       // Calculate Labor Gold from the cost table
