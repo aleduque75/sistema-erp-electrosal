@@ -19,7 +19,7 @@ export class MenuController {
   @Get()
   findAll(@Request() req): Promise<FullMenuResponse> {
     const organizationId = req.user.organizationId;
-    return this.menuService.findAll(organizationId);
+    return this.menuService.findAll(organizationId, req.user);
   }
 
   @Patch('reorder')

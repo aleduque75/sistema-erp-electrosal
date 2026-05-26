@@ -30,6 +30,7 @@ const userSchema = z.object({
   email: z.string().email("Email inválido."),
   password: z.string().optional(), // Senha opcional na edição
   role: z.enum(["ADMIN", "USER"]), // Funções permitidas
+  sector: z.enum(["PCP", "FINANCEIRO", "OPERACOES", "ESTOQUE", "RELATORIOS", "ADMINISTRACAO", "GERAL"]),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -40,6 +41,7 @@ interface UserFormProps {
     name: string;
     email: string;
     role: string;
+    sector?: string;
   } | null;
   onSave: () => void;
 }
@@ -52,6 +54,7 @@ export function UserForm({ user, onSave }: UserFormProps) {
       email: user?.email || "",
       password: "",
       role: (user?.role as "ADMIN" | "USER") || "USER",
+      sector: (user?.sector as any) || "GERAL",
     },
   });
 
@@ -63,6 +66,7 @@ export function UserForm({ user, onSave }: UserFormProps) {
           name: data.name,
           email: data.email,
           role: data.role,
+          sector: data.sector,
         };
         if (data.password && data.password.length > 0) {
           payload.password = data.password;
@@ -137,6 +141,32 @@ export function UserForm({ user, onSave }: UserFormProps) {
                 <SelectContent>
                   <SelectItem value="ADMIN">Administrador</SelectItem>
                   <SelectItem value="USER">Usuário</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="sector"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Setor</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value || "GERAL"}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o setor" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="PCP">PCP (Produção)</SelectItem>
+                  <SelectItem value="FINANCEIRO">Financeiro</SelectItem>
+                  <SelectItem value="OPERACOES">Operações</SelectItem>
+                  <SelectItem value="ESTOQUE">Estoque</SelectItem>
+                  <SelectItem value="RELATORIOS">Relatórios</SelectItem>
+                  <SelectItem value="ADMINISTRACAO">Administração</SelectItem>
+                  <SelectItem value="GERAL">Geral (Sem Setor)</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />

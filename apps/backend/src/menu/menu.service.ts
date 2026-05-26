@@ -4,7 +4,7 @@ import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
 import { MenuItem as PrismaMenuItem } from '@prisma/client';
 
-interface MenuItem extends PrismaMenuItem {
+export interface MenuItem extends PrismaMenuItem {
   subItems?: MenuItem[];
 }
 
@@ -27,7 +27,45 @@ export class MenuService {
     });
   }
 
-  async findAll(organizationId: string): Promise<FullMenuResponse> {
+  private filterItems(items: MenuItem[], user: any): MenuItem[] {
+    if (!user) return items;
+    if (user.role === 'ADMIN') return items; // Admin vê tudo
+
+    const userSector = user.sector || 'GERAL';
+    const userRole = user.role || 'USER';
+
+    return items
+      .filter(item => {
+        if (item.disabled) return false;
+
+        // Filtrar por setor
+        if (item.allowedSectors && item.allowedSectors.length > 0) {
+          if (!item.allowedSectors.includes(userSector)) {
+            return false;
+          }
+        }
+
+        // Filtrar por cargo
+        if (item.allowedRoles && item.allowedRoles.length > 0) {
+          if (!item.allowedRoles.includes(userRole)) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .map(item => {
+        if (item.subItems && item.subItems.length > 0) {
+          return {
+            ...item,
+            subItems: this.filterItems(item.subItems, user)
+          };
+        }
+        return item;
+      });
+  }
+
+  async findAll(organizationId: string, user?: any): Promise<FullMenuResponse> {
     const [menuItems, landingPage] = await Promise.all([
       this.prisma.menuItem.findMany({
         where: { organizationId, parentId: null },
@@ -49,8 +87,10 @@ export class MenuService {
       }),
     ]);
 
+    const filteredItems = this.filterItems(menuItems as MenuItem[], user);
+
     return {
-      menuItems: menuItems,
+      menuItems: filteredItems,
       logoImage: landingPage?.logoImage ? { path: landingPage.logoImage.path, id: landingPage.logoImage.id } : undefined,
       logoText: landingPage?.logoText || 'Sistema',
     };

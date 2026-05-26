@@ -76,6 +76,7 @@ model User {
   organizationId String
   pessoaId       String?       @unique
   role           Role          @default(USER)
+  sector         UserSector    @default(GERAL)
   active         Boolean       @default(true)
   organization   Organization  @relation(fields: [organizationId], references: [id])
   pessoa         Pessoa?       @relation("UserToPessoa", fields: [pessoaId], references: [id])
@@ -1199,6 +1200,8 @@ model MenuItem {
   updatedAt      DateTime     @updatedAt
   organizationId String
   disabled       Boolean?
+  allowedSectors String[]     @default([])
+  allowedRoles   String[]     @default([])
   organization   Organization @relation(fields: [organizationId], references: [id])
   parent         MenuItem?    @relation("SubMenuItems", fields: [parentId], references: [id])
   subItems       MenuItem[]   @relation("SubMenuItems")
@@ -1299,6 +1302,18 @@ enum EntityType {
 enum Role {
   USER
   ADMIN
+
+  @@schema("erp")
+}
+
+enum UserSector {
+  PCP
+  FINANCEIRO
+  OPERACOES
+  ESTOQUE
+  RELATORIOS
+  ADMINISTRACAO
+  GERAL
 
   @@schema("erp")
 }

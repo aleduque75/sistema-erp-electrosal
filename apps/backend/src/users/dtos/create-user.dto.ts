@@ -7,7 +7,7 @@ import {
   IsEnum,
   IsOptional,
 } from 'class-validator';
-import { Role } from '@prisma/client';
+import { Role, UserSector } from '@prisma/client';
 
 export class CreateUserDto {
   @IsEmail({}, { message: 'Por favor, insira um email válido.' })
@@ -25,6 +25,10 @@ export class CreateUserDto {
   @IsEnum(Role)
   @IsOptional()
   role?: Role;
+
+  @IsEnum(UserSector)
+  @IsOptional()
+  sector?: UserSector;
 }
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {

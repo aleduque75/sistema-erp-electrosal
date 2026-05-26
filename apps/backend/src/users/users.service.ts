@@ -17,6 +17,7 @@ export class UsersService {
         email: createUserDto.email,
         name: createUserDto.name,
         role: createUserDto.role,
+        sector: createUserDto.sector,
         password: hashedPassword,
         organization: {
           create: {

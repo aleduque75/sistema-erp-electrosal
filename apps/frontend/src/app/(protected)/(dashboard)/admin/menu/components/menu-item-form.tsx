@@ -39,9 +39,11 @@ const formSchema = z.object({
   title: z.string().min(2, 'Título deve ter ao menos 2 caracteres'),
   href: z.string().min(1, 'Link é obrigatório'),
   icon: z.string().optional(),
-  order: z.preprocess((val) => Number(val), z.number().int()),
-  disabled: z.boolean().default(false),
+  order: z.number().int(),
+  disabled: z.boolean().optional(),
   parentId: z.string().nullable().optional(),
+  allowedSectors: z.array(z.string()).optional(),
+  allowedRoles: z.array(z.string()).optional(),
 });
 
 interface MenuItemFormProps {
@@ -70,6 +72,8 @@ export function MenuItemForm({
       order: 0,
       disabled: false,
       parentId: null,
+      allowedSectors: [],
+      allowedRoles: [],
     },
   });
 
@@ -82,6 +86,8 @@ export function MenuItemForm({
         order: initialData.order || 0,
         disabled: initialData.disabled || false,
         parentId: initialData.parentId || null,
+        allowedSectors: initialData.allowedSectors || [],
+        allowedRoles: initialData.allowedRoles || [],
       });
     } else {
       form.reset({
@@ -91,6 +97,8 @@ export function MenuItemForm({
         order: parentItems.length + 1,
         disabled: false,
         parentId: null,
+        allowedSectors: [],
+        allowedRoles: [],
       });
     }
   }, [initialData, open, form, parentItems.length]);
@@ -238,6 +246,95 @@ export function MenuItemForm({
                   </FormItem>
                 )}
               />
+              <div className="col-span-2 space-y-2">
+                <FormLabel>Setores Autorizados</FormLabel>
+                <div className="grid grid-cols-2 gap-2 border rounded-md p-3">
+                  {[
+                    { value: "PCP", label: "PCP (Produção)" },
+                    { value: "FINANCEIRO", label: "Financeiro" },
+                    { value: "OPERACOES", label: "Operações" },
+                    { value: "ESTOQUE", label: "Estoque" },
+                    { value: "RELATORIOS", label: "Relatórios" },
+                    { value: "ADMINISTRACAO", label: "Administração" },
+                    { value: "GERAL", label: "Geral (Sem Setor)" },
+                  ].map((sector) => (
+                    <FormField
+                      key={sector.value}
+                      control={form.control}
+                      name="allowedSectors"
+                      render={({ field }) => {
+                        return (
+                          <FormItem
+                            key={sector.value}
+                            className="flex flex-row items-start space-x-2 space-y-0"
+                          >
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(sector.value)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...(field.value || []), sector.value])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== sector.value
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal cursor-pointer select-none">
+                              {sector.label}
+                            </FormLabel>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="col-span-2 space-y-2">
+                <FormLabel>Funções Autorizadas</FormLabel>
+                <div className="grid grid-cols-2 gap-2 border rounded-md p-3">
+                  {[
+                    { value: "ADMIN", label: "Administrador" },
+                    { value: "USER", label: "Usuário Comum" },
+                  ].map((role) => (
+                    <FormField
+                      key={role.value}
+                      control={form.control}
+                      name="allowedRoles"
+                      render={({ field }) => {
+                        return (
+                          <FormItem
+                            key={role.value}
+                            className="flex flex-row items-start space-x-2 space-y-0"
+                          >
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(role.value)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...(field.value || []), role.value])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== role.value
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal cursor-pointer select-none">
+                              {role.label}
+                            </FormLabel>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
               <FormField
                 control={form.control}
                 name="disabled"

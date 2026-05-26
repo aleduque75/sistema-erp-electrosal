@@ -16,6 +16,8 @@ interface AuthUser {
   orgId: string;
   permissions: string[];
   name?: string;
+  role?: string;
+  sector?: string;
   settings?: UserSettings | null;
 }
 
@@ -70,6 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: rawUser.email,
         orgId: rawUser.organizationId,
         name: rawUser.name,
+        role: rawUser.role,
+        sector: rawUser.sector,
         permissions: rawUser.role ? [rawUser.role] : ['USER'], // Sempre garante uma permissão base
         settings: rawUser.settings
       };
