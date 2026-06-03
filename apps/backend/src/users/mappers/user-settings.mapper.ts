@@ -29,7 +29,7 @@ export class UserSettingsMapper {
    */
   static toPersistence(userSettings: UserSettings): any {
     return {
-      id: userSettings.id,
+      id: userSettings.id.toValue(),
       userId: userSettings.userId,
       theme: userSettings.theme, // <-- Prepara para salvar
       language: userSettings.language,

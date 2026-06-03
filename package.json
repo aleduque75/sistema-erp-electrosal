@@ -6,6 +6,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "pnpm --filter @sistema-erp-electrosal/core build && dotenv -e .env -- pnpm --filter backend start:dev & node scripts/wait-for-port.js && pnpm --filter frontend dev",
+    "dev:mobile": "cd apps/mobile && npx expo start --tunnel -c",
     "test": "jest",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
