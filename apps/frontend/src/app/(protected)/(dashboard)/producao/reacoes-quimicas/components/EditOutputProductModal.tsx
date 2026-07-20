@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { ChemicalReactionDetails } from "@/types/chemical-reaction";
 
 interface EditOutputProductModalProps {
@@ -68,7 +68,7 @@ export function EditOutputProductModal({ isOpen, onClose, reaction, onSave }: Ed
             Produto Final
           </label>
           <Select
-            value={selectedProductId}
+            value={selectedProductId || undefined}
             onValueChange={setSelectedProductId}
             disabled={isLoading || isSubmitting}
           >
@@ -83,13 +83,14 @@ export function EditOutputProductModal({ isOpen, onClose, reaction, onSave }: Ed
               ) : (
                 productGroups?.map((pg: any) => (
                   pg.products && pg.products.length > 0 ? (
-                    <optgroup key={pg.id} label={pg.name} className="p-1 font-semibold text-sm text-muted-foreground">
+                    <SelectGroup key={pg.id}>
+                      <SelectLabel className="p-1 font-semibold text-sm text-muted-foreground">{pg.name}</SelectLabel>
                       {pg.products.map((product: any) => (
                         <SelectItem key={product.id} value={product.id}>
                           {product.name}
                         </SelectItem>
                       ))}
-                    </optgroup>
+                    </SelectGroup>
                   ) : null
                 ))
               )}

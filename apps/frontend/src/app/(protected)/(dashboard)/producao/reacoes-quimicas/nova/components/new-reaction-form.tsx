@@ -34,6 +34,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
@@ -448,13 +450,14 @@ export function NewReactionForm() {
                           ) : (
                             productGroups?.map((pg) => (
                               pg.products && pg.products.length > 0 ? (
-                                <optgroup key={pg.id} label={pg.name} className="p-1 font-semibold text-sm text-muted-foreground">
+                                <SelectGroup key={pg.id}>
+                                  <SelectLabel className="p-1 font-semibold text-sm text-muted-foreground">{pg.name}</SelectLabel>
                                   {pg.products.map((product) => (
                                     <SelectItem key={product.id} value={product.id}>
                                       {product.name}
                                     </SelectItem>
                                   ))}
-                                </optgroup>
+                                </SelectGroup>
                               ) : null
                             ))
                           )}
