@@ -225,14 +225,14 @@ export default function ChemicalReactionsPage() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {reaction.status === 'STARTED' && (
-                <>
-                  <DropdownMenuItem onClick={() => handleOpenLotSelectionModal(reaction)}>
-                    Editar Lotes
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleOpenEditProductModal(reaction)}>
-                    Editar Produto Final
-                  </DropdownMenuItem>
-                </>
+                <DropdownMenuItem onClick={() => handleOpenLotSelectionModal(reaction)}>
+                  Editar Lotes
+                </DropdownMenuItem>
+              )}
+              {reaction.status === 'STARTED' && (
+                <DropdownMenuItem onClick={() => handleOpenEditProductModal(reaction)}>
+                  Editar Produto Final
+                </DropdownMenuItem>
               )}
               {(reaction.status === 'STARTED' || reaction.status === 'PROCESSING') && (
                 <ProductionStepClientBlock reactionId={reaction.id} auUsedGrams={reaction.auUsedGrams} />
@@ -410,14 +410,14 @@ export default function ChemicalReactionsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {reaction.status === 'STARTED' && (
-                                <>
-                                  <DropdownMenuItem onClick={() => handleOpenLotSelectionModal(reaction)}>
-                                    Editar Lotes
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleOpenEditProductModal(reaction)}>
-                                    Editar Produto Final
-                                  </DropdownMenuItem>
-                                </>
+                                <DropdownMenuItem onClick={() => handleOpenLotSelectionModal(reaction)}>
+                                  Editar Lotes
+                                </DropdownMenuItem>
+                              )}
+                              {reaction.status === 'STARTED' && (
+                                <DropdownMenuItem onClick={() => handleOpenEditProductModal(reaction)}>
+                                  Editar Produto Final
+                                </DropdownMenuItem>
                               )}
                               {(reaction.status === 'STARTED' || reaction.status === 'PROCESSING') && (
                                 <div className="p-2" onClick={(e) => e.stopPropagation()}>
