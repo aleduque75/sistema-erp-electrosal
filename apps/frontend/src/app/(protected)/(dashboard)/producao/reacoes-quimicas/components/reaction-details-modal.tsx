@@ -161,10 +161,10 @@ export function ReactionDetailsModal({ reaction, isOpen, onClose }: ReactionDeta
                 <div className="space-y-2 mt-4">
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-tight">Detalhamento dos Lotes:</p>
                   <div className="max-h-[150px] overflow-y-auto pr-2">
-                    {currentReaction.lots.map(lot => (
-                      <div key={lot.id} className="flex items-center justify-between py-2 text-sm border-b last:border-0">
+                    {currentReaction.lots.map((lot: any) => (
+                      <div key={lot.id || lot.pureMetalLotId} className="flex items-center justify-between py-2 text-sm border-b last:border-0">
                         <div className="flex flex-col">
-                          <span className="font-semibold">Lote {lot.lotNumber || lot.id.substring(0, 8)}</span>
+                          <span className="font-semibold">Lote {lot.lotNumber || (lot.id || lot.pureMetalLotId || '').substring(0, 8)}</span>
                           <span className="text-[10px] text-muted-foreground italic">{lot.description || 'Sem descrição'}</span>
                         </div>
                         <Badge variant="secondary">{formatGrams(lot.gramsToUse)}</Badge>
