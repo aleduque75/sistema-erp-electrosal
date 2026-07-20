@@ -8,4 +8,8 @@ export class UpdateChemicalReactionDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsString()
+  @IsOptional()
+  outputProductId?: string;
 }

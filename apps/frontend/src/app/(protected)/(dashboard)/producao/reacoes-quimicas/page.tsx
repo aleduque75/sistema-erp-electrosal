@@ -22,6 +22,7 @@ import { ReactionDetailsModal } from "./components/reaction-details-modal";
 import { PureMetalLotSelectionModal } from "./components/PureMetalLotSelectionModal";
 import { ProductionStepClientBlock } from "./[id]/components/production-step-client-block";
 import { AdjustPurityClientBlock } from "./[id]/components/adjust-purity-client-block";
+import { EditOutputProductModal } from "./components/EditOutputProductModal";
 import { ChemicalReactionDetails } from "@/types/chemical-reaction";
 import { TipoMetal } from "@/types/tipo-metal";
 import { FlaskConical as FlaskIcon, Zap, CheckCircle2, Activity, ArrowUpRight } from "lucide-react";
@@ -50,6 +51,7 @@ export default function ChemicalReactionsPage() {
   const [selectedReaction, setSelectedReaction] = useState<ChemicalReactionDetails | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLotSelectionModalOpen, setIsLotSelectionModalOpen] = useState(false);
+  const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
 
   // Filters
@@ -93,6 +95,11 @@ export default function ChemicalReactionsPage() {
   const handleOpenLotSelectionModal = (reaction: ChemicalReactionDetails) => {
     setSelectedReaction(reaction);
     setIsLotSelectionModalOpen(true);
+  };
+
+  const handleOpenEditProductModal = (reaction: ChemicalReactionDetails) => {
+    setSelectedReaction(reaction);
+    setIsEditProductModalOpen(true);
   };
 
   const handlePrintPdf = async (reactionId: string) => {
@@ -218,9 +225,14 @@ export default function ChemicalReactionsPage() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {reaction.status === 'STARTED' && (
-                <DropdownMenuItem onClick={() => handleOpenLotSelectionModal(reaction)}>
-                  Editar Lotes
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={() => handleOpenLotSelectionModal(reaction)}>
+                    Editar Lotes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleOpenEditProductModal(reaction)}>
+                    Editar Produto Final
+                  </DropdownMenuItem>
+                </>
               )}
               {(reaction.status === 'STARTED' || reaction.status === 'PROCESSING') && (
                 <ProductionStepClientBlock reactionId={reaction.id} auUsedGrams={reaction.auUsedGrams} />
@@ -398,9 +410,14 @@ export default function ChemicalReactionsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {reaction.status === 'STARTED' && (
-                                <DropdownMenuItem onClick={() => handleOpenLotSelectionModal(reaction)}>
-                                  Editar Lotes
-                                </DropdownMenuItem>
+                                <>
+                                  <DropdownMenuItem onClick={() => handleOpenLotSelectionModal(reaction)}>
+                                    Editar Lotes
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleOpenEditProductModal(reaction)}>
+                                    Editar Produto Final
+                                  </DropdownMenuItem>
+                                </>
                               )}
                               {(reaction.status === 'STARTED' || reaction.status === 'PROCESSING') && (
                                 <div className="p-2" onClick={(e) => e.stopPropagation()}>
@@ -438,6 +455,17 @@ export default function ChemicalReactionsPage() {
           onSave={() => {
             fetchReactions();
             setIsLotSelectionModalOpen(false);
+          }}
+        />
+      )}
+      {selectedReaction && (
+        <EditOutputProductModal
+          isOpen={isEditProductModalOpen}
+          onClose={() => setIsEditProductModalOpen(false)}
+          reaction={selectedReaction}
+          onSave={() => {
+            fetchReactions();
+            setIsEditProductModalOpen(false);
           }}
         />
       )}

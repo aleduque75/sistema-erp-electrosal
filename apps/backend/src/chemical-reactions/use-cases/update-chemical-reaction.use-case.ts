@@ -31,6 +31,10 @@ export class UpdateChemicalReactionUseCase {
       chemicalReaction.props.notes = dto.notes;
     }
 
+    if (dto.outputProductId) {
+      chemicalReaction.props.outputProductId = dto.outputProductId;
+    }
+
     await this.chemicalReactionRepository.save(chemicalReaction);
   }
 }
