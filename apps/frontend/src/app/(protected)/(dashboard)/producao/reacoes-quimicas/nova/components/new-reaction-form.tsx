@@ -56,9 +56,9 @@ const formSchema = z.object({
       })
     )
     .min(1, "Adicione pelo menos um lote de metal."),
-  outputProductGroupId: z
+  outputProductId: z
     .string()
-    .min(1, "Selecione o grupo de produto de saída."),
+    .min(1, "Selecione o produto de saída."),
   batchNumber: z.string().optional(),
   rawMaterials: z.array(z.object({
     rawMaterialId: z.string().min(1, "Selecione uma matéria-prima"),
@@ -95,7 +95,7 @@ export function NewReactionForm() {
       metalType: TipoMetal.AU,
       notes: "",
       sourceLots: [],
-      outputProductGroupId: "",
+      outputProductId: "",
       batchNumber: "",
       rawMaterials: [],
     },
@@ -138,7 +138,7 @@ export function NewReactionForm() {
     fetchRawMaterials();
   }, []);
 
-  const selectedOutputProductGroupId = form.watch("outputProductGroupId");
+  const selectedOutputProductId = form.watch("outputProductId");
   const selectedMetalType = form.watch("metalType");
   const sourceLots = form.watch("sourceLots");
   const totalGramsToUse = useMemo(() => {
@@ -146,19 +146,25 @@ export function NewReactionForm() {
   }, [sourceLots]);
   
   const selectedOutputProduct = useMemo(() => {
-    const group = productGroups?.find((pg) => pg.id === selectedOutputProductGroupId);
-    return group?.products?.[0];
-  }, [productGroups, selectedOutputProductGroupId]);
+    for (const group of productGroups || []) {
+      const product = group.products?.find((p) => p.id === selectedOutputProductId);
+      if (product) return product;
+    }
+    return null;
+  }, [productGroups, selectedOutputProductId]);
 
   useEffect(() => {
     if (
       productGroups &&
       productGroups.length > 0 &&
-      !selectedOutputProductGroupId
+      !selectedOutputProductId
     ) {
-      form.setValue("outputProductGroupId", productGroups[0].id);
+      const firstProduct = productGroups[0]?.products?.[0];
+      if (firstProduct) {
+        form.setValue("outputProductId", firstProduct.id);
+      }
     }
-  }, [productGroups, selectedOutputProductGroupId, form]);
+  }, [productGroups, selectedOutputProductId, form]);
 
   const handleSelectMetalLots = (
     selected: { lotId: string; quantity: number }[]
@@ -180,7 +186,7 @@ export function NewReactionForm() {
     }
 
     try {
-      const { outputProductGroupId, ...restOfValues } = values;
+      const { outputProductId, ...restOfValues } = values;
       const payload = {
         ...restOfValues,
         reactionDate: new Date(values.reactionDate).toISOString(),
@@ -420,10 +426,10 @@ export function NewReactionForm() {
               <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="outputProductGroupId"
+                  name="outputProductId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Grupo de Produto de Saída</FormLabel>
+                      <FormLabel>Produto Final</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -431,19 +437,25 @@ export function NewReactionForm() {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione o grupo de produto..." />
+                            <SelectValue placeholder="Selecione o produto..." />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {isLoadingProductGroups ? (
                             <SelectItem value="loading" disabled>
-                              Carregando grupos...
+                              Carregando produtos...
                             </SelectItem>
                           ) : (
                             productGroups?.map((pg) => (
-                              <SelectItem key={pg.id} value={pg.id}>
-                                {pg.name}
-                              </SelectItem>
+                              pg.products && pg.products.length > 0 ? (
+                                <optgroup key={pg.id} label={pg.name} className="p-1 font-semibold text-sm text-muted-foreground">
+                                  {pg.products.map((product) => (
+                                    <SelectItem key={product.id} value={product.id}>
+                                      {product.name}
+                                    </SelectItem>
+                                  ))}
+                                </optgroup>
+                              ) : null
                             ))
                           )}
                         </SelectContent>
@@ -492,7 +504,7 @@ export function NewReactionForm() {
               disabled={
                 form.formState.isSubmitting ||
                 sourceLotFields.length === 0 ||
-                !selectedOutputProductGroupId
+                !selectedOutputProductId
               }
             >
               {form.formState.isSubmitting
