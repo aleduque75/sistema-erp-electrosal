@@ -14,6 +14,7 @@ interface SidebarContextType {
   isHovered: boolean;
   toggleSidebar: () => void;
   toggleMobileSidebar: () => void;
+  closeMobileSidebar: () => void;
   setIsHovered: (hovered: boolean) => void;
   sidebarWidth: number; // Largura atual do sidebar
 }
@@ -32,6 +33,10 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleMobileSidebar = () => {
     setIsMobileOpen((prev) => !prev);
+  };
+
+  const closeMobileSidebar = () => {
+    setIsMobileOpen(false);
   };
 
   useEffect(() => {
@@ -53,6 +58,7 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
         isHovered,
         toggleSidebar,
         toggleMobileSidebar,
+        closeMobileSidebar,
         setIsHovered,
         sidebarWidth,
       }}

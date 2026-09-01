@@ -21,6 +21,7 @@ export function Sidebar() {
     sidebarWidth,
     isMobileOpen,
     toggleMobileSidebar,
+    closeMobileSidebar,
   } = useSidebar();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
@@ -28,6 +29,11 @@ export function Sidebar() {
   const [openSub, setOpenSub] = useState<string | null>(null);
   const [appearance, setAppearance] = useState<any>(null);
   const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  // Close mobile sidebar automatically on any page navigation
+  useEffect(() => {
+    closeMobileSidebar();
+  }, [pathname]);
 
   useEffect(() => {
     // Busca aparência com retry e tratamento de erro
@@ -78,11 +84,13 @@ export function Sidebar() {
                 if (Array.isArray(item.subItems) && item.subItems.length > 0) {
                   e.preventDefault();
                   setOpenSub(isOpen ? null : item.id);
+                } else {
+                  closeMobileSidebar();
                 }
               }}
             >
               <Icon size={20} className="shrink-0" />
-              {(isExpanded || isHovered) && (
+              {(isExpanded || isHovered || !isDesktop) && (
                 <>
                   <span className="text-sm font-medium flex-1 truncate">
                     {item.title}
@@ -99,7 +107,7 @@ export function Sidebar() {
               )}
             </Link>
           </div>
-          {isOpen && item.subItems && (isExpanded || isHovered) && (
+          {isOpen && item.subItems && (isExpanded || isHovered || !isDesktop) && (
             <ul className="mt-1 ml-6 border-l border-sidebar-border space-y-1">
               {renderItems(item.subItems)}
             </ul>
@@ -114,40 +122,58 @@ export function Sidebar() {
     : "/images/logo.png";
 
   return (
-    <aside
-      onMouseEnter={() => isDesktop && !isExpanded && setIsHovered(true)}
-      onMouseLeave={() => isDesktop && !isExpanded && setIsHovered(false)}
-      className={cn(
-        "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-sidebar border-sidebar-border transition-transform duration-300",
-        isMobileOpen ? "translate-x-0" : "-translate-x-full",
-        "md:translate-x-0",
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden animate-in fade-in-50 duration-200"
+          onClick={closeMobileSidebar}
+        />
       )}
-      style={{ width: sidebarWidth + "px" }}
-    >
-      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
-        <div className="flex items-center">
-          <div className="relative w-8 h-8 flex items-center justify-center overflow-hidden rounded-md">
-            <Image
-              src={logoUrl}
-              alt="Logo"
-              fill
-              className="object-contain"
-              unoptimized
-              onError={(e) => {
-                (e.target as any).src = "/images/logo.png";
-              }}
-            />
+
+      <aside
+        onMouseEnter={() => isDesktop && !isExpanded && setIsHovered(true)}
+        onMouseLeave={() => isDesktop && !isExpanded && setIsHovered(false)}
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-sidebar border-sidebar-border transition-transform duration-300",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full",
+          "md:translate-x-0",
+        )}
+        style={{ width: (isDesktop ? sidebarWidth : 280) + "px" }}
+      >
+        <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
+          <div className="flex items-center">
+            <div className="relative w-8 h-8 flex items-center justify-center overflow-hidden rounded-md">
+              <Image
+                src={logoUrl}
+                alt="Logo"
+                fill
+                className="object-contain"
+                unoptimized
+                onError={(e) => {
+                  (e.target as any).src = "/images/logo.png";
+                }}
+              />
+            </div>
+            {(isExpanded || isHovered || !isDesktop) && (
+              <span className="ml-3 font-black text-lg text-sidebar-foreground tracking-tighter">
+                ELECTROSAL
+              </span>
+            )}
           </div>
-          {(isExpanded || isHovered) && (
-            <span className="ml-3 font-black text-lg text-sidebar-foreground tracking-tighter">
-              ELECTROSAL
-            </span>
-          )}
+          {/* Mobile Close Button */}
+          <button
+            onClick={closeMobileSidebar}
+            className="md:hidden p-1.5 rounded-md text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-colors"
+            title="Fechar menu"
+          >
+            <X size={20} />
+          </button>
         </div>
-      </div>
-      <ScrollArea className="flex-1 py-4">
-        <ul>{renderItems(items)}</ul>
-      </ScrollArea>
-    </aside>
+        <ScrollArea className="flex-1 py-4">
+          <ul>{renderItems(items)}</ul>
+        </ScrollArea>
+      </aside>
+    </>
   );
 }
