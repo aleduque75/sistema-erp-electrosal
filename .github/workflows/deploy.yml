@@ -61,7 +61,11 @@ jobs:
         run: |
           if [ -n "$WEBHOOK_URL" ]; then
             echo "Triggering Dokploy auto-deploy..."
-            curl -X POST "$WEBHOOK_URL"
+            curl -X POST \
+              -H "Content-Type: application/json" \
+              -H "x-github-event: push" \
+              -d '{"ref":"refs/heads/main"}' \
+              "$WEBHOOK_URL"
           else
             echo "No DOKPLOY_WEBHOOK_URL set. Skipping webhook trigger."
           fi
