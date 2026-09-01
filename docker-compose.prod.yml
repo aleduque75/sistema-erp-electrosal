@@ -16,9 +16,7 @@ services:
       retries: 10
 
   backend:
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
+    image: ghcr.io/aleduque75/sistema-erp-electrosal-backend:latest
     container_name: electrosal-backend-prod
     restart: always
     environment:
@@ -33,9 +31,7 @@ services:
       - backend_prod_uploads:/app/uploads
 
   frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
+    image: ghcr.io/aleduque75/sistema-erp-electrosal-frontend:latest
     container_name: electrosal-frontend-prod
     restart: always
     environment:
