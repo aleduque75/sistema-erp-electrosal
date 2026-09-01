@@ -454,7 +454,6 @@ ${itemsText}`;
                   <>
                     <DropdownMenuItem onClick={() => setSaleToEdit(sale)}>Editar Pedido</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleReleaseToPcp(sale.id)}>Liberar para Separação</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>Confirmar Venda</DropdownMenuItem>
                     <DropdownMenuItem className="text-red-600" onClick={() => handleCancelSale(sale.id)}>Cancelar Venda</DropdownMenuItem>
                   </>
                 )}
@@ -780,7 +779,6 @@ ${itemsText}`;
                               <>
                                 <DropdownMenuItem onClick={() => setSaleToEdit(sale)}>Editar Pedido</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleReleaseToPcp(sale.id)}>Liberar para Separação</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>Confirmar Venda</DropdownMenuItem>
                                 <DropdownMenuItem className="text-red-600" onClick={() => handleCancelSale(sale.id)}>Cancelar Venda</DropdownMenuItem>
                               </>
                             )}
