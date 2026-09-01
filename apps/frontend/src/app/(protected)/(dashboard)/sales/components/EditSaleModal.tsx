@@ -15,11 +15,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil } from 'lucide-react';
 import { AddItemModal } from './AddItemModal';
 import { Sale, Product } from '@/types/sale';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+const CONVERSION_FACTORS: Record<string, { factor: number; defaultLabor: number }> = {
+  'El Sal 68%': { factor: 0.68, defaultLabor: 5 },
+  'Cianeto de Prata 54%': { factor: 0.54, defaultLabor: 5 },
+};
 
 interface EditSaleModalProps {
   sale: Sale | null;
@@ -51,8 +56,9 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
   const [laborCostTable, setLaborCostTable] = useState<any[]>([]);
   const [editableItems, setEditableItems] = useState<EditableItem[]>([]);
 
-  // State for AddItemModal
+  // State for AddItemModal (supports adding or editing item)
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -94,19 +100,23 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
     if (initialSale) {
       setSale(initialSale);
 
-      const itemsList: EditableItem[] = (initialSale.saleItems || []).map(item => ({
-        id: item.id,
-        productId: item.productId,
-        productName: item.product?.name || 'Item sem nome',
-        goldValue: Number(item.product?.goldValue || 0),
-        quantity: Number(item.quantity || 0),
-        originalQuantity: Number(item.quantity || 0),
-        price: Number(item.price || 0),
-        laborPercentage: item.laborPercentage,
-        entryUnit: item.entryUnit,
-        entryQuantity: item.entryQuantity,
-        isNew: false,
-      }));
+      const itemsList: EditableItem[] = (initialSale.saleItems || []).map(item => {
+        const productName = item.product?.name || 'Item sem nome';
+        const conv = Object.entries(CONVERSION_FACTORS).find(([name]) => productName.includes(name));
+        return {
+          id: item.id,
+          productId: item.productId,
+          productName,
+          goldValue: Number(item.product?.goldValue || (conv ? conv[1].factor : 0)),
+          quantity: Number(item.quantity || 0),
+          originalQuantity: Number(item.quantity || 0),
+          price: Number(item.price || 0),
+          laborPercentage: item.laborPercentage ?? (conv ? conv[1].defaultLabor : undefined),
+          entryUnit: item.entryUnit ?? (conv ? 'metal' : undefined),
+          entryQuantity: item.entryQuantity ?? (conv ? Number(item.quantity || 0) * conv[1].factor : undefined),
+          isNew: false,
+        };
+      });
       setEditableItems(itemsList);
 
       Promise.all([
@@ -135,12 +145,52 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
     }
   }, [initialSale, reset]);
 
+  // Automatically recalculate Sal 68% item price when gold quote changes
+  useEffect(() => {
+    if (!updatedGoldPrice || updatedGoldPrice <= 0) return;
+
+    setEditableItems(prevItems =>
+      prevItems.map(item => {
+        const conv = Object.entries(CONVERSION_FACTORS).find(([name]) => item.productName.includes(name));
+        if (!conv || item.quantity <= 0) return item;
+
+        const factor = conv[1].factor;
+        const laborPct = item.laborPercentage ?? conv[1].defaultLabor;
+        // Metal grams Au
+        const metalGrams = item.entryUnit === 'metal' && item.entryQuantity
+          ? item.entryQuantity
+          : item.quantity * factor;
+        const totalMetalWithLabor = metalGrams * (1 + laborPct / 100);
+        const recalculatedPrice = (totalMetalWithLabor * Number(updatedGoldPrice)) / item.quantity;
+
+        return {
+          ...item,
+          price: parseFloat(recalculatedPrice.toFixed(2)),
+        };
+      })
+    );
+  }, [updatedGoldPrice]);
+
   const handleQuantityChange = (index: number, value: string) => {
     const parsed = parseFloat(value);
     if (!isNaN(parsed) && parsed >= 0) {
       setEditableItems(prev => {
         const next = [...prev];
-        next[index] = { ...next[index], quantity: parsed };
+        const item = next[index];
+        const conv = Object.entries(CONVERSION_FACTORS).find(([name]) => item.productName.includes(name));
+        
+        let newPrice = item.price;
+        if (conv && updatedGoldPrice && parsed > 0) {
+          const factor = conv[1].factor;
+          const laborPct = item.laborPercentage ?? conv[1].defaultLabor;
+          const metalGrams = item.entryUnit === 'metal' && item.entryQuantity
+            ? item.entryQuantity
+            : parsed * factor;
+          const totalMetalWithLabor = metalGrams * (1 + laborPct / 100);
+          newPrice = parseFloat(((totalMetalWithLabor * Number(updatedGoldPrice)) / parsed).toFixed(2));
+        }
+
+        next[index] = { ...item, quantity: parsed, price: newPrice };
         return next;
       });
     }
@@ -168,46 +218,69 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
     });
   };
 
-  const handleAddItemFromModal = (newItemData: any) => {
+  const handleEditExistingItem = (index: number) => {
+    setEditingItemIndex(index);
+    setIsAddItemModalOpen(true);
+  };
+
+  const handleOpenAddNewModal = () => {
+    setEditingItemIndex(null);
+    setIsAddItemModalOpen(true);
+  };
+
+  const handleSaveItemFromModal = (newItemData: any) => {
     const product = products.find(p => p.id === newItemData.productId);
-    setEditableItems(prev => [
-      ...prev,
-      {
-        productId: newItemData.productId,
-        productName: newItemData.name || product?.name || 'Item sem nome',
-        goldValue: Number(product?.goldValue || 0),
-        quantity: newItemData.quantity,
-        originalQuantity: 0,
-        price: newItemData.price,
-        laborPercentage: newItemData.laborPercentage,
-        entryUnit: newItemData.entryUnit,
-        entryQuantity: newItemData.entryQuantity,
-        isNew: true,
-      }
-    ]);
-    toast.success(`Produto "${newItemData.name || product?.name}" adicionado.`);
+    const productName = newItemData.name || product?.name || 'Item sem nome';
+    const goldVal = Number(product?.goldValue || 0);
+
+    if (editingItemIndex !== null) {
+      // Update existing item
+      setEditableItems(prev => {
+        const next = [...prev];
+        next[editingItemIndex] = {
+          ...next[editingItemIndex],
+          productId: newItemData.productId,
+          productName,
+          goldValue: goldVal,
+          quantity: newItemData.quantity,
+          price: newItemData.price,
+          laborPercentage: newItemData.laborPercentage,
+          entryUnit: newItemData.entryUnit,
+          entryQuantity: newItemData.entryQuantity,
+        };
+        return next;
+      });
+      toast.success(`Item "${productName}" atualizado.`);
+    } else {
+      // Add new item
+      setEditableItems(prev => [
+        ...prev,
+        {
+          productId: newItemData.productId,
+          productName,
+          goldValue: goldVal,
+          quantity: newItemData.quantity,
+          originalQuantity: 0,
+          price: newItemData.price,
+          laborPercentage: newItemData.laborPercentage,
+          entryUnit: newItemData.entryUnit,
+          entryQuantity: newItemData.entryQuantity,
+          isNew: true,
+        }
+      ]);
+      toast.success(`Produto "${productName}" adicionado.`);
+    }
   };
 
   // --- Calculation Logic for Real-time Summary ---
   const totalAmount = useMemo(() => {
-    if (!updatedGoldPrice) return new Decimal(0);
-
     return editableItems.reduce((acc, item) => {
       if (item.quantity <= 0) return acc;
       const currentQuantity = new Decimal(item.quantity);
-      const itemGoldValue = new Decimal(item.goldValue || 0);
-      const quote = new Decimal(updatedGoldPrice);
-
-      // For non-gold products, price is fixed in BRL
-      if (itemGoldValue.isZero()) {
-        const fixedPrice = new Decimal(item.price || 0);
-        return acc.plus(fixedPrice.times(currentQuantity));
-      }
-
-      const itemTotalBRL = currentQuantity.times(itemGoldValue).times(quote);
-      return acc.plus(itemTotalBRL);
+      const itemPrice = new Decimal(item.price || 0);
+      return acc.plus(currentQuantity.times(itemPrice));
     }, new Decimal(0));
-  }, [updatedGoldPrice, editableItems]);
+  }, [editableItems]);
 
   const netAmount = useMemo(() => {
     return totalAmount.plus(new Decimal(shippingCost || 0));
@@ -287,7 +360,7 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
           onOpenChange={setIsAddItemModalOpen}
           products={products}
           items={editableItems}
-          onAddItem={handleAddItemFromModal}
+          onAddItem={handleSaveItemFromModal}
           saleGoldQuote={Number(updatedGoldPrice || 0)}
           saleSilverQuote={0}
           laborCostTable={laborCostTable}
@@ -392,7 +465,7 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                   <div>
                     <CardTitle className="text-base">Itens da Venda</CardTitle>
                     <p className="text-[11px] text-muted-foreground">
-                      Edite as quantidades ou adicione novos produtos com as regras de Sal 68%.
+                      Clique no lápis (✏️) para recalcular itens existentes com as regras de Sal 68%.
                     </p>
                   </div>
                   <Button
@@ -400,7 +473,7 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                     variant="outline"
                     size="sm"
                     className="h-8 gap-1.5 text-xs font-semibold"
-                    onClick={() => setIsAddItemModalOpen(true)}
+                    onClick={handleOpenAddNewModal}
                   >
                     <PlusCircle className="h-4 w-4" />
                     Adicionar Item
@@ -413,7 +486,7 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                         <TableHead className="text-xs">Produto</TableHead>
                         <TableHead className="text-right w-24 text-xs">Qtd</TableHead>
                         <TableHead className="text-right w-28 text-xs">Preço Unit.</TableHead>
-                        <TableHead className="w-10"></TableHead>
+                        <TableHead className="w-16 text-center text-xs">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -455,15 +528,28 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                                 />
                               </TableCell>
                               <TableCell className="text-center">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-red-500 hover:bg-red-500/10"
-                                  onClick={() => handleRemoveItem(idx)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-blue-500 hover:bg-blue-500/10"
+                                    title="Editar calculadora deste produto"
+                                    onClick={() => handleEditExistingItem(idx)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-500 hover:bg-red-500/10"
+                                    title="Remover item"
+                                    onClick={() => handleRemoveItem(idx)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           );
