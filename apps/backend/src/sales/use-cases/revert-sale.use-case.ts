@@ -28,14 +28,6 @@ export class RevertSaleUseCase {
         throw new BadRequestException(`Apenas vendas com status CONFIRMADO, A SEPARAR, SEPARADO ou FINALIZADO podem ser revertidas.`);
       }
 
-      // If sale is only A_SEPARAR, no stock deduction occurred yet.
-      if (sale.status === SaleStatus.A_SEPARAR) {
-        return tx.sale.update({
-          where: { id: saleId },
-          data: { status: SaleStatus.PENDENTE },
-        });
-      }
-
       // 1. Reverse Stock Deduction (for SEPARADO / CONFIRMADO / FINALIZADO)
       for (const item of sale.saleItems) {
         const itemLots = (item as any).saleItemLots || [];
@@ -135,7 +127,13 @@ export class RevertSaleUseCase {
       });
 
       await tx.accountRec.deleteMany({
-        where: { saleId: sale.id },
+        where: {
+          OR: [
+            { saleId: sale.id },
+            { description: { contains: `venda #${sale.orderNumber}` } },
+            { description: { contains: `Venda #${sale.orderNumber}` } },
+          ],
+        },
       });
 
       // 3. Reverse Metal Payments and Account Entries

@@ -7,6 +7,8 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-senha_segura_prod}
       POSTGRES_DB: ${DB_NAME:-sistema_electrosal_prod}
+      TZ: America/Sao_Paulo
+    command: "postgres -c timezone=America/Sao_Paulo"
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,6 +25,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
+      TZ: America/Sao_Paulo
       DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-senha_segura_prod}@postgres:5432/${DB_NAME:-sistema_electrosal_prod}?schema=erp"
       JWT_SECRET: ${JWT_SECRET:-sua_chave_secreta_jwt_electrosal_prod_2026}
       PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
@@ -42,6 +45,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: "0.0.0.0"
+      TZ: America/Sao_Paulo
       NEXT_PUBLIC_API_URL: "https://api.electrosal.com.br"
     depends_on:
       - backend
@@ -50,6 +54,8 @@ services:
     image: nginx:alpine
     container_name: electrosal-nginx-prod
     restart: always
+    environment:
+      TZ: America/Sao_Paulo
     ports:
       - "8090:80"
     volumes:
