@@ -83,6 +83,7 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
       { value: 'A_VISTA', label: 'À Vista', isTerm: false },
       { value: 'CREDIT_CARD', label: 'Cartão de Crédito', isTerm: false },
       { value: 'METAL', label: 'Metal', isTerm: false },
+      { value: 'A_COMBINAR', label: 'A Combinar', isTerm: false },
     ];
   }, [paymentTerms]);
 
@@ -307,6 +308,9 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
         paymentTermId = null;
       } else if (selectedPaymentCondition.value === 'A_VISTA') {
         paymentMethod = 'A_VISTA';
+        paymentTermId = null;
+      } else if (selectedPaymentCondition.value === 'A_COMBINAR') {
+        paymentMethod = 'A_COMBINAR';
         paymentTermId = null;
       } else if (selectedPaymentCondition.isTerm) {
         paymentTermId = selectedPaymentCondition.value;

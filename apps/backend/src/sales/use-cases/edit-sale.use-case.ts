@@ -132,7 +132,7 @@ export class EditSaleUseCase {
           totalAmount: totalAmountBRL,
           netAmount: netAmountBRL,
           goldValue: totalGoldValue,
-          paymentTermId: dto.paymentTermId ?? sale.paymentTermId,
+          paymentTermId: dto.paymentTermId !== undefined ? dto.paymentTermId : sale.paymentTermId,
           paymentMethod: dto.paymentMethod ?? sale.paymentMethod,
           observation: dto.observation ?? sale.observation,
         },
