@@ -3,11 +3,20 @@ import { Type } from 'class-transformer';
 
 export class UpdateSaleItemDto {
   @IsString()
-  id: string;
+  @IsOptional()
+  id?: string;
+
+  @IsString()
+  @IsOptional()
+  productId?: string;
 
   @IsNumber()
   @Min(0)
   quantity: number;
+
+  @IsNumber()
+  @IsOptional()
+  price?: number;
 }
 
 export class EditSaleDto {
@@ -26,6 +35,14 @@ export class EditSaleDto {
   @IsString()
   @IsOptional()
   paymentMethod?: string;
+
+  @IsString()
+  @IsOptional()
+  contaCorrenteId?: string;
+
+  @IsString()
+  @IsOptional()
+  observation?: string;
 
   @IsArray()
   @IsOptional()

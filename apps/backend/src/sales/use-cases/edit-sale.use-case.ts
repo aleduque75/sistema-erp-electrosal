@@ -31,45 +31,73 @@ export class EditSaleUseCase {
         );
       }
 
-      // --- 1. Update item quantities if provided ---
+      // --- 1. Update item quantities, additions, and removals if provided ---
       if (dto.items && dto.items.length > 0) {
         for (const itemUpdate of dto.items) {
-          const existingItem = sale.saleItems.find((i) => i.id === itemUpdate.id);
-          if (!existingItem) {
-            throw new BadRequestException(
-              `Item com ID ${itemUpdate.id} não encontrado nesta venda.`,
-            );
+          if (itemUpdate.id) {
+            const existingItem = sale.saleItems.find((i) => i.id === itemUpdate.id);
+            if (!existingItem) {
+              throw new BadRequestException(
+                `Item com ID ${itemUpdate.id} não encontrado nesta venda.`,
+              );
+            }
+
+            if (itemUpdate.quantity <= 0) {
+              // Delete item from sale
+              await tx.saleItemLot.deleteMany({ where: { saleItemId: itemUpdate.id } });
+              await tx.saleItem.delete({ where: { id: itemUpdate.id } });
+            } else {
+              // Update item quantity and price
+              await tx.saleItem.update({
+                where: { id: itemUpdate.id },
+                data: {
+                  quantity: itemUpdate.quantity,
+                  ...(itemUpdate.price !== undefined ? { price: itemUpdate.price } : {}),
+                },
+              });
+
+              // Clear lots so they can be re-allocated
+              await tx.saleItemLot.deleteMany({
+                where: { saleItemId: itemUpdate.id },
+              });
+            }
+          } else if (itemUpdate.productId && itemUpdate.quantity > 0) {
+            // Create new sale item
+            const product = await tx.product.findUnique({ where: { id: itemUpdate.productId } });
+            if (!product) {
+              throw new BadRequestException(`Produto com ID ${itemUpdate.productId} não encontrado.`);
+            }
+
+            await tx.saleItem.create({
+              data: {
+                saleId: sale.id,
+                productId: itemUpdate.productId,
+                quantity: itemUpdate.quantity,
+                price: itemUpdate.price ?? product.price ?? 0,
+              },
+            });
           }
-
-          if (itemUpdate.quantity <= 0) {
-            throw new BadRequestException(
-              `A quantidade do item deve ser maior que zero.`,
-            );
-          }
-
-          // Update the SaleItem quantity
-          await tx.saleItem.update({
-            where: { id: itemUpdate.id },
-            data: { quantity: itemUpdate.quantity },
-          });
-
-          // Delete existing SaleItemLots as the total quantity changed. 
-          // The user will need to re-link appropriate lots for the new quantity.
-          await tx.saleItemLot.deleteMany({
-            where: { saleItemId: itemUpdate.id }
-          });
-
-
         }
 
         // Reload sale items with updated quantities for recalculation
-        sale.saleItems = await tx.saleItem.findMany({
+        sale.saleItems = (await tx.saleItem.findMany({
           where: { saleId: sale.id },
           include: { product: true },
-        }) as any;
+        })) as any;
       }
 
-      // --- 2. Recalculate financial totals ---
+      // --- 2. Conta Corrente name lookup if provided ---
+      let paymentAccountName = sale.paymentAccountName;
+      if (dto.contaCorrenteId) {
+        const conta = await tx.contaCorrente.findUnique({
+          where: { id: dto.contaCorrenteId },
+        });
+        if (conta) {
+          paymentAccountName = conta.nome;
+        }
+      }
+
+      // --- 3. Recalculate financial totals ---
       const goldPrice = new Decimal(dto.updatedGoldPrice ?? sale.goldPrice ?? 0);
       const shippingCostBRL = new Decimal(dto.shippingCost ?? sale.shippingCost ?? 0);
 
@@ -99,7 +127,7 @@ export class EditSaleUseCase {
       const netAmountBRL = totalGoldValue.times(goldPrice);
       const totalAmountBRL = netAmountBRL.minus(shippingCostBRL);
 
-      // --- 3. Update the sale record ---
+      // --- 4. Update the sale record ---
       const updatedSale = await tx.sale.update({
         where: { id: saleId },
         data: {
@@ -110,6 +138,8 @@ export class EditSaleUseCase {
           goldValue: totalGoldValue,
           paymentTermId: dto.paymentTermId ?? sale.paymentTermId,
           paymentMethod: dto.paymentMethod ?? sale.paymentMethod,
+          paymentAccountName: paymentAccountName,
+          observation: dto.observation ?? sale.observation,
         },
       });
 

@@ -12,10 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Sale } from '@/types/sale'; // Assuming a shared Sale type
+import { PlusCircle, Trash2 } from 'lucide-react';
+import { Sale, Product } from '@/types/sale';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
@@ -26,23 +28,40 @@ interface EditSaleModalProps {
   onSave: () => void;
 }
 
+interface EditableItem {
+  id?: string;
+  productId: string;
+  productName: string;
+  goldValue: number;
+  quantity: number;
+  originalQuantity: number;
+  price: number;
+  isNew?: boolean;
+}
+
 export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }: EditSaleModalProps) {
   const [sale, setSale] = useState<Sale | null>(initialSale);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentTerms, setPaymentTerms] = useState<any[]>([]);
-  // State for editable item quantities: { [saleItemId]: quantity }
-  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
+  const [contasCorrentes, setContasCorrentes] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [editableItems, setEditableItems] = useState<EditableItem[]>([]);
+
+  // State for new product addition
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [newProductQty, setNewProductQty] = useState<number>(1);
 
   const form = useForm({
     defaultValues: {
       updatedGoldPrice: 0,
       shippingCost: 0,
       paymentConditionId: '' as string | null,
+      contaCorrenteId: '' as string | null,
       observation: '',
     }
   });
 
-  const { control, watch, reset } = form;
+  const { control, watch, reset, setValue } = form;
 
   const updatedGoldPrice = watch('updatedGoldPrice');
   const shippingCost = watch('shippingCost');
@@ -62,45 +81,124 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
     return paymentOptions.find(opt => opt.value === paymentConditionId);
   }, [paymentConditionId, paymentOptions]);
 
+  const isAVista = useMemo(() => {
+    if (!selectedPaymentCondition) return false;
+    if (selectedPaymentCondition.value === 'A_VISTA') return true;
+    return selectedPaymentCondition.label.toLowerCase().includes('vista');
+  }, [selectedPaymentCondition]);
+
   useEffect(() => {
     if (initialSale) {
       setSale(initialSale);
-      // Initialize item quantities from the current sale items
-      const initialQuantities: Record<string, number> = {};
-      (initialSale.saleItems || []).forEach(item => {
-        initialQuantities[item.id] = item.quantity;
-      });
-      setItemQuantities(initialQuantities);
 
-      api.get('/payment-terms').then(res => {
-        setPaymentTerms(res.data);
+      const itemsList: EditableItem[] = (initialSale.saleItems || []).map(item => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.product?.name || 'Item sem nome',
+        goldValue: Number(item.product?.goldValue || 0),
+        quantity: Number(item.quantity || 0),
+        originalQuantity: Number(item.quantity || 0),
+        price: Number(item.price || 0),
+        isNew: false,
+      }));
+      setEditableItems(itemsList);
+
+      Promise.all([
+        api.get('/payment-terms'),
+        api.get('/contas-correntes', { params: { types: ['BANCO', 'FORNECEDOR_METAL'] } }),
+        api.get('/products'),
+      ]).then(([termsRes, contasRes, productsRes]) => {
+        setPaymentTerms(termsRes.data || []);
+        setContasCorrentes(contasRes.data || []);
+        setProducts(productsRes.data || []);
+
         reset({
           updatedGoldPrice: initialSale.goldPrice || 0,
           shippingCost: initialSale.shippingCost || 0,
           paymentConditionId: initialSale.paymentTermId || initialSale.paymentMethod || null,
+          contaCorrenteId: initialSale.paymentAccountName
+            ? contasRes.data.find((c: any) => c.nome === initialSale.paymentAccountName)?.id || null
+            : null,
           observation: initialSale.observation || '',
         });
+      }).catch(err => {
+        console.error('Falha ao carregar dados auxiliares do pedido:', err);
       });
     }
   }, [initialSale, reset]);
 
-  const handleQuantityChange = (itemId: string, value: string) => {
+  const handleQuantityChange = (index: number, value: string) => {
     const parsed = parseFloat(value);
     if (!isNaN(parsed) && parsed >= 0) {
-      setItemQuantities(prev => ({ ...prev, [itemId]: parsed }));
+      setEditableItems(prev => {
+        const next = [...prev];
+        next[index] = { ...next[index], quantity: parsed };
+        return next;
+      });
     }
   };
 
-  // --- Calculation Logic for Real-time Summary (uses itemQuantities state) ---
-  const totalAmount = useMemo(() => {
-    if (!sale?.saleItems || !updatedGoldPrice) return new Decimal(0);
+  const handlePriceChange = (index: number, value: string) => {
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed) && parsed >= 0) {
+      setEditableItems(prev => {
+        const next = [...prev];
+        next[index] = { ...next[index], price: parsed };
+        return next;
+      });
+    }
+  };
 
-    return sale.saleItems.reduce((acc, item) => {
-      const currentQuantity = new Decimal(itemQuantities[item.id] ?? item.quantity ?? 0);
-      const itemGoldValue = new Decimal(item.product?.goldValue || 0);
+  const handleRemoveItem = (index: number) => {
+    setEditableItems(prev => {
+      const next = [...prev];
+      if (next[index].isNew) {
+        // Remove completely if new
+        return next.filter((_, i) => i !== index);
+      }
+      // If existing, set quantity to 0 so backend deletes it
+      next[index] = { ...next[index], quantity: 0 };
+      return next;
+    });
+  };
+
+  const handleAddNewProduct = () => {
+    if (!selectedProductId) {
+      toast.warning('Selecione um produto para adicionar.');
+      return;
+    }
+    const product = products.find(p => p.id === selectedProductId);
+    if (!product) return;
+
+    setEditableItems(prev => [
+      ...prev,
+      {
+        productId: product.id,
+        productName: product.name,
+        goldValue: Number(product.goldValue || 0),
+        quantity: newProductQty > 0 ? newProductQty : 1,
+        originalQuantity: 0,
+        price: Number(product.price || 0),
+        isNew: true,
+      }
+    ]);
+
+    setSelectedProductId('');
+    setNewProductQty(1);
+    toast.success(`Produto "${product.name}" adicionado.`);
+  };
+
+  // --- Calculation Logic for Real-time Summary ---
+  const totalAmount = useMemo(() => {
+    if (!updatedGoldPrice) return new Decimal(0);
+
+    return editableItems.reduce((acc, item) => {
+      if (item.quantity <= 0) return acc;
+      const currentQuantity = new Decimal(item.quantity);
+      const itemGoldValue = new Decimal(item.goldValue || 0);
       const quote = new Decimal(updatedGoldPrice);
 
-      // For non-gold products, their price is fixed in BRL and doesn't change
+      // For non-gold products, price is fixed in BRL
       if (itemGoldValue.isZero()) {
         const fixedPrice = new Decimal(item.price || 0);
         return acc.plus(fixedPrice.times(currentQuantity));
@@ -109,8 +207,7 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
       const itemTotalBRL = currentQuantity.times(itemGoldValue).times(quote);
       return acc.plus(itemTotalBRL);
     }, new Decimal(0));
-
-  }, [sale, updatedGoldPrice, itemQuantities]);
+  }, [updatedGoldPrice, editableItems]);
 
   const netAmount = useMemo(() => {
     return totalAmount.plus(new Decimal(shippingCost || 0));
@@ -121,7 +218,6 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
     if (price.isZero()) return new Decimal(0);
     return netAmount.dividedBy(price);
   }, [netAmount, updatedGoldPrice]);
-
 
   const handleSaveChanges = async (formData: any) => {
     if (!sale) return;
@@ -141,29 +237,31 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
         paymentTermId = null;
       } else if (selectedPaymentCondition.isTerm) {
         paymentTermId = selectedPaymentCondition.value;
-        if (selectedPaymentCondition.label.toLowerCase().includes('vista')) {
-          paymentMethod = 'A_VISTA';
-        } else {
-          paymentMethod = 'A_PRAZO';
-        }
+        paymentMethod = selectedPaymentCondition.label.toLowerCase().includes('vista') ? 'A_VISTA' : 'A_PRAZO';
       }
     }
 
-    // Build item updates: only send items whose quantity changed
-    const itemUpdates = (sale.saleItems || [])
-      .filter(item => (itemQuantities[item.id] ?? item.quantity) !== item.quantity)
-      .map(item => ({
-        id: item.id,
-        quantity: itemQuantities[item.id],
-      }));
+    if (paymentMethod === 'A_VISTA' && !formData.contaCorrenteId) {
+      toast.error('Para pagamento À Vista, por favor selecione a Conta Corrente de destino.');
+      return;
+    }
+
+    // Build item payload: modified existing items or new items
+    const itemUpdates = editableItems.map(item => ({
+      id: item.id,
+      productId: item.productId,
+      quantity: item.quantity,
+      price: item.price,
+    }));
 
     const payload = {
       updatedGoldPrice: formData.updatedGoldPrice,
       shippingCost: formData.shippingCost,
       paymentTermId: paymentTermId,
       paymentMethod: paymentMethod,
+      contaCorrenteId: formData.contaCorrenteId || undefined,
       observation: formData.observation,
-      items: itemUpdates.length > 0 ? itemUpdates : undefined,
+      items: itemUpdates,
     };
 
     setIsSubmitting(true);
@@ -181,34 +279,39 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="w-[96vw] max-w-5xl max-h-[94vh] flex flex-col p-3 md:p-6 overflow-hidden">
         <DialogHeader>
           <DialogTitle>Editar Venda #{sale?.orderNumber}</DialogTitle>
         </DialogHeader>
         {sale ? (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSaveChanges)} className="space-y-4 p-4">
+            <form onSubmit={form.handleSubmit(handleSaveChanges)} className="space-y-4 flex-1 overflow-y-auto p-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
-                  <CardHeader><CardTitle>Editar Dados da Venda</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField control={control} name="updatedGoldPrice" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cotação do Ouro (R$)</FormLabel>
-                        <FormControl><Input type="number" {...field} step="0.01" /></FormControl>
-                      </FormItem>
-                    )} />
-                    <FormField control={control} name="shippingCost" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Custo do Frete (R$)</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
-                      </FormItem>
-                    )} />
+                  <CardHeader className="p-3 md:p-4">
+                    <CardTitle className="text-base">Editar Dados da Venda</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 p-3 md:p-4 pt-0">
+                    <div className="grid grid-cols-2 gap-2">
+                      <FormField control={control} name="updatedGoldPrice" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Cotação Ouro (R$)</FormLabel>
+                          <FormControl><Input type="number" className="h-9 text-xs" {...field} step="0.01" /></FormControl>
+                        </FormItem>
+                      )} />
+                      <FormField control={control} name="shippingCost" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Frete (R$)</FormLabel>
+                          <FormControl><Input type="number" className="h-9 text-xs" {...field} step="0.01" /></FormControl>
+                        </FormItem>
+                      )} />
+                    </div>
+
                     <FormField control={control} name="paymentConditionId" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Condição de Pagamento</FormLabel>
+                        <FormLabel className="text-xs">Condição de Pagamento</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ''}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                          <FormControl><SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                           <SelectContent>
                             {paymentOptions.map(option => (
                               <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
@@ -217,11 +320,28 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                         </Select>
                       </FormItem>
                     )} />
+
+                    {isAVista && (
+                      <FormField control={control} name="contaCorrenteId" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Receber em (Conta Corrente)</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl><SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione a conta..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              {contasCorrentes.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )} />
+                    )}
+
                     <FormField control={control} name="observation" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Observações</FormLabel>
+                        <FormLabel className="text-xs">Observações</FormLabel>
                         <FormControl>
-                          <Textarea {...field} placeholder="Observações adicionais..." className="resize-none h-24" />
+                          <Textarea {...field} placeholder="Observações adicionais..." className="resize-none h-16 text-xs" />
                         </FormControl>
                       </FormItem>
                     )} />
@@ -229,71 +349,138 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                 </Card>
 
                 <Card>
-                  <CardHeader><CardTitle>Resumo Financeiro (Recalculado)</CardTitle></CardHeader>
-                  <CardContent className="space-y-3 pt-6">
-                    <div className="flex justify-between items-center text-sm">
+                  <CardHeader className="p-3 md:p-4">
+                    <CardTitle className="text-base">Resumo Financeiro (Recalculado)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2.5 p-3 md:p-4 pt-0">
+                    <div className="flex justify-between items-center text-xs">
                       <span className="text-muted-foreground">Subtotal dos Itens</span>
-                      <span className="font-mono">{formatCurrency(totalAmount.toNumber())}</span>
+                      <span className="font-mono font-medium">{formatCurrency(totalAmount.toNumber())}</span>
                     </div>
-                    <div className="flex justify-between items-center text-sm">
+                    <div className="flex justify-between items-center text-xs">
                       <span className="text-muted-foreground">Custo do Frete</span>
-                      <span className="font-mono">{formatCurrency(Number(shippingCost))}</span>
+                      <span className="font-mono font-medium">{formatCurrency(Number(shippingCost))}</span>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t mt-2">
-                      <span className="text-muted-foreground text-lg">Total Final a Pagar (R$)</span>
-                      <span className="font-bold text-xl text-green-600">{formatCurrency(netAmount.toNumber())}</span>
+                      <span className="text-muted-foreground text-sm font-semibold">Total Final a Pagar (R$)</span>
+                      <span className="font-black text-lg text-emerald-500">{formatCurrency(netAmount.toNumber())}</span>
                     </div>
-                    <div className="flex justify-between items-center text-sm pt-2">
+                    <div className="flex justify-between items-center text-xs pt-2">
                       <span className="text-muted-foreground">Equivalente Total em Ouro</span>
-                      <span className="font-mono">{finalGoldValue.toFixed(4)} g</span>
+                      <span className="font-mono font-bold">{finalGoldValue.toFixed(4)} g</span>
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
+              {/* Itens da Venda */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Itens da Venda</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Edite as quantidades diretamente na tabela abaixo.
-                  </p>
+                <CardHeader className="p-3 md:p-4 flex flex-row items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base">Itens da Venda</CardTitle>
+                    <p className="text-[11px] text-muted-foreground">
+                      Edite as quantidades ou adicione novos produtos ao pedido.
+                    </p>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <Table size="sm">
+                <CardContent className="p-3 md:p-4 pt-0 space-y-3">
+                  {/* Incluir Novo Produto */}
+                  <div className="flex flex-wrap items-end gap-2 bg-muted/40 p-2.5 rounded-lg border">
+                    <div className="flex-1 min-w-[200px] space-y-1">
+                      <FormLabel className="text-xs font-semibold">Adicionar Novo Produto</FormLabel>
+                      <Combobox
+                        options={products.map(p => ({ value: p.id, label: p.name }))}
+                        value={selectedProductId}
+                        onChange={setSelectedProductId}
+                        placeholder="Selecione um produto..."
+                      />
+                    </div>
+                    <div className="w-24 space-y-1">
+                      <FormLabel className="text-xs font-semibold">Qtd</FormLabel>
+                      <Input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        className="h-9 text-xs"
+                        value={newProductQty}
+                        onChange={e => setNewProductQty(parseFloat(e.target.value) || 1)}
+                      />
+                    </div>
+                    <Button type="button" size="sm" className="h-9 px-3 gap-1" onClick={handleAddNewProduct}>
+                      <PlusCircle className="h-4 w-4" />
+                      Adicionar
+                    </Button>
+                  </div>
+
+                  <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Produto</TableHead>
-                        <TableHead className="text-right w-32">Qtd. Original</TableHead>
-                        <TableHead className="text-right w-36">Nova Qtd.</TableHead>
+                        <TableHead className="text-xs">Produto</TableHead>
+                        <TableHead className="text-right w-24 text-xs">Qtd</TableHead>
+                        <TableHead className="text-right w-28 text-xs">Preço Unit.</TableHead>
+                        <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sale.saleItems.map((item) => {
-                        const currentQty = itemQuantities[item.id] ?? item.quantity;
-                        const hasChanged = currentQty !== item.quantity;
-                        return (
-                          <TableRow key={item.id} className={hasChanged ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''}>
-                            <TableCell className="font-medium">{item.product?.name || 'Item sem nome'}</TableCell>
-                            <TableCell className="text-right text-muted-foreground">{item.quantity}</TableCell>
-                            <TableCell className="text-right">
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.001"
-                                value={currentQty}
-                                onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                className={`w-28 ml-auto text-right ${hasChanged ? 'border-yellow-500 focus:border-yellow-500' : ''}`}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {editableItems.length > 0 ? (
+                        editableItems.map((item, idx) => {
+                          const isRemoved = item.quantity <= 0;
+                          return (
+                            <TableRow key={item.id || idx} className={isRemoved ? 'opacity-40 bg-red-500/10' : item.isNew ? 'bg-emerald-500/10' : ''}>
+                              <TableCell className="font-semibold text-xs">
+                                {item.productName}
+                                {item.isNew && <span className="ml-1 text-[10px] text-emerald-500 font-bold">(Novo)</span>}
+                                {isRemoved && <span className="ml-1 text-[10px] text-red-500 font-bold">(Removido)</span>}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  disabled={isRemoved}
+                                  value={item.quantity}
+                                  onChange={(e) => handleQuantityChange(idx, e.target.value)}
+                                  className="w-20 ml-auto text-right h-8 text-xs font-bold"
+                                />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  disabled={isRemoved}
+                                  value={item.price}
+                                  onChange={(e) => handlePriceChange(idx, e.target.value)}
+                                  className="w-24 ml-auto text-right h-8 text-xs"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500 hover:bg-red-500/10"
+                                  onClick={() => handleRemoveItem(idx)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground text-xs py-4">
+                            Nenhum item no pedido.
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
 
-              <DialogFooter className="pt-4">
+              <DialogFooter className="pt-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
