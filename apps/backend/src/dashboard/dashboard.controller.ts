@@ -14,8 +14,12 @@ export class DashboardController {
   ) {}
 
   @Get('summary')
-  getSummary(@CurrentUser('orgId') organizationId: string) {
-    return this.dashboardService.getDashboardSummary(organizationId);
+  getSummary(
+    @CurrentUser('orgId') organizationId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.dashboardService.getDashboardSummary(organizationId, startDate, endDate);
   }
 
   @Get('accounts-pay-status')

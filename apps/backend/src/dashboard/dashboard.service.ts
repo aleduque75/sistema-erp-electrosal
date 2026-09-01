@@ -8,9 +8,44 @@ import { TipoMetal, ContaCorrenteType } from '@prisma/client';
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
-  async getDashboardSummary(organizationId: string) {
+  async getDashboardSummary(organizationId: string, startDateParam?: string, endDateParam?: string) {
     const now = new Date();
-    const [products, accountsPay, accountsRec, salesSummary, inventoryLots, todayQuotation] = await Promise.all([
+    let start = startDateParam ? new Date(startDateParam) : startOfMonth(now);
+    let end = endDateParam ? new Date(endDateParam) : endOfMonth(now);
+
+    let salesSummary = await this.prisma.sale.aggregate({
+      where: {
+        organizationId,
+        status: { not: 'CANCELADO' },
+        createdAt: {
+          gte: start,
+          lte: end,
+        },
+      },
+      _sum: { netAmount: true, totalAmount: true, goldValue: true },
+    });
+
+    // If current calendar month has 0 sales yet (e.g. 1st day of a new month), fallback to most recent month with sales
+    if (!salesSummary._sum.goldValue || salesSummary._sum.goldValue.toNumber() === 0) {
+      const mostRecentSale = await this.prisma.sale.findFirst({
+        where: { organizationId, status: { not: 'CANCELADO' } },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (mostRecentSale) {
+        start = startOfMonth(mostRecentSale.createdAt);
+        end = endOfMonth(mostRecentSale.createdAt);
+        salesSummary = await this.prisma.sale.aggregate({
+          where: {
+            organizationId,
+            status: { not: 'CANCELADO' },
+            createdAt: { gte: start, lte: end },
+          },
+          _sum: { netAmount: true, totalAmount: true, goldValue: true },
+        });
+      }
+    }
+
+    const [products, accountsPay, accountsRec, inventoryLots, todayQuotation] = await Promise.all([
       this.prisma.product.findMany({
         where: { organizationId },
         select: { id: true, price: true },
@@ -22,10 +57,6 @@ export class DashboardService {
       this.prisma.accountRec.aggregate({
         where: { organizationId, received: false },
         _sum: { amount: true },
-      }),
-      this.prisma.sale.aggregate({
-        where: { organizationId, status: { not: 'CANCELADO' } },
-        _sum: { totalAmount: true, goldValue: true },
       }),
       this.prisma.inventoryLot.findMany({
         where: { organizationId, remainingQuantity: { gt: 0 } },
@@ -52,9 +83,10 @@ export class DashboardService {
       totalAccountsPay: accountsPay._sum.amount?.toNumber() || 0,
       totalAccountsRec: accountsRec._sum.amount?.toNumber() || 0,
       totalStockValue: totalStockValue,
-      totalSalesBRL: salesSummary._sum.totalAmount?.toNumber() || 0,
+      totalSalesBRL: salesSummary._sum.netAmount?.toNumber() || salesSummary._sum.totalAmount?.toNumber() || 0,
       totalSalesAu: salesSummary._sum.goldValue?.toNumber() || 0,
       todayQuotationRegistered: !!todayQuotation,
+      periodMonth: format(start, 'MM/yyyy'),
     };
   }
 
