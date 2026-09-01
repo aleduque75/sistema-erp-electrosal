@@ -79,3 +79,8 @@ data/
 pm2_backend.log
 backend_recent.log
 backup_pre_migration_*.sql
+
+# Backups e imagens de upload (não commitar no Git)
+*.sql
+uploads/
+backup_hoje.sql

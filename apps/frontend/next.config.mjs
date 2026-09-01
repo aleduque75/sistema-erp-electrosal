@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   // Ignorar erros para agilizar o deploy no VPS
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },

@@ -9,8 +9,9 @@ COPY . .
 # Instala tudo (incluindo devDeps)
 RUN pnpm install --frozen-lockfile
 
-# 1. Build do Core e do Backend
+# 1. Build do Core, geração do Prisma Client e Build do Backend
 RUN pnpm --filter "@sistema-erp-electrosal/core" build
+RUN npx prisma generate --schema=apps/backend/prisma/schema.prisma
 RUN pnpm --filter backend build
 
 # 2. O PULO DO GATO: Isola o backend para produção em uma pasta limpa
@@ -33,19 +34,21 @@ COPY --from=builder /app/deployed-backend ./
 COPY --from=builder /app/apps/backend/prisma ./prisma
 COPY --from=builder /app/packages/core/dist ./packages/core/dist
 
-# Dependências para Puppeteer/PDFs
+# Dependências para Puppeteer/PDFs (incluindo libnss3 e libxkbcommon0)
 RUN apt-get update && apt-get install -y \
-    ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 \
+    ca-certificates fonts-liberation libnss3 libnspr4 libxkbcommon0 libdrm2 \
+    libasound2 libatk-bridge2.0-0 libatk1.0-0 \
     libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgbm1 \
-    libgcc1 libglib2.0-0 libgtk-3-0 libnspr4 libpango-1.0-0 libpangocairo-1.0-0 \
+    libgcc1 libglib2.0-0 libgtk-3-0 libpango-1.0-0 libpangocairo-1.0-0 \
     libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 \
     libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 \
     libxtst6 lsb-release wget xdg-utils && rm -rf /var/lib/apt/lists/*
 
-# Instalamos o Prisma global apenas para rodar o generate no boot
-RUN npm install -g prisma@5.12.1
+# Instalamos o Prisma global e os navegadores do Puppeteer para geração de PDFs
+RUN npm install -g prisma@5.22.0
+RUN npx puppeteer browsers install chrome
 
 EXPOSE 3001
 
-# Comando final: o prisma agora vai achar o @prisma/client porque a pasta está "plana"
+# Comando final: gera prisma e inicia backend
 CMD ["sh", "-c", "prisma generate && node dist/main"]
