@@ -53,3 +53,9 @@ jobs:
           tags: ghcr.io/${{ github.repository_owner }}/sistema-erp-electrosal-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Trigger Dokploy Deployment Webhook
+        if: ${{ secrets.DOKPLOY_WEBHOOK_URL != '' }}
+        run: |
+          echo "Triggering Dokploy auto-deploy..."
+          curl -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
