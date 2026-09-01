@@ -508,7 +508,7 @@ ${itemsText}`;
                 Nova Venda
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
+            <DialogContent className="w-[96vw] max-w-6xl h-[95vh] p-3 md:p-6 flex flex-col overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Registrar Nova Venda</DialogTitle>
               </DialogHeader>

@@ -404,15 +404,16 @@ export function NewSaleForm({ onSave }: any) {
       <div className="flex flex-col lg:flex-row flex-1 gap-4">
         <div className="w-full lg:w-1/3 space-y-4">
           <Card className="h-full">
-            <CardHeader className="p-4 md:p-6">
-              <CardTitle className="text-lg">1. Dados da Venda</CardTitle>
+            <CardHeader className="p-3 md:p-6 pb-2">
+              <CardTitle className="text-base md:text-lg">1. Dados da Venda</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 p-4 md:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <CardContent className="space-y-3 p-3 md:p-6 pt-0">
+              <div className="grid grid-cols-2 gap-2 sm:gap-4">
                 <div className="space-y-1">
-                  <Label>Data da Venda</Label>
+                  <Label className="text-xs">Data da Venda</Label>
                   <Input
                     type="date"
+                    className="h-9 text-xs"
                     value={saleDate ? saleDate.toISOString().split('T')[0] : ""}
                     onChange={(e) => setSaleDate(e.target.value ? new Date(e.target.value + 'T12:00:00') : undefined)}
                   />
@@ -422,109 +423,119 @@ export function NewSaleForm({ onSave }: any) {
                   control={control}
                   render={({ field }) => (
                     <div className="space-y-1">
-                      <Label>Nº Pedido (Opcional)</Label>
+                      <Label className="text-xs">Nº Pedido (Opcional)</Label>
                       <Input
                         {...field}
                         type="number"
-                        placeholder="Automático se vazio"
+                        className="h-9 text-xs"
+                        placeholder="Automático"
                         onBlur={handleCheckOrderNumber}
                       />
-                      <p className="text-sm text-destructive">{typeof errors.orderNumber?.message === "string" ? errors.orderNumber.message : ""}</p>
+                      <p className="text-[11px] text-destructive">{typeof errors.orderNumber?.message === "string" ? errors.orderNumber.message : ""}</p>
                     </div>
                   )}
                 />
               </div>
-              <Controller
-                name="clientId"
-                control={control}
-                render={({ field }) => (
-                  <div className="space-y-1">
-                    <Label>Cliente</Label>
-                    <Combobox
-                      options={clients.map((c) => ({ value: c.id, label: c.name }))}
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder="Selecione..."
-                    />
-                    <p className="text-sm text-destructive">{typeof errors.clientId?.message === "string" ? errors.clientId.message : ""}</p>
-                  </div>
-                )}
-              />
-              <Controller
-                name="paymentConditionId"
-                control={control}
-                render={({ field }) => (
-                  <div className="space-y-1">
-                    <Label>Condição de Pagamento</Label>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>
-                        {paymentOptions.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-sm text-destructive">{typeof errors.paymentConditionId?.message === "string" ? errors.paymentConditionId.message : ""}</p>
-                  </div>
-                )}
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+                <Controller
+                  name="clientId"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Cliente</Label>
+                      <Combobox
+                        options={clients.map((c) => ({ value: c.id, label: c.name }))}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Selecione..."
+                      />
+                      <p className="text-[11px] text-destructive">{typeof errors.clientId?.message === "string" ? errors.clientId.message : ""}</p>
+                    </div>
+                  )}
+                />
+                <Controller
+                  name="paymentConditionId"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Condição de Pagamento</Label>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          {paymentOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-destructive">{typeof errors.paymentConditionId?.message === "string" ? errors.paymentConditionId.message : ""}</p>
+                    </div>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-1">
-                  <Label>Ouro (R$)</Label>
+                  <Label className="text-[11px]">Ouro (R$)</Label>
                   <Input
                     type="number"
+                    className="h-9 text-xs"
                     value={saleGoldQuote}
                     onChange={(e) => setSaleGoldQuote(Number(e.target.value))}
                     step="0.01"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label>Prata (R$)</Label>
+                  <Label className="text-[11px]">Prata (R$)</Label>
                   <Input
                     type="number"
+                    className="h-9 text-xs"
                     value={saleSilverQuote}
                     onChange={(e) => setSaleSilverQuote(Number(e.target.value))}
                     step="0.01"
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px]">Frete (R$)</Label>
+                  <Input
+                    type="number"
+                    className="h-9 text-xs"
+                    value={freightAmount}
+                    onChange={(e) => setFreightAmount(Number(e.target.value))}
+                    step="0.01"
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label>Frete (R$)</Label>
-                <Input
-                  type="number"
-                  value={freightAmount}
-                  onChange={(e) => setFreightAmount(Number(e.target.value))}
-                  step="0.01"
-                />
-              </div>
+
               <Controller
                 name="observation"
                 control={control}
                 render={({ field }) => (
                   <div className="space-y-1">
-                    <Label>Observações</Label>
+                    <Label className="text-xs">Observações</Label>
                     <Textarea
                       {...field}
                       placeholder="Observações adicionais..."
-                      className="resize-none h-24"
+                      className="resize-none h-16 text-xs"
                     />
                   </div>
                 )}
               />
+
               {paymentConditionId === "CREDIT_CARD" && (
                 <Controller
                   name="numberOfInstallments"
                   control={control}
                   render={({ field }) => (
                     <div className="space-y-1">
-                      <Label>Parcelamento (Cartão)</Label>
+                      <Label className="text-xs">Parcelamento (Cartão)</Label>
                       <Select
                         onValueChange={(value) => field.onChange(parseInt(value, 10))}
                         value={field.value?.toString() || "1"}
                       >
-                        <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                         <SelectContent>
                           {fees.length > 0 ? (
                             fees.map((feeRule) => (
@@ -541,21 +552,22 @@ export function NewSaleForm({ onSave }: any) {
                   )}
                 />
               )}
+
               {currentPaymentMethod === 'A_VISTA' && (
                 <Controller
                   name="contaCorrenteId"
                   control={control}
                   render={({ field }) => (
                     <div className="space-y-1">
-                      <Label>Receber em</Label>
+                      <Label className="text-xs">Receber em</Label>
                       <Select onValueChange={field.onChange} value={field.value || ""}>
-                        <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                         <SelectContent>
                           {contasCorrentes.map((c) => (
                             <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                           ))}</SelectContent>
                       </Select>
-                      <p className="text-sm text-destructive">{typeof errors.contaCorrenteId?.message === "string" ? errors.contaCorrenteId.message : ""}</p>
+                      <p className="text-[11px] text-destructive">{typeof errors.contaCorrenteId?.message === "string" ? errors.contaCorrenteId.message : ""}</p>
                     </div>
                   )}
                 />
