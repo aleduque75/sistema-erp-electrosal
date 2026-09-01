@@ -50,11 +50,9 @@ services:
     container_name: electrosal-nginx-prod
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "8090:80"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend
