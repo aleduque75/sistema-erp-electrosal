@@ -30,6 +30,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-sua_chave_secreta_jwt_electrosal_prod_2026}
       PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
       PUPPETEER_EXECUTABLE_PATH: "/usr/bin/chromium"
+      AUTOMATIONS_API_KEY: ${AUTOMATIONS_API_KEY:-electrosal_automation_secret_key_2026}
+      DEFAULT_ORGANIZATION_ID: ${DEFAULT_ORGANIZATION_ID:-2a5bb448-056b-4b87-b02f-fec691dd658d}
     depends_on:
       postgres:
         condition: service_healthy
