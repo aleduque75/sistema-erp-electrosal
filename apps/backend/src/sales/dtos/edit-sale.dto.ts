@@ -17,6 +17,18 @@ export class UpdateSaleItemDto {
   @IsNumber()
   @IsOptional()
   price?: number;
+
+  @IsNumber()
+  @IsOptional()
+  laborPercentage?: number;
+
+  @IsString()
+  @IsOptional()
+  entryUnit?: string;
+
+  @IsNumber()
+  @IsOptional()
+  entryQuantity?: number;
 }
 
 export class EditSaleDto {

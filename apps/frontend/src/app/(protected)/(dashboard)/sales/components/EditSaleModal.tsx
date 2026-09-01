@@ -12,11 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Combobox } from '@/components/ui/combobox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { PlusCircle, Trash2 } from 'lucide-react';
+import { AddItemModal } from './AddItemModal';
 import { Sale, Product } from '@/types/sale';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
@@ -36,6 +36,9 @@ interface EditableItem {
   quantity: number;
   originalQuantity: number;
   price: number;
+  laborPercentage?: number;
+  entryUnit?: string;
+  entryQuantity?: number;
   isNew?: boolean;
 }
 
@@ -45,11 +48,11 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
   const [paymentTerms, setPaymentTerms] = useState<any[]>([]);
   const [contasCorrentes, setContasCorrentes] = useState<any[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [laborCostTable, setLaborCostTable] = useState<any[]>([]);
   const [editableItems, setEditableItems] = useState<EditableItem[]>([]);
 
-  // State for new product addition
-  const [selectedProductId, setSelectedProductId] = useState('');
-  const [newProductQty, setNewProductQty] = useState<number>(1);
+  // State for AddItemModal
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -61,7 +64,7 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
     }
   });
 
-  const { control, watch, reset, setValue } = form;
+  const { control, watch, reset } = form;
 
   const updatedGoldPrice = watch('updatedGoldPrice');
   const shippingCost = watch('shippingCost');
@@ -99,6 +102,9 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
         quantity: Number(item.quantity || 0),
         originalQuantity: Number(item.quantity || 0),
         price: Number(item.price || 0),
+        laborPercentage: item.laborPercentage,
+        entryUnit: item.entryUnit,
+        entryQuantity: item.entryQuantity,
         isNew: false,
       }));
       setEditableItems(itemsList);
@@ -107,10 +113,12 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
         api.get('/payment-terms'),
         api.get('/contas-correntes', { params: { types: ['BANCO', 'FORNECEDOR_METAL'] } }),
         api.get('/products'),
-      ]).then(([termsRes, contasRes, productsRes]) => {
+        api.get('/labor-cost-table-entries'),
+      ]).then(([termsRes, contasRes, productsRes, laborRes]) => {
         setPaymentTerms(termsRes.data || []);
         setContasCorrentes(contasRes.data || []);
         setProducts(productsRes.data || []);
+        setLaborCostTable(laborRes.data || []);
 
         reset({
           updatedGoldPrice: initialSale.goldPrice || 0,
@@ -153,39 +161,31 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
     setEditableItems(prev => {
       const next = [...prev];
       if (next[index].isNew) {
-        // Remove completely if new
         return next.filter((_, i) => i !== index);
       }
-      // If existing, set quantity to 0 so backend deletes it
       next[index] = { ...next[index], quantity: 0 };
       return next;
     });
   };
 
-  const handleAddNewProduct = () => {
-    if (!selectedProductId) {
-      toast.warning('Selecione um produto para adicionar.');
-      return;
-    }
-    const product = products.find(p => p.id === selectedProductId);
-    if (!product) return;
-
+  const handleAddItemFromModal = (newItemData: any) => {
+    const product = products.find(p => p.id === newItemData.productId);
     setEditableItems(prev => [
       ...prev,
       {
-        productId: product.id,
-        productName: product.name,
-        goldValue: Number(product.goldValue || 0),
-        quantity: newProductQty > 0 ? newProductQty : 1,
+        productId: newItemData.productId,
+        productName: newItemData.name || product?.name || 'Item sem nome',
+        goldValue: Number(product?.goldValue || 0),
+        quantity: newItemData.quantity,
         originalQuantity: 0,
-        price: Number(product.price || 0),
+        price: newItemData.price,
+        laborPercentage: newItemData.laborPercentage,
+        entryUnit: newItemData.entryUnit,
+        entryQuantity: newItemData.entryQuantity,
         isNew: true,
       }
     ]);
-
-    setSelectedProductId('');
-    setNewProductQty(1);
-    toast.success(`Produto "${product.name}" adicionado.`);
+    toast.success(`Produto "${newItemData.name || product?.name}" adicionado.`);
   };
 
   // --- Calculation Logic for Real-time Summary ---
@@ -246,12 +246,14 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
       return;
     }
 
-    // Build item payload: modified existing items or new items
     const itemUpdates = editableItems.map(item => ({
       id: item.id,
       productId: item.productId,
       quantity: item.quantity,
       price: item.price,
+      laborPercentage: item.laborPercentage,
+      entryUnit: item.entryUnit,
+      entryQuantity: item.entryQuantity,
     }));
 
     const payload = {
@@ -280,6 +282,17 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[96vw] max-w-5xl max-h-[94vh] flex flex-col p-3 md:p-6 overflow-hidden">
+        <AddItemModal
+          open={isAddItemModalOpen}
+          onOpenChange={setIsAddItemModalOpen}
+          products={products}
+          items={editableItems}
+          onAddItem={handleAddItemFromModal}
+          saleGoldQuote={Number(updatedGoldPrice || 0)}
+          saleSilverQuote={0}
+          laborCostTable={laborCostTable}
+        />
+
         <DialogHeader>
           <DialogTitle>Editar Venda #{sale?.orderNumber}</DialogTitle>
         </DialogHeader>
@@ -379,39 +392,21 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                   <div>
                     <CardTitle className="text-base">Itens da Venda</CardTitle>
                     <p className="text-[11px] text-muted-foreground">
-                      Edite as quantidades ou adicione novos produtos ao pedido.
+                      Edite as quantidades ou adicione novos produtos com as regras de Sal 68%.
                     </p>
                   </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs font-semibold"
+                    onClick={() => setIsAddItemModalOpen(true)}
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    Adicionar Item
+                  </Button>
                 </CardHeader>
                 <CardContent className="p-3 md:p-4 pt-0 space-y-3">
-                  {/* Incluir Novo Produto */}
-                  <div className="flex flex-wrap items-end gap-2 bg-muted/40 p-2.5 rounded-lg border">
-                    <div className="flex-1 min-w-[200px] space-y-1">
-                      <FormLabel className="text-xs font-semibold">Adicionar Novo Produto</FormLabel>
-                      <Combobox
-                        options={products.map(p => ({ value: p.id, label: p.name }))}
-                        value={selectedProductId}
-                        onChange={setSelectedProductId}
-                        placeholder="Selecione um produto..."
-                      />
-                    </div>
-                    <div className="w-24 space-y-1">
-                      <FormLabel className="text-xs font-semibold">Qtd</FormLabel>
-                      <Input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        className="h-9 text-xs"
-                        value={newProductQty}
-                        onChange={e => setNewProductQty(parseFloat(e.target.value) || 1)}
-                      />
-                    </div>
-                    <Button type="button" size="sm" className="h-9 px-3 gap-1" onClick={handleAddNewProduct}>
-                      <PlusCircle className="h-4 w-4" />
-                      Adicionar
-                    </Button>
-                  </div>
-
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -429,6 +424,11 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                             <TableRow key={item.id || idx} className={isRemoved ? 'opacity-40 bg-red-500/10' : item.isNew ? 'bg-emerald-500/10' : ''}>
                               <TableCell className="font-semibold text-xs">
                                 {item.productName}
+                                {item.laborPercentage !== undefined && item.laborPercentage > 0 && (
+                                  <span className="block text-[10px] text-muted-foreground font-normal">
+                                    Mão de obra: {item.laborPercentage}%
+                                  </span>
+                                )}
                                 {item.isNew && <span className="ml-1 text-[10px] text-emerald-500 font-bold">(Novo)</span>}
                                 {isRemoved && <span className="ml-1 text-[10px] text-red-500 font-bold">(Removido)</span>}
                               </TableCell>

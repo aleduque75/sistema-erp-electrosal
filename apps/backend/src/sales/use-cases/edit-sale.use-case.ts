@@ -74,6 +74,9 @@ export class EditSaleUseCase {
                 productId: itemUpdate.productId,
                 quantity: itemUpdate.quantity,
                 price: itemUpdate.price ?? product.price ?? 0,
+                laborPercentage: itemUpdate.laborPercentage,
+                entryUnit: itemUpdate.entryUnit,
+                entryQuantity: itemUpdate.entryQuantity,
               },
             });
           }
