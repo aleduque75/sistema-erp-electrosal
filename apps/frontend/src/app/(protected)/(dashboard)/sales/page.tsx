@@ -215,6 +215,17 @@ export default function SalesPage() {
     }
   };
 
+  const handleDeleteSale = async (sale: Sale) => {
+    if (!confirm(`Deseja realmente EXCLUIR a venda #${sale.orderNumber}? Esta ação excluirá o registro e LIBERARÁ o número #${sale.orderNumber} para usar em outra venda.`)) return;
+    try {
+      await api.delete(`/sales/${sale.id}`);
+      toast.success(`Venda #${sale.orderNumber} excluída com sucesso! O número #${sale.orderNumber} está livre.`);
+      fetchSales();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Falha ao excluir venda.');
+    }
+  };
+
   const handleCopyAsText = () => {
     const selectedIndices = Object.keys(rowSelection).map(Number);
     const selectedSales = sales.filter((_, index) => selectedIndices.includes(index));
@@ -477,11 +488,24 @@ ${itemsText}`;
                   </DropdownMenuItem>
                 )}
 
-                {/* Ação de Reverter (aparece em todos os status, menos PENDENTE) */}
+                {/* Ações para CANCELADO */}
+                {sale.status === 'CANCELADO' && (
+                  <>
+                    <DropdownMenuItem onClick={() => handleRevertSale(sale.id)}>
+                      Reativar / Voltar para Pendente
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-red-600 font-semibold" onClick={() => handleDeleteSale(sale)}>
+                      Excluir Venda (Liberar Nº #{sale.orderNumber})
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {/* Ações para CONFIRMADO ou FINALIZADO */}
                 {isRevertible && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600" onClick={() => handleRevertSale(sale.id)}>
+                    <DropdownMenuItem className="text-red-600 font-semibold" onClick={() => handleRevertSale(sale.id)}>
                       Reverter para Pendente
                     </DropdownMenuItem>
                   </>
@@ -798,10 +822,22 @@ ${itemsText}`;
                             {(sale.status === 'A_SEPARAR' || sale.status === 'SEPARADO') && (
                               <DropdownMenuItem onClick={() => handleRevertSale(sale.id)}>Voltar para Pendente</DropdownMenuItem>
                             )}
+                            {sale.status === 'CANCELADO' && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleRevertSale(sale.id)}>
+                                  Reativar / Voltar para Pendente
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-red-600 font-semibold" onClick={() => handleDeleteSale(sale)}>
+                                  Excluir Venda (Liberar Nº #{sale.orderNumber})
+                                </DropdownMenuItem>
+                              </>
+                            )}
+
                             {isRevertible && (
                               <>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600" onClick={() => handleRevertSale(sale.id)}>
+                                <DropdownMenuItem className="text-red-600 font-semibold" onClick={() => handleRevertSale(sale.id)}>
                                   Reverter para Pendente
                                 </DropdownMenuItem>
                               </>

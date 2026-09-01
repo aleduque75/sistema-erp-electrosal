@@ -9,6 +9,7 @@ import {
   Query,
   Req,
   Res,
+  Delete,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { SaleStatus, Role } from '@prisma/client'; // Keep Sale for now, will refactor later
@@ -297,12 +298,10 @@ export class SalesController {
     await this.revertSaleUseCase.execute(organizationId, saleId);
     return { message: 'Venda revertida para PENDENTE com sucesso.' };
   }
-
-  @Patch(':saleId/installments/:installmentId/receive')
   async receiveInstallmentPayment(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') userId: string,
-    @Param('saleId') saleId: string, // Not directly used in use case, but for context/path
+    @Param('saleId') saleId: string,
     @Param('installmentId') installmentId: string,
     @Body() receiveInstallmentPaymentDto: ReceiveInstallmentPaymentDto,
   ) {
@@ -312,5 +311,14 @@ export class SalesController {
       installmentId,
       receiveInstallmentPaymentDto,
     );
+  }
+
+  @Delete(':id')
+  async remove(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') saleId: string,
+  ) {
+    await this.salesService.remove(organizationId, saleId);
+    return { message: 'Venda excluída com sucesso.' };
   }
 }
