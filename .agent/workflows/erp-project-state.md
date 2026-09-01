@@ -56,10 +56,18 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
 1. **CI/CD & Deploy Rápido para Oracle ARM:**
    - Migrado o runner de `ubuntu-latest` (x86 + QEMU) para `ubuntu-24.04-arm` nativo.
    - Tempo de build reduzido de ~47 minutos para ~3 a 5 minutos.
+   - Webhook do Dokploy configurado com payload de branch `main` e evento `push`, tornando o autodeploy 100% automático.
 2. **Reversão e Cancelamento de Vendas:**
-   - Reversão para `PENDENTE`: Agora limpa e exclui as parcelas geradas (`SaleInstallments`) e as contas a receber associadas (`AccountRec`), evitando duplicidade financeira ao alterar ou reconfirmar a venda.
+   - Reversão para `PENDENTE`: Limpa e exclui as parcelas geradas (`SaleInstallments`) e as contas a receber associadas (`AccountRec`) de qualquer status (`A_SEPARAR`, `SEPARADO`, `CONFIRMADO`, `FINALIZADO`).
    - Ação de exclusão permanente (`DELETE`) disponível apenas para vendas `CANCELADO`.
-3. **Dashboard & KPIs:**
+   - Estorno de estoque no `revert-sale.use-case.ts` agora preenche `sourceDocument: "Estorno Venda #..."` e restaura o lote (`inventoryLotId`), não vindo mais em branco no Extrato de Estoque.
+3. **Condições de Pagamento:**
+   - Adicionada a opção `A Combinar` no modal de edição de vendas (`EditSaleModal.tsx`) e suporte no backend.
+4. **Fuso Horário Global (America/Sao_Paulo / UTC-3):**
+   - Configurado `America/Sao_Paulo` no host Linux da VPS, no banco PostgreSQL (`timezone='America/Sao_Paulo'`), no `main.ts` do backend (`process.env.TZ`) e em todos os serviços Docker.
+5. **Decisão de Arquitetura de Rede / Nginx:**
+   - **Mantido o Nginx interno** como Gateway unificador sob `erp.electrosal.com.br` (porta 8090). Vantagens: mesma origem sem CORS para `/api`, paridade exata com o ambiente local e consumo irrisório de recursos (~5MB RAM).
+6. **Dashboard & KPIs:**
    - Filtro das métricas de vendas e gráficos considerando apenas o mês corrente (`currentMonth`).
    - Cards de KPI organizados em 2 por linha no mobile e todos os cards tornados clicáveis para navegação direta.
 
