@@ -107,15 +107,15 @@ export class RevertSaleUseCase {
           }
         }
 
-        await tx.accountRec.update({
-          where: { id: ar.id },
-          data: { received: false, receivedAt: null },
-        });
       }
 
-      await tx.saleInstallment.updateMany({
+      // Remove any AccountRecs and SaleInstallments associated with this sale since it's back in PENDENTE status
+      await tx.saleInstallment.deleteMany({
         where: { saleId: sale.id },
-        data: { status: SaleInstallmentStatus.PENDING, paidAt: null },
+      });
+
+      await tx.accountRec.deleteMany({
+        where: { saleId: sale.id },
       });
 
       // 3. Reverse Metal Payments and Account Entries
