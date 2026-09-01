@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { MoreHorizontal, PlusCircle, ArrowUpDown, Printer, RotateCcw, Truck, Copy } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUpDown, Printer, RotateCcw, Truck, Copy, Filter, SlidersHorizontal, ChevronDown, ChevronUp, Search, X } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -74,6 +74,7 @@ export default function SalesPage() {
   const [rowSelection, setRowSelection] = useState<Record<number, boolean>>({});
 
   // Filter states
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [clients, setClients] = useState<{ value: string; label: string }[]>([]);
   const [filters, setFilters] = useState({
     startDate: '',
@@ -82,6 +83,8 @@ export default function SalesPage() {
     clientId: '',
     status: '',
   });
+
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   const fetchClients = async () => {
     try {
@@ -517,12 +520,13 @@ ${itemsText}`;
         </div>
       </div>
 
-      <Card>
+      {/* Desktop Filters */}
+      <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
             <div className="space-y-2">
               <Label htmlFor="startDate">Data Inicial</Label>
               <Input id="startDate" type="date" value={filters.startDate} onChange={e => handleFilterChange('startDate', e.target.value)} />
@@ -552,7 +556,7 @@ ${itemsText}`;
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 col-span-1 md:col-span-2 lg:col-span-5 justify-end">
               <Button type="submit">Filtrar</Button>
               <Button type="button" variant="outline" onClick={handleClearFilters}>Limpar</Button>
             </div>
@@ -560,23 +564,132 @@ ${itemsText}`;
         </CardContent>
       </Card>
 
+      {/* Mobile Collapsible Filter Bar */}
+      <div className="md:hidden space-y-2">
+        <div className="flex items-center gap-2">
+          <form onSubmit={handleFilterSubmit} className="flex-1 flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar pedido ou cliente..."
+                value={filters.orderNumber}
+                onChange={e => handleFilterChange('orderNumber', e.target.value)}
+                className="pl-9 h-11 text-sm bg-card border-border shadow-sm rounded-lg"
+              />
+            </div>
+          </form>
+          <Button
+            type="button"
+            variant={isMobileFilterOpen || activeFilterCount > 0 ? "default" : "outline"}
+            className="h-11 px-3.5 gap-2 relative shadow-sm rounded-lg"
+            onClick={() => setIsMobileFilterOpen(prev => !prev)}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span className="text-xs font-semibold">Filtros</span>
+            {activeFilterCount > 0 && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground text-primary text-[11px] font-bold">
+                {activeFilterCount}
+              </span>
+            )}
+            {isMobileFilterOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        {/* Collapsible Mobile Filter Panel */}
+        {isMobileFilterOpen && (
+          <Card className="p-4 space-y-3 bg-card border border-border shadow-md rounded-xl animate-in fade-in-50 slide-in-from-top-2 duration-200">
+            <form onSubmit={(e) => { handleFilterSubmit(e); setIsMobileFilterOpen(false); }} className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="mobileStartDate" className="text-xs">Data Inicial</Label>
+                  <Input id="mobileStartDate" type="date" className="h-10 text-xs" value={filters.startDate} onChange={e => handleFilterChange('startDate', e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="mobileEndDate" className="text-xs">Data Final</Label>
+                  <Input id="mobileEndDate" type="date" className="h-10 text-xs" value={filters.endDate} onChange={e => handleFilterChange('endDate', e.target.value)} />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Cliente</Label>
+                <Combobox options={clients} value={filters.clientId ?? ''} onChange={value => handleFilterChange('clientId', value)} placeholder="Selecione um cliente..." />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Status</Label>
+                <Select value={filters.status} onValueChange={value => handleFilterChange('status', value)}>
+                  <SelectTrigger className="h-10 text-xs">
+                    <SelectValue placeholder="Selecione um status..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(statusConfig).map(([key, { label }]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="flex-1 h-10 text-xs font-bold">
+                  Aplicar Filtros
+                </Button>
+                <Button type="button" variant="outline" className="h-10 text-xs" onClick={handleClearFilters}>
+                  Limpar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        )}
+      </div>
+
       <Card className="border-none md:border md:shadow-sm bg-transparent md:bg-card">
-        <CardContent className="p-2 md:pt-6">
-          <div className="flex items-center gap-2 mb-4">
+        <CardContent className="p-1 md:p-6 space-y-4">
+          <div className="flex items-center justify-between gap-2">
             {Object.keys(rowSelection).length > 0 && (
-              <>
-                <Button onClick={handleBulkConfirm}>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleBulkConfirm}>
                   Confirmar {Object.keys(rowSelection).length} Venda(s)
                 </Button>
-                <Button variant="outline" onClick={handleCopyAsText}>
+                <Button size="sm" variant="outline" onClick={handleCopyAsText}>
                   <Copy className="mr-2 h-4 w-4" />
                   Copiar Texto
                 </Button>
-              </>
+              </div>
             )}
           </div>
 
-          {/* Desktop View */}
+          {/* Pagination Header / Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-card/60 backdrop-blur border rounded-lg shadow-sm">
+            <div className="text-xs md:text-sm text-muted-foreground font-medium">
+              Mostrando <span className="font-bold text-foreground">{sales.length}</span> de <span className="font-bold text-foreground">{total}</span> registros
+            </div>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 text-xs font-semibold"
+                onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                disabled={page <= 1 || loading}
+              >
+                Anterior
+              </Button>
+              <div className="text-xs font-bold px-2 py-1 bg-muted rounded">
+                {page} / {Math.ceil(total / limit) || 1}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 text-xs font-semibold"
+                onClick={() => setPage(prev => prev + 1)}
+                disabled={page >= Math.ceil(total / limit) || loading}
+              >
+                Próximo
+              </Button>
+            </div>
+          </div>
+
+          {/* Desktop Table View */}
           <div className="hidden md:block">
             <DataTable
               columns={columns}
@@ -587,100 +700,132 @@ ${itemsText}`;
             />
           </div>
 
-          <div className="flex items-center justify-between py-4 border-t">
-            <div className="text-sm text-muted-foreground italic">
-              Mostrando {sales.length} de {total} registros
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-                disabled={page <= 1 || loading}
-              >
-                Anterior
-              </Button>
-              <div className="text-sm font-medium">
-                Página {page} de {Math.ceil(total / limit) || 1}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(prev => prev + 1)}
-                disabled={page >= Math.ceil(total / limit) || loading}
-              >
-                Próximo
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile View */}
-          <div className="md:hidden space-y-2 max-w-md mx-auto">
+          {/* Mobile Card List View */}
+          <div className="md:hidden space-y-2.5">
             {loading ? (
-              <div className="py-8 text-center text-muted-foreground italic">Carregando vendas...</div>
+              <div className="py-12 text-center text-muted-foreground italic text-sm">Carregando vendas...</div>
             ) : sales.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground italic">Nenhuma venda encontrada.</div>
+              <div className="py-12 text-center text-muted-foreground italic text-sm">Nenhuma venda encontrada.</div>
             ) : (
               sales.map((sale, idx) => {
                 const config = statusConfig[sale.status] || { label: sale.status, className: '' };
                 const saleItems = sale.saleItems || [];
                 const totalQty = saleItems.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0;
+                const isRevertible = sale.status !== 'PENDENTE';
 
                 return (
                   <div
                     key={sale.id}
-                    className="flex gap-2 p-3 rounded-lg border border-border bg-card shadow-sm active:scale-[0.98] transition-transform relative overflow-hidden group"
+                    className="p-3.5 rounded-xl border border-border bg-card shadow-sm hover:border-primary/40 active:scale-[0.99] transition-all relative space-y-3"
                   >
-                    {/* Checkbox de Seleção */}
-                    <div className="pt-1">
-                      <Checkbox
-                        checked={rowSelection[idx] || false}
-                        onCheckedChange={(checked) => {
-                          setRowSelection(prev => ({
-                            ...prev,
-                            [idx]: !!checked
-                          }));
-                        }}
-                      />
-                    </div>
-
-                    <div className="flex-1 space-y-3" onClick={() => setSelectedSale(sale)}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{sale.orderNumber}</p>
-                          <h3 className="font-black italic text-[hsl(var(--mobile-card-title))] truncate max-w-[150px]">{sale.pessoa?.name}</h3>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <Badge variant="outline" className={`border-none ${config.className} text-[10px] px-2 py-0`}>
-                            {config.label}
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-[hsl(var(--mobile-card-icon))] hover:text-blue-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownloadPdf(sale);
-                            }}
-                          >
-                            <Printer size={16} />
-                          </Button>
+                    {/* Header Row: Checkbox + Pedido/Cliente + Status + Actions Menu */}
+                    <div className="flex items-start justify-between gap-2 border-b border-border/40 pb-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Checkbox
+                          checked={rowSelection[idx] || false}
+                          className="h-5 w-5 rounded border-muted-foreground/40"
+                          onCheckedChange={(checked) => {
+                            setRowSelection(prev => ({
+                              ...prev,
+                              [idx]: !!checked
+                            }));
+                          }}
+                        />
+                        <div className="min-w-0" onClick={() => setSelectedSale(sale)}>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-black text-primary uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded">
+                              #{sale.orderNumber}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {formatDate(sale.createdAt)}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-sm text-foreground truncate mt-0.5">
+                            {sale.pessoa?.name}
+                          </h3>
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-end">
-                        <div className="space-y-1">
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Produtos ({totalQty})</p>
-                          <p className="text-xs text-[hsl(var(--mobile-card-subtitle))] line-clamp-1 italic">
-                            {saleItems.map(i => i.product?.name).join(', ')}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Total</p>
-                          <p className="font-black italic text-[hsl(var(--mobile-card-value))] text-base">
-                            {formatCurrency(Number(sale.adjustment?.paymentReceivedBRL || 0))}
-                          </p>
-                        </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Badge variant="outline" className={`border-none ${config.className} text-[10px] font-extrabold px-2 py-0.5 rounded-full`}>
+                          {config.label}
+                        </Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuLabel>Ações do Pedido</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => setSelectedSale(sale)}>
+                              Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadPdf(sale)}>
+                              <Printer className="mr-2 h-4 w-4" />
+                              Imprimir Pedido
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSaleToEditObservation(sale)}>
+                              Editar Observação
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSaleToApplyCommission(sale)}>
+                              Incluir Comissão
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSaleToUpdateShipping(sale)}>
+                              <Truck className="mr-2 h-4 w-4" />
+                              Incluir/Alterar Frete
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {sale.status === 'PENDENTE' && (
+                              <>
+                                <DropdownMenuItem onClick={() => setSaleToEdit(sale)}>Editar Pedido</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleReleaseToPcp(sale.id)}>Liberar para Separação</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>Confirmar Venda</DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600" onClick={() => handleCancelSale(sale.id)}>Cancelar Venda</DropdownMenuItem>
+                              </>
+                            )}
+                            {sale.status === 'A_SEPARAR' && (
+                              <DropdownMenuItem onClick={() => handleSeparateSale(sale.id)}>Marcar como Separado</DropdownMenuItem>
+                            )}
+                            {(sale.status === 'A_SEPARAR' || sale.status === 'SEPARADO') && (
+                              <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>Confirmar Venda</DropdownMenuItem>
+                            )}
+                            {isRevertible && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-red-600" onClick={() => handleRevertSale(sale.id)}>
+                                  Reverter para Pendente
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+
+                    {/* Middle Content Row: Products + Payment Method */}
+                    <div className="flex justify-between items-center text-xs text-muted-foreground" onClick={() => setSelectedSale(sale)}>
+                      <div className="line-clamp-1 pr-2">
+                        <span className="font-medium text-foreground">{totalQty} item(ns): </span>
+                        {saleItems.map(i => i.product?.name).filter(Boolean).join(', ') || 'Nenhum produto'}
+                      </div>
+                      {sale.paymentAccountName && (
+                        <Badge variant="outline" className="border-border bg-muted/50 text-[10px] shrink-0 font-medium">
+                          {sale.paymentAccountName}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Footer Row: Total Value + Action buttons */}
+                    <div className="flex justify-between items-center pt-1" onClick={() => setSelectedSale(sale)}>
+                      <div className="text-xs text-muted-foreground">
+                        Cotação: <span className="font-semibold">{formatCurrency(Number(sale.goldPrice))}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">Valor Total</span>
+                        <span className="font-black text-base text-emerald-500">
+                          {formatCurrency(Number(sale.adjustment?.paymentReceivedBRL || 0))}
+                        </span>
                       </div>
                     </div>
                   </div>
