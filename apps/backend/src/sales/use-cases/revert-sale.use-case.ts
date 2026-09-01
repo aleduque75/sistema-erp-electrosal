@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SaleStatus, TipoTransacaoPrisma, SaleInstallmentStatus } from '@prisma/client';
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 
 @Injectable()
 export class RevertSaleUseCase {
@@ -24,21 +24,36 @@ export class RevertSaleUseCase {
         throw new NotFoundException(`Venda com ID ${saleId} não encontrada.`);
       }
 
-      if (sale.status !== SaleStatus.A_SEPARAR && sale.status !== SaleStatus.FINALIZADO && sale.status !== SaleStatus.CONFIRMADO) {
-        throw new BadRequestException(`Apenas vendas com status CONFIRMADO, A SEPARAR ou FINALIZADO podem ser revertidas.`);
+      if (sale.status !== SaleStatus.A_SEPARAR && sale.status !== SaleStatus.SEPARADO && sale.status !== SaleStatus.FINALIZADO && sale.status !== SaleStatus.CONFIRMADO) {
+        throw new BadRequestException(`Apenas vendas com status CONFIRMADO, A SEPARAR, SEPARADO ou FINALIZADO podem ser revertidas.`);
       }
 
-      // 1. Reverse Stock Deduction
+      // If sale is only A_SEPARAR or SEPARADO, no stock deduction or financial entries were confirmed yet.
+      // Simply return status to PENDENTE safely.
+      if (sale.status === SaleStatus.A_SEPARAR || sale.status === SaleStatus.SEPARADO) {
+        return tx.sale.update({
+          where: { id: saleId },
+          data: { status: SaleStatus.PENDENTE },
+        });
+      }
+
+      // 1. Reverse Stock Deduction (for CONFIRMADO / FINALIZADO)
       for (const item of sale.saleItems) {
         for (const saleItemLot of (item as any).saleItemLots) {
-          await tx.inventoryLot.update({
-            where: { id: saleItemLot.inventoryLotId },
-            data: {
-              remainingQuantity: {
-                increment: saleItemLot.quantity,
+          if (saleItemLot.isStockDeducted) {
+            await tx.inventoryLot.update({
+              where: { id: saleItemLot.inventoryLotId },
+              data: {
+                remainingQuantity: {
+                  increment: saleItemLot.quantity,
+                },
               },
-            },
-          });
+            });
+            await tx.saleItemLot.update({
+              where: { id: saleItemLot.id },
+              data: { isStockDeducted: false },
+            });
+          }
         }
         await tx.product.update({
           where: { id: item.productId },
@@ -49,7 +64,7 @@ export class RevertSaleUseCase {
         });
       }
 
-      // 2. Reverse Financial Entries
+      // 2. Reverse Financial Entries (for CONFIRMADO / FINALIZADO)
       const accountsRec = await tx.accountRec.findMany({
         where: { saleId: sale.id },
         include: { transacoes: true },
@@ -60,7 +75,14 @@ export class RevertSaleUseCase {
           for (const transacao of ar.transacoes) {
             // Check if this transaction has already been reversed to avoid double reversal
             const alreadyReversed = await tx.transacao.findFirst({
-              where: { linkedTransactionId: transacao.id, tipo: TipoTransacaoPrisma.DEBITO }
+              where: {
+                organizationId,
+                tipo: TipoTransacaoPrisma.DEBITO,
+                OR: [
+                  { linkedTransactionId: transacao.id },
+                  { descricao: { contains: `Estorno Venda #${sale.orderNumber}` } },
+                ],
+              },
             });
 
             if (!alreadyReversed) {
@@ -77,7 +99,7 @@ export class RevertSaleUseCase {
                   goldPrice: transacao.goldPrice,
                   fitId: String(sale.orderNumber),
                   linkedTransactionId: transacao.id,
-                  accountRecId: transacao.accountRecId, // Link to same AccountRec so adjustment calculator finds it
+                  accountRecId: transacao.accountRecId,
                   dataHora: new Date(),
                 },
               });
@@ -97,7 +119,7 @@ export class RevertSaleUseCase {
       });
 
       // 3. Reverse Metal Payments and Account Entries
-      if (sale.paymentMethod === 'METAL' || true) { // Check for metal entries regardless of current paymentMethod for safety
+      if (sale.paymentMethod === 'METAL') {
         await tx.pure_metal_lots.deleteMany({ where: { saleId: sale.id } });
 
         const metalEntries = await tx.metalAccountEntry.findMany({
@@ -111,9 +133,15 @@ export class RevertSaleUseCase {
         });
 
         for (const metalEntry of metalEntries) {
-          // Check if already reversed
           const alreadyReversed = await tx.metalAccountEntry.findFirst({
-            where: { sourceId: sale.id, type: 'SALE_REVERTED', description: { contains: metalEntry.id } }
+            where: {
+              metalAccountId: metalEntry.metalAccountId,
+              type: 'SALE_REVERTED',
+              OR: [
+                { sourceId: sale.id },
+                { description: { contains: `Venda #${sale.orderNumber}` } }
+              ]
+            }
           });
 
           if (!alreadyReversed) {
@@ -122,7 +150,7 @@ export class RevertSaleUseCase {
                 metalAccountId: metalEntry.metalAccountId,
                 date: new Date(),
                 description: `Estorno (Ref: ${metalEntry.id}): Venda #${sale.orderNumber}`,
-                grams: new Decimal(metalEntry.grams).negated(), // Reverse the grams
+                grams: new Decimal(metalEntry.grams).negated(),
                 type: 'SALE_REVERTED',
                 sourceId: sale.id,
               }
@@ -131,7 +159,7 @@ export class RevertSaleUseCase {
         }
       }
 
-      // 3. Update Sale Status
+      // 4. Update Sale Status
       return tx.sale.update({
         where: { id: saleId },
         data: { status: SaleStatus.PENDENTE },

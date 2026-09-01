@@ -93,10 +93,14 @@ export class EditSaleUseCase {
       const goldPrice = new Decimal(dto.updatedGoldPrice ?? sale.goldPrice ?? 0);
       const shippingCostBRL = new Decimal(dto.shippingCost ?? sale.shippingCost ?? 0);
 
-      // Calculate Item Gold from (updated) sale items
+      // Calculate Item Gold from (updated) sale items including item labor percentage
       const itemGold = sale.saleItems.reduce((sum, item) => {
         const productGoldValue = new Decimal(item.product.goldValue || 0);
-        return sum.plus(new Decimal(item.quantity).times(productGoldValue));
+        const qty = new Decimal(item.quantity);
+        const pureMetal = qty.times(productGoldValue);
+        const laborPct = new Decimal((item as any).laborPercentage ?? 0);
+        const itemLaborGold = pureMetal.times(laborPct).dividedBy(100);
+        return sum.plus(pureMetal).plus(itemLaborGold);
       }, new Decimal(0));
 
       // Calculate Labor Gold from the cost table
