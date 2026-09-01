@@ -509,9 +509,9 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                                 <Input
                                   type="number"
                                   min="0"
-                                  step="0.01"
+                                  step="any"
                                   disabled={isRemoved}
-                                  value={item.quantity}
+                                  value={item.quantity !== undefined && item.quantity !== null ? Number(Number(item.quantity).toFixed(2)) : ''}
                                   onChange={(e) => handleQuantityChange(idx, e.target.value)}
                                   className="w-20 ml-auto text-right h-8 text-xs font-bold"
                                 />
@@ -520,9 +520,9 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
                                 <Input
                                   type="number"
                                   min="0"
-                                  step="0.01"
+                                  step="any"
                                   disabled={isRemoved}
-                                  value={item.price}
+                                  value={item.price !== undefined && item.price !== null ? Number(Number(item.price).toFixed(2)) : ''}
                                   onChange={(e) => handlePriceChange(idx, e.target.value)}
                                   className="w-24 ml-auto text-right h-8 text-xs"
                                 />
