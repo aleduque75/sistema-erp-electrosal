@@ -410,8 +410,8 @@ ${itemsText}`;
       id: 'actions',
       cell: ({ row }) => {
         const sale = row.original;
-        // REGRA FINAL: Reverter está disponível em todos os status, exceto no PENDENTE.
-        const isRevertible = sale.status !== 'PENDENTE';
+        // REGRA FINAL: Reverter pesado só aparece se a venda foi CONFIRMADA ou FINALIZADA (lotes baixados e financeiro gerado)
+        const isRevertible = sale.status === 'CONFIRMADO' || sale.status === 'FINALIZADO';
 
         return (
           <div className="text-right">
@@ -467,6 +467,13 @@ ${itemsText}`;
                 {sale.status === 'SEPARADO' && (
                   <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>
                     Confirmar Venda
+                  </DropdownMenuItem>
+                )}
+
+                {/* Ações para A_SEPARAR ou SEPARADO (Voltar para Pendente) */}
+                {(sale.status === 'A_SEPARAR' || sale.status === 'SEPARADO') && (
+                  <DropdownMenuItem onClick={() => handleRevertSale(sale.id)}>
+                    Voltar para Pendente
                   </DropdownMenuItem>
                 )}
 
@@ -710,7 +717,7 @@ ${itemsText}`;
                 const config = statusConfig[sale.status] || { label: sale.status, className: '' };
                 const saleItems = sale.saleItems || [];
                 const totalQty = saleItems.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0;
-                const isRevertible = sale.status !== 'PENDENTE';
+                const isRevertible = sale.status === 'CONFIRMADO' || sale.status === 'FINALIZADO';
 
                 return (
                   <div
@@ -787,6 +794,9 @@ ${itemsText}`;
                             )}
                             {sale.status === 'SEPARADO' && (
                               <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>Confirmar Venda</DropdownMenuItem>
+                            )}
+                            {(sale.status === 'A_SEPARAR' || sale.status === 'SEPARADO') && (
+                              <DropdownMenuItem onClick={() => handleRevertSale(sale.id)}>Voltar para Pendente</DropdownMenuItem>
                             )}
                             {isRevertible && (
                               <>

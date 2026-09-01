@@ -53,6 +53,7 @@ export class EditSaleUseCase {
                 data: {
                   quantity: itemUpdate.quantity,
                   ...(itemUpdate.price !== undefined ? { price: itemUpdate.price } : {}),
+                  ...(itemUpdate.laborPercentage !== undefined ? { laborPercentage: itemUpdate.laborPercentage } : {}),
                 },
               });
 
@@ -74,9 +75,8 @@ export class EditSaleUseCase {
                 productId: itemUpdate.productId,
                 quantity: itemUpdate.quantity,
                 price: itemUpdate.price ?? product.price ?? 0,
+                costPriceAtSale: product.costPrice ?? 0,
                 laborPercentage: itemUpdate.laborPercentage,
-                entryUnit: itemUpdate.entryUnit,
-                entryQuantity: itemUpdate.entryQuantity,
               },
             });
           }
@@ -89,18 +89,7 @@ export class EditSaleUseCase {
         })) as any;
       }
 
-      // --- 2. Conta Corrente name lookup if provided ---
-      let paymentAccountName = sale.paymentAccountName;
-      if (dto.contaCorrenteId) {
-        const conta = await tx.contaCorrente.findUnique({
-          where: { id: dto.contaCorrenteId },
-        });
-        if (conta) {
-          paymentAccountName = conta.nome;
-        }
-      }
-
-      // --- 3. Recalculate financial totals ---
+      // --- 2. Recalculate financial totals ---
       const goldPrice = new Decimal(dto.updatedGoldPrice ?? sale.goldPrice ?? 0);
       const shippingCostBRL = new Decimal(dto.shippingCost ?? sale.shippingCost ?? 0);
 
@@ -130,7 +119,7 @@ export class EditSaleUseCase {
       const netAmountBRL = totalGoldValue.times(goldPrice);
       const totalAmountBRL = netAmountBRL.minus(shippingCostBRL);
 
-      // --- 4. Update the sale record ---
+      // --- 3. Update the sale record ---
       const updatedSale = await tx.sale.update({
         where: { id: saleId },
         data: {
@@ -141,7 +130,6 @@ export class EditSaleUseCase {
           goldValue: totalGoldValue,
           paymentTermId: dto.paymentTermId ?? sale.paymentTermId,
           paymentMethod: dto.paymentMethod ?? sale.paymentMethod,
-          paymentAccountName: paymentAccountName,
           observation: dto.observation ?? sale.observation,
         },
       });
