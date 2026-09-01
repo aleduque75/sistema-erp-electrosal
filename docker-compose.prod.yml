@@ -7,8 +7,6 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-senha_segura_prod}
       POSTGRES_DB: ${DB_NAME:-sistema_electrosal_prod}
-    ports:
-      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,8 +25,6 @@ services:
       NODE_ENV: production
       PORT: 3001
       DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-senha_segura_prod}@postgres:5432/${DB_NAME:-sistema_electrosal_prod}?schema=erp"
-    ports:
-      - "127.0.0.1:3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,8 +42,6 @@ services:
       PORT: 3000
       HOSTNAME: "0.0.0.0"
       NEXT_PUBLIC_API_URL: "https://api.electrosal.com.br"
-    ports:
-      - "127.0.0.1:3000:3000"
     depends_on:
       - backend
 
