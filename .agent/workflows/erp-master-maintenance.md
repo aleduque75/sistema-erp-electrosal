@@ -59,35 +59,31 @@ Para garantir compatibilidade com as fórmulas de notificação de WhatsApp, o f
 
 ## 4. Fluxo de Deploy Automatizado (CI/CD) 🚀
 
-### Arquivos Críticos
-1. **.github/workflows/deploy.yml**: Dispara o script via SSH ao dar push na `main`.
-2. **deploy.sh**: Automatiza o `git pull`, `pnpm install`, `build` e `pm2 reload`.
-3. **ecosystem.config.js**: Gerencia os processos do PM2. Deve usar caminhos relativos ao `cwd`.
+### Arquitetura de Deploy Atual
+1. **GitHub Actions (`.github/workflows/deploy.yml`)**:
+   - Runner nativo ARM64 (`ubuntu-24.04-arm`).
+   - Compila imagens Docker para `linux/arm64` nativamente (backend e frontend).
+   - Publica as imagens no GitHub Container Registry (`ghcr.io/aleduque75/...`).
+2. **Dokploy (VPS Oracle Cloud ARM Ampere)**:
+   - Disparado via webhook (`secrets.DOKPLOY_WEBHOOK_URL`) ao final do build no GitHub Actions.
+   - Faz o pull das novas imagens `latest` do GHCR e reinicia os serviços sem downtime perceptível.
+3. **Nginx Reverso Local (`docker-compose.prod.yml` & `nginx/default.conf`)**:
+   - Roteia `https://erp.electrosal.com.br` na porta 8090 para o Frontend (`:3000`), Backend (`:3001/api/`) e Mídia (`:3001/api/media/public-media/`).
 
-### Comandos de Emergência (Isolamento de Ambientes)
-Se o sistema apresentar "HTML puro" (sem estilo) ou o banco de dados estiver cruzado (Produção vendo Homolog):
-
-// turbo-all
+### Comandos Úteis no Dokploy / Servidor
+Se precisar interagir diretamente via terminal no servidor Oracle:
 ```bash
-# 1. Limpar processos fantasmas e redundantes
-pm2 delete all
+# Verificar status dos containers
+docker ps
 
-# 2. Subir Homologação (Diretório Específico)
-cd /root/apps/homolog-erp
-pnpm --filter frontend build
-pm2 start ecosystem.config.js
+# Ver logs do backend em produção
+docker logs -f electrosal-backend-prod --tail 100
 
-# 3. Subir Produção (Diretório Específico)
-cd /root/apps/sistema-erp-electrosal
-# pnpm --filter frontend build # (Opcional se já estiver buildado)
-pm2 start ecosystem.config.js
+# Ver logs do frontend em produção
+docker logs -f electrosal-frontend-prod --tail 100
 
-# 4. Salvar configuração para reinicialização do server
-pm2 save
-```
-
-> [!IMPORTANT]
-> **NUNCA** use `pm2 start apps/backend/dist/main.js` diretamente. Use sempre o `ecosystem.config.js` de cada pasta, pois os arquivos de configuração agora utilizam **caminhos absolutos** (`/root/apps/...`) para garantir que o PM2 não se confunda entre as pastas.
+# Forçar restart manual dos serviços
+docker compose -f docker-compose.prod.yml restart
 
 ---
 

@@ -1,0 +1,74 @@
+---
+description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Decisões e Contexto do ERP Electrosal
+---
+
+# 🧠 Estado Atual do ERP Electrosal & Base de Contexto Contínuo
+
+> **Objetivo:** Este documento é a fonte única da verdade para a IA e o desenvolvedor. Sempre que uma nova funcionalidade for implementada, um bug corrigido ou a infraestrutura alterada, este arquivo DEVE ser atualizado para que qualquer nova sessão (mesmo após travamentos ou reinicializações) continue exatamente de onde parou sem perda de contexto.
+
+---
+
+## 1. 🌐 Infraestrutura e Hospedagem Ativa
+
+- **Servidor:** VPS Oracle Cloud (Arquitetura ARM64 Ampere A1, 4 OCPU, 24 GB RAM).
+- **Gerenciador de Containers:** **Dokploy**.
+- **Domínio Principal:** `https://erp.electrosal.com.br`
+  - Encaminha para a porta `8090` gerenciada pelo Nginx interno (`docker-compose.prod.yml`).
+  - Rotas de Nginx:
+    - `/` -> Frontend Next.js (`frontend:3000`)
+    - `/api/` -> Backend NestJS (`backend:3001/api/`)
+    - `/public-media/` -> Backend Mídia (`backend:3001/api/media/public-media/`)
+- **API Dedicada:** `https://api.electrosal.com.br`
+- **WhatsApp / Evolution API:** `https://wa.electrosal.com.br` (porta 8080)
+- **Automação n8n:** `https://n8n.electrosal.com.br` (porta 5678)
+
+---
+
+## 2. 🚀 Pipeline de CI/CD & Deploy Automatizado
+
+- **Arquivo:** `.github/workflows/deploy.yml`
+- **Runner:** `ubuntu-24.04-arm` (Runner nativo ARM64 do GitHub com 4 vCPUs e 16 GB RAM).
+- **Plataforma Docker:** `linux/arm64` nativa (SEM emulação QEMU lenta).
+- **Registro de Imagens:** GitHub Container Registry (`ghcr.io`):
+  - `ghcr.io/aleduque75/sistema-erp-electrosal-backend:latest`
+  - `ghcr.io/aleduque75/sistema-erp-electrosal-frontend:latest`
+- **Gatilho de Deploy (Webhook Dokploy):**
+  - Ao final do build das imagens, dispara o webhook `secrets.DOKPLOY_WEBHOOK_URL`.
+  - O Dokploy baixa as novas imagens e reinicia os containers automaticamente.
+- **Controle de Concorrência:** `concurrency: cancel-in-progress: true` (evita filas e cancela builds obsoletos em pushes seguidos).
+
+---
+
+## 3. 🛠️ Stack Tecnológica & Comandos Locais
+
+- **Monorepo:** `pnpm` workspace + Turborepo.
+- **Frontend:** Next.js 14+ (App Router, TailwindCSS, Radix UI / Shadcn, Lucide Icons, SWR).
+  - Dev local: `NEXT_PUBLIC_API_URL=http://localhost:8090 pnpm --filter frontend dev`
+- **Backend:** NestJS, Prisma ORM, PostgreSQL (schema `erp`), Puppeteer para PDFs.
+  - Dev local: `pnpm --filter backend start:dev`
+- **Core Package:** `@sistema-erp-electrosal/core` (tipos e regras compartilhadas).
+
+---
+
+## 4. 📋 Histórico Recente de Evoluções e Correções
+
+### [01/09/2026]
+1. **CI/CD & Deploy Rápido para Oracle ARM:**
+   - Migrado o runner de `ubuntu-latest` (x86 + QEMU) para `ubuntu-24.04-arm` nativo.
+   - Tempo de build reduzido de ~47 minutos para ~3 a 5 minutos.
+2. **Reversão e Cancelamento de Vendas:**
+   - Reversão para `PENDENTE`: Agora limpa e exclui as parcelas geradas (`SaleInstallments`) e as contas a receber associadas (`AccountRec`), evitando duplicidade financeira ao alterar ou reconfirmar a venda.
+   - Ação de exclusão permanente (`DELETE`) disponível apenas para vendas `CANCELADO`.
+3. **Dashboard & KPIs:**
+   - Filtro das métricas de vendas e gráficos considerando apenas o mês corrente (`currentMonth`).
+   - Cards de KPI organizados em 2 por linha no mobile e todos os cards tornados clicáveis para navegação direta.
+
+---
+
+## 5. 🎯 Diretrizes para o Agente em Novas Sessões
+
+Ao iniciar qualquer sessão:
+1. Ler este arquivo (`.agent/workflows/erp-project-state.md`) para se situar sobre a arquitetura e estado recente.
+2. Verificar o status do git (`git status`, `git log -n 3`) para conferir se há alterações locais pendentes.
+3. Não propor mudanças que retrocedam para `ubuntu-latest` x86 ou que usem comandos obsoletos do PM2.
+4. Sempre manter este documento atualizado ao concluir tarefas complexas.

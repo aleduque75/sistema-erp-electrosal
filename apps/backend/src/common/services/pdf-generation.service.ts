@@ -12,7 +12,11 @@ export class PdfGenerationService {
     const template = handlebars.compile(templateHtml);
     const html = template(data);
 
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+    });
     const page = await browser.newPage();
     await page.setContent(html);
     const pdf = await page.pdf({ format: 'A4' });

@@ -17,6 +17,7 @@ services:
 
   backend:
     image: ghcr.io/aleduque75/sistema-erp-electrosal-backend:latest
+    pull_policy: always
     container_name: electrosal-backend-prod
     restart: always
     environment:
@@ -24,6 +25,8 @@ services:
       PORT: 3001
       DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-senha_segura_prod}@postgres:5432/${DB_NAME:-sistema_electrosal_prod}?schema=erp"
       JWT_SECRET: ${JWT_SECRET:-sua_chave_secreta_jwt_electrosal_prod_2026}
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+      PUPPETEER_EXECUTABLE_PATH: "/usr/bin/chromium"
     depends_on:
       postgres:
         condition: service_healthy
@@ -32,6 +35,7 @@ services:
 
   frontend:
     image: ghcr.io/aleduque75/sistema-erp-electrosal-frontend:latest
+    pull_policy: always
     container_name: electrosal-frontend-prod
     restart: always
     environment:
