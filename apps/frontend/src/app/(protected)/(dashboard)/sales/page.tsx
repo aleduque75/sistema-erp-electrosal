@@ -353,7 +353,7 @@ ${itemsText}`;
           <div className="flex flex-col">
             {saleItems.map(item => (
               <span key={item.id}>
-                {item.product?.name || 'Produto desconhecido'} ({item.quantity})
+                {item.product?.name || 'Produto desconhecido'} ({Number(Number(item.quantity).toFixed(2))})
               </span>
             ))}
           </div>
@@ -463,8 +463,8 @@ ${itemsText}`;
                   <DropdownMenuItem onClick={() => handleSeparateSale(sale.id)}>Marcar como Separado</DropdownMenuItem>
                 )}
 
-                {/* Ações para A_SEPARAR ou SEPARADO */}
-                {(sale.status === 'A_SEPARAR' || sale.status === 'SEPARADO') && (
+                {/* Ações para SEPARADO */}
+                {sale.status === 'SEPARADO' && (
                   <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>
                     Confirmar Venda
                   </DropdownMenuItem>
@@ -785,7 +785,7 @@ ${itemsText}`;
                             {sale.status === 'A_SEPARAR' && (
                               <DropdownMenuItem onClick={() => handleSeparateSale(sale.id)}>Marcar como Separado</DropdownMenuItem>
                             )}
-                            {(sale.status === 'A_SEPARAR' || sale.status === 'SEPARADO') && (
+                            {sale.status === 'SEPARADO' && (
                               <DropdownMenuItem onClick={() => setSaleToConfirm(sale)}>Confirmar Venda</DropdownMenuItem>
                             )}
                             {isRevertible && (
