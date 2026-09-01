@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { ConfirmSaleUseCase } from '../sales/use-cases/confirm-sale.use-case';
 import { TransacoesService } from '../transacoes/transacoes.service';
+import { MediaService } from '../media/media.service';
 import Decimal from 'decimal.js';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class AutomationsService {
     private readonly configService: ConfigService,
     private readonly confirmSaleUseCase: ConfirmSaleUseCase,
     private readonly transacoesService: TransacoesService,
+    private readonly mediaService: MediaService,
   ) {}
 
   private getOrganizationId(): string {
@@ -206,6 +208,8 @@ export class AutomationsService {
     amount?: number;
     date?: string;
     observation?: string;
+    fileBase64?: string;
+    mimeType?: string;
   }) {
     const organizationId = this.getOrganizationId();
     const { saleId, contaCorrenteId } = dto;
@@ -239,6 +243,23 @@ export class AutomationsService {
       },
     );
 
+    // If receipt photo is sent, upload to AWS S3
+    if (dto.fileBase64) {
+      try {
+        const buffer = Buffer.from(dto.fileBase64, 'base64');
+        const multerFile = {
+          buffer,
+          originalname: `comprovante-venda-${sale.orderNumber}-${Date.now()}.jpg`,
+          mimetype: dto.mimeType || 'image/jpeg',
+          size: buffer.length,
+        } as Express.Multer.File;
+
+        await this.mediaService.create(multerFile, organizationId);
+      } catch (err) {
+        console.error('Erro ao fazer upload do comprovante para AWS S3:', err);
+      }
+    }
+
     return {
       success: true,
       message: `Venda #${sale.orderNumber} (${sale.pessoa?.name}) baixada com sucesso e creditada em ${contaCorrente.nome}!`,
@@ -255,6 +276,8 @@ export class AutomationsService {
     description?: string;
     date?: string;
     contaContabilId?: string;
+    fileBase64?: string;
+    mimeType?: string;
   }) {
     const organizationId = this.getOrganizationId();
     const { sourceAccountId, destinationAccountId, amount, description, date } = dto;
@@ -286,6 +309,25 @@ export class AutomationsService {
       dataHora: date ? new Date(date) : new Date(),
       contaContabilId,
     });
+
+    // If receipt photo is sent, upload to AWS S3 and attach to the debit transaction
+    if (dto.fileBase64) {
+      try {
+        const buffer = Buffer.from(dto.fileBase64, 'base64');
+        const multerFile = {
+          buffer,
+          originalname: `comprovante-transferencia-${Date.now()}.jpg`,
+          mimetype: dto.mimeType || 'image/jpeg',
+          size: buffer.length,
+        } as Express.Multer.File;
+
+        await this.mediaService.create(multerFile, organizationId, {
+          transacaoId: result.debitTransaction.id,
+        });
+      } catch (err) {
+        console.error('Erro ao fazer upload do comprovante para AWS S3:', err);
+      }
+    }
 
     return {
       success: true,

@@ -32,6 +32,10 @@ services:
       PUPPETEER_EXECUTABLE_PATH: "/usr/bin/chromium"
       AUTOMATIONS_API_KEY: ${AUTOMATIONS_API_KEY:-electrosal_automation_secret_key_2026}
       DEFAULT_ORGANIZATION_ID: ${DEFAULT_ORGANIZATION_ID:-2a5bb448-056b-4b87-b02f-fec691dd658d}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-AKIA3RBPCMYS4VLMNL6R}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-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}
+      AWS_REGION: ${AWS_REGION:-us-east-2}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME:-electrosal-erp-media}
     depends_on:
       postgres:
         condition: service_healthy
