@@ -50,14 +50,57 @@ export class SeparateSaleUseCase {
 
         for (const item of saleWithItems.saleItems) {
           this.logger.log(`Processing item ${item.id}`);
-          if (!(item as any).saleItemLots || (item as any).saleItemLots.length === 0) {
-            throw new BadRequestException(`O item ${item.product.name} não possui lotes de estoque associados.`);
+          let itemLots = (item as any).saleItemLots || [];
+
+          // If no lots associated yet, attempt auto-allocation from available inventory lots (FIFO)
+          if (itemLots.length === 0) {
+            let neededQty = new Decimal(item.quantity);
+            const availableLots = await tx.inventoryLot.findMany({
+              where: { productId: item.productId, remainingQuantity: { gt: 0 } },
+              orderBy: { createdAt: 'asc' },
+            });
+
+            for (const lot of availableLots) {
+              if (neededQty.lte(0)) break;
+              const takeQty = Decimal.min(neededQty, new Decimal(lot.remainingQuantity));
+
+              const createdLot = await tx.saleItemLot.create({
+                data: {
+                  saleItemId: item.id,
+                  inventoryLotId: lot.id,
+                  quantity: takeQty.toNumber(),
+                  isStockDeducted: false,
+                },
+              });
+              itemLots.push(createdLot);
+              neededQty = neededQty.minus(takeQty);
+            }
+          }
+
+          // If product still has no inventory lots in DB, deduct directly from product total stock
+          if (itemLots.length === 0) {
+            const qtyToDeduct = new Decimal(item.quantity).toNumber();
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: qtyToDeduct } },
+            });
+            await tx.stockMovement.create({
+              data: {
+                organizationId,
+                productId: item.productId,
+                quantity: -qtyToDeduct,
+                type: 'SALE_SEPARATED',
+                sourceDocument: `Venda #${saleWithItems.orderNumber}`,
+                createdAt: separationDate || saleWithItems.createdAt,
+              },
+            });
+            continue;
           }
 
           let quantityToDecrementFromTotalStock = new Decimal(0);
 
-          // Primeiro, decrementa o estoque dos lotes individuais que ainda não foram baixados
-          for (const saleItemLot of (item as any).saleItemLots) {
+          // Decrement stock from individual linked lots
+          for (const saleItemLot of itemLots) {
             if (saleItemLot.isStockDeducted) {
               this.logger.log(`Stock for lot ${saleItemLot.inventoryLotId} already deducted, skipping.`);
               continue;
@@ -77,14 +120,13 @@ export class SeparateSaleUseCase {
                 organizationId,
                 productId: item.productId,
                 inventoryLotId: saleItemLot.inventoryLotId,
-                quantity: -lotQuantityToDecrement, // Negative for stock out
+                quantity: -lotQuantityToDecrement,
                 type: 'SALE_SEPARATED',
                 sourceDocument: `Venda #${saleWithItems.orderNumber}`,
                 createdAt: separationDate || saleWithItems.createdAt,
               }
             });
 
-            // Marca o lote como baixado
             await tx.saleItemLot.update({
               where: { id: saleItemLot.id },
               data: { isStockDeducted: true },
@@ -93,7 +135,6 @@ export class SeparateSaleUseCase {
             quantityToDecrementFromTotalStock = quantityToDecrementFromTotalStock.plus(lotQuantityToDecrement);
           }
 
-          // Depois, decrementa o estoque total do produto apenas pela quantidade que foi baixada agora
           if (quantityToDecrementFromTotalStock.greaterThan(0)) {
             const totalToDecrement = quantityToDecrementFromTotalStock.toNumber();
             this.logger.log(`Decrementing total product stock for item ${item.id} by ${totalToDecrement}`);
