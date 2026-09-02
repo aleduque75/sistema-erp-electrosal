@@ -67,9 +67,17 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - Configurado `America/Sao_Paulo` no host Linux da VPS, no banco PostgreSQL (`timezone='America/Sao_Paulo'`), no `main.ts` do backend (`process.env.TZ`) e em todos os serviços Docker.
 5. **Decisão de Arquitetura de Rede / Nginx:**
    - **Mantido o Nginx interno** como Gateway unificador sob `erp.electrosal.com.br` (porta 8090). Vantagens: mesma origem sem CORS para `/api`, paridade exata com o ambiente local e consumo irrisório de recursos (~5MB RAM).
-6. **Dashboard & KPIs:**
-   - Filtro das métricas de vendas e gráficos considerando apenas o mês corrente (`currentMonth`).
-   - Cards de KPI organizados em 2 por linha no mobile e todos os cards tornados clicáveis para navegação direta.
+### [02/09/2026]
+1. **Refatoração do Módulo Sales para DDD (Domain-Driven Design):**
+   - Eliminação completa de `sales.service.ts` em favor de Casos de Uso especializados (`DeleteSaleUseCase`, `UpdateSaleFinancialsUseCase`, `BackfillSaleAdjustmentsUseCase`, `BackfillSaleQuotationsUseCase`, `BackfillSaleCostsUseCase`, `DiagnoseSaleUseCase`).
+   - Implementação de `SalesRepository` e `PrismaSaleRepository`.
+   - Criação das entidades de domínio `Sale` e `SaleItem` e Value Object `SaleStatusVO` com regras puras e transições válidas.
+   - Suíte com 21 testes unitários criados e validados (`pnpm jest src/sales`).
+2. **Correção do Fluxo de Cancelamento & Exclusão de Vendas:**
+   - Adicionada a rota `@Patch(':id/cancel')` no `SalesController` conectando a ação do frontend ao `CancelSaleUseCase`.
+   - `DeleteSaleUseCase` corrigido para excluir os vínculos com lotes (`SaleItemLot`) e ajustes antes dos itens (`SaleItem`), resolvendo a violação de chave estrangeira (`P2003`) e permitindo excluir a venda para reutilização do número do pedido.
+3. **Build Determinístico no Dockerfile:**
+   - Adicionada cópia explícita de `/app/apps/backend/dist ./dist` no estágio de runner do `apps/backend/Dockerfile`.
 
 ---
 
