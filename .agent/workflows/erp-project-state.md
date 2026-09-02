@@ -78,6 +78,11 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - `DeleteSaleUseCase` corrigido para excluir os vínculos com lotes (`SaleItemLot`) e ajustes antes dos itens (`SaleItem`), resolvendo a violação de chave estrangeira (`P2003`) e permitindo excluir a venda para reutilização do número do pedido.
 3. **Build Determinístico no Dockerfile:**
    - Adicionada cópia explícita de `/app/apps/backend/dist ./dist` no estágio de runner do `apps/backend/Dockerfile`.
+4. **Refatoração do Módulo Pessoa para DDD (Domain-Driven Design):**
+   - Eliminação completa de `pessoa.service.ts` em favor de Casos de Uso especializados (`CreatePessoaUseCase`, `UpdatePessoaUseCase`, `ListPessoasUseCase`, `GetPessoaUseCase`, `DeletePessoaUseCase`).
+   - Implementação de `PessoaRepository` e `PrismaPessoaRepository` com transações atômicas para papéis (`client`, `fornecedor`, `funcionario`) e compatibilidade mantida com `IPessoaRepository`.
+   - Criação da entidade rica `PessoaEntity` e do Value Object `PessoaRoleVO`.
+   - Suíte com 22 testes unitários passando (`pnpm jest src/pessoa`).
 
 ---
 

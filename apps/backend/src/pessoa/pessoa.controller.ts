@@ -9,26 +9,35 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
-import { PessoaService } from './pessoa.service';
 import {
   CreatePessoaDto,
   UpdatePessoaDto,
-} from '../pessoa/dtos/create-pessoa.dto';
+} from './dtos/create-pessoa.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CreatePessoaUseCase } from './use-cases/create-pessoa.use-case';
+import { UpdatePessoaUseCase } from './use-cases/update-pessoa.use-case';
+import { ListPessoasUseCase } from './use-cases/list-pessoas.use-case';
+import { GetPessoaUseCase } from './use-cases/get-pessoa.use-case';
+import { DeletePessoaUseCase } from './use-cases/delete-pessoa.use-case';
 
-@UseGuards(AuthGuard('jwt')) // Reabilitado
+@UseGuards(AuthGuard('jwt'))
 @Controller('pessoas')
 export class PessoaController {
-  constructor(private readonly pessoaService: PessoaService) {}
+  constructor(
+    private readonly createPessoaUseCase: CreatePessoaUseCase,
+    private readonly updatePessoaUseCase: UpdatePessoaUseCase,
+    private readonly listPessoasUseCase: ListPessoasUseCase,
+    private readonly getPessoaUseCase: GetPessoaUseCase,
+    private readonly deletePessoaUseCase: DeletePessoaUseCase,
+  ) {}
 
   @Post()
   create(
     @CurrentUser('organizationId') organizationId: string,
     @Body() createPessoaDto: CreatePessoaDto,
   ) {
-    // ESTE MÉTODO PRECISA DE REATORAÇÃO NO SERVICE
-    return this.pessoaService.create(organizationId, createPessoaDto);
+    return this.createPessoaUseCase.execute(organizationId, createPessoaDto);
   }
 
   @Get()
@@ -36,7 +45,7 @@ export class PessoaController {
     @CurrentUser('organizationId') organizationId: string,
     @Query('role') role?: 'CLIENT' | 'FORNECEDOR' | 'FUNCIONARIO',
   ) {
-    return this.pessoaService.findAll(organizationId, role);
+    return this.listPessoasUseCase.execute(organizationId, role);
   }
 
   @Get(':id')
@@ -44,8 +53,7 @@ export class PessoaController {
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
   ) {
-    // ESTE MÉTODO PRECISA DE REATORAÇÃO NO SERVICE
-    return this.pessoaService.findOne(organizationId, id);
+    return this.getPessoaUseCase.execute(organizationId, id);
   }
 
   @Patch(':id')
@@ -54,8 +62,7 @@ export class PessoaController {
     @Param('id') id: string,
     @Body() updatePessoaDto: UpdatePessoaDto,
   ) {
-    // ESTE MÉTODO PRECISA DE REATORAÇÃO NO SERVICE
-    return this.pessoaService.update(organizationId, id, updatePessoaDto);
+    return this.updatePessoaUseCase.execute(organizationId, id, updatePessoaDto);
   }
 
   @Delete(':id')
@@ -63,7 +70,6 @@ export class PessoaController {
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
   ) {
-    // ESTE MÉTODO PRECISA DE REATORAÇÃO NO SERVICE
-    return this.pessoaService.remove(organizationId, id);
+    return this.deletePessoaUseCase.execute(organizationId, id);
   }
 }
