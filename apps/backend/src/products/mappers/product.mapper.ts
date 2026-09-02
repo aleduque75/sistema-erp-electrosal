@@ -1,58 +1,68 @@
-import { Product, UniqueEntityID, InventoryLotProps, ProductGroup } from '@sistema-erp-electrosal/core';
-import { Product as PrismaProduct, InventoryLot as PrismaInventoryLot, ProductGroup as PrismaProductGroup, Prisma } from '@prisma/client';
-import { ProductGroupMapper } from './product-group.mapper';
+import {
+  Product as PrismaProduct,
+  InventoryLot as PrismaInventoryLot,
+  ProductGroup as PrismaProductGroup,
+  Prisma,
+} from '@prisma/client';
+import { ProductEntity } from '../entities/product.entity';
 
-// É necessário definir o tipo do `raw` que o `toDomain` recebe para incluir as relações
-type PrismaProductWithRelations = PrismaProduct & {
+export type PrismaProductWithRelations = PrismaProduct & {
   inventoryLots?: PrismaInventoryLot[];
   productGroup?: PrismaProductGroup | null;
 };
 
 export class ProductMapper {
-  static toDomain(raw: PrismaProductWithRelations): Product {
-    const inventoryLots: InventoryLotProps[] = raw.inventoryLots?.map(lot => ({
-      id: UniqueEntityID.create(lot.id),
-      remainingQuantity: lot.remainingQuantity,
-      sourceType: lot.sourceType,
-    })) ?? [];
-
-    let productGroup: ProductGroup | undefined = undefined;
-    if (raw.productGroup) {
-      productGroup = ProductGroupMapper.toDomain(raw.productGroup);
-    }
-
-    const product = Product.create(
-      {
-        organizationId: raw.organizationId,
-        name: raw.name,
-        description: raw.description ?? undefined,
-        price: raw.price.toNumber(),
-        costPrice: raw.costPrice?.toNumber() ?? undefined,
-        stock: raw.stock ?? 0,
-        stockUnit: raw.stockUnit,
-        goldValue: raw.goldValue ?? undefined,
-        inventoryLots: inventoryLots, // Mapeando os lotes
-        productGroup: productGroup,
-        createdAt: raw.createdAt,
-        updatedAt: raw.updatedAt,
-      },
-      raw.id ? UniqueEntityID.create(raw.id) : undefined,
-    );
-    return product;
+  static toDomain(raw: PrismaProductWithRelations): ProductEntity {
+    return ProductEntity.create({
+      id: raw.id,
+      organizationId: raw.organizationId,
+      name: raw.name,
+      description: raw.description,
+      price: raw.price ? Number(raw.price) : 0,
+      costPrice: raw.costPrice ? Number(raw.costPrice) : null,
+      stock: raw.stock !== null && raw.stock !== undefined ? Number(raw.stock) : 0,
+      stockUnit: raw.stockUnit,
+      goldValue: raw.goldValue !== null && raw.goldValue !== undefined ? Number(raw.goldValue) : null,
+      productGroupId: raw.productGroupId,
+      externalId: raw.externalId,
+      productGroup: raw.productGroup,
+      inventoryLots: raw.inventoryLots || [],
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+    });
   }
 
-  static toPersistence(product: Product): Prisma.ProductCreateInput {
+  static toPersistence(product: ProductEntity): Prisma.ProductUncheckedCreateInput {
     return {
-      id: product.id.toString(),
-      organization: { connect: { id: product.organizationId } },
+      id: product.id,
+      organizationId: product.organizationId,
       name: product.name,
       description: product.description ?? null,
       price: new Prisma.Decimal(product.price),
       costPrice: product.costPrice ? new Prisma.Decimal(product.costPrice) : null,
       stock: product.stock,
       stockUnit: product.stockUnit,
+      goldValue: product.goldValue ?? null,
+      productGroupId: product.productGroupId ?? null,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+    };
+  }
+
+  static toResponseDto(product: ProductEntity): any {
+    return {
+      id: product.id,
+      organizationId: product.organizationId,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      costPrice: product.costPrice,
+      stock: product.stock,
+      stockUnit: product.stockUnit,
       goldValue: product.goldValue,
-      productGroup: product.productGroup ? { connect: { id: product.productGroup.id.toString() } } : undefined,
+      productGroupId: product.productGroupId,
+      productGroup: product.productGroup,
+      inventoryLots: product.inventoryLots,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
     };

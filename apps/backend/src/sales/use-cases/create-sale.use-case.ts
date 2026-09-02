@@ -54,7 +54,7 @@ export class CreateSaleUseCase {
     const inventoryLotUpdates: { id: string; quantity: number }[] = [];
 
     for (const item of items) {
-      const product = productsInDb.find((p) => p.id.toString() === item.productId);
+      const product = productsInDb.find((p) => p.id === item.productId);
       if (!product) throw new NotFoundException(`Produto com ID ${item.productId} não encontrado.`);
 
       const productGroup = product.productGroup;
@@ -103,7 +103,7 @@ export class CreateSaleUseCase {
       totalCommissionAmount = totalCommissionAmount.plus(itemCommission);
 
       saleItemsToCreate.push({
-        product: { connect: { id: product.id.toString() } },
+        product: { connect: { id: product.id! } },
         quantity: item.quantity,
         price: itemPrice,
         costPriceAtSale: itemTotalCost.dividedBy(itemQuantity),

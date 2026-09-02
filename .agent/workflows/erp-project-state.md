@@ -83,6 +83,12 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - Implementação de `PessoaRepository` e `PrismaPessoaRepository` com transações atômicas para papéis (`client`, `fornecedor`, `funcionario`) e compatibilidade mantida com `IPessoaRepository`.
    - Criação da entidade rica `PessoaEntity` e do Value Object `PessoaRoleVO`.
    - Suíte com 22 testes unitários passando (`pnpm jest src/pessoa`).
+5. **Refatoração do Módulo Products para DDD (Domain-Driven Design):**
+   - Eliminação completa de `products.service.ts` em favor de Casos de Uso especializados (`CreateProductUseCase`, `UpdateProductUseCase`, `ListProductsUseCase`, `GetProductUseCase`, `DeleteProductUseCase`, `AnalyzeXmlImportUseCase`, `ConfirmXmlImportUseCase`, `FixReactionGroupUseCase`, `GetAllProductGroupsUseCase`).
+   - Implementação de `ProductRepository` e `PrismaProductRepository` trazendo grupos e lotes ativos com saldo remanescente.
+   - Criação da entidade rica `ProductEntity` e do Value Object `StockUnitVO`.
+   - Organização de DTOs dedicados (`update-product.dto.ts`, `list-products-query.dto.ts`, `index.ts`).
+   - Suíte com 24 testes unitários passando em verde (`npx jest src/products`), com total de 68 testes aprovados entre `products`, `pessoa` e `sales`.
 
 ---
 

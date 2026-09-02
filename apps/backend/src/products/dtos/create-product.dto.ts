@@ -1,5 +1,4 @@
 import {
-  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -8,7 +7,6 @@ import {
   IsUUID,
   Min,
 } from 'class-validator';
-import { PartialType } from '@nestjs/mapped-types';
 import { StockUnit } from '@prisma/client';
 
 export class CreateProductDto {
@@ -17,19 +15,13 @@ export class CreateProductDto {
   @IsNumber() @Min(0) price: number;
   @IsNumber() stock!: number;
   @IsEnum(StockUnit) @IsOptional() stockUnit?: StockUnit;
-  @IsNumber() @IsOptional() costPrice?: number; // Adicionado
-  @IsNumber() @IsOptional() goldValue?: number; // Adicionado
-  @IsUUID() @IsOptional() productGroupId?: string; // NOVO CAMPO
+  @IsNumber() @IsOptional() costPrice?: number;
+  @IsNumber() @IsOptional() goldValue?: number;
+  @IsUUID() @IsOptional() productGroupId?: string;
 }
 
-export class UpdateProductDto extends PartialType(CreateProductDto) {}
-
-// Mantendo os DTOs de importação de XML que você já tinha
-export class ImportXmlDto {
-  @IsNotEmpty()
-  @IsString()
-  xmlContent: string;
-}
+export { UpdateProductDto } from './update-product.dto';
+export { ImportXmlDto, ConfirmImportXmlDto } from './import-xml.dto';
 export class ManualMatchesDto {
   [xmlName: string]: string;
 }

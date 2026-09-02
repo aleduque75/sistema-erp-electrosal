@@ -7,79 +7,149 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
-import { ProductsService } from './products.service';
-import { CreateProductDto, UpdateProductDto } from './dtos/create-product.dto';
-import { ImportXmlDto, ConfirmImportXmlDto } from './dtos/import-xml.dto';
+import {
+  CreateProductDto,
+  UpdateProductDto,
+  ListProductsQueryDto,
+  ImportXmlDto,
+  ConfirmImportXmlDto,
+} from './dtos';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { ListProductsUseCase } from './use-cases/list-products.use-case';
+import { GetProductUseCase } from './use-cases/get-product.use-case';
+import { CreateProductUseCase } from './use-cases/create-product.use-case';
+import { UpdateProductUseCase } from './use-cases/update-product.use-case';
+import { DeleteProductUseCase } from './use-cases/delete-product.use-case';
+import { AnalyzeXmlImportUseCase } from './use-cases/analyze-xml-import.use-case';
+import { ConfirmXmlImportUseCase } from './use-cases/confirm-xml-import.use-case';
+import { FixReactionGroupUseCase } from './use-cases/fix-reaction-group.use-case';
+import { GetAllProductGroupsUseCase } from './use-cases/get-all-product-groups.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly listProductsUseCase: ListProductsUseCase,
+    private readonly getProductUseCase: GetProductUseCase,
+    private readonly createProductUseCase: CreateProductUseCase,
+    private readonly updateProductUseCase: UpdateProductUseCase,
+    private readonly deleteProductUseCase: DeleteProductUseCase,
+    private readonly analyzeXmlImportUseCase: AnalyzeXmlImportUseCase,
+    private readonly confirmXmlImportUseCase: ConfirmXmlImportUseCase,
+    private readonly fixReactionGroupUseCase: FixReactionGroupUseCase,
+    private readonly getAllProductGroupsUseCase: GetAllProductGroupsUseCase,
+  ) {}
+
+  private resolveOrgId(org1?: string, org2?: string): string {
+    return org1 || org2 || '';
+  }
 
   @Post('import-xml/analyze')
   importXmlAnalyze(
-    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('orgId') legacyOrgId: string,
     @Body() importXmlDto: ImportXmlDto,
   ) {
-    return this.productsService.importXmlAnalyze(organizationId, importXmlDto);
+    return this.analyzeXmlImportUseCase.execute(
+      this.resolveOrgId(orgId, legacyOrgId),
+      importXmlDto,
+    );
   }
 
   @Post('import-xml')
   importXml(
-    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('orgId') legacyOrgId: string,
     @Body() confirmImportXmlDto: ConfirmImportXmlDto,
   ) {
-    return this.productsService.importXml(organizationId, confirmImportXmlDto);
+    return this.confirmXmlImportUseCase.execute(
+      this.resolveOrgId(orgId, legacyOrgId),
+      confirmImportXmlDto,
+    );
   }
 
   @Post()
   create(
-    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('orgId') legacyOrgId: string,
     @Body() createProductDto: CreateProductDto,
   ) {
-    return this.productsService.create(organizationId, createProductDto);
+    return this.createProductUseCase.execute(
+      this.resolveOrgId(orgId, legacyOrgId),
+      createProductDto,
+    );
   }
 
   @Get()
-  findAll(@CurrentUser('orgId') organizationId: string) {
-    return this.productsService.findAll(organizationId);
+  findAll(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('orgId') legacyOrgId: string,
+    @Query() query: ListProductsQueryDto,
+  ) {
+    return this.listProductsUseCase.execute(
+      this.resolveOrgId(orgId, legacyOrgId),
+      query,
+    );
   }
 
   @Get(':id')
   findOne(
-    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('orgId') legacyOrgId: string,
     @Param('id') id: string,
   ) {
-    return this.productsService.findOne(organizationId, id);
+    return this.getProductUseCase.execute(
+      this.resolveOrgId(orgId, legacyOrgId),
+      id,
+    );
   }
 
   @Patch(':id')
   update(
-    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('orgId') legacyOrgId: string,
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
   ) {
-    return this.productsService.update(organizationId, id, updateProductDto);
+    return this.updateProductUseCase.execute(
+      this.resolveOrgId(orgId, legacyOrgId),
+      id,
+      updateProductDto,
+    );
   }
 
   @Delete(':id')
   remove(
-    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('orgId') legacyOrgId: string,
     @Param('id') id: string,
   ) {
-    return this.productsService.remove(organizationId, id);
+    return this.deleteProductUseCase.execute(
+      this.resolveOrgId(orgId, legacyOrgId),
+      id,
+    );
   }
 
   @Get('product-groups/debug')
-  getAllProductGroups(@CurrentUser('orgId') organizationId: string) {
-    return this.productsService.getAllProductGroups(organizationId);
+  getAllProductGroups(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('orgId') legacyOrgId: string,
+  ) {
+    return this.getAllProductGroupsUseCase.execute(
+      this.resolveOrgId(orgId, legacyOrgId),
+    );
   }
 
   @Post('fix-reaction-group')
-  fixReactionGroupFlag(@CurrentUser('orgId') organizationId: string) {
-    return this.productsService.fixReactionGroupFlag(organizationId);
+  fixReactionGroupFlag(
+    @CurrentUser('organizationId') orgId: string,
+    @CurrentUser('orgId') legacyOrgId: string,
+  ) {
+    return this.fixReactionGroupUseCase.execute(
+      this.resolveOrgId(orgId, legacyOrgId),
+    );
   }
 }
