@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SalesController } from './sales.controller';
-import { SalesService } from './sales.service';
+import { SalesRepository } from './repositories/sales.repository';
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case';
 import { EditSaleUseCase } from './use-cases/edit-sale.use-case';
 import { ConfirmSaleUseCase } from './use-cases/confirm-sale.use-case';
@@ -16,6 +16,11 @@ import { ReceiveInstallmentPaymentUseCase } from './use-cases/receive-installmen
 import { GenerateSalePdfUseCase } from './use-cases/generate-sale-pdf.use-case';
 import { ApplySaleCommissionUseCase } from './use-cases/apply-sale-commission.use-case';
 import { CalculateSaleAdjustmentUseCase } from './use-cases/calculate-sale-adjustment.use-case';
+import { DeleteSaleUseCase } from './use-cases/delete-sale.use-case';
+import { UpdateSaleFinancialsUseCase } from './use-cases/update-sale-financials.use-case';
+import { BackfillSaleAdjustmentsUseCase } from './use-cases/backfill-sale-adjustments.use-case';
+import { BackfillSaleQuotationsUseCase } from './use-cases/backfill-sale-quotations.use-case';
+import { DiagnoseSaleUseCase } from './use-cases/diagnose-sale.use-case';
 
 describe('SalesController', () => {
   let controller: SalesController;
@@ -25,21 +30,19 @@ describe('SalesController', () => {
       controllers: [SalesController],
       providers: [
         {
-          provide: SalesService,
+          provide: SalesRepository,
           useValue: {
             findAll: jest.fn(),
-            findOne: jest.fn(),
+            findById: jest.fn(),
+            findByIdWithDetails: jest.fn(),
+            findByOrderNumberWithTransactions: jest.fn(),
             create: jest.fn(),
             update: jest.fn(),
+            updatePartial: jest.fn(),
+            updateObservation: jest.fn(),
             remove: jest.fn(),
-            backfillSaleAdjustments: jest.fn(),
-            backfillQuotations: jest.fn(),
-            diagnoseSale: jest.fn(),
-            findByOrderNumberWithTransactions: jest.fn(),
             getNextOrderNumber: jest.fn(),
             checkOrderNumberExists: jest.fn(),
-            updateFinancials: jest.fn(),
-            updateObservation: jest.fn(),
           },
         },
         { provide: CreateSaleUseCase, useValue: { execute: jest.fn() } },
@@ -57,6 +60,11 @@ describe('SalesController', () => {
         { provide: GenerateSalePdfUseCase, useValue: { execute: jest.fn() } },
         { provide: ApplySaleCommissionUseCase, useValue: { execute: jest.fn() } },
         { provide: CalculateSaleAdjustmentUseCase, useValue: { execute: jest.fn() } },
+        { provide: DeleteSaleUseCase, useValue: { execute: jest.fn() } },
+        { provide: UpdateSaleFinancialsUseCase, useValue: { execute: jest.fn() } },
+        { provide: BackfillSaleAdjustmentsUseCase, useValue: { execute: jest.fn() } },
+        { provide: BackfillSaleQuotationsUseCase, useValue: { execute: jest.fn() } },
+        { provide: DiagnoseSaleUseCase, useValue: { execute: jest.fn() } },
       ],
     }).compile();
 

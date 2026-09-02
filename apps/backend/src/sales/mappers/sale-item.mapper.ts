@@ -1,38 +1,36 @@
-import { SaleItem, Product } from '@sistema-erp-electrosal/core';
-import { SaleItem as PrismaSaleItem, Prisma } from '@prisma/client';
-import { ProductMapper } from '../../products/mappers/product.mapper';
-
-type PrismaSaleItemWithDetails = Prisma.SaleItemGetPayload<{
-  include: { product: true; saleItemLots: true };
-}>;
+import { SaleItemEntity } from '../entities/sale-item.entity';
+import { Prisma } from '@prisma/client';
 
 export class SaleItemMapper {
-  static toDomain(raw: PrismaSaleItemWithDetails): SaleItem {
-    const product = raw.product ? ProductMapper.toDomain(raw.product) : undefined;
-
-    return SaleItem.create(
-      {
-        saleId: raw.saleId,
-        productId: raw.productId,
-        quantity: raw.quantity,
-        price: raw.price.toNumber(),
-        product: product,
-        createdAt: raw.createdAt,
-        updatedAt: raw.updatedAt,
-      },
-      raw.id,
-    );
+  static toDomain(raw: any): SaleItemEntity {
+    return new SaleItemEntity({
+      id: raw.id,
+      saleId: raw.saleId,
+      productId: raw.productId,
+      quantity: Number(raw.quantity),
+      price: raw.price ? Number(raw.price) : 0,
+      costPriceAtSale: raw.costPriceAtSale ? Number(raw.costPriceAtSale) : 0,
+      laborPercentage: raw.laborPercentage ? Number(raw.laborPercentage) : null,
+      externalId: raw.externalId,
+      product: raw.product,
+      saleItemLots: raw.saleItemLots,
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+    });
   }
 
-  static toPersistence(saleItem: SaleItem): PrismaSaleItem {
+  static toPersistence(item: SaleItemEntity): Prisma.SaleItemUncheckedCreateInput {
     return {
-      id: saleItem.id.toString(),
-      saleId: saleItem.saleId,
-      productId: saleItem.productId,
-      quantity: saleItem.quantity,
-      price: saleItem.price,
-      createdAt: saleItem.createdAt,
-      updatedAt: saleItem.updatedAt,
-    } as PrismaSaleItem; // Cast to PrismaSaleItem to satisfy type checking
+      id: item.id,
+      saleId: item.saleId!,
+      productId: item.productId,
+      quantity: item.quantity,
+      price: item.price,
+      costPriceAtSale: item.costPriceAtSale,
+      laborPercentage: item.laborPercentage,
+      externalId: item.externalId,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    };
   }
 }

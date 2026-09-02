@@ -1,11 +1,13 @@
-import { Module, OnModuleInit } from '@nestjs/common';
-import { SalesService } from './sales.service';
+import { Module } from '@nestjs/common';
 import { SalesController } from './sales.controller';
 import { PessoaModule } from '../pessoa/pessoa.module';
 import { ProductsModule } from '../products/products.module';
 import { SettingsModule } from '../settings/settings.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PureMetalLotsModule } from '../pure-metal-lots/pure-metal-lots.module';
+import { QuotationsModule } from '../quotations/quotations.module';
+import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
+
 import { CreateSaleUseCase } from './use-cases/create-sale.use-case';
 import { ConfirmSaleUseCase } from './use-cases/confirm-sale.use-case';
 import { BulkConfirmSalesUseCase } from './use-cases/bulk-confirm-sales.use-case';
@@ -19,17 +21,21 @@ import { ReleaseToPcpUseCase } from './use-cases/release-to-pcp.use-case';
 import { ReleaseForPaymentUseCase } from './use-cases/release-for-payment.use-case';
 import { CalculateSaleAdjustmentUseCase } from './use-cases/calculate-sale-adjustment.use-case';
 import { BackfillSaleGoldValueUseCase } from './use-cases/backfill-sale-gold-value.use-case';
-import { QuotationsModule } from '../quotations/quotations.module';
 import { BackfillInstallmentsUseCase } from './use-cases/backfill-installments.use-case';
-import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
-
-import { ProcessClientMetalPaymentToSupplierUseCase } from './use-cases/process-client-metal-payment-to-supplier.use-case'; // New Use Case
+import { ProcessClientMetalPaymentToSupplierUseCase } from './use-cases/process-client-metal-payment-to-supplier.use-case';
 import { ReceiveInstallmentPaymentUseCase } from './use-cases/receive-installment-payment.use-case';
-import { PrismaMetalAccountRepository } from '../metal-accounts/repositories/prisma-metal-account.repository'; // Assuming path
-import { PrismaMetalAccountEntryRepository } from '../metal-accounts/repositories/prisma-metal-account-entry.repository'; // Assuming path
 import { GenerateSalePdfUseCase } from './use-cases/generate-sale-pdf.use-case';
 import { ApplySaleCommissionUseCase } from './use-cases/apply-sale-commission.use-case';
 
+import { DeleteSaleUseCase } from './use-cases/delete-sale.use-case';
+import { UpdateSaleFinancialsUseCase } from './use-cases/update-sale-financials.use-case';
+import { BackfillSaleAdjustmentsUseCase } from './use-cases/backfill-sale-adjustments.use-case';
+import { BackfillSaleQuotationsUseCase } from './use-cases/backfill-sale-quotations.use-case';
+import { BackfillSaleCostsUseCase } from './use-cases/backfill-sale-costs.use-case';
+import { DiagnoseSaleUseCase } from './use-cases/diagnose-sale.use-case';
+
+import { SalesRepository } from './repositories/sales.repository';
+import { PrismaSaleRepository } from './repositories/prisma-sale.repository';
 
 @Module({
   imports: [
@@ -43,7 +49,11 @@ import { ApplySaleCommissionUseCase } from './use-cases/apply-sale-commission.us
   ],
   controllers: [SalesController],
   providers: [
-    SalesService,
+    {
+      provide: SalesRepository,
+      useClass: PrismaSaleRepository,
+    },
+    PrismaSaleRepository,
     CreateSaleUseCase,
     EditSaleUseCase,
     ConfirmSaleUseCase,
@@ -54,6 +64,7 @@ import { ApplySaleCommissionUseCase } from './use-cases/apply-sale-commission.us
     RevertSaleUseCase,
     SeparateSaleUseCase,
     ReleaseToPcpUseCase,
+    ReleaseForPaymentUseCase,
     BackfillSaleGoldValueUseCase,
     BackfillInstallmentsUseCase,
     CalculateSaleAdjustmentUseCase,
@@ -61,7 +72,27 @@ import { ApplySaleCommissionUseCase } from './use-cases/apply-sale-commission.us
     ProcessClientMetalPaymentToSupplierUseCase,
     GenerateSalePdfUseCase,
     ApplySaleCommissionUseCase,
+    DeleteSaleUseCase,
+    UpdateSaleFinancialsUseCase,
+    BackfillSaleAdjustmentsUseCase,
+    BackfillSaleQuotationsUseCase,
+    BackfillSaleCostsUseCase,
+    DiagnoseSaleUseCase,
   ],
-  exports: [SalesService, CreateSaleUseCase, ConfirmSaleUseCase, CalculateSaleAdjustmentUseCase],
+  exports: [
+    SalesRepository,
+    PrismaSaleRepository,
+    CreateSaleUseCase,
+    EditSaleUseCase,
+    ConfirmSaleUseCase,
+    CalculateSaleAdjustmentUseCase,
+    DeleteSaleUseCase,
+    UpdateSaleFinancialsUseCase,
+    BackfillSaleAdjustmentsUseCase,
+    BackfillSaleQuotationsUseCase,
+    BackfillSaleCostsUseCase,
+    BackfillInstallmentsUseCase,
+    DiagnoseSaleUseCase,
+  ],
 })
 export class SalesModule {}

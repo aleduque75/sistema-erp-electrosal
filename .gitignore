@@ -84,3 +84,5 @@ backup_pre_migration_*.sql
 *.sql
 uploads/
 backup_hoje.sql
+scripts/generate_*
+scripts/patch_*

@@ -11,8 +11,8 @@ import {
   Res,
   Delete,
 } from '@nestjs/common';
-import { SalesService } from './sales.service';
-import { SaleStatus, Role } from '@prisma/client'; // Keep Sale for now, will refactor later
+import { SalesRepository } from './repositories/sales.repository';
+import { SaleStatus, Role } from '@prisma/client';
 import { LinkLotsToSaleItemDto } from './dtos/link-lots-to-sale-item.dto';
 import { LinkLotsToSaleItemUseCase } from './use-cases/link-lots-to-sale-item.use-case';
 import { CreateSaleDto, UpdateSaleDto, ConfirmSaleDto, ReceiveInstallmentPaymentDto, BulkConfirmSalesDto, UpdateObservationDto } from './dtos/sales.dto';
@@ -41,12 +41,17 @@ import { Response } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
 
 import { CalculateSaleAdjustmentUseCase } from './use-cases/calculate-sale-adjustment.use-case';
+import { DeleteSaleUseCase } from './use-cases/delete-sale.use-case';
+import { UpdateSaleFinancialsUseCase } from './use-cases/update-sale-financials.use-case';
+import { BackfillSaleAdjustmentsUseCase } from './use-cases/backfill-sale-adjustments.use-case';
+import { BackfillSaleQuotationsUseCase } from './use-cases/backfill-sale-quotations.use-case';
+import { DiagnoseSaleUseCase } from './use-cases/diagnose-sale.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('sales')
 export class SalesController {
   constructor(
-    private readonly salesService: SalesService,
+    private readonly salesRepository: SalesRepository,
     private readonly createSaleUseCase: CreateSaleUseCase,
     private readonly editSaleUseCase: EditSaleUseCase,
     private readonly confirmSaleUseCase: ConfirmSaleUseCase,
@@ -62,6 +67,11 @@ export class SalesController {
     private readonly generateSalePdfUseCase: GenerateSalePdfUseCase,
     private readonly applySaleCommissionUseCase: ApplySaleCommissionUseCase,
     private readonly calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
+    private readonly deleteSaleUseCase: DeleteSaleUseCase,
+    private readonly updateSaleFinancialsUseCase: UpdateSaleFinancialsUseCase,
+    private readonly backfillSaleAdjustmentsUseCase: BackfillSaleAdjustmentsUseCase,
+    private readonly backfillSaleQuotationsUseCase: BackfillSaleQuotationsUseCase,
+    private readonly diagnoseSaleUseCase: DiagnoseSaleUseCase,
   ) {}
 
   @Post(':id/recalculate-adjustment')
@@ -109,20 +119,19 @@ export class SalesController {
   }
 
   @Public()
-  @Post('backfill-adjustments')
-  async backfillSaleAdjustments() {
-    const organizationId = '2a5bb448-056b-4b87-b02f-fec691dd658d'; // Electrosal
-    return this.salesService.backfillSaleAdjustments(organizationId);
+  @Post('backfill-sale-adjustments')
+  async backfillSaleAdjustments(@CurrentUser('organizationId') organizationId: string) {
+    return this.backfillSaleAdjustmentsUseCase.execute(organizationId);
   }
 
   @Post('backfill-quotations')
   async backfillQuotations(@CurrentUser('organizationId') organizationId: string) {
-    return this.salesService.backfillQuotations(organizationId);
+    return this.backfillSaleQuotationsUseCase.execute(organizationId);
   }
 
   @Get('diagnose/:orderNumber')
   async diagnoseSale(@CurrentUser('organizationId') organizationId: string, @Param('orderNumber') orderNumber: string) {
-    return this.salesService.diagnoseSale(organizationId, Number(orderNumber));
+    return this.diagnoseSaleUseCase.execute(organizationId, Number(orderNumber));
   }
 
   @Post('items/:id/link-lots')
@@ -144,7 +153,7 @@ export class SalesController {
     @CurrentUser('organizationId') organizationId: string, 
     @Param('orderNumber') orderNumber: string
   ) {
-    return this.salesService.findByOrderNumberWithTransactions(organizationId, Number(orderNumber));
+    return this.salesRepository.findByOrderNumberWithTransactions(organizationId, Number(orderNumber));
   }
 
   @Get()
@@ -158,7 +167,7 @@ export class SalesController {
     @Query('endDate') endDate?: string,
     @Query('clientId') clientId?: string,
   ) {
-    return this.salesService.findAll(organizationId, {
+    return this.salesRepository.findAll(organizationId, {
       page: page ? +page : 1,
       limit: limit ? +limit : 50,
       status,
@@ -171,7 +180,7 @@ export class SalesController {
 
   @Get('next-order-number')
   async getNextOrderNumber(@CurrentUser('organizationId') organizationId: string) {
-    const nextNumber = await this.salesService.getNextOrderNumber(organizationId);
+    const nextNumber = await this.salesRepository.getNextOrderNumber(organizationId);
     return { nextOrderNumber: nextNumber };
   }
 
@@ -180,7 +189,7 @@ export class SalesController {
     @CurrentUser('organizationId') organizationId: string,
     @Param('orderNumber') orderNumber: string,
   ) {
-    const exists = await this.salesService.checkOrderNumberExists(organizationId, parseInt(orderNumber, 10));
+    const exists = await this.salesRepository.checkOrderNumberExists(organizationId, parseInt(orderNumber, 10));
     return { exists };
   }
 
@@ -205,20 +214,20 @@ export class SalesController {
   }
 
   @Get(':id')
-  findOne(
-    @CurrentUser('orgId') organizationId: string,
+  async findOne(
+    @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
   ) {
-    return this.salesService.findOne(organizationId, id);
+    return this.salesRepository.findByIdWithDetails(organizationId, id);
   }
 
   @Patch(':id/financials')
   async updateFinancials(
-    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
     @Body() body: { goldPrice?: number; feeAmount?: number; shippingCost?: number },
   ) {
-    await this.salesService.updateFinancials(organizationId, id, body);
+    await this.updateSaleFinancialsUseCase.execute(organizationId, id, body);
     return { message: 'Dados financeiros atualizados com sucesso.' };
   }
 
@@ -228,17 +237,17 @@ export class SalesController {
     @Param('id') id: string,
     @Body() updateObservationDto: UpdateObservationDto,
   ) {
-    await this.salesService.updateObservation(organizationId, id, updateObservationDto.observation);
+    await this.salesRepository.updateObservation(organizationId, id, updateObservationDto.observation);
     return { message: 'Observação atualizada com sucesso.' };
   }
 
   @Patch(':id')
   update(
-    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
     @Body() updateSaleDto: UpdateSaleDto,
   ) {
-    return this.salesService.update(organizationId, id, updateSaleDto);
+    return this.salesRepository.updatePartial(organizationId, id, updateSaleDto);
   }
 
   @Post(':id/confirm')
@@ -298,6 +307,17 @@ export class SalesController {
     await this.revertSaleUseCase.execute(organizationId, saleId);
     return { message: 'Venda revertida para PENDENTE com sucesso.' };
   }
+
+  @Patch(':id/cancel')
+  async cancel(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') saleId: string,
+  ) {
+    await this.cancelSaleUseCase.execute(organizationId, saleId);
+    return { message: 'Venda cancelada com sucesso.' };
+  }
+
+  @Post(':saleId/installments/:installmentId/pay')
   async receiveInstallmentPayment(
     @CurrentUser('organizationId') organizationId: string,
     @CurrentUser('id') userId: string,
@@ -318,7 +338,7 @@ export class SalesController {
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') saleId: string,
   ) {
-    await this.salesService.remove(organizationId, saleId);
+    await this.deleteSaleUseCase.execute(organizationId, saleId);
     return { message: 'Venda excluída com sucesso.' };
   }
 }

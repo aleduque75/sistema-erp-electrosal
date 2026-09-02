@@ -33,6 +33,7 @@ COPY --from=builder /app/deployed-backend ./
 # Copiamos o schema e o core compilado para os lugares que o Nest espera
 COPY --from=builder /app/apps/backend/prisma ./prisma
 COPY --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --from=builder /app/apps/backend/dist ./dist
 
 # Dependências e Navegador para Puppeteer (Chromium nativo Debian/ARM64)
 RUN apt-get update && apt-get install -y \

@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { SalesService } from '../sales.service';
+import { SalesRepository } from '../repositories/sales.repository';
 import * as puppeteer from 'puppeteer';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -21,7 +21,7 @@ export interface GenerateSalePdfCommand {
 export class GenerateSalePdfUseCase {
   private readonly logger = new Logger(GenerateSalePdfUseCase.name);
 
-  constructor(private readonly salesService: SalesService) {
+  constructor(private readonly salesRepository: SalesRepository) {
     this.registerHandlebarsHelpers();
   }
 
@@ -70,9 +70,7 @@ export class GenerateSalePdfUseCase {
 
   async execute(command: GenerateSalePdfCommand): Promise<Buffer> {
     const { saleId, organizationId } = command;
-
-    const sale = await this.salesService.findOne(organizationId, saleId);
-
+    const sale = await this.salesRepository.findByIdWithDetails(organizationId, saleId);
     if (!sale) {
       throw new NotFoundException(`Venda com ID ${saleId} não encontrada.`);
     }

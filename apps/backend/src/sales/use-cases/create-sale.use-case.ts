@@ -6,7 +6,7 @@ import { Prisma, TipoMetal, SaleInstallmentStatus,  } from '@prisma/client';
 import { SettingsService } from '../../settings/settings.service';
 import { ProductMapper } from '../../products/mappers/product.mapper';
 import { QuotationsService } from '../../quotations/quotations.service';
-import { SalesService } from '../sales.service';
+import { SalesRepository } from '../repositories/sales.repository';
 import Decimal from 'decimal.js';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class CreateSaleUseCase {
     private prisma: PrismaService,
     private settingsService: SettingsService,
     private quotationsService: QuotationsService,
-    private salesService: SalesService,
+    private salesRepository: SalesRepository,
     private confirmSaleUseCase: ConfirmSaleUseCase,
   ) {}
 
@@ -120,13 +120,13 @@ export class CreateSaleUseCase {
 
     let finalOrderNumber: number;
     if (orderNumber) {
-      const exists = await this.salesService.checkOrderNumberExists(organizationId, orderNumber);
+      const exists = await this.salesRepository.checkOrderNumberExists(organizationId, orderNumber);
       if (exists) {
         throw new ConflictException(`Já existe uma venda com o número de pedido ${orderNumber}.`);
       }
       finalOrderNumber = orderNumber;
     } else {
-      finalOrderNumber = await this.salesService.getNextOrderNumber(organizationId);
+      finalOrderNumber = await this.salesRepository.getNextOrderNumber(organizationId);
     }
 
     const sale = await this.prisma.sale.create({

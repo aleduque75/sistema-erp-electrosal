@@ -4,7 +4,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ContaCorrenteType, TipoTransacaoPrisma } from '@prisma/client';
 import { exec } from 'child_process';
-import { SalesService } from '../sales/sales.service';
+import { BackfillSaleAdjustmentsUseCase } from '../sales/use-cases/backfill-sale-adjustments.use-case';
 import { Decimal } from 'decimal.js';
 
 import { ImportProductsUseCase } from './import-products.use-case';
@@ -16,7 +16,7 @@ export class JsonImportsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly salesService: SalesService,
+    private readonly backfillSaleAdjustmentsUseCase: BackfillSaleAdjustmentsUseCase,
     private readonly importProductsUseCase: ImportProductsUseCase,
     private readonly salesMovementImportUseCase: SalesMovementImportUseCase,
   ) {}
@@ -952,7 +952,7 @@ export class JsonImportsService {
       await this.importProducts(organizationId);
       await this.importSalesAndFinance(organizationId);
       await this.backfillLotCreationMovements(organizationId); // Adicionado
-      await this.salesService.backfillSaleAdjustments(organizationId);
+      await this.backfillSaleAdjustmentsUseCase.execute(organizationId);
 
       // Etapa final: Executar a importação de movimentação de vendas
       this.logger.log(

@@ -1,14 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BackfillInstallmentsUseCase } from '../../sales/use-cases/backfill-installments.use-case';
-import { SalesService } from '../../sales/sales.service';
+import { BackfillSaleQuotationsUseCase } from '../../sales/use-cases/backfill-sale-quotations.use-case';
+import { BackfillSaleCostsUseCase } from '../../sales/use-cases/backfill-sale-costs.use-case';
+import { BackfillSaleAdjustmentsUseCase } from '../../sales/use-cases/backfill-sale-adjustments.use-case';
 
 @Injectable()
 export class RunFullMaintenanceUseCase {
   private readonly logger = new Logger(RunFullMaintenanceUseCase.name);
 
   constructor(
-    private readonly salesService: SalesService,
     private readonly backfillInstallmentsUseCase: BackfillInstallmentsUseCase,
+    private readonly backfillSaleQuotationsUseCase: BackfillSaleQuotationsUseCase,
+    private readonly backfillSaleCostsUseCase: BackfillSaleCostsUseCase,
+    private readonly backfillSaleAdjustmentsUseCase: BackfillSaleAdjustmentsUseCase,
   ) {}
 
   async execute(organizationId: string) {
@@ -20,12 +24,12 @@ export class RunFullMaintenanceUseCase {
       this.logger.log(`[RESULTADO PASSO 1] ${installmentsResult.message}`);
 
       this.logger.log('[PASSO 2/3] Preenchendo cotações e custos de vendas antigas...');
-      await this.salesService.backfillQuotations(organizationId);
-      await this.salesService.backfillCosts(organizationId);
+      await this.backfillSaleQuotationsUseCase.execute(organizationId);
+      await this.backfillSaleCostsUseCase.execute(organizationId);
       this.logger.log('[RESULTADO PASSO 2] Cotações e custos preenchidos.');
 
       this.logger.log('[PASSO 3/3] Recalculando todos os ajustes de vendas finalizadas...');
-      const adjustmentsResult = await this.salesService.backfillSaleAdjustments(organizationId);
+      const adjustmentsResult = await this.backfillSaleAdjustmentsUseCase.execute(organizationId);
       this.logger.log(`[RESULTADO PASSO 3] ${adjustmentsResult.message}`);
 
       const finalMessage = 'Processo de manutenção completa finalizado com sucesso!';
