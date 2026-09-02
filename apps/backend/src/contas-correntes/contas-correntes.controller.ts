@@ -61,24 +61,23 @@ export class ContasCorrentesController {
     let endDate: Date;
 
     if (startDateString) {
-      startDate = new Date(startDateString);
+      startDate = new Date(startDateString.includes('T') ? startDateString : `${startDateString}T00:00:00`);
     } else {
       const now = new Date();
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     }
 
     if (endDateString) {
-      endDate = new Date(endDateString);
+      endDate = new Date(endDateString.includes('T') ? endDateString : `${endDateString}T23:59:59.999`);
     } else {
       endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
     }
-    
-    endDate.setHours(23, 59, 59, 999); // Ajusta para o final do dia
 
     // Validação para evitar 'Invalid Date'
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       const now = new Date();
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       endDate = new Date();
       endDate.setHours(23, 59, 59, 999);
     }
@@ -98,23 +97,22 @@ export class ContasCorrentesController {
     let endDate: Date;
 
     if (startDateString) {
-      startDate = new Date(startDateString);
+      startDate = new Date(startDateString.includes('T') ? startDateString : `${startDateString}T00:00:00`);
     } else {
       const now = new Date();
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     }
 
     if (endDateString) {
-      endDate = new Date(endDateString);
+      endDate = new Date(endDateString.includes('T') ? endDateString : `${endDateString}T23:59:59.999`);
     } else {
       endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
     }
-    
-    endDate.setHours(23, 59, 59, 999);
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       const now = new Date();
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       endDate = new Date();
       endDate.setHours(23, 59, 59, 999);
     }

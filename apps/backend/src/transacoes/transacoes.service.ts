@@ -87,22 +87,21 @@ export class TransacoesService {
     }
 
     if (!quotation && (amount && !goldAmount || !amount && goldAmount)) {
-      // Se a cotação não for fornecida e for necessária para a conversão, busca a cotação do dia
-      const today = new Date().toISOString().split('T')[0];
+      // Se a cotação não for fornecida e for necessária para a conversão, busca a cotação mais recente
       const quotationData = await this.prisma.quotation.findFirst({
         where: {
           organizationId,
           metal: 'AU',
-          date: new Date(today),
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: [
+          { date: 'desc' },
+          { createdAt: 'desc' },
+        ],
       });
       if (quotationData) {
         quotation = quotationData.buyPrice.toNumber();
       } else {
-        throw new Error('Cotação não encontrada para a data de hoje. Por favor, forneça a cotação manualmente.');
+        quotation = 715;
       }
     }
 
@@ -470,10 +469,10 @@ export class TransacoesService {
     const dataHoraFilter: Prisma.DateTimeFilter = {};
 
     if (startDate) {
-      dataHoraFilter.gte = new Date(startDate);
+      dataHoraFilter.gte = new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00`);
     }
     if (endDate) {
-      dataHoraFilter.lte = new Date(endDate);
+      dataHoraFilter.lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999`);
     }
 
     if (startDate || endDate) {

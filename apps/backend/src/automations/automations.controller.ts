@@ -55,4 +55,38 @@ export class AutomationsController {
   ) {
     return this.automationsService.transferToSupplier(body);
   }
+
+  @Post('direct-expense')
+  async createDirectExpense(
+    @Body()
+    body: {
+      amount: number;
+      contaCorrenteId: string;
+      categoria: string;
+      description?: string;
+      date?: string;
+      fileBase64?: string;
+      mimeType?: string;
+    },
+  ) {
+    return this.automationsService.createDirectExpense(body);
+  }
+
+  @Get('search')
+  async searchLookup(
+    @Query('q') q?: string,
+    @Query('type') type?: 'categoria' | 'conta',
+  ) {
+    return this.automationsService.searchLookup({ q, type });
+  }
+
+  @Post('telegram-process')
+  async processTelegramUpdate(@Body() update: any) {
+    return this.automationsService.handleTelegramUpdate(update);
+  }
+
+  @Post('telegram-webhook')
+  async handleTelegramWebhook(@Body() update: any) {
+    return this.automationsService.handleTelegramUpdate(update);
+  }
 }
