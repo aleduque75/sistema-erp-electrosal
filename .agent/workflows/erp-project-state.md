@@ -99,8 +99,12 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - Implementação do contrato abstrato `TransacaoRepository` e da implementação `PrismaTransacaoRepository`.
    - Criação dos Casos de Uso especializados: `CreateTransacaoUseCase`, `CreateTransferUseCase`, `UpdateTransacaoUseCase`, `DeleteTransacaoUseCase`, `ListTransacoesUseCase`, `GetTransacaoUseCase`, `FindUnlinkedTransacoesUseCase`, `LinkAccountUseCase`, `BulkCreateTransacoesUseCase`, `BulkUpdateTransacoesUseCase`.
    - `TransacoesController` atualizado para orquestrar unicamente os novos Casos de Uso.
-   - `TransacoesService` reduzido a uma fachada limpa que delega para os Use Cases, mantendo compatibilidade 100% com outros módulos.
-   - Suíte de 23 testes unitários no módulo `transacoes` e total de 106 testes aprovados em 33 suítes no backend.
+   - **Exclusão completa de `transacoes.service.ts`:** Todos os módulos dependentes (`recovery-orders`, `metal-credits`, `automations`) foram migrados para injetar diretamente os novos Casos de Uso (`CreateTransacaoUseCase`, `CreateTransferUseCase`).
+8. **Refatoração do Módulo Metal-Payments para DDD & Clean Architecture:**
+   - Criação do caso de uso `PayClientWithMetalUseCase` encapsulando toda a baixa de lote de metal puro, cotações, geração de transações financeiras atômicas via `CreateTransacaoUseCase`, abatimento FIFO de créditos de metal e movimentação de conta corrente de metal.
+   - Atualização do controlador `MetalPaymentsController` para delegar exclusivamente ao caso de uso.
+   - Exclusão completa de `metal-payments.service.ts`.
+   - Suíte com 111 testes unitários aprovados em 35 suítes no backend.
 
 ---
 

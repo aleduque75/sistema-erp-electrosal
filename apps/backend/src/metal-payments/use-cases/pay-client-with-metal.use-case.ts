@@ -1,32 +1,41 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { PayClientWithMetalDto } from './dto/pay-client-with-metal.dto';
-import { PureMetalLotsService } from '../pure-metal-lots/pure-metal-lots.service';
-import { TransacoesService } from '../transacoes/transacoes.service';
-import { QuotationsService } from '../quotations/quotations.service';
-import { SettingsService } from '../settings/settings.service';
-import { TipoTransacaoPrisma, TipoMetal, MetalCreditStatus } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { PayClientWithMetalDto } from '../dto/pay-client-with-metal.dto';
+import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreateTransacaoUseCase } from '../../transacoes/use-cases/create-transacao.use-case';
+import { QuotationsService } from '../../quotations/quotations.service';
+import { SettingsService } from '../../settings/settings.service';
+import { TipoTransacaoPrisma, MetalCreditStatus } from '@prisma/client';
 import { Decimal } from 'decimal.js';
 
 @Injectable()
-export class MetalPaymentsService {
+export class PayClientWithMetalUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pureMetalLotsService: PureMetalLotsService,
-    private readonly transacoesService: TransacoesService,
+    private readonly createTransacaoUseCase: CreateTransacaoUseCase,
     private readonly quotationsService: QuotationsService,
     private readonly settingsService: SettingsService,
-  ) { }
+  ) {}
 
-  async payClientWithMetal(organizationId: string, userId: string, dto: PayClientWithMetalDto) {
+  async execute(
+    organizationId: string,
+    userId: string,
+    dto: PayClientWithMetalDto,
+  ): Promise<{ message: string }> {
     const { clientId, pureMetalLotId, grams, notes, data } = dto;
     const transactionDate = new Date(data);
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Verificar o lote de metal puro
-      const pureMetalLot = await this.pureMetalLotsService.findOne(organizationId, pureMetalLotId);
+      const pureMetalLot = await this.pureMetalLotsService.findOne(
+        organizationId,
+        pureMetalLotId,
+      );
       if (!pureMetalLot) {
-        throw new NotFoundException(`Lote de metal puro com ID ${pureMetalLotId} não encontrado.`);
+        throw new NotFoundException(
+          `Lote de metal puro com ID ${pureMetalLotId} não encontrado.`,
+        );
       }
       if (pureMetalLot.remainingGrams < grams) {
         throw new BadRequestException('Quantidade de metal insuficiente no lote.');
@@ -45,20 +54,28 @@ export class MetalPaymentsService {
       );
 
       // 3. Obter a cotação de compra do metal
-      const quotation = await this.quotationsService.findLatest(pureMetalLot.metalType, organizationId, transactionDate);
+      const quotation = await this.quotationsService.findLatest(
+        pureMetalLot.metalType,
+        organizationId,
+        transactionDate,
+      );
       if (!quotation || quotation.buyPrice.isZero()) {
-        throw new BadRequestException(`Nenhuma cotação de compra para ${pureMetalLot.metalType} encontrada para a data ${transactionDate.toLocaleDateString()}.`);
+        throw new BadRequestException(
+          `Nenhuma cotação de compra para ${pureMetalLot.metalType} encontrada para a data ${transactionDate.toLocaleDateString()}.`,
+        );
       }
       const valorBRL = new Decimal(grams).times(quotation.buyPrice);
 
       // 4. Registrar a transação financeira (débito em Contas a Pagar, crédito em Estoque de Metal)
       const settings = await this.settingsService.findOne(userId);
       if (!settings?.productionCostAccountId || !settings?.metalStockAccountId) {
-        throw new BadRequestException('Contas contábeis padrão para Contas a Pagar ou Estoque de Metal não configuradas.');
+        throw new BadRequestException(
+          'Contas contábeis padrão para Contas a Pagar ou Estoque de Metal não configuradas.',
+        );
       }
 
-      // Débito em Contas a Pagar (ou conta de despesa de pagamento)
-      await this.transacoesService.create(
+      // Débito em Contas a Pagar
+      await this.createTransacaoUseCase.execute(
         {
           tipo: TipoTransacaoPrisma.DEBITO,
           valor: valorBRL.toNumber(),
@@ -73,14 +90,14 @@ export class MetalPaymentsService {
       );
 
       // Crédito no Estoque de Metal (saída do estoque)
-      await this.transacoesService.create(
+      await this.createTransacaoUseCase.execute(
         {
           tipo: TipoTransacaoPrisma.CREDITO,
           valor: valorBRL.toNumber(),
           descricao: `Saída de metal do estoque para pagamento ao cliente ${clientId} - ${notes || ''}`,
           dataHora: transactionDate,
           contaContabilId: settings.metalStockAccountId,
-          goldAmount: new Decimal(grams).negated().toNumber(), // Negativo para indicar saída
+          goldAmount: new Decimal(grams).negated().toNumber(),
           goldPrice: quotation.buyPrice.toNumber(),
         },
         organizationId,
@@ -94,13 +111,17 @@ export class MetalPaymentsService {
           clientId,
           organizationId,
           metalType: pureMetalLot.metalType,
-          status: { in: [MetalCreditStatus.PENDING, MetalCreditStatus.PARTIALLY_PAID] },
+          status: {
+            in: [MetalCreditStatus.PENDING, MetalCreditStatus.PARTIALLY_PAID],
+          },
         },
         orderBy: { date: 'asc' },
       });
 
       if (dto.metalCreditId) {
-        const specificIndex = openCredits.findIndex(c => c.id === dto.metalCreditId);
+        const specificIndex = openCredits.findIndex(
+          (c) => c.id === dto.metalCreditId,
+        );
         if (specificIndex > -1) {
           const [specificCredit] = openCredits.splice(specificIndex, 1);
           openCredits.unshift(specificCredit);
@@ -120,8 +141,12 @@ export class MetalPaymentsService {
         }
 
         const newGrams = creditGrams.minus(deduction);
-        const newSettledGrams = new Decimal(credit.settledGrams || 0).plus(deduction);
-        const newStatus = newGrams.lessThanOrEqualTo(0.0001) ? MetalCreditStatus.PAID : MetalCreditStatus.PARTIALLY_PAID;
+        const newSettledGrams = new Decimal(credit.settledGrams || 0).plus(
+          deduction,
+        );
+        const newStatus = newGrams.lessThanOrEqualTo(0.0001)
+          ? MetalCreditStatus.PAID
+          : MetalCreditStatus.PARTIALLY_PAID;
 
         await tx.metalCredit.update({
           where: { id: credit.id },
@@ -152,7 +177,7 @@ export class MetalPaymentsService {
             organizationId,
             personId: clientId,
             type: pureMetalLot.metalType,
-          }
+          },
         });
       }
 
@@ -163,8 +188,8 @@ export class MetalPaymentsService {
           description: `Pagamento em metal ao cliente (Lote: ${pureMetalLot.lotNumber || 'N/A'})`,
           grams: new Decimal(grams).negated().toNumber(),
           type: 'DEBIT',
-          sourceId: movement.id, // Linking to the lot movement
-        }
+          sourceId: movement.id,
+        },
       });
 
       return { message: 'Pagamento em metal ao cliente registrado com sucesso.' };

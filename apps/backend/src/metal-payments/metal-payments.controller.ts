@@ -1,13 +1,15 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { MetalPaymentsService } from './metal-payments.service';
 import { PayClientWithMetalDto } from './dto/pay-client-with-metal.dto';
+import { PayClientWithMetalUseCase } from './use-cases/pay-client-with-metal.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('metal-payments')
 export class MetalPaymentsController {
-  constructor(private readonly metalPaymentsService: MetalPaymentsService) {}
+  constructor(
+    private readonly payClientWithMetalUseCase: PayClientWithMetalUseCase,
+  ) {}
 
   @Post('pay-client')
   async payClientWithMetal(
@@ -15,6 +17,10 @@ export class MetalPaymentsController {
     @CurrentUser('id') userId: string,
     @Body() payClientWithMetalDto: PayClientWithMetalDto,
   ) {
-    return this.metalPaymentsService.payClientWithMetal(organizationId, userId, payClientWithMetalDto);
+    return this.payClientWithMetalUseCase.execute(
+      organizationId,
+      userId,
+      payClientWithMetalDto,
+    );
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { TransacoesService } from '../../transacoes/transacoes.service';
+import { CreateTransacaoUseCase } from '../../transacoes/use-cases/create-transacao.use-case';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { SettingsService } from '../../settings/settings.service';
 import { TipoTransacaoPrisma, MetalCredit, TipoMetal, MetalCreditStatus } from '@prisma/client';
@@ -14,7 +14,7 @@ import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.serv
 export class PayWithClientCreditUseCase {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly transacoesService: TransacoesService,
+    private readonly createTransacaoUseCase: CreateTransacaoUseCase,
     private readonly quotationsService: QuotationsService,
     private readonly settingsService: SettingsService,
     private readonly createMetalAccountEntryUseCase: CreateMetalAccountEntryUseCase,
@@ -77,7 +77,7 @@ export class PayWithClientCreditUseCase {
 
       // 5. Create financial transactions
       // Debit to metal credit payable account
-      const debitTransaction = await this.transacoesService.create(
+      const debitTransaction = await this.createTransacaoUseCase.execute(
         {
           tipo: TipoTransacaoPrisma.DEBITO,
           valor: finalAmountBRL.toNumber(),
@@ -92,7 +92,7 @@ export class PayWithClientCreditUseCase {
       );
 
       // Credit from the receivable account
-      const creditTransaction = await this.transacoesService.create(
+      const creditTransaction = await this.createTransacaoUseCase.execute(
         {
           tipo: TipoTransacaoPrisma.CREDITO,
           valor: finalAmountBRL.toNumber(),

@@ -24,7 +24,7 @@ import {
 } from '@sistema-erp-electrosal/core';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { ContasContabeisService } from '../../contas-contabeis/contas-contabeis.service';
-import { TransacoesService } from '../../transacoes/transacoes.service';
+import { CreateTransacaoUseCase } from '../../transacoes/use-cases/create-transacao.use-case';
 import { UsersService } from '../../users/users.service';
 import { TipoTransacaoPrisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -55,7 +55,7 @@ export class ProcessRecoveryFinalizationUseCase {
     private readonly pessoaRepository: IPessoaRepository,
     private readonly cotacoesService: QuotationsService,
     private readonly contasContabeisService: ContasContabeisService,
-    private readonly transacoesService: TransacoesService,
+    private readonly createTransacaoUseCase: CreateTransacaoUseCase,
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
   ) { }
@@ -173,7 +173,7 @@ export class ProcessRecoveryFinalizationUseCase {
           if (contaDebito && contaCredito) {
             const dataTransacao = new Date();
             // Débito (Aumenta o valor do estoque de metal)
-            await this.transacoesService.create({
+            await this.createTransacaoUseCase.execute({
               descricao: `Valorização de estoque por recuperação de metal da Ordem #${recoveryOrder.id.toString()}`,
               valor: valorBRL,
               tipo: TipoTransacaoPrisma.DEBITO,
@@ -184,7 +184,7 @@ export class ProcessRecoveryFinalizationUseCase {
             }, organizationId);
 
             // Crédito (Registra o custo da produção/recuperação)
-            await this.transacoesService.create({
+            await this.createTransacaoUseCase.execute({
               descricao: `Contrapartida da valorização de estoque da Ordem #${recoveryOrder.id.toString()}`,
               valor: valorBRL,
               tipo: TipoTransacaoPrisma.CREDITO,

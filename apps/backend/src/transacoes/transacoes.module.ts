@@ -4,7 +4,6 @@ import { CommonModule } from '../common/common.module';
 import { MediaModule } from '../media/media.module';
 import { SalesModule } from '../sales/sales.module';
 import { TransacoesController } from './transacoes.controller';
-import { TransacoesService } from './transacoes.service';
 import { TransacaoRepository } from './repositories/transacao.repository';
 import { PrismaTransacaoRepository } from './repositories/prisma-transacao.repository';
 import { CreateTransacaoUseCase } from './use-cases/create-transacao.use-case';
@@ -38,7 +37,6 @@ import { UpdateTransactionUseCase } from './use-cases/update-transaction.use-cas
     BulkCreateTransacoesUseCase,
     BulkUpdateTransacoesUseCase,
     UpdateTransactionUseCase,
-    TransacoesService,
   ],
   exports: [
     TransacaoRepository,
@@ -53,7 +51,6 @@ import { UpdateTransactionUseCase } from './use-cases/update-transaction.use-cas
     BulkCreateTransacoesUseCase,
     BulkUpdateTransacoesUseCase,
     UpdateTransactionUseCase,
-    TransacoesService,
   ],
 })
 export class TransacoesModule {}

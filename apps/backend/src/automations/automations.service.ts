@@ -4,7 +4,7 @@ import { AccountsPayService } from '../accounts-pay/accounts-pay.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { ConfirmSaleUseCase } from '../sales/use-cases/confirm-sale.use-case';
-import { TransacoesService } from '../transacoes/transacoes.service';
+import { CreateTransferUseCase } from '../transacoes/use-cases/create-transfer.use-case';
 import { MediaService } from '../media/media.service';
 import Decimal from 'decimal.js';
 
@@ -15,7 +15,7 @@ export class AutomationsService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly confirmSaleUseCase: ConfirmSaleUseCase,
-    private readonly transacoesService: TransacoesService,
+    private readonly createTransferUseCase: CreateTransferUseCase,
     private readonly mediaService: MediaService,
   ) {}
 
@@ -356,7 +356,7 @@ export class AutomationsService {
       goldPrice = quotation ? Number(quotation.buyPrice) : 715;
     }
 
-    const result = await this.transacoesService.createTransfer(organizationId, {
+    const result = await this.createTransferUseCase.execute(organizationId, {
       sourceAccountId,
       destinationAccountId,
       amount: Number(amount),
