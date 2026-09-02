@@ -4,9 +4,10 @@ import { IRecoveryOrderRepository, RecoveryOrder, UniqueEntityID, RecoveryOrderS
 import { RecoveryOrder as PrismaRecoveryOrder, RecoveryOrderStatusPrisma, Prisma, RawMaterial as PrismaRawMaterial, RawMaterialUsed as PrismaRawMaterialUsed, Media } from '@prisma/client';
 import { MediaMapper } from '../../media/mappers/media.mapper';
 import { ListRecoveryOrdersDto } from '../dtos/list-recovery-orders.dto';
+import { RecoveryOrderRepository } from './recovery-order.repository';
 
 @Injectable()
-export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
+export class PrismaRecoveryOrderRepository implements RecoveryOrderRepository, IRecoveryOrderRepository {
   constructor(private prisma: PrismaService) {}
 
   private mapToDomain(
@@ -337,5 +338,9 @@ export class PrismaRecoveryOrderRepository implements IRecoveryOrderRepository {
       },
     });
     return this.mapToDomain(dbRecoveryOrder);
+  }
+
+  async executeInTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(fn);
   }
 }

@@ -8,7 +8,6 @@ import {
   Param,
   ParseUUIDPipe,
   Get,
-  Inject,
   Query,
   Res,
 } from '@nestjs/common';
@@ -18,6 +17,8 @@ import { CreateRecoveryOrderUseCase } from './use-cases/create-recovery-order.us
 import { CreateRecoveryOrderDto } from './dtos/create-recovery-order.dto';
 import { RecoveryOrderResponseDto } from './dtos/recovery-order.response.dto';
 import { ListRecoveryOrdersDto } from './dtos/list-recovery-orders.dto';
+import { ListRecoveryOrdersUseCase } from './use-cases/list-recovery-orders.use-case';
+import { GetRecoveryOrderByIdUseCase } from './use-cases/get-recovery-order-by-id.use-case';
 import { StartRecoveryOrderUseCase } from './use-cases/start-recovery-order.use-case';
 import { UpdateRecoveryOrderPurityUseCase } from './use-cases/update-recovery-order-purity.use-case';
 import { ProcessRecoveryFinalizationUseCase } from './use-cases/process-recovery-finalization.use-case';
@@ -25,7 +26,6 @@ import { UpdateRecoveryOrderPurityDto } from './dtos/update-recovery-order-purit
 import { FinalizeRecoveryOrderDto } from './dtos/finalize-recovery-order.dto';
 import { AddRawMaterialToRecoveryOrderUseCase } from './use-cases/add-raw-material.use-case';
 import { AddRawMaterialDto } from './dtos/add-raw-material.dto';
-import { IRecoveryOrderRepository } from '@sistema-erp-electrosal/core';
 import { AssociateImageToRecoveryOrderUseCase } from './use-cases/associate-image-to-recovery-order.use-case';
 import { CancelRecoveryOrderUseCase } from './use-cases/cancel-recovery-order.use-case';
 import { GerarPdfRecoveryOrderUseCase } from './use-cases/gerar-pdf-recovery-order.use-case';
@@ -47,8 +47,8 @@ export class RecoveryOrdersController {
     private readonly gerarPdfRecoveryOrderUseCase: GerarPdfRecoveryOrderUseCase,
     private readonly applyRecoveryOrderCommissionUseCase: ApplyRecoveryOrderCommissionUseCase,
     private readonly updateRecoveryOrderUseCase: UpdateRecoveryOrderUseCase,
-    @Inject('IRecoveryOrderRepository')
-    private readonly recoveryOrderRepository: IRecoveryOrderRepository,
+    private readonly listRecoveryOrdersUseCase: ListRecoveryOrdersUseCase,
+    private readonly getRecoveryOrderByIdUseCase: GetRecoveryOrderByIdUseCase,
   ) {}
 
   @Patch(':id')
@@ -86,17 +86,17 @@ export class RecoveryOrdersController {
   @Get()
   async getAllRecoveryOrders(@Req() req, @Query() filters: ListRecoveryOrdersDto): Promise<RecoveryOrderResponseDto[]> {
     const organizationId = req.user?.orgId;
-    const recoveryOrders = await this.recoveryOrderRepository.findAll(organizationId, filters);
+    const recoveryOrders = await this.listRecoveryOrdersUseCase.execute(organizationId, filters);
     return recoveryOrders.map(RecoveryOrderResponseDto.fromDomain);
   }
 
   @Get(':id')
   async getRecoveryOrderById(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Req() req
+    @Req() req,
   ): Promise<RecoveryOrderResponseDto> {
     const organizationId = req.user?.orgId;
-    const recoveryOrder = await this.recoveryOrderRepository.findById(id, organizationId);
+    const recoveryOrder = await this.getRecoveryOrderByIdUseCase.execute(id, organizationId);
     return RecoveryOrderResponseDto.fromDomain(recoveryOrder);
   }
 

@@ -1,40 +1,34 @@
 import { PayClientWithMetalUseCase } from './pay-client-with-metal.use-case';
-import { PrismaService } from '../../prisma/prisma.service';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { MetalPaymentRepository } from '../repositories/metal-payment.repository';
 import { CreateTransacaoUseCase } from '../../transacoes/use-cases/create-transacao.use-case';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { SettingsService } from '../../settings/settings.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { Decimal } from 'decimal.js';
+import { TipoMetal } from '@prisma/client';
+import Decimal from 'decimal.js';
 
 describe('PayClientWithMetalUseCase', () => {
   let useCase: PayClientWithMetalUseCase;
-  let mockPrisma: any;
-  let mockPureMetalLotsService: jest.Mocked<PureMetalLotsService>;
+  let mockRepository: jest.Mocked<MetalPaymentRepository>;
   let mockCreateTransacaoUseCase: jest.Mocked<CreateTransacaoUseCase>;
   let mockQuotationsService: jest.Mocked<QuotationsService>;
   let mockSettingsService: jest.Mocked<SettingsService>;
 
   beforeEach(() => {
-    mockPrisma = {
-      $transaction: jest.fn().mockImplementation((cb) => cb(mockPrisma)),
-      metalCredit: {
-        findMany: jest.fn().mockResolvedValue([]),
-        update: jest.fn().mockResolvedValue({}),
-      },
-      metalAccount: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'metal-acc-1' }),
-        create: jest.fn().mockResolvedValue({ id: 'metal-acc-1' }),
-      },
-      metalAccountEntry: {
-        create: jest.fn().mockResolvedValue({}),
-      },
+    mockRepository = {
+      findPureMetalLot: jest.fn(),
+      createLotMovement: jest.fn().mockResolvedValue({ id: 'mov-1' }),
+      findOpenMetalCredits: jest.fn().mockResolvedValue([]),
+      updateMetalCredit: jest.fn().mockResolvedValue(undefined),
+      findOrCreateMetalAccount: jest.fn().mockResolvedValue({
+        id: 'acc-1',
+        organizationId: 'org-1',
+        personId: 'cli-1',
+        type: TipoMetal.AU,
+      }),
+      createMetalAccountEntry: jest.fn().mockResolvedValue(undefined),
+      executeInTransaction: jest.fn().mockImplementation((fn) => fn({})),
     };
-
-    mockPureMetalLotsService = {
-      findOne: jest.fn(),
-      createPureMetalLotMovement: jest.fn().mockResolvedValue({ id: 'mov-1' }),
-    } as any;
 
     mockCreateTransacaoUseCase = {
       execute: jest.fn().mockResolvedValue({} as any),
@@ -49,8 +43,7 @@ describe('PayClientWithMetalUseCase', () => {
     } as any;
 
     useCase = new PayClientWithMetalUseCase(
-      mockPrisma,
-      mockPureMetalLotsService,
+      mockRepository,
       mockCreateTransacaoUseCase,
       mockQuotationsService,
       mockSettingsService,
@@ -58,7 +51,7 @@ describe('PayClientWithMetalUseCase', () => {
   });
 
   it('should throw NotFoundException if pure metal lot is not found', async () => {
-    mockPureMetalLotsService.findOne.mockResolvedValue(null);
+    mockRepository.findPureMetalLot.mockResolvedValue(null);
 
     await expect(
       useCase.execute('org-1', 'user-1', {
@@ -71,10 +64,14 @@ describe('PayClientWithMetalUseCase', () => {
   });
 
   it('should throw BadRequestException if lot has insufficient grams', async () => {
-    mockPureMetalLotsService.findOne.mockResolvedValue({
+    mockRepository.findPureMetalLot.mockResolvedValue({
       id: 'lot-1',
       remainingGrams: 5,
-      metalType: 'AU',
+      metalType: TipoMetal.AU,
+    });
+
+    mockQuotationsService.findLatest.mockResolvedValue({
+      buyPrice: new Decimal(350),
     } as any);
 
     await expect(
@@ -87,12 +84,13 @@ describe('PayClientWithMetalUseCase', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('should pay client with metal successfully', async () => {
-    mockPureMetalLotsService.findOne.mockResolvedValue({
+  it('should pay client with metal successfully and return response DTO', async () => {
+    mockRepository.findPureMetalLot.mockResolvedValue({
       id: 'lot-1',
       remainingGrams: 50,
-      metalType: 'AU',
-    } as any);
+      metalType: TipoMetal.AU,
+      lotNumber: 'LOT-2026-01',
+    });
 
     mockQuotationsService.findLatest.mockResolvedValue({
       buyPrice: new Decimal(350),
@@ -110,8 +108,11 @@ describe('PayClientWithMetalUseCase', () => {
       data: '2026-09-02',
     });
 
-    expect(result.message).toBe('Pagamento em metal ao cliente registrado com sucesso.');
+    expect(result.message).toContain('sucesso');
+    expect(result.clientId).toBe('cli-1');
+    expect(result.grams).toBe(10);
+    expect(result.valorBRL).toBe(3500);
     expect(mockCreateTransacaoUseCase.execute).toHaveBeenCalledTimes(2);
-    expect(mockPureMetalLotsService.createPureMetalLotMovement).toHaveBeenCalled();
+    expect(mockRepository.createLotMovement).toHaveBeenCalled();
   });
 });

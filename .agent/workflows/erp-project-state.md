@@ -100,11 +100,23 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - Criação dos Casos de Uso especializados: `CreateTransacaoUseCase`, `CreateTransferUseCase`, `UpdateTransacaoUseCase`, `DeleteTransacaoUseCase`, `ListTransacoesUseCase`, `GetTransacaoUseCase`, `FindUnlinkedTransacoesUseCase`, `LinkAccountUseCase`, `BulkCreateTransacoesUseCase`, `BulkUpdateTransacoesUseCase`.
    - `TransacoesController` atualizado para orquestrar unicamente os novos Casos de Uso.
    - **Exclusão completa de `transacoes.service.ts`:** Todos os módulos dependentes (`recovery-orders`, `metal-credits`, `automations`) foram migrados para injetar diretamente os novos Casos de Uso (`CreateTransacaoUseCase`, `CreateTransferUseCase`).
-8. **Refatoração do Módulo Metal-Payments para DDD & Clean Architecture:**
-   - Criação do caso de uso `PayClientWithMetalUseCase` encapsulando toda a baixa de lote de metal puro, cotações, geração de transações financeiras atômicas via `CreateTransacaoUseCase`, abatimento FIFO de créditos de metal e movimentação de conta corrente de metal.
-   - Atualização do controlador `MetalPaymentsController` para delegar exclusivamente ao caso de uso.
+8. **Refatoração Completa do Módulo Metal-Payments para DDD & Clean Architecture:**
+   - Criação dos Value Objects `MetalAmountVO` (validações estritas de peso > 0, precisão decimal de 4 dígitos) e `MetalTypeVO` (tipagem canônica de metais).
+   - Criação da entidade rica `MetalPaymentEntity` contendo cálculo de valor BRL com cotação, dedução de estoque e validações de suficiência de lote.
+   - Criação do mapeador de domínio `MetalPaymentMapper`.
+   - Inversão de dependência através de `MetalPaymentRepository` abstrato e implementação `PrismaMetalPaymentRepository`, eliminando chamadas diretas ao ORM do caso de uso.
+   - Caso de uso `PayClientWithMetalUseCase` e `MetalPaymentsController` desacoplados.
    - Exclusão completa de `metal-payments.service.ts`.
-   - Suíte com 111 testes unitários aprovados em 35 suítes no backend.
+   - 15 testes unitários passando no módulo `metal-payments`.
+9. **Refatoração Completa do Módulo Recovery-Orders para DDD & Clean Architecture:**
+   - Criação dos Value Objects `RecoveryOrderStatusVO` (máquina de estados com regras de transição), `PurityVO` (teor químico estrito de 0 a 1) e `OrderNumberVO`.
+   - Criação da entidade agregada rica `RecoveryOrderEntity` (métodos `start`, `updateProcessingResult`, `finalize`, `cancel`, `calculateYield`) e sub-entidade `RawMaterialItemEntity`.
+   - Criação do mapeador bidirecional `RecoveryOrderMapper`.
+   - Criação da classe abstrata canônica `RecoveryOrderRepository` e implementação `PrismaRecoveryOrderRepository`.
+   - Criação dos casos de uso de leitura `ListRecoveryOrdersUseCase` e `GetRecoveryOrderByIdUseCase`.
+   - Desacoplamento do `RecoveryOrdersController` eliminando a injeção direta de repositórios nas rotas HTTP.
+   - Criação de 26 testes unitários no módulo `recovery-orders`.
+   - **Total:** 147 testes unitários passando em 50 suítes no backend (`metal-payments`, `recovery-orders`, `transacoes`, `sale-adjustments`, `sales-movement-import`, `products`, `pessoa`, `sales`).
 
 ---
 

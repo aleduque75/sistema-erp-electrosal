@@ -1,18 +1,18 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { MetalPaymentRepository } from '../repositories/metal-payment.repository';
 import { PayClientWithMetalDto } from '../dto/pay-client-with-metal.dto';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { MetalPaymentEntity } from '../entities/metal-payment.entity';
+import { MetalPaymentMapper, MetalPaymentResponseDto } from '../mappers/metal-payment.mapper';
 import { CreateTransacaoUseCase } from '../../transacoes/use-cases/create-transacao.use-case';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { SettingsService } from '../../settings/settings.service';
 import { TipoTransacaoPrisma, MetalCreditStatus } from '@prisma/client';
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 
 @Injectable()
 export class PayClientWithMetalUseCase {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly pureMetalLotsService: PureMetalLotsService,
+    private readonly metalPaymentRepository: MetalPaymentRepository,
     private readonly createTransacaoUseCase: CreateTransacaoUseCase,
     private readonly quotationsService: QuotationsService,
     private readonly settingsService: SettingsService,
@@ -22,51 +22,70 @@ export class PayClientWithMetalUseCase {
     organizationId: string,
     userId: string,
     dto: PayClientWithMetalDto,
-  ): Promise<{ message: string }> {
+  ): Promise<MetalPaymentResponseDto> {
     const { clientId, pureMetalLotId, grams, notes, data } = dto;
-    const transactionDate = new Date(data);
+    const paymentDate = new Date(data);
 
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Verificar o lote de metal puro
-      const pureMetalLot = await this.pureMetalLotsService.findOne(
-        organizationId,
-        pureMetalLotId,
+    // 1. Verificar lote de metal puro
+    const pureMetalLot = await this.metalPaymentRepository.findPureMetalLot(
+      pureMetalLotId,
+      organizationId,
+    );
+    if (!pureMetalLot) {
+      throw new NotFoundException(
+        `Lote de metal puro com ID ${pureMetalLotId} não encontrado.`,
       );
-      if (!pureMetalLot) {
-        throw new NotFoundException(
-          `Lote de metal puro com ID ${pureMetalLotId} não encontrado.`,
-        );
-      }
-      if (pureMetalLot.remainingGrams < grams) {
-        throw new BadRequestException('Quantidade de metal insuficiente no lote.');
-      }
+    }
 
-      // 2. Registrar a saída do metal do lote
-      const movement = await this.pureMetalLotsService.createPureMetalLotMovement(
-        organizationId,
+    // 2. Obter cotação atualizada do metal
+    const quotation = await this.quotationsService.findLatest(
+      pureMetalLot.metalType,
+      organizationId,
+      paymentDate,
+    );
+    if (!quotation || quotation.buyPrice.isZero()) {
+      throw new BadRequestException(
+        `Nenhuma cotação de compra para ${pureMetalLot.metalType} encontrada para a data ${paymentDate.toLocaleDateString()}.`,
+      );
+    }
+
+    const quotationPrice = Number(quotation.buyPrice);
+
+    // 3. Criar entidade de domínio rica (validações invariantes e cálculos)
+    const paymentEntity = MetalPaymentEntity.create({
+      organizationId,
+      userId,
+      clientId,
+      pureMetalLotId,
+      metalCreditId: dto.metalCreditId,
+      grams,
+      metalType: pureMetalLot.metalType,
+      notes,
+      data: paymentDate,
+      quotationPrice,
+    });
+
+    if (!paymentEntity.hasEnoughLotBalance(pureMetalLot.remainingGrams)) {
+      throw new BadRequestException('Quantidade de metal insuficiente no lote.');
+    }
+
+    const valorBRL = paymentEntity.calculateBRLValue();
+
+    // 4. Executar fluxo atômico desacoplado
+    await this.metalPaymentRepository.executeInTransaction(async (tx) => {
+      // 4.1. Registrar saída física no lote
+      const movement = await this.metalPaymentRepository.createLotMovement(
         pureMetalLotId,
+        organizationId,
         {
           type: 'EXIT',
-          grams: grams,
+          grams: paymentEntity.grams.value,
           notes: `Pagamento ao cliente ${clientId} - ${notes || ''}`,
         },
         tx,
       );
 
-      // 3. Obter a cotação de compra do metal
-      const quotation = await this.quotationsService.findLatest(
-        pureMetalLot.metalType,
-        organizationId,
-        transactionDate,
-      );
-      if (!quotation || quotation.buyPrice.isZero()) {
-        throw new BadRequestException(
-          `Nenhuma cotação de compra para ${pureMetalLot.metalType} encontrada para a data ${transactionDate.toLocaleDateString()}.`,
-        );
-      }
-      const valorBRL = new Decimal(grams).times(quotation.buyPrice);
-
-      // 4. Registrar a transação financeira (débito em Contas a Pagar, crédito em Estoque de Metal)
+      // 4.2. Registrar lançamentos contábeis via CreateTransacaoUseCase
       const settings = await this.settingsService.findOne(userId);
       if (!settings?.productionCostAccountId || !settings?.metalStockAccountId) {
         throw new BadRequestException(
@@ -80,43 +99,38 @@ export class PayClientWithMetalUseCase {
           tipo: TipoTransacaoPrisma.DEBITO,
           valor: valorBRL.toNumber(),
           descricao: `Pagamento em metal ao cliente ${clientId} - ${notes || ''}`,
-          dataHora: transactionDate,
+          dataHora: paymentDate,
           contaContabilId: settings.productionCostAccountId,
-          goldAmount: new Decimal(grams).toNumber(),
-          goldPrice: quotation.buyPrice.toNumber(),
+          goldAmount: paymentEntity.grams.value,
+          goldPrice: quotationPrice,
         },
         organizationId,
         tx,
       );
 
-      // Crédito no Estoque de Metal (saída do estoque)
+      // Crédito no Estoque de Metal (saída negativa de estoque)
       await this.createTransacaoUseCase.execute(
         {
           tipo: TipoTransacaoPrisma.CREDITO,
           valor: valorBRL.toNumber(),
           descricao: `Saída de metal do estoque para pagamento ao cliente ${clientId} - ${notes || ''}`,
-          dataHora: transactionDate,
+          dataHora: paymentDate,
           contaContabilId: settings.metalStockAccountId,
-          goldAmount: new Decimal(grams).negated().toNumber(),
-          goldPrice: quotation.buyPrice.toNumber(),
+          goldAmount: paymentEntity.getStockDeductionGrams(),
+          goldPrice: quotationPrice,
         },
         organizationId,
         tx,
       );
 
-      // 5. Abater dos créditos de metal do cliente (FIFO)
-      let remainingGramsToDeduct = new Decimal(grams);
-      const openCredits = await tx.metalCredit.findMany({
-        where: {
-          clientId,
-          organizationId,
-          metalType: pureMetalLot.metalType,
-          status: {
-            in: [MetalCreditStatus.PENDING, MetalCreditStatus.PARTIALLY_PAID],
-          },
-        },
-        orderBy: { date: 'asc' },
-      });
+      // 4.3. Abater créditos de metal em aberto do cliente (FIFO ou direcionado)
+      let remainingGramsToDeduct = paymentEntity.grams.decimal;
+      const openCredits = await this.metalPaymentRepository.findOpenMetalCredits(
+        clientId,
+        pureMetalLot.metalType,
+        organizationId,
+        tx,
+      );
 
       if (dto.metalCreditId) {
         const specificIndex = openCredits.findIndex(
@@ -141,58 +155,45 @@ export class PayClientWithMetalUseCase {
         }
 
         const newGrams = creditGrams.minus(deduction);
-        const newSettledGrams = new Decimal(credit.settledGrams || 0).plus(
-          deduction,
-        );
+        const newSettledGrams = new Decimal(credit.settledGrams || 0).plus(deduction);
         const newStatus = newGrams.lessThanOrEqualTo(0.0001)
           ? MetalCreditStatus.PAID
           : MetalCreditStatus.PARTIALLY_PAID;
 
-        await tx.metalCredit.update({
-          where: { id: credit.id },
-          data: {
+        await this.metalPaymentRepository.updateMetalCredit(
+          credit.id,
+          {
             grams: newGrams.toNumber(),
             settledGrams: newSettledGrams.toNumber(),
             status: newStatus,
           },
-        });
+          tx,
+        );
 
         remainingGramsToDeduct = remainingGramsToDeduct.minus(deduction);
       }
 
-      // 6. Atualizar Conta Metal (MetalAccount) e criar entrada (MetalAccountEntry)
-      let metalAccount = await tx.metalAccount.findUnique({
-        where: {
-          organizationId_personId_type: {
-            organizationId,
-            personId: clientId,
-            type: pureMetalLot.metalType,
-          },
-        },
-      });
+      // 4.4. Atualizar extrato de conta corrente de metal do cliente
+      const metalAccount = await this.metalPaymentRepository.findOrCreateMetalAccount(
+        clientId,
+        pureMetalLot.metalType,
+        organizationId,
+        tx,
+      );
 
-      if (!metalAccount) {
-        metalAccount = await tx.metalAccount.create({
-          data: {
-            organizationId,
-            personId: clientId,
-            type: pureMetalLot.metalType,
-          },
-        });
-      }
-
-      await tx.metalAccountEntry.create({
-        data: {
+      await this.metalPaymentRepository.createMetalAccountEntry(
+        {
           metalAccountId: metalAccount.id,
-          date: transactionDate,
+          date: paymentDate,
           description: `Pagamento em metal ao cliente (Lote: ${pureMetalLot.lotNumber || 'N/A'})`,
-          grams: new Decimal(grams).negated().toNumber(),
+          grams: paymentEntity.getStockDeductionGrams(),
           type: 'DEBIT',
           sourceId: movement.id,
         },
-      });
-
-      return { message: 'Pagamento em metal ao cliente registrado com sucesso.' };
+        tx,
+      );
     });
+
+    return MetalPaymentMapper.toResponseDto(paymentEntity);
   }
 }
