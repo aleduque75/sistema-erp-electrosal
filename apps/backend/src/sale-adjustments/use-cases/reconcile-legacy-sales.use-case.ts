@@ -22,9 +22,19 @@ export class ReconcileLegacySalesUseCase {
   constructor(private prisma: PrismaService) {}
 
   async execute(organizationId: string): Promise<{ reconciled: number; notFound: number; alreadyDone: number }> {
-    const basePath = '/home/aleduque/Documentos/cursos/sistema-erp-electrosal/json-imports';
+    const possibleBasePaths = [
+      path.join(process.cwd(), 'json-imports'),
+      path.join(process.cwd(), 'apps', 'backend', 'json-imports'),
+      '/home/aleduque/Documentos/cursos/sistema-erp-electrosal/json-imports',
+    ];
+
+    const basePath = possibleBasePaths.find(p => fs.existsSync(p)) || possibleBasePaths[0];
     const receivablesPath = path.join(basePath, 'pedido-duplicatas.json');
     const paymentsPath = path.join(basePath, 'financeiro.json');
+
+    if (!fs.existsSync(receivablesPath) || !fs.existsSync(paymentsPath)) {
+      return { reconciled: 0, notFound: 0, alreadyDone: 0 };
+    }
 
     const receivablesFile = fs.readFileSync(receivablesPath, 'utf-8');
     const paymentsFile = fs.readFileSync(paymentsPath, 'utf-8');

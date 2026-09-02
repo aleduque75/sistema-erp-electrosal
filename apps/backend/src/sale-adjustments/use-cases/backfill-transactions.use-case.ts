@@ -1,43 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { SaleAdjustmentRepository } from '../repositories/sale-adjustment.repository';
 
 @Injectable()
 export class BackfillTransactionsUseCase {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly repository: SaleAdjustmentRepository) {}
 
   async execute(organizationId: string): Promise<{ count: number }> {
-    // Find transactions that are missing a contaCorrenteId
-    const transactionsToFix = await this.prisma.transacao.findMany({
-      where: {
-        organizationId,
-        contaCorrenteId: null,
-      },
-    });
+    const transactionsToFix =
+      await this.repository.findTransactionsMissingContaCorrente(organizationId);
 
     let updatedCount = 0;
 
     for (const transacao of transactionsToFix) {
-      // Find the corresponding AccountRec that links to this transaction
-      const accountRec = await this.prisma.accountRec.findFirst({
-        where: {
-          organizationId,
-          contaCorrenteId: { not: null }, // Ensure the AccountRec has the ID we need
-          transacoes: {
-            some: {
-              id: transacao.id,
-            },
-          },
-        },
-      });
+      const accountRec = await this.repository.findAccountRecByTransactionId(
+        transacao.id,
+        organizationId,
+      );
 
-      // If we found an AccountRec with a contaCorrenteId, update the transaction
       if (accountRec && accountRec.contaCorrenteId) {
-        await this.prisma.transacao.update({
-          where: { id: transacao.id },
-          data: {
-            contaCorrenteId: accountRec.contaCorrenteId,
-          },
-        });
+        await this.repository.updateTransacaoContaCorrente(
+          transacao.id,
+          accountRec.contaCorrenteId,
+        );
         updatedCount++;
       }
     }

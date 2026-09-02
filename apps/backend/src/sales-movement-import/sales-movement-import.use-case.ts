@@ -1,18 +1,21 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import * as Papa from 'papaparse';
 import { Decimal } from 'decimal.js';
 import { SaleInstallmentStatus, SaleStatus, EntityType } from '@prisma/client';
 import { GenerateNextNumberUseCase } from '../common/use-cases/generate-next-number.use-case';
 import { QuotationsService } from '../quotations/quotations.service';
-
-// Removed unused SalesMovementRow interface to avoid "defined but never used" lint/compile error.
+import { SalesMovementParserService } from './parsers/sales-movement-parser.service';
 
 @Injectable()
 export class SalesMovementImportUseCase {
   private readonly logger = new Logger(SalesMovementImportUseCase.name);
 
-  constructor(private prisma: PrismaService, private readonly generateNextNumberUseCase: GenerateNextNumberUseCase, private readonly quotationsService: QuotationsService) { }
+  constructor(
+    private prisma: PrismaService,
+    private readonly generateNextNumberUseCase: GenerateNextNumberUseCase,
+    private readonly quotationsService: QuotationsService,
+    private readonly parser: SalesMovementParserService,
+  ) {}
 
   private parseDecimal(value: string | number): number {
     if (typeof value === 'number') {
@@ -26,38 +29,10 @@ export class SalesMovementImportUseCase {
     return 0;
   }
 
-  async execute(fileBuffer: Buffer) {
+  async execute(fileBuffer: Buffer, inputOrgId?: string) {
     this.logger.log('Starting sales movement import process (v4 - Corrected Logic)...');
-    const organizationId = '2a5bb448-056b-4b87-b02f-fec691dd658d'; // Hardcoded for Electrosal
-
-    let csvData = fileBuffer.toString('utf-8');
-    if (csvData.startsWith('\uFEFF')) {
-      csvData = csvData.substring(1);
-    }
-    const parsed = Papa.parse(csvData, {
-      header: true,
-      skipEmptyLines: true,
-      dynamicTyping: true,
-      delimiter: ';',
-      transformHeader: (header) => {
-        const trimmed = header.trim();
-        if (trimmed === 'Nº DO LOTE') return 'N_DO_LOTE';
-        if (trimmed === 'Nº DO PEDIDO') return 'N_DO_PEDIDO';
-        if (trimmed === 'PEDIDOS EM SAL') return 'PEDIDOS_EM_SAL';
-        if (trimmed === 'PEDIDOS EM FINO') return 'PEDIDOS_EM_FINO';
-        if (trimmed.toLowerCase() === 'data') return 'data_row';
-        return trimmed;
-      },
-    });
-
-    if (parsed.errors.length) {
-      this.logger.error('Errors parsing CSV file:', parsed.errors);
-      throw new BadRequestException(
-        'Erro ao ler o arquivo CSV. Verifique o formato.',
-      );
-    }
-
-    const rows = parsed.data as Record<string, unknown>[];
+    const organizationId = inputOrgId || '2a5bb448-056b-4b87-b02f-fec691dd658d';
+    const rows = this.parser.parse(fileBuffer);
 
     // --- ETAPA 1: IDENTIFICAR DADOS DE CRIAÇÃO DOS LOTES ---
     this.logger.log('--- ETAPA 1: Identificando dados de criação dos Lotes ---');

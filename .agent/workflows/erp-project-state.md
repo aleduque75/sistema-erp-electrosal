@@ -89,6 +89,10 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - Criação da entidade rica `ProductEntity` e do Value Object `StockUnitVO`.
    - Organização de DTOs dedicados (`update-product.dto.ts`, `list-products-query.dto.ts`, `index.ts`).
    - Suíte com 24 testes unitários passando em verde (`npx jest src/products`), com total de 68 testes aprovados entre `products`, `pessoa` e `sales`.
+6. **Refatoração dos Módulos Sale-Adjustments e Sales-Movement-Import para DDD:**
+   - **`sale-adjustments`:** Criação da entidade rica `SaleAdjustmentEntity` com recálculo de discrepâncias em ouro e margem de lucro. Implementação do repositório desacoplado `SaleAdjustmentRepository` e `PrismaSaleAdjustmentRepository`. Implementação completa da lógica de negócio em `AdjustSaleUseCase`. Refatoração dos casos de uso de conciliação bancária (`BackfillReceivablesUseCase`, `BackfillTransactionsUseCase`) e remoção de caminhos absolutos do disco com fallback seguro em `ReconcileLegacySalesUseCase`.
+   - **`sales-movement-import`:** Proteção da rota com `@UseGuards(AuthGuard('jwt'))`, injeção dinâmica de tenant autenticado (`organizationId`) eliminando o ID hardcoded. Desacoplamento do parsing de CSV no serviço isolado `SalesMovementParserService`.
+   - Suíte de 83 testes unitários passando em verde em 25 suítes (`sale-adjustments`, `sales-movement-import`, `products`, `pessoa`, `sales`).
 
 ---
 
