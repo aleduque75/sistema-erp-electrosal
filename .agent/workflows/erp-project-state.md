@@ -93,6 +93,14 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - **`sale-adjustments`:** Criação da entidade rica `SaleAdjustmentEntity` com recálculo de discrepâncias em ouro e margem de lucro. Implementação do repositório desacoplado `SaleAdjustmentRepository` e `PrismaSaleAdjustmentRepository`. Implementação completa da lógica de negócio em `AdjustSaleUseCase`. Refatoração dos casos de uso de conciliação bancária (`BackfillReceivablesUseCase`, `BackfillTransactionsUseCase`) e remoção de caminhos absolutos do disco com fallback seguro em `ReconcileLegacySalesUseCase`.
    - **`sales-movement-import`:** Proteção da rota com `@UseGuards(AuthGuard('jwt'))`, injeção dinâmica de tenant autenticado (`organizationId`) eliminando o ID hardcoded. Desacoplamento do parsing de CSV no serviço isolado `SalesMovementParserService`.
    - Suíte de 83 testes unitários passando em verde em 25 suítes (`sale-adjustments`, `sales-movement-import`, `products`, `pessoa`, `sales`).
+7. **Refatoração do Módulo Transações para DDD (Domain-Driven Design):**
+   - Criação da entidade de domínio `TransacaoEntity` com métodos de estorno, vínculo de contas e transferências.
+   - Criação dos Value Objects `TipoTransacaoVO` (`CREDITO`, `DEBITO`) e `TransacaoStatusVO` (`ATIVA`, `AJUSTADA`, `CANCELADA`) com validações estritas.
+   - Implementação do contrato abstrato `TransacaoRepository` e da implementação `PrismaTransacaoRepository`.
+   - Criação dos Casos de Uso especializados: `CreateTransacaoUseCase`, `CreateTransferUseCase`, `UpdateTransacaoUseCase`, `DeleteTransacaoUseCase`, `ListTransacoesUseCase`, `GetTransacaoUseCase`, `FindUnlinkedTransacoesUseCase`, `LinkAccountUseCase`, `BulkCreateTransacoesUseCase`, `BulkUpdateTransacoesUseCase`.
+   - `TransacoesController` atualizado para orquestrar unicamente os novos Casos de Uso.
+   - `TransacoesService` reduzido a uma fachada limpa que delega para os Use Cases, mantendo compatibilidade 100% com outros módulos.
+   - Suíte de 23 testes unitários no módulo `transacoes` e total de 106 testes aprovados em 33 suítes no backend.
 
 ---
 
