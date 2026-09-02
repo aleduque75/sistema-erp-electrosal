@@ -318,6 +318,7 @@ export class AutomationsService {
     sourceAccountId: string;
     destinationAccountId: string;
     amount: number;
+    quotation?: number;
     description?: string;
     date?: string;
     contaContabilId?: string;
@@ -346,11 +347,14 @@ export class AutomationsService {
       throw new NotFoundException('Conta Contábil não encontrada para realizar a transferência.');
     }
 
-    const quotation = await this.prisma.quotation.findFirst({
-      where: { organizationId, metal: 'AU' },
-      orderBy: { date: 'desc' },
-    });
-    const goldPrice = quotation ? Number(quotation.buyPrice) : 715;
+    let goldPrice = dto.quotation;
+    if (!goldPrice || goldPrice <= 0) {
+      const quotation = await this.prisma.quotation.findFirst({
+        where: { organizationId, metal: 'AU' },
+        orderBy: { date: 'desc' },
+      });
+      goldPrice = quotation ? Number(quotation.buyPrice) : 715;
+    }
 
     const result = await this.transacoesService.createTransfer(organizationId, {
       sourceAccountId,
@@ -393,6 +397,7 @@ export class AutomationsService {
     amount: number;
     contaCorrenteId: string;
     categoria: string;
+    quotation?: number;
     description?: string;
     date?: string;
     fileBase64?: string;
@@ -418,12 +423,14 @@ export class AutomationsService {
       }
     }
 
-    // Get today's quotation
-    const quotation = await this.prisma.quotation.findFirst({
-      where: { organizationId, metal: 'AU' },
-      orderBy: { date: 'desc' },
-    });
-    const goldPrice = quotation ? Number(quotation.buyPrice) : 715;
+    let goldPrice = dto.quotation;
+    if (!goldPrice || goldPrice <= 0) {
+      const quotation = await this.prisma.quotation.findFirst({
+        where: { organizationId, metal: 'AU' },
+        orderBy: { date: 'desc' },
+      });
+      goldPrice = quotation ? Number(quotation.buyPrice) : 715;
+    }
     const goldAmount = goldPrice > 0 ? Number(amount) / goldPrice : 0;
 
     const contaCorrente = await this.prisma.contaCorrente.findUnique({
@@ -642,6 +649,186 @@ export class AutomationsService {
     if (year < 100) year += 2000;
     const d = new Date(year, month, day, 12, 0, 0);
     return isNaN(d.getTime()) ? null : d;
+  }
+
+  async checkDuplicateTransaction(params: {
+    contaCorrenteId?: string;
+    clienteId?: string;
+    amount: number;
+    date: Date;
+  }): Promise<{ isDuplicate: boolean; existingTx?: { descricao: string; dataHora: Date; valor: number; contaNome?: string } }> {
+    try {
+      const organizationId = this.getOrganizationId();
+      const d = new Date(params.date);
+
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
+      const startOfDay = new Date(`${dateStr}T00:00:00.000-03:00`);
+      const endOfDay = new Date(`${dateStr}T23:59:59.999-03:00`);
+
+      const accountIds: string[] = [];
+      if (params.contaCorrenteId) accountIds.push(params.contaCorrenteId);
+      if (params.clienteId) accountIds.push(params.clienteId);
+
+      if (accountIds.length === 0 || !params.amount) return { isDuplicate: false };
+
+      const tx = await this.prisma.transacao.findFirst({
+        where: {
+          organizationId,
+          contaCorrenteId: { in: accountIds },
+          valor: {
+            gte: params.amount - 0.009,
+            lte: params.amount + 0.009,
+          },
+          dataHora: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+        },
+        include: {
+          contaCorrente: {
+            select: { nome: true },
+          },
+        },
+        orderBy: { dataHora: 'desc' },
+      });
+
+      if (tx) {
+        return {
+          isDuplicate: true,
+          existingTx: {
+            descricao: tx.descricao || 'Lançamento sem descrição',
+            dataHora: tx.dataHora,
+            valor: Number(tx.valor),
+            contaNome: tx.contaCorrente?.nome || 'Conta',
+          },
+        };
+      }
+
+      return { isDuplicate: false };
+    } catch (err) {
+      console.error('Erro ao verificar duplicidade de transação:', err);
+      return { isDuplicate: false };
+    }
+  }
+
+  async buildDepositConfirmation(sessionData: any, quoteData: any): Promise<{ text: string; inline_keyboard: any[][] }> {
+    const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
+    const dateLabel = targetDate.toLocaleDateString('pt-BR');
+    const isToday = targetDate.toDateString() === new Date().toDateString();
+    const formattedAmount = (sessionData.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const historico = sessionData.description || `Depósito Cliente ${sessionData.selectedClienteName || ''}`;
+
+    const effectiveGoldPrice = sessionData.customQuotation || quoteData.price;
+    const goldAmount = effectiveGoldPrice > 0 ? (sessionData.amount || 0) / effectiveGoldPrice : 0;
+    const cotacaoLabel = sessionData.customQuotation ? 'Personalizada' : quoteData.dateBase;
+
+    const dupCheck = await this.checkDuplicateTransaction({
+      contaCorrenteId: sessionData.destinationAccountId,
+      clienteId: sessionData.selectedClienteId,
+      amount: sessionData.amount || 0,
+      date: targetDate,
+    });
+
+    let text = '';
+    let confirmBtnText = `✅ Confirmar (${isToday ? 'Hoje' : dateLabel})`;
+
+    if (dupCheck.isDuplicate) {
+      const horaStr = dupCheck.existingTx?.dataHora
+        ? new Date(dupCheck.existingTx.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+        : '';
+      text += `⚠️ *ALERTA: VALOR JÁ LANÇADO NESTE DIA!*\n` +
+        `Já existe um lançamento de *R$ ${formattedAmount}* em *${dateLabel}*:\n` +
+        `• _"${dupCheck.existingTx?.descricao}"_ (${dupCheck.existingTx?.contaNome}${horaStr ? ` às ${horaStr}` : ''})\n\n` +
+        `❓ *Deseja lançar novamente este valor?*\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n`;
+      confirmBtnText = `⚠️ Sim, Lançar Mesmo Assim`;
+    }
+
+    text += `💰 *CONFIRMAÇÃO DO DEPÓSITO*\n\n` +
+      `• Cliente: *${sessionData.selectedClienteName || 'Cliente'}*\n` +
+      `• Destino: *${sessionData.destinationName}*\n` +
+      `• Valor: *R$ ${formattedAmount}*\n` +
+      `• Histórico: *${historico}*\n` +
+      `• Data da Operação: *${dateLabel}* ${isToday ? '*(Hoje)*' : ''}\n` +
+      `• Cotação Au (${cotacaoLabel}): *R$ ${effectiveGoldPrice},00 / g*\n` +
+      `• Equiv. Ouro: *${goldAmount.toFixed(3)} g de Au*\n\n` +
+      (dupCheck.isDuplicate ? `Deseja confirmar ou ajustar os dados?` : `Confirma o depósito ou deseja ajustar dados?`);
+
+    const inline_keyboard = [
+      [{ text: confirmBtnText, callback_data: 'exec_final_dep' }],
+      [
+        { text: '🟡 Mudar Cotação', callback_data: 'mudar_cot_dep' },
+        { text: '📅 Mudar Data', callback_data: 'mudar_data_dep' },
+      ],
+      [
+        { text: '📝 Mudar Histórico', callback_data: 'mudar_hist_dep' },
+        { text: dupCheck.isDuplicate ? '❌ Não Lançar' : '❌ Cancelar', callback_data: 'cancelar' },
+      ],
+    ];
+
+    return { text, inline_keyboard };
+  }
+
+  async buildExpenseConfirmation(sessionData: any, quoteData: any): Promise<{ text: string; inline_keyboard: any[][] }> {
+    const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
+    const dateLabel = targetDate.toLocaleDateString('pt-BR');
+    const isToday = targetDate.toDateString() === new Date().toDateString();
+    const formattedAmount = (sessionData.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const catLabel = (sessionData.selectedCategoryName || sessionData.selectedCategory || 'GERAIS').toUpperCase();
+    const historico = sessionData.description || `Pago referente a ${catLabel}`;
+
+    const effectiveGoldPrice = sessionData.customQuotation || quoteData.price;
+    const goldAmount = effectiveGoldPrice > 0 ? (sessionData.amount || 0) / effectiveGoldPrice : 0;
+    const cotacaoLabel = sessionData.customQuotation ? 'Personalizada' : quoteData.dateBase;
+
+    const dupCheck = await this.checkDuplicateTransaction({
+      contaCorrenteId: sessionData.destinationAccountId,
+      amount: sessionData.amount || 0,
+      date: targetDate,
+    });
+
+    let text = '';
+    let confirmBtnText = `✅ Confirmar (${isToday ? 'Hoje' : dateLabel})`;
+
+    if (dupCheck.isDuplicate) {
+      const horaStr = dupCheck.existingTx?.dataHora
+        ? new Date(dupCheck.existingTx.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+        : '';
+      text += `⚠️ *ALERTA: VALOR JÁ LANÇADO NESTE DIA!*\n` +
+        `Já existe uma despesa de *R$ ${formattedAmount}* em *${dateLabel}*:\n` +
+        `• _"${dupCheck.existingTx?.descricao}"_ (${dupCheck.existingTx?.contaNome}${horaStr ? ` às ${horaStr}` : ''})\n\n` +
+        `❓ *Deseja lançar novamente este valor?*\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n`;
+      confirmBtnText = `⚠️ Sim, Lançar Mesmo Assim`;
+    }
+
+    text += `💳 *CONFIRMAÇÃO DO PAGAMENTO*\n\n` +
+      `• Categoria: *${catLabel}*\n` +
+      `• Conta de Saída: *${sessionData.destinationName}*\n` +
+      `• Valor: *R$ ${formattedAmount}*\n` +
+      `• Histórico: *${historico}*\n` +
+      `• Data da Operação: *${dateLabel}* ${isToday ? '*(Hoje)*' : ''}\n` +
+      `• Cotação Au (${cotacaoLabel}): *R$ ${effectiveGoldPrice},00 / g*\n` +
+      `• Equiv. Ouro: *${goldAmount.toFixed(3)} g de Au*\n\n` +
+      (dupCheck.isDuplicate ? `Deseja confirmar ou ajustar os dados?` : `Confirma a despesa ou deseja ajustar dados?`);
+
+    const inline_keyboard = [
+      [{ text: confirmBtnText, callback_data: 'exec_final_desp' }],
+      [
+        { text: '🟡 Mudar Cotação', callback_data: 'mudar_cot_desp' },
+        { text: '📅 Mudar Data', callback_data: 'mudar_data_desp' },
+      ],
+      [
+        { text: '📝 Mudar Histórico', callback_data: 'mudar_hist_desp' },
+        { text: dupCheck.isDuplicate ? '❌ Não Lançar' : '❌ Cancelar', callback_data: 'cancelar' },
+      ],
+    ];
+
+    return { text, inline_keyboard };
   }
 
   async getTelegramSession(chatId: string) {
@@ -927,25 +1114,13 @@ export class AutomationsService {
 
         if (sessionData.amount && sessionData.amount > 0) {
           const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
-          const dateLabel = targetDate.toLocaleDateString('pt-BR');
-          const isToday = targetDate.toDateString() === new Date().toDateString();
           const quoteData = await this.getQuotationForDate(targetDate, 'AU');
           sessionData.goldPrice = quoteData.price;
           const historico = sessionData.description || `Depósito Cliente ${sessionData.selectedClienteName || ''}`;
           sessionData.description = historico;
           await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
-          const formattedAmount = sessionData.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-          const confirmText = `💰 *CONFIRMAÇÃO DO DEPÓSITO*\n\n• Cliente: *${sessionData.selectedClienteName || 'Cliente'}*\n• Destino: *${sessionData.destinationName}*\n• Valor: *R$ ${formattedAmount}*\n• Histórico: *${historico}*\n• Data da Operação: *${dateLabel}* ${isToday ? '*(Hoje)*' : ''}\n• Cotação Au (${quoteData.dateBase}): *R$ ${quoteData.price},00 / g*\n\nConfirma o depósito ou deseja ajustar histórico / data?`;
-
-          const inline_keyboard = [
-            [{ text: `✅ Confirmar (${isToday ? 'Hoje' : dateLabel})`, callback_data: 'exec_final_dep' }],
-            [
-              { text: '📝 Mudar Histórico', callback_data: 'mudar_hist_dep' },
-              { text: '📅 Mudar Data', callback_data: 'mudar_data_dep' },
-            ],
-            [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
-          ];
+          const { text: confirmText, inline_keyboard } = await this.buildDepositConfirmation(sessionData, quoteData);
 
           await this.callTelegramApi('editMessageText', {
             chat_id: chatId,
@@ -979,13 +1154,15 @@ export class AutomationsService {
       if (data === 'exec_final_dep') {
         const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
         const quoteData = await this.getQuotationForDate(targetDate, 'AU');
-        const goldPrice = quoteData.price;
+        const goldPrice = sessionData.customQuotation || sessionData.goldPrice || quoteData.price;
+        const cotacaoBase = sessionData.customQuotation ? 'Personalizada' : quoteData.dateBase;
         const historico = sessionData.description || `Depósito Cliente ${sessionData.selectedClienteName || ''} via Telegram`;
 
         const res = await this.transferToSupplier({
           sourceAccountId: sessionData.selectedClienteId,
           destinationAccountId: sessionData.destinationAccountId,
           amount: sessionData.amount,
+          quotation: goldPrice,
           date: targetDate.toISOString(),
           description: historico,
         });
@@ -1002,13 +1179,31 @@ export class AutomationsService {
 
         const formattedAmount = (sessionData.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         const dateLabel = targetDate.toLocaleDateString('pt-BR');
-        const confirmText = `🎉 *DEPÓSITO REGISTRADO COM SUCESSO!*\n\n• Cliente: *${sessionData.selectedClienteName || 'Cliente'}*\n• Destino: *${sessionData.destinationName}*\n• Valor: *R$ ${formattedAmount}*\n• Histórico: *${historico}*\n• Data da Operação: *${dateLabel}*\n• Cotação Au (${quoteData.dateBase}): *R$ ${goldPrice},00 / g*\n• Equiv. Ouro: *${goldAmount.toFixed(3)} g de Au*\n\n✅ Saldo creditado na conta de destino\n✅ Débito registrado na conta do cliente\n📎 Comprovante arquivado no AWS S3`;
+        const confirmText = `🎉 *DEPÓSITO REGISTRADO COM SUCESSO!*\n\n• Cliente: *${sessionData.selectedClienteName || 'Cliente'}*\n• Destino: *${sessionData.destinationName}*\n• Valor: *R$ ${formattedAmount}*\n• Histórico: *${historico}*\n• Data da Operação: *${dateLabel}*\n• Cotação Au (${cotacaoBase}): *R$ ${goldPrice},00 / g*\n• Equiv. Ouro: *${goldAmount.toFixed(3)} g de Au*\n\n✅ Saldo creditado na conta de destino\n✅ Débito registrado na conta do cliente\n📎 Comprovante arquivado no AWS S3`;
 
         await this.callTelegramApi('editMessageText', {
           chat_id: chatId,
           message_id: messageId,
           text: confirmText,
           parse_mode: 'Markdown',
+        });
+        return { ok: true };
+      }
+
+      if (data === 'mudar_cot_dep') {
+        sessionData.waitingFor = 'cotacao_deposito';
+        await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        const currentPrice = sessionData.customQuotation || sessionData.goldPrice || 715;
+        const text = `🟡 *ALTERAR COTAÇÃO DO OURO (AU)*\n\n• Cotação atual: *R$ ${currentPrice},00 / g*\n\n👉 *Digite a nova cotação do ouro em R$* no chat (ex: *720* ou *718,50*):`;
+        await this.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: '❌ Cancelar', callback_data: 'cancelar' }]],
+          },
         });
         return { ok: true };
       }
@@ -1189,28 +1384,14 @@ export class AutomationsService {
         sessionData.destinationName = contaNome;
 
         const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
-        const dateLabel = targetDate.toLocaleDateString('pt-BR');
-        const isToday = targetDate.toDateString() === new Date().toDateString();
         const quoteData = await this.getQuotationForDate(targetDate, 'AU');
         sessionData.goldPrice = quoteData.price;
-        await this.saveTelegramSession(chatId, session.fileId, sessionData);
-
-        const formattedAmount = (sessionData.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         const catLabel = (sessionData.selectedCategoryName || sessionData.selectedCategory || 'GERAIS').toUpperCase();
         const historico = sessionData.description || `Pago referente a ${catLabel}`;
         sessionData.description = historico;
         await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
-        const confirmText = `💳 *CONFIRMAÇÃO DO PAGAMENTO*\n\n• Categoria: *${catLabel}*\n• Conta de Saída: *${contaNome}*\n• Valor: *R$ ${formattedAmount}*\n• Histórico: *${historico}*\n• Data da Operação: *${dateLabel}* ${isToday ? '*(Hoje)*' : ''}\n• Cotação Au (${quoteData.dateBase}): *R$ ${quoteData.price},00 / g*\n\nConfirma a despesa ou deseja ajustar histórico / data?`;
-
-        const inline_keyboard = [
-          [{ text: `✅ Confirmar (${isToday ? 'Hoje' : dateLabel})`, callback_data: 'exec_final_desp' }],
-          [
-            { text: '📝 Mudar Histórico', callback_data: 'mudar_hist_desp' },
-            { text: '📅 Mudar Data', callback_data: 'mudar_data_desp' },
-          ],
-          [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
-        ];
+        const { text: confirmText, inline_keyboard } = await this.buildExpenseConfirmation(sessionData, quoteData);
 
         await this.callTelegramApi('editMessageText', {
           chat_id: chatId,
@@ -1224,12 +1405,15 @@ export class AutomationsService {
 
       if (data === 'exec_final_desp') {
         const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
+        const quoteData = await this.getQuotationForDate(targetDate, 'AU');
+        const goldPrice = sessionData.customQuotation || sessionData.goldPrice || quoteData.price;
         const historico = sessionData.description || `Pago referente a ${(sessionData.selectedCategoryName || 'DESPESA').toUpperCase()}`;
 
         const res = await this.createDirectExpense({
           amount: sessionData.amount || 0,
           contaCorrenteId: sessionData.destinationAccountId,
           categoria: sessionData.selectedCategory || 'gerais',
+          quotation: goldPrice,
           description: historico,
           date: targetDate.toISOString(),
         });
@@ -1248,6 +1432,24 @@ export class AutomationsService {
           message_id: messageId,
           text: confirmText,
           parse_mode: 'Markdown',
+        });
+        return { ok: true };
+      }
+
+      if (data === 'mudar_cot_desp') {
+        sessionData.waitingFor = 'cotacao_despesa';
+        await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        const currentPrice = sessionData.customQuotation || sessionData.goldPrice || 715;
+        const text = `🟡 *ALTERAR COTAÇÃO DO OURO (AU)*\n\n• Cotação atual: *R$ ${currentPrice},00 / g*\n\n👉 *Digite a nova cotação do ouro em R$* no chat (ex: *720* ou *718,50*):`;
+        await this.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: '❌ Cancelar', callback_data: 'cancelar' }]],
+          },
         });
         return { ok: true };
       }
@@ -1380,8 +1582,6 @@ export class AutomationsService {
           }
 
           const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
-          const dateLabel = targetDate.toLocaleDateString('pt-BR');
-          const isToday = targetDate.toDateString() === new Date().toDateString();
           const quoteData = await this.getQuotationForDate(targetDate, 'AU');
           sessionData.goldPrice = quoteData.price;
           const historico = sessionData.description || `Depósito Cliente ${sessionData.selectedClienteName || ''}`;
@@ -1389,17 +1589,7 @@ export class AutomationsService {
           sessionData.waitingFor = null;
           await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
-          const formattedAmount = amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-          const confirmText = `💰 *CONFIRMAÇÃO DO DEPÓSITO*\n\n• Cliente: *${sessionData.selectedClienteName || 'Cliente'}*\n• Destino: *${sessionData.destinationName}*\n• Valor: *R$ ${formattedAmount}*\n• Histórico: *${historico}*\n• Data da Operação: *${dateLabel}* ${isToday ? '*(Hoje)*' : ''}\n• Cotação Au (${quoteData.dateBase}): *R$ ${quoteData.price},00 / g*\n\nConfirma o depósito ou deseja ajustar histórico / data?`;
-
-          const inline_keyboard = [
-            [{ text: `✅ Confirmar (${isToday ? 'Hoje' : dateLabel})`, callback_data: 'exec_final_dep' }],
-            [
-              { text: '📝 Mudar Histórico', callback_data: 'mudar_hist_dep' },
-              { text: '📅 Mudar Data', callback_data: 'mudar_data_dep' },
-            ],
-            [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
-          ];
+          const { text: confirmText, inline_keyboard } = await this.buildDepositConfirmation(sessionData, quoteData);
 
           await this.callTelegramApi('sendMessage', {
             chat_id: chatId,
@@ -1419,22 +1609,11 @@ export class AutomationsService {
           sessionData.waitingFor = null;
 
           const targetDate = parsed;
-          const dateLabel = targetDate.toLocaleDateString('pt-BR');
           const quoteData = await this.getQuotationForDate(targetDate, 'AU');
           sessionData.goldPrice = quoteData.price;
           await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
-          const formattedAmount = (sessionData.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-          const confirmText = `💰 *CONFIRMAÇÃO DO DEPÓSITO*\n\n• Cliente: *${sessionData.selectedClienteName || 'Cliente'}*\n• Destino: *${sessionData.destinationName}*\n• Valor: *R$ ${formattedAmount}*\n• Histórico: *${sessionData.description || 'Depósito'}*\n• Data da Operação: *${dateLabel}*\n• Cotação Au (${quoteData.dateBase}): *R$ ${quoteData.price},00 / g*\n\nConfirma o depósito com esta data?`;
-
-          const inline_keyboard = [
-            [{ text: `✅ Confirmar (${dateLabel})`, callback_data: 'exec_final_dep' }],
-            [
-              { text: '📝 Mudar Histórico', callback_data: 'mudar_hist_dep' },
-              { text: '📅 Outra Data', callback_data: 'mudar_data_dep' },
-            ],
-            [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
-          ];
+          const { text: confirmText, inline_keyboard } = await this.buildDepositConfirmation(sessionData, quoteData);
 
           await this.callTelegramApi('sendMessage', {
             chat_id: chatId,
@@ -1454,24 +1633,11 @@ export class AutomationsService {
           sessionData.waitingFor = null;
 
           const targetDate = parsed;
-          const dateLabel = targetDate.toLocaleDateString('pt-BR');
           const quoteData = await this.getQuotationForDate(targetDate, 'AU');
           sessionData.goldPrice = quoteData.price;
           await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
-          const formattedAmount = (sessionData.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-          const catLabel = (sessionData.selectedCategoryName || sessionData.selectedCategory || 'GERAIS').toUpperCase();
-
-          const confirmText = `💳 *CONFIRMAÇÃO DO PAGAMENTO*\n\n• Categoria: *${catLabel}*\n• Conta de Saída: *${sessionData.destinationName}*\n• Valor: *R$ ${formattedAmount}*\n• Histórico: *${sessionData.description || `Pago referente a ${catLabel}`}*\n• Data da Operação: *${dateLabel}*\n• Cotação Au (${quoteData.dateBase}): *R$ ${quoteData.price},00 / g*\n\nConfirma o pagamento com esta data?`;
-
-          const inline_keyboard = [
-            [{ text: `✅ Confirmar (${dateLabel})`, callback_data: 'exec_final_desp' }],
-            [
-              { text: '📝 Mudar Histórico', callback_data: 'mudar_hist_desp' },
-              { text: '📅 Outra Data', callback_data: 'mudar_data_desp' },
-            ],
-            [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
-          ];
+          const { text: confirmText, inline_keyboard } = await this.buildExpenseConfirmation(sessionData, quoteData);
 
           await this.callTelegramApi('sendMessage', {
             chat_id: chatId,
@@ -1489,25 +1655,11 @@ export class AutomationsService {
         sessionData.waitingFor = null;
 
         const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
-        const dateLabel = targetDate.toLocaleDateString('pt-BR');
-        const isToday = targetDate.toDateString() === new Date().toDateString();
         const quoteData = await this.getQuotationForDate(targetDate, 'AU');
         sessionData.goldPrice = quoteData.price;
         await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
-        const formattedAmount = (sessionData.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        const catLabel = (sessionData.selectedCategoryName || sessionData.selectedCategory || 'GERAIS').toUpperCase();
-
-        const confirmText = `💳 *CONFIRMAÇÃO DO PAGAMENTO*\n\n• Categoria: *${catLabel}*\n• Conta de Saída: *${sessionData.destinationName}*\n• Valor: *R$ ${formattedAmount}*\n• Histórico: *${sessionData.description}*\n• Data da Operação: *${dateLabel}* ${isToday ? '*(Hoje)*' : ''}\n• Cotação Au (${quoteData.dateBase}): *R$ ${quoteData.price},00 / g*\n\nDeseja confirmar o pagamento?`;
-
-        const inline_keyboard = [
-          [{ text: `✅ Confirmar Pagamento`, callback_data: 'exec_final_desp' }],
-          [
-            { text: '📝 Mudar Histórico', callback_data: 'mudar_hist_desp' },
-            { text: '📅 Mudar Data', callback_data: 'mudar_data_desp' },
-          ],
-          [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
-        ];
+        const { text: confirmText, inline_keyboard } = await this.buildExpenseConfirmation(sessionData, quoteData);
 
         await this.callTelegramApi('sendMessage', {
           chat_id: chatId,
@@ -1524,23 +1676,11 @@ export class AutomationsService {
         sessionData.waitingFor = null;
 
         const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
-        const dateLabel = targetDate.toLocaleDateString('pt-BR');
-        const isToday = targetDate.toDateString() === new Date().toDateString();
         const quoteData = await this.getQuotationForDate(targetDate, 'AU');
         sessionData.goldPrice = quoteData.price;
         await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
-        const formattedAmount = (sessionData.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        const confirmText = `💰 *CONFIRMAÇÃO DO DEPÓSITO*\n\n• Cliente: *${sessionData.selectedClienteName || 'Cliente'}*\n• Destino: *${sessionData.destinationName}*\n• Valor: *R$ ${formattedAmount}*\n• Histórico: *${sessionData.description}*\n• Data da Operação: *${dateLabel}* ${isToday ? '*(Hoje)*' : ''}\n• Cotação Au (${quoteData.dateBase}): *R$ ${quoteData.price},00 / g*\n\nDeseja confirmar o depósito?`;
-
-        const inline_keyboard = [
-          [{ text: `✅ Confirmar Depósito`, callback_data: 'exec_final_dep' }],
-          [
-            { text: '📝 Mudar Histórico', callback_data: 'mudar_hist_dep' },
-            { text: '📅 Mudar Data', callback_data: 'mudar_data_dep' },
-          ],
-          [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
-        ];
+        const { text: confirmText, inline_keyboard } = await this.buildDepositConfirmation(sessionData, quoteData);
 
         await this.callTelegramApi('sendMessage', {
           chat_id: chatId,
@@ -1549,6 +1689,56 @@ export class AutomationsService {
           reply_markup: { inline_keyboard },
         });
         return { ok: true };
+      }
+
+      // B.7) Usuário digitou cotação personalizada para depósito
+      if (sessionData.waitingFor === 'cotacao_deposito') {
+        const cleaned = text.replace(/[^0-9.,]/g, '').replace(',', '.');
+        const num = parseFloat(cleaned);
+        if (!isNaN(num) && num > 0) {
+          sessionData.customQuotation = num;
+          sessionData.goldPrice = num;
+          sessionData.waitingFor = null;
+
+          const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
+          const quoteData = await this.getQuotationForDate(targetDate, 'AU');
+          await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+          const { text: confirmText, inline_keyboard } = await this.buildDepositConfirmation(sessionData, quoteData);
+
+          await this.callTelegramApi('sendMessage', {
+            chat_id: chatId,
+            text: confirmText,
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard },
+          });
+          return { ok: true };
+        }
+      }
+
+      // B.8) Usuário digitou cotação personalizada para despesa
+      if (sessionData.waitingFor === 'cotacao_despesa') {
+        const cleaned = text.replace(/[^0-9.,]/g, '').replace(',', '.');
+        const num = parseFloat(cleaned);
+        if (!isNaN(num) && num > 0) {
+          sessionData.customQuotation = num;
+          sessionData.goldPrice = num;
+          sessionData.waitingFor = null;
+
+          const targetDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
+          const quoteData = await this.getQuotationForDate(targetDate, 'AU');
+          await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+          const { text: confirmText, inline_keyboard } = await this.buildExpenseConfirmation(sessionData, quoteData);
+
+          await this.callTelegramApi('sendMessage', {
+            chat_id: chatId,
+            text: confirmText,
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard },
+          });
+          return { ok: true };
+        }
       }
 
       // C) Usuário digitou termo para buscar categoria
