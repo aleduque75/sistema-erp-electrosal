@@ -190,6 +190,13 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
   useEffect(() => {
     const fetchQuotation = async () => {
       if (dataHora) {
+        // Se estiver editando e a data for a mesma da transação, preserva a cotação já gravada
+        const initialDate = initialData?.dataHora?.split('T')[0];
+        if (initialData && dataHora === initialDate && initialData.goldPrice) {
+          setQuotation(initialData.goldPrice);
+          return;
+        }
+
         try {
           const response = await api.get(
             `/quotations/by-date?date=${dataHora}&metal=AU`,
@@ -213,7 +220,7 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
       }
     };
     fetchQuotation();
-  }, [dataHora, setValue, getValues]);
+  }, [dataHora, setValue, getValues, initialData]);
 
   const handleBrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newBrlValue = parseFloat(e.target.value) || 0;

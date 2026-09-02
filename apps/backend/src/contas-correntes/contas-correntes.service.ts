@@ -198,15 +198,17 @@ export class ContasCorrentesService {
       orderBy: { dataHora: 'asc' },
     });
 
-    // 4. Busca as Cotações do Período para referência
+    // 4. Busca as Cotações de Ouro (AU) do Período para referência / fallback
     const quotations = await this.prisma.quotation.findMany({
       where: {
         organizationId,
+        metal: 'AU',
         date: {
           gte: startDate,
           lte: endDate,
         },
       },
+      orderBy: { date: 'asc' },
     });
 
     const quotationMap = new Map<string, number>();
@@ -243,9 +245,9 @@ export class ContasCorrentesService {
         const dateKey = t.dataHora.toISOString().split('T')[0];
         const dailyQuotation = quotationMap.get(dateKey);
 
-        // Prioriza a cotação do dia. Se não houver, usa a cotação da transação (se existir), senão null.
+        // Prioriza SEMPRE a cotação real gravada na transação. Se não houver, usa a cotação do dia para ouro como fallback.
         const goldPrice =
-          dailyQuotation ?? (t.goldPrice ? Number(t.goldPrice) : null);
+          t.goldPrice != null ? Number(t.goldPrice) : (dailyQuotation ?? null);
 
         return {
           ...t,
