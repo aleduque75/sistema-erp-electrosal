@@ -61,7 +61,7 @@ export class CreatePessoaDto {
   defaultContaContabilId?: string;
 }
 
-export class UpdatePessoaDto extends PartialType(CreatePessoaDto) {}
+export { UpdatePessoaDto } from './update-pessoa.dto';
 
 // --- DTOs para importação em lote (já existentes) ---
 export class PessoaLoteDto {

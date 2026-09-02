@@ -66,8 +66,9 @@ describe('PessoaController', () => {
   it('should delegate findAll to ListPessoasUseCase', async () => {
     listPessoasUseCase.execute.mockResolvedValue([{ id: 'p-1' }] as any);
 
-    const result = await controller.findAll('org-1', 'CLIENT');
-    expect(listPessoasUseCase.execute).toHaveBeenCalledWith('org-1', 'CLIENT');
+    const query = { role: 'CLIENT' as const };
+    const result = await controller.findAll('org-1', query);
+    expect(listPessoasUseCase.execute).toHaveBeenCalledWith('org-1', query);
     expect(result).toHaveLength(1);
   });
 

@@ -12,7 +12,8 @@ import {
 import {
   CreatePessoaDto,
   UpdatePessoaDto,
-} from './dtos/create-pessoa.dto';
+  ListPessoasQueryDto,
+} from './dtos';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreatePessoaUseCase } from './use-cases/create-pessoa.use-case';
@@ -43,9 +44,9 @@ export class PessoaController {
   @Get()
   findAll(
     @CurrentUser('organizationId') organizationId: string,
-    @Query('role') role?: 'CLIENT' | 'FORNECEDOR' | 'FUNCIONARIO',
+    @Query() query: ListPessoasQueryDto,
   ) {
-    return this.listPessoasUseCase.execute(organizationId, role);
+    return this.listPessoasUseCase.execute(organizationId, query);
   }
 
   @Get(':id')

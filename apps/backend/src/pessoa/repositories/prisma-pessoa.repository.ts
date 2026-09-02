@@ -32,11 +32,30 @@ export class PrismaPessoaRepository
 
   async findAll(
     organizationId: string,
-    role?: string,
+    filter?: string | { role?: string; search?: string },
   ): Promise<any[]> {
+    const role = typeof filter === 'string' ? filter : filter?.role;
+    const search =
+      typeof filter === 'object' ? filter?.search?.trim() : undefined;
+
+    const whereClause: any = { organizationId };
+
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { razaoSocial: { contains: search, mode: 'insensitive' } },
+        { cpf: { contains: search } },
+        { cnpj: { contains: search } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     if (role === 'CLIENT') {
       const clients = await this.prisma.client.findMany({
-        where: { organizationId },
+        where: {
+          organizationId,
+          ...(search ? { pessoa: whereClause } : {}),
+        },
         include: { pessoa: { include: this.includeRoles } },
         orderBy: { pessoa: { name: 'asc' } },
       });
@@ -45,7 +64,10 @@ export class PrismaPessoaRepository
 
     if (role === 'FORNECEDOR') {
       const fornecedores = await this.prisma.fornecedor.findMany({
-        where: { organizationId },
+        where: {
+          organizationId,
+          ...(search ? { pessoa: whereClause } : {}),
+        },
         include: { pessoa: { include: this.includeRoles } },
         orderBy: { pessoa: { name: 'asc' } },
       });
@@ -54,7 +76,10 @@ export class PrismaPessoaRepository
 
     if (role === 'FUNCIONARIO') {
       const funcionarios = await this.prisma.funcionario.findMany({
-        where: { organizationId },
+        where: {
+          organizationId,
+          ...(search ? { pessoa: whereClause } : {}),
+        },
         include: { pessoa: { include: this.includeRoles } },
         orderBy: { pessoa: { name: 'asc' } },
       });
@@ -62,7 +87,7 @@ export class PrismaPessoaRepository
     }
 
     const pessoas = await this.prisma.pessoa.findMany({
-      where: { organizationId },
+      where: whereClause,
       include: this.includeRoles,
       orderBy: { name: 'asc' },
     });
