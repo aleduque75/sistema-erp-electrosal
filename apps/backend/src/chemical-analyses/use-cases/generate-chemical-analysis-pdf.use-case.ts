@@ -1,0 +1,170 @@
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
+import { ChemicalAnalysesRepository } from '../repositories/chemical-analyses.repository';
+import * as puppeteer from 'puppeteer';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { format } from 'date-fns';
+import { Buffer } from 'buffer';
+import * as Handlebars from 'handlebars';
+
+export interface GenerateChemicalAnalysisPdfCommand {
+  analiseId: string;
+  organizationId: string;
+}
+
+@Injectable()
+export class GenerateChemicalAnalysisPdfUseCase {
+  private readonly logger = new Logger(GenerateChemicalAnalysisPdfUseCase.name);
+
+  constructor(private readonly chemicalAnalysesRepository: ChemicalAnalysesRepository) {
+    this.registerHandlebarsHelpers();
+  }
+
+  private registerHandlebarsHelpers() {
+    Handlebars.registerHelper(
+      'formatarNumero',
+      (valor, casasDecimais = 2) => {
+        if (valor === null || valor === undefined || isNaN(Number(valor)))
+          return 'N/A';
+        return Number(valor).toFixed(casasDecimais).replace('.', ',');
+      },
+    );
+
+    Handlebars.registerHelper('formatarData', (data) => {
+      if (!data) return 'N/A';
+      try {
+        const dateObj = new Date(data);
+        if (isNaN(dateObj.getTime())) return 'Data inválida';
+        return format(dateObj, 'dd/MM/yyyy');
+      } catch (e) {
+        return '';
+      }
+    });
+
+    Handlebars.registerHelper('formatarPercentual', (valor) => {
+      if (typeof valor !== 'number' || isNaN(valor)) return 'N/A';
+      return `${valor.toFixed(2)}%`.replace('.', ',');
+    });
+
+    Handlebars.registerHelper('ifCond', function (v1, operator, v2, options) {
+      switch (operator) {
+        case '==':
+          return v1 == v2 ? options.fn(this) : options.inverse(this);
+        case '===':
+          return v1 === v2 ? options.fn(this) : options.inverse(this);
+        default:
+          return options.inverse(this);
+      }
+    });
+  }
+
+  private async getImageAsBase64(filePath: string): Promise<string | null> {
+    try {
+      if (!filePath) return null;
+
+      let imageBuffer: Buffer;
+
+      if (filePath.startsWith('http')) {
+        const response = await fetch(filePath);
+        if (!response.ok) throw new Error(`Falha ao baixar imagem: ${response.statusText}`);
+        const arrayBuffer = await response.arrayBuffer();
+        imageBuffer = Buffer.from(arrayBuffer);
+      } else {
+        let absolutePath = filePath;
+        if (filePath.startsWith('/uploads/')) {
+          absolutePath = path.join(process.cwd(), filePath.substring(1));
+        }
+        imageBuffer = await fs.readFile(absolutePath);
+      }
+
+      const base64Image = imageBuffer.toString('base64');
+      const ext = path.extname(filePath.split('?')[0]).toLowerCase();
+      let mimeType = 'image/jpeg';
+      if (ext === '.png') mimeType = 'image/png';
+      else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
+
+      return `data:${mimeType};base64,${base64Image}`;
+    } catch (error) {
+      console.error(`Erro ao processar imagem para PDF: ${filePath}`, error);
+      return null;
+    }
+  }
+
+  async execute(command: GenerateChemicalAnalysisPdfCommand): Promise<Buffer> {
+    const { analiseId, organizationId } = command;
+
+    const analise = await this.chemicalAnalysesRepository.findByIdWithDetails(
+      analiseId,
+      organizationId,
+    );
+    if (!analise) {
+      throw new NotFoundException(
+        `Análise química com ID ${analiseId} não encontrada.`,
+      );
+    }
+
+    const baseDir = process.env.NODE_ENV === 'production'
+      ? path.join(process.cwd(), 'dist')
+      : path.join(process.cwd(), 'src');
+
+    const templatePath = path.join(
+      baseDir,
+      'templates',
+      'analise-quimica-pdf.template.html',
+    );
+    const htmlTemplateString = await fs.readFile(templatePath, 'utf-8');
+
+    const logoPath = path.join(
+      baseDir,
+      'assets',
+      'images',
+      'logoAtual.png',
+    );
+    const logoBase64 = await this.getImageAsBase64(logoPath);
+
+    const htmlComLogo = htmlTemplateString.replace(
+      '%%LOGO_PLACEHOLDER%%',
+      logoBase64 || '',
+    );
+
+    const templateData = {
+      ...analise,
+      dataEmissaoPdf: new Date(),
+      statusAnalise: (analise.status || '').replace(/_/g, ' '),
+    };
+
+    const template = Handlebars.compile(htmlComLogo);
+    const htmlContent = template(templateData);
+
+    let browser;
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      });
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' },
+      });
+
+      return Buffer.from(pdfBuffer);
+    } catch (error) {
+      this.logger.error('Erro ao gerar PDF:', error);
+      throw new InternalServerErrorException('Falha ao gerar o PDF da análise.');
+    } finally {
+      if (browser) {
+        await browser.close();
+      }
+    }
+  }
+}

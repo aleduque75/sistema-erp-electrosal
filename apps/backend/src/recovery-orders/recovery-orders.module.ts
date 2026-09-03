@@ -4,7 +4,7 @@ import { PrismaRecoveryOrderRepository } from './repositories/prisma-recovery-or
 import { RecoveryOrderRepository } from './repositories/recovery-order.repository';
 import { RecoveryOrdersController } from './recovery-orders.controller';
 import { CreateRecoveryOrderUseCase } from './use-cases/create-recovery-order.use-case';
-import { AnalisesQuimicasModule } from '../analises-quimicas/analises-quimicas.module';
+import { ChemicalAnalysesModule } from '../chemical-analyses/chemical-analyses.module';
 import { StartRecoveryOrderUseCase } from './use-cases/start-recovery-order.use-case';
 import { UpdateRecoveryOrderPurityUseCase } from './use-cases/update-recovery-order-purity.use-case';
 import { MetalCreditsModule } from '../metal-credits/metal-credits.module';
@@ -29,7 +29,7 @@ import { PrismaPureMetalLotRepository } from './repositories/prisma-pure-metal-l
 @Module({
   imports: [
     PrismaModule,
-    AnalisesQuimicasModule,
+    ChemicalAnalysesModule,
     MetalCreditsModule,
     MetalAccountsModule,
     QuotationsModule,

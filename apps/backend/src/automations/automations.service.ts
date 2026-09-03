@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateExpenseAutomationDto } from './dto/create-expense-automation.dto';
-import { AccountsPayService } from '../accounts-pay/accounts-pay.service';
+import { CreateAccountPayUseCase } from '../accounts-pay/use-cases/create-account-pay.use-case';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { ConfirmSaleUseCase } from '../sales/use-cases/confirm-sale.use-case';
@@ -11,7 +11,7 @@ import Decimal from 'decimal.js';
 @Injectable()
 export class AutomationsService {
   constructor(
-    private readonly accountsPayService: AccountsPayService,
+    private readonly createAccountPayUseCase: CreateAccountPayUseCase,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly confirmSaleUseCase: ConfirmSaleUseCase,
@@ -64,7 +64,7 @@ export class AutomationsService {
       fornecedorId: fornecedor.pessoaId,
     };
 
-    return this.accountsPayService.create(organizationId, createAccountPayDto);
+    return this.createAccountPayUseCase.execute(organizationId, createAccountPayDto);
   }
 
   async receiptLookup(query: { payer?: string; amount?: number; orderNumber?: number }) {

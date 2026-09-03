@@ -2,7 +2,6 @@ import { WhatsappRoutinesService } from '../whatsapp-routines/whatsapp-routines.
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
-import { AccountsPayService } from '../accounts-pay/accounts-pay.service';
 import { Decimal } from 'decimal.js';
 
 @Injectable()
@@ -20,7 +19,6 @@ export class WhatsappService {
   constructor(
     private prisma: PrismaService,
     private readonly httpService: HttpService,
-    private readonly accountsPayService: AccountsPayService,
     private readonly whatsappRoutineService: WhatsappRoutinesService,
   ) {}
 

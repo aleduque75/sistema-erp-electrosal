@@ -11,7 +11,6 @@ import {
   HttpStatus,
   Query,
 } from '@nestjs/common';
-import { AccountsRecService } from './accounts-rec.service';
 import {
   CreateAccountRecDto,
   UpdateAccountRecDto,
@@ -20,6 +19,13 @@ import {
 import { PayAccountsRecWithMetalCreditDto } from './dtos/pay-accounts-rec-with-metal-credit.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CreateAccountRecUseCase } from './use-cases/create-account-rec.use-case';
+import { ListAccountsRecUseCase } from './use-cases/list-accounts-rec.use-case';
+import { GetAccountRecByIdUseCase } from './use-cases/get-account-rec-by-id.use-case';
+import { UpdateAccountRecUseCase } from './use-cases/update-account-rec.use-case';
+import { DeleteAccountRecUseCase } from './use-cases/delete-account-rec.use-case';
+import { ReceiveAccountRecPaymentUseCase } from './use-cases/receive-account-rec-payment.use-case';
+import { ForceFinalizeAccountRecUseCase } from './use-cases/force-finalize-account-rec.use-case';
 import { PayAccountsRecWithMetalCreditUseCase } from './use-cases/pay-accounts-rec-with-metal-credit.use-case';
 import { PayAccountsRecWithMetalDto } from './dtos/pay-accounts-rec-with-metal.dto';
 import { PayAccountsRecWithMetalUseCase } from './use-cases/pay-accounts-rec-with-metal.use-case';
@@ -34,7 +40,13 @@ import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
 @Controller('accounts-rec')
 export class AccountsRecController {
   constructor(
-    private readonly accountsRecService: AccountsRecService,
+    private readonly createAccountRecUseCase: CreateAccountRecUseCase,
+    private readonly listAccountsRecUseCase: ListAccountsRecUseCase,
+    private readonly getAccountRecByIdUseCase: GetAccountRecByIdUseCase,
+    private readonly updateAccountRecUseCase: UpdateAccountRecUseCase,
+    private readonly deleteAccountRecUseCase: DeleteAccountRecUseCase,
+    private readonly receiveAccountRecPaymentUseCase: ReceiveAccountRecPaymentUseCase,
+    private readonly forceFinalizeAccountRecUseCase: ForceFinalizeAccountRecUseCase,
     private readonly payAccountsRecWithMetalCreditUseCase: PayAccountsRecWithMetalCreditUseCase,
     private readonly payAccountsRecWithMetalUseCase: PayAccountsRecWithMetalUseCase,
     private readonly payAccountsRecWithMetalCreditMultipleUseCase: PayAccountsRecWithMetalCreditMultipleUseCase,
@@ -47,7 +59,7 @@ export class AccountsRecController {
     @CurrentUser('orgId') organizationId: string,
     @Body() createDto: CreateAccountRecDto,
   ) {
-    return this.accountsRecService.create(organizationId, createDto);
+    return this.createAccountRecUseCase.execute(organizationId, createDto);
   }
 
   @Get()
@@ -55,7 +67,7 @@ export class AccountsRecController {
     @CurrentUser('orgId') organizationId: string,
     @Query('status') status?: string,
   ) {
-    return this.accountsRecService.findAll(organizationId, status);
+    return this.listAccountsRecUseCase.execute(organizationId, status);
   }
 
   @Get(':id')
@@ -63,7 +75,7 @@ export class AccountsRecController {
     @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
   ) {
-    return this.accountsRecService.findOne(organizationId, id);
+    return this.getAccountRecByIdUseCase.execute(organizationId, id);
   }
 
   @Patch(':id')
@@ -72,7 +84,7 @@ export class AccountsRecController {
     @Param('id') id: string,
     @Body() updateDto: UpdateAccountRecDto,
   ) {
-    return this.accountsRecService.update(organizationId, id, updateDto);
+    return this.updateAccountRecUseCase.execute(organizationId, id, updateDto);
   }
 
   @Post(':id/hybrid-receive')
@@ -97,7 +109,7 @@ export class AccountsRecController {
     @Param('id') id: string,
     @Body() dto: ReceivePaymentDto,
   ) {
-    return this.accountsRecService.receive(organizationId, userId, id, dto);
+    return this.receiveAccountRecPaymentUseCase.execute(organizationId, userId, id, dto);
   }
 
   @Patch(':id/pay-with-metal-credit')
@@ -165,7 +177,7 @@ export class AccountsRecController {
     @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
   ) {
-    return this.accountsRecService.forceFinalize(organizationId, id);
+    return this.forceFinalizeAccountRecUseCase.execute(organizationId, id);
   }
 
   @Delete(':id')
@@ -174,6 +186,6 @@ export class AccountsRecController {
     @CurrentUser('orgId') organizationId: string,
     @Param('id') id: string,
   ) {
-    return this.accountsRecService.remove(organizationId, id);
+    return this.deleteAccountRecUseCase.execute(organizationId, id);
   }
 }

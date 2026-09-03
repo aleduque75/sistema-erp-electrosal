@@ -1,0 +1,102 @@
+import { Prisma } from '@prisma/client';
+import { ChemicalAnalysisEntity } from '../entities/chemical-analysis.entity';
+
+export class ChemicalAnalysisMapper {
+  static toDomain(raw: any): ChemicalAnalysisEntity {
+    return ChemicalAnalysisEntity.create({
+      id: raw.id,
+      organizationId: raw.organizationId,
+      clienteId: raw.clienteId,
+      numeroAnalise: raw.numeroAnalise,
+      dataEntrada: raw.dataEntrada,
+      descricaoMaterial: raw.descricaoMaterial,
+      volumeOuPesoEntrada: raw.volumeOuPesoEntrada,
+      unidadeEntrada: raw.unidadeEntrada,
+      resultadoAnaliseValor: raw.resultadoAnaliseValor,
+      unidadeResultado: raw.unidadeResultado,
+      percentualQuebra: raw.percentualQuebra,
+      taxaServicoPercentual: raw.taxaServicoPercentual,
+      teorRecuperavel: raw.teorRecuperavel,
+      auEstimadoBrutoGramas: raw.auEstimadoBrutoGramas,
+      auEstimadoRecuperavelGramas: raw.auEstimadoRecuperavelGramas,
+      taxaServicoEmGramas: raw.taxaServicoEmGramas,
+      auLiquidoParaClienteGramas: raw.auLiquidoParaClienteGramas,
+      status: raw.status,
+      dataAnaliseConcluida: raw.dataAnaliseConcluida,
+      dataAprovacaoCliente: raw.dataAprovacaoCliente,
+      dataFinalizacaoRecuperacao: raw.dataFinalizacaoRecuperacao,
+      observacoes: raw.observacoes,
+      ordemDeRecuperacaoId: raw.ordemDeRecuperacaoId,
+      metalType: raw.metalType,
+      isWriteOff: raw.isWriteOff,
+      dataCriacao: raw.dataCriacao,
+      dataAtualizacao: raw.dataAtualizacao,
+    });
+  }
+
+  static toPersistence(entity: ChemicalAnalysisEntity): Prisma.AnaliseQuimicaUncheckedCreateInput {
+    return {
+      id: entity.id,
+      organizationId: entity.organizationId,
+      clienteId: entity.clienteId,
+      numeroAnalise: entity.numeroAnalise,
+      dataEntrada: entity.dataEntrada,
+      descricaoMaterial: entity.descricaoMaterial,
+      volumeOuPesoEntrada: entity.volumeOuPesoEntrada,
+      unidadeEntrada: entity.unidadeEntrada,
+      resultadoAnaliseValor: entity.resultadoAnaliseValor,
+      unidadeResultado: entity.unidadeResultado,
+      percentualQuebra: entity.percentualQuebra,
+      taxaServicoPercentual: entity.taxaServicoPercentual,
+      teorRecuperavel: entity.teorRecuperavel,
+      auEstimadoBrutoGramas: entity.auEstimadoBrutoGramas,
+      auEstimadoRecuperavelGramas: entity.auEstimadoRecuperavelGramas,
+      taxaServicoEmGramas: entity.taxaServicoEmGramas,
+      auLiquidoParaClienteGramas: entity.auLiquidoParaClienteGramas,
+      status: entity.statusValue as any,
+      dataAnaliseConcluida: entity.dataAnaliseConcluida,
+      dataAprovacaoCliente: entity.dataAprovacaoCliente,
+      dataFinalizacaoRecuperacao: entity.dataFinalizacaoRecuperacao,
+      observacoes: entity.observacoes,
+      ordemDeRecuperacaoId: entity.ordemDeRecuperacaoId,
+      metalType: entity.metalType,
+      isWriteOff: entity.isWriteOff,
+    };
+  }
+
+  static toResponseDto(entity: ChemicalAnalysisEntity, extra?: any): any {
+    return {
+      id: entity.id,
+      organizationId: entity.organizationId,
+      clienteId: entity.clienteId,
+      clientName: extra?.clientName || extra?.cliente?.name,
+      numeroAnalise: entity.numeroAnalise,
+      dataEntrada: entity.dataEntrada,
+      descricaoMaterial: entity.descricaoMaterial,
+      volumeOuPesoEntrada: entity.volumeOuPesoEntrada,
+      unidadeEntrada: entity.unidadeEntrada,
+      resultadoAnaliseValor: entity.resultadoAnaliseValor,
+      unidadeResultado: entity.unidadeResultado,
+      percentualQuebra: entity.percentualQuebra,
+      taxaServicoPercentual: entity.taxaServicoPercentual,
+      teorRecuperavel: entity.teorRecuperavel,
+      auEstimadoBrutoGramas: entity.auEstimadoBrutoGramas,
+      auEstimadoRecuperavelGramas: entity.auEstimadoRecuperavelGramas,
+      taxaServicoEmGramas: entity.taxaServicoEmGramas,
+      auLiquidoParaClienteGramas: entity.auLiquidoParaClienteGramas,
+      status: entity.statusValue,
+      dataAnaliseConcluida: entity.dataAnaliseConcluida,
+      dataAprovacaoCliente: entity.dataAprovacaoCliente,
+      dataFinalizacaoRecuperacao: entity.dataFinalizacaoRecuperacao,
+      observacoes: entity.observacoes,
+      ordemDeRecuperacaoId: entity.ordemDeRecuperacaoId,
+      metalType: entity.metalType,
+      isWriteOff: entity.isWriteOff,
+      cliente: extra?.cliente,
+      media: extra?.media || [],
+      metalCredit: extra?.metalCredit,
+      dataCriacao: entity.dataCriacao,
+      dataAtualizacao: entity.dataAtualizacao,
+    };
+  }
+}

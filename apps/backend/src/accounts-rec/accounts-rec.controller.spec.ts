@@ -1,6 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountsRecController } from './accounts-rec.controller';
-import { AccountsRecService } from './accounts-rec.service';
+import { CreateAccountRecUseCase } from './use-cases/create-account-rec.use-case';
+import { ListAccountsRecUseCase } from './use-cases/list-accounts-rec.use-case';
+import { GetAccountRecByIdUseCase } from './use-cases/get-account-rec-by-id.use-case';
+import { UpdateAccountRecUseCase } from './use-cases/update-account-rec.use-case';
+import { DeleteAccountRecUseCase } from './use-cases/delete-account-rec.use-case';
+import { ReceiveAccountRecPaymentUseCase } from './use-cases/receive-account-rec-payment.use-case';
+import { ForceFinalizeAccountRecUseCase } from './use-cases/force-finalize-account-rec.use-case';
 import { PayAccountsRecWithMetalCreditUseCase } from './use-cases/pay-accounts-rec-with-metal-credit.use-case';
 import { PayAccountsRecWithMetalUseCase } from './use-cases/pay-accounts-rec-with-metal.use-case';
 import { PayAccountsRecWithMetalCreditMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-credit-multiple.use-case';
@@ -9,24 +15,18 @@ import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
 
 describe('AccountsRecController', () => {
   let controller: AccountsRecController;
-  let service: AccountsRecService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AccountsRecController],
       providers: [
-        {
-          provide: AccountsRecService,
-          useValue: {
-            findAll: jest.fn(),
-            findOne: jest.fn(),
-            create: jest.fn(),
-            update: jest.fn(),
-            remove: jest.fn(),
-            receive: jest.fn(),
-            forceFinalize: jest.fn(),
-          },
-        },
+        { provide: CreateAccountRecUseCase, useValue: { execute: jest.fn() } },
+        { provide: ListAccountsRecUseCase, useValue: { execute: jest.fn() } },
+        { provide: GetAccountRecByIdUseCase, useValue: { execute: jest.fn() } },
+        { provide: UpdateAccountRecUseCase, useValue: { execute: jest.fn() } },
+        { provide: DeleteAccountRecUseCase, useValue: { execute: jest.fn() } },
+        { provide: ReceiveAccountRecPaymentUseCase, useValue: { execute: jest.fn() } },
+        { provide: ForceFinalizeAccountRecUseCase, useValue: { execute: jest.fn() } },
         { provide: PayAccountsRecWithMetalCreditUseCase, useValue: { execute: jest.fn() } },
         { provide: PayAccountsRecWithMetalUseCase, useValue: { execute: jest.fn() } },
         { provide: PayAccountsRecWithMetalCreditMultipleUseCase, useValue: { execute: jest.fn() } },
@@ -36,7 +36,6 @@ describe('AccountsRecController', () => {
     }).compile();
 
     controller = module.get<AccountsRecController>(AccountsRecController);
-    service = module.get<AccountsRecService>(AccountsRecService);
   });
 
   it('should be defined', () => {

@@ -29,6 +29,10 @@ export class CreateAccountRecDto {
   @IsUUID()
   @IsOptional()
   saleId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  contaCorrenteId?: string;
 }
 
 export class UpdateAccountRecDto extends PartialType(CreateAccountRecDto) {}
