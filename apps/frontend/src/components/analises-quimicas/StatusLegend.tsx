@@ -1,11 +1,13 @@
 'use client';
 
 import { StatusAnaliseQuimica } from "@sistema-erp-electrosal/core";
+import { cn } from "@/lib/utils";
 
 const statusMap: Record<
   (typeof StatusAnaliseQuimica)[keyof typeof StatusAnaliseQuimica],
   { label: string; className: string }
 > = {
+  RECEBIDO: { label: "Recebido", className: "bg-cyan-500" },
   EM_ANALISE: { label: "Em Análise", className: "bg-blue-500" },
   ANALISADO_AGUARDANDO_APROVACAO: { label: "Aguardando Aprovação", className: "bg-orange-500" },
   APROVADO_PARA_RECUPERACAO: { label: "Aprovado p/ Recuperação", className: "bg-green-500" },
@@ -16,9 +18,13 @@ const statusMap: Record<
   RESIDUO: { label: "Resíduo", className: "bg-pink-500" },
 };
 
-export function StatusLegend() {
+interface StatusLegendProps {
+  className?: string;
+}
+
+export function StatusLegend({ className }: StatusLegendProps) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border p-2">
+    <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border p-2", className)}>
       <span className="text-sm font-semibold">Legenda:</span>
       {Object.values(statusMap).map((statusInfo) => (
         <div key={statusInfo.label} className="flex items-center gap-2">

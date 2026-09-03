@@ -7,8 +7,8 @@ export class CreateChemicalAnalysisDto {
   clienteId?: string;
 
   @IsString()
-  @IsNotEmpty()
-  numeroAnalise: string;
+  @IsOptional()
+  numeroAnalise?: string;
 
   @IsDateString()
   @IsOptional()
@@ -19,7 +19,7 @@ export class CreateChemicalAnalysisDto {
   descricaoMaterial: string;
 
   @IsNumber()
-  @Min(0.0001)
+  @Min(0)
   volumeOuPesoEntrada: number;
 
   @IsString()
@@ -47,6 +47,18 @@ export class UpdateChemicalAnalysisDto {
   @IsDateString()
   @IsOptional()
   dataEntrada?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dataAnaliseConcluida?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dataAprovacaoCliente?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dataFinalizacaoRecuperacao?: string;
 
   @IsString()
   @IsOptional()
@@ -121,4 +133,20 @@ export class ListChemicalAnalysesQueryDto {
   @IsString()
   @IsOptional()
   numeroAnalise?: string;
+
+  @IsDateString()
+  @IsOptional()
+  startDate?: string;
+
+  @IsDateString()
+  @IsOptional()
+  endDate?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dataInicio?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dataFim?: string;
 }

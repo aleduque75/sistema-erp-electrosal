@@ -282,7 +282,7 @@ export function AnalisesQuimicasTable({
                             Editar Análise
                           </DropdownMenuItem>
                         )}
-                        {analise.status === "EM_ANALISE" && (
+                        {(analise.status === "EM_ANALISE" || analise.status === "RECEBIDO") && (
                           <>
                             <DropdownMenuItem
                               onClick={() => setAnaliseParaLancar(analise)}
@@ -410,7 +410,7 @@ export function AnalisesQuimicasTable({
                         <Pencil className="mr-2 h-4 w-4" /> Editar Análise
                       </DropdownMenuItem>
                     )}
-                    {analise.status === "EM_ANALISE" && (
+                    {(analise.status === "EM_ANALISE" || analise.status === "RECEBIDO") && (
                       <DropdownMenuItem onClick={() => setAnaliseParaLancar(analise)}>
                         <FlaskConical className="mr-2 h-4 w-4" /> Lançar Resultado
                       </DropdownMenuItem>

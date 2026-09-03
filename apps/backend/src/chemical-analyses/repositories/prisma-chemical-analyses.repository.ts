@@ -26,19 +26,30 @@ export class PrismaChemicalAnalysesRepository
     return tx || this.prisma;
   }
 
-  async create(entity: ChemicalAnalysisEntity, tx?: any): Promise<ChemicalAnalysisEntity> {
-    const data = ChemicalAnalysisMapper.toPersistence(entity);
+  async create(entity: ChemicalAnalysisEntity | any, txOrOrgId?: any, maybeTx?: any): Promise<ChemicalAnalysisEntity> {
+    const tx = maybeTx || (typeof txOrOrgId === 'object' && txOrOrgId !== null ? txOrOrgId : undefined);
+    const orgId = typeof txOrOrgId === 'string' ? txOrOrgId : undefined;
+    const data = ChemicalAnalysisMapper.toPersistence(entity, orgId);
+    if (!data.organizationId && orgId) {
+      data.organizationId = orgId;
+    }
     const created = await this.getClient(tx).analiseQuimica.create({ data });
     return ChemicalAnalysisMapper.toDomain(created);
   }
 
-  async save(entity: ChemicalAnalysisEntity, tx?: any): Promise<ChemicalAnalysisEntity> {
-    if (!entity.id) {
+  async save(entity: ChemicalAnalysisEntity | any, txOrOrgId?: any, maybeTx?: any): Promise<ChemicalAnalysisEntity> {
+    const tx = maybeTx || (typeof txOrOrgId === 'object' && txOrOrgId !== null ? txOrOrgId : undefined);
+    const orgId = typeof txOrOrgId === 'string' ? txOrOrgId : undefined;
+    const id = entity.id?.toString ? entity.id.toString() : entity.id;
+    if (!id) {
       throw new Error('Não é possível salvar uma análise sem ID.');
     }
-    const data = ChemicalAnalysisMapper.toPersistence(entity);
+    const data = ChemicalAnalysisMapper.toPersistence(entity, orgId);
+    if (!data.organizationId && orgId) {
+      data.organizationId = orgId;
+    }
     const updated = await this.getClient(tx).analiseQuimica.update({
-      where: { id: entity.id },
+      where: { id },
       data,
     });
     return ChemicalAnalysisMapper.toDomain(updated);
@@ -58,6 +69,7 @@ export class PrismaChemicalAnalysesRepository
       include: {
         cliente: {
           select: {
+            id: true,
             name: true,
           },
         },
@@ -77,6 +89,7 @@ export class PrismaChemicalAnalysesRepository
       clientName: raw.cliente?.name,
       metalCredit: raw.metalCredit,
       media: raw.media,
+      recoveryOrderAsResidue: raw.recoveryOrderAsResidue,
     });
   }
 
@@ -115,6 +128,16 @@ export class PrismaChemicalAnalysesRepository
       where.numeroAnalise = { contains: filters.numeroAnalise, mode: 'insensitive' };
     }
 
+    const start = filters?.dataInicio || filters?.startDate;
+    const end = filters?.dataFim || filters?.endDate;
+
+    if (start || end) {
+      where.dataEntrada = {
+        ...(start ? { gte: new Date(start) } : {}),
+        ...(end ? { lte: new Date(end) } : {}),
+      };
+    }
+
     const items = await this.getClient(tx).analiseQuimica.findMany({
       where,
       include: {
@@ -137,6 +160,7 @@ export class PrismaChemicalAnalysesRepository
       return ChemicalAnalysisMapper.toResponseDto(entity, {
         clientName: raw.cliente?.name,
         cliente: raw.cliente,
+        recoveryOrderAsResidue: raw.recoveryOrderAsResidue,
       });
     });
   }
@@ -178,6 +202,16 @@ export class PrismaChemicalAnalysesRepository
     await this.getClient(tx).analiseQuimica.delete({
       where: { id, organizationId },
     });
+  }
+
+  async getNextCrrNumber(organizationId: string, tx?: any): Promise<string> {
+    const client = this.getClient(tx);
+    const counter = await client.crrCounter.upsert({
+      where: { organizationId },
+      update: { lastCrrNumber: { increment: 1 } },
+      create: { organizationId, lastCrrNumber: 3066 },
+    });
+    return `CRR-${counter.lastCrrNumber}`;
   }
 
   async executeInTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {

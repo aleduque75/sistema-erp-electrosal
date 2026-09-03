@@ -538,11 +538,14 @@ ${itemsText}`;
                 Nova Venda
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[96vw] max-w-6xl h-[95vh] p-3 md:p-6 flex flex-col overflow-hidden">
-              <DialogHeader>
-                <DialogTitle>Registrar Nova Venda</DialogTitle>
+            <DialogContent className="w-[98vw] max-w-[1440px] h-[92vh] max-h-[960px] p-3 md:p-5 flex flex-col overflow-hidden">
+              <DialogHeader className="pb-2 border-b">
+                <DialogTitle className="text-lg md:text-xl font-bold flex items-center gap-2">
+                  <PlusCircle className="h-5 w-5 text-primary" />
+                  Registrar Nova Venda
+                </DialogTitle>
               </DialogHeader>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-hidden min-h-0 pt-2">
                 <NewSaleForm onSave={handleSaveSuccess} />
               </div>
             </DialogContent>
@@ -571,7 +574,7 @@ ${itemsText}`;
             </div>
             <div className="space-y-2">
               <Label>Cliente</Label>
-              <Combobox options={clients} value={filters.clientId ?? ''} onChange={value => handleFilterChange('clientId', value)} placeholder="Selecione um cliente..." />
+              <Combobox options={clients} value={filters.clientId ?? ''} onChange={value => handleFilterChange('clientId', value || '')} placeholder="Selecione um cliente..." />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
@@ -643,7 +646,7 @@ ${itemsText}`;
 
               <div className="space-y-1">
                 <Label className="text-xs">Cliente</Label>
-                <Combobox options={clients} value={filters.clientId ?? ''} onChange={value => handleFilterChange('clientId', value)} placeholder="Selecione um cliente..." />
+                <Combobox options={clients} value={filters.clientId ?? ''} onChange={value => handleFilterChange('clientId', value || '')} placeholder="Selecione um cliente..." />
               </div>
 
               <div className="space-y-1">

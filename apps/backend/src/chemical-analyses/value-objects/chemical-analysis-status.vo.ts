@@ -86,4 +86,12 @@ export class ChemicalAnalysisStatusVO {
   canRedo(): boolean {
     return this.isPendingApproval || this.isRejected;
   }
+
+  toString(): string {
+    return this._value;
+  }
+
+  valueOf(): string {
+    return this._value;
+  }
 }

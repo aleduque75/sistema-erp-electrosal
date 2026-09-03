@@ -76,8 +76,8 @@ export class ChemicalAnalysisEntity {
     if (!params.descricaoMaterial || params.descricaoMaterial.trim() === '') {
       throw new Error('Descrição do material é obrigatória.');
     }
-    if (params.volumeOuPesoEntrada <= 0) {
-      throw new Error('Volume ou peso de entrada deve ser maior que zero.');
+    if (params.volumeOuPesoEntrada !== undefined && params.volumeOuPesoEntrada < 0) {
+      throw new Error('Volume ou peso de entrada não pode ser negativo.');
     }
 
     const dataEntrada = params.dataEntrada
@@ -86,7 +86,7 @@ export class ChemicalAnalysisEntity {
 
     const statusVO = params.status
       ? (params.status instanceof ChemicalAnalysisStatusVO ? params.status : new ChemicalAnalysisStatusVO(params.status))
-      : new ChemicalAnalysisStatusVO('RECEBIDO');
+      : new ChemicalAnalysisStatusVO('EM_ANALISE');
 
     const dataAnaliseConcluida = params.dataAnaliseConcluida
       ? (typeof params.dataAnaliseConcluida === 'string' ? new Date(params.dataAnaliseConcluida) : params.dataAnaliseConcluida)
@@ -271,17 +271,22 @@ export class ChemicalAnalysisEntity {
     const quebra = this.props.percentualQuebra ?? 0;
     const taxa = this.props.taxaServicoPercentual ?? 0;
 
-    let auBruto = (peso * valor) / 1000;
-    if (this.props.unidadeResultado === 'g/kg' || this.props.unidadeResultado === 'g/L') {
-      auBruto = peso * valor;
-    } else if (this.props.unidadeResultado === '%') {
+    const quebraDecimal = quebra > 1 ? quebra / 100 : quebra;
+    const taxaDecimal = taxa > 1 ? taxa / 100 : taxa;
+
+    let auBruto = peso * valor;
+    if (this.props.unidadeResultado === '%') {
       auBruto = (peso * valor) / 100;
+    } else if (this.props.unidadeResultado === 'ppm') {
+      auBruto = (peso * valor) / 1000;
     }
 
-    const auRecuperavel = auBruto * (1 - quebra / 100);
-    const taxaGramas = auRecuperavel * (taxa / 100);
+    const teorRecuperavel = valor * (1 - quebraDecimal);
+    const auRecuperavel = auBruto * (1 - quebraDecimal);
+    const taxaGramas = auRecuperavel * taxaDecimal;
     const auLiquido = auRecuperavel - taxaGramas;
 
+    this.props.teorRecuperavel = parseFloat(teorRecuperavel.toFixed(4));
     this.props.auEstimadoBrutoGramas = parseFloat(auBruto.toFixed(4));
     this.props.auEstimadoRecuperavelGramas = parseFloat(auRecuperavel.toFixed(4));
     this.props.taxaServicoEmGramas = parseFloat(taxaGramas.toFixed(4));
@@ -313,6 +318,33 @@ export class ChemicalAnalysisEntity {
   writeOffResidue(): void {
     this.props.isWriteOff = true;
     this.props.status = new ChemicalAnalysisStatusVO('RESIDUO');
+  }
+
+  reverterStatusParaAprovadoParaRecuperacao(): void {
+    this.props.status = new ChemicalAnalysisStatusVO('APROVADO_PARA_RECUPERACAO');
+    this.props.dataAtualizacao = new Date();
+  }
+
+  clearOrdemDeRecuperacaoId(): void {
+    this.props.ordemDeRecuperacaoId = null;
+    this.props.dataAtualizacao = new Date();
+  }
+
+  update(params: {
+    status?: any;
+    ordemDeRecuperacaoId?: string | null;
+    [key: string]: any;
+  }): void {
+    if (params.status) {
+      this.props.status =
+        params.status instanceof ChemicalAnalysisStatusVO
+          ? params.status
+          : new ChemicalAnalysisStatusVO(params.status);
+    }
+    if (params.ordemDeRecuperacaoId !== undefined) {
+      this.props.ordemDeRecuperacaoId = params.ordemDeRecuperacaoId;
+    }
+    this.updateDetails(params);
   }
 
   updateDetails(params: Partial<ChemicalAnalysisProps>): void {

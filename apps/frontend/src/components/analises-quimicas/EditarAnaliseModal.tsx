@@ -37,27 +37,34 @@ export function EditarAnaliseModal({
     try {
       await updateAnaliseQuimica(analise.id, {
         ...values,
-        dataEntrada: values.dataEntrada.toISOString(),
+        dataEntrada: values.dataEntrada ? values.dataEntrada.toISOString() : undefined,
       });
       toast.success("Sucesso!", {
         description: "Análise química atualizada.",
       });
       onSuccess();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Falha ao atualizar análise:", error);
+      const apiMessage = error?.response?.data?.message || error?.message || "Ocorreu um erro ao atualizar a análise. Tente novamente.";
+      const description = Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage;
       toast.error("Erro ao salvar", {
-        description: "Ocorreu um erro ao atualizar a análise. Tente novamente.",
+        description,
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const initialData = {
-    ...analise,
-    dataEntrada: new Date(analise.dataEntrada),
-  }
+  const initialData: Partial<AnaliseQuimicaFormValues> = {
+    clienteId: analise.cliente?.id || (analise as any).clienteId || "",
+    metalType: (analise.metalType as any) || "AU",
+    descricaoMaterial: analise.descricaoMaterial,
+    volumeOuPesoEntrada: analise.volumeOuPesoEntrada,
+    unidadeEntrada: analise.unidadeEntrada,
+    observacoes: analise.observacoes || "",
+    dataEntrada: analise.dataEntrada ? new Date(analise.dataEntrada) : new Date(),
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

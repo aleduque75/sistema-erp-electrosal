@@ -11,7 +11,7 @@ describe('ChemicalAnalysisEntity', () => {
     });
 
     expect(analysis.numeroAnalise).toBe('AN-2026-001');
-    expect(analysis.status.isReceived).toBe(true);
+    expect(analysis.status.isInAnalysis).toBe(true);
 
     analysis.postResult({
       resultadoAnaliseValor: 5.5,

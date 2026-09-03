@@ -405,7 +405,7 @@ export function VisualizarAnaliseModal({
     setIsSavingDescription(true);
     try {
       await updateAnaliseQuimica(currentAnalise.id, {
-        clienteId: currentAnalise.cliente?.id || '',
+        clienteId: currentAnalise.cliente?.id || undefined,
         metalType: currentAnalise.metalType as any || 'AU',
         dataEntrada: currentAnalise.dataEntrada,
         volumeOuPesoEntrada: currentAnalise.volumeOuPesoEntrada,
@@ -415,8 +415,9 @@ export function VisualizarAnaliseModal({
       toast.success("Descrição atualizada!");
       setIsEditingDescription(false);
       fetchAnaliseData(currentAnalise.id);
-    } catch (error) {
-      toast.error("Erro ao atualizar descrição.");
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.message || "Erro ao atualizar descrição.";
+      toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
     } finally {
       setIsSavingDescription(false);
     }
@@ -427,7 +428,7 @@ export function VisualizarAnaliseModal({
     setIsSaving(true);
     try {
       await updateAnaliseQuimica(currentAnalise.id, {
-        clienteId: currentAnalise.cliente?.id || '',
+        clienteId: currentAnalise.cliente?.id || undefined,
         metalType: currentAnalise.metalType as any || 'AU',
         dataEntrada: currentAnalise.dataEntrada,
         volumeOuPesoEntrada: currentAnalise.volumeOuPesoEntrada,
@@ -438,8 +439,9 @@ export function VisualizarAnaliseModal({
       toast.success("Data atualizada!");
       setIsEditing(false);
       fetchAnaliseData(currentAnalise.id);
-    } catch (error) {
-      toast.error("Erro ao atualizar data.");
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.message || "Erro ao atualizar data.";
+      toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
     } finally {
       setIsSaving(false);
     }

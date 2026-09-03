@@ -296,7 +296,10 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
         finalize: data.finalize,
         financialPayments: data.financialPayments?.map(({ goldAmount, ...rest }) => rest), // Remove goldAmount
         metalCreditPayments: data.metalCreditPayments,
-        metalPayments: data.metalPayments,
+        metalPayments: data.metalPayments?.map(mp => ({
+          ...mp,
+          purity: mp.purity > 1 ? mp.purity / 100 : mp.purity,
+        })),
         installmentId: data.selectedInstallmentId || undefined,
       };
 

@@ -14,9 +14,8 @@ describe('PurityVO (pure-metal-lots)', () => {
   });
 
   it('should throw for invalid values', () => {
-    expect(() => new PurityVO(0)).toThrow();
     expect(() => new PurityVO(-0.1)).toThrow();
-    expect(() => new PurityVO(1.05)).toThrow();
+    expect(() => new PurityVO(105)).toThrow();
     expect(() => new PurityVO(NaN)).toThrow();
   });
 });

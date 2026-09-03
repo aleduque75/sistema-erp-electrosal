@@ -4,12 +4,15 @@ export class PurityVO {
   private readonly _value: Decimal;
 
   constructor(purity: number | string | Decimal) {
-    const dec = new Decimal(purity);
+    let dec = new Decimal(purity ?? 1);
     if (dec.isNaN() || !dec.isFinite()) {
       throw new Error('Teor químico inválido.');
     }
-    if (dec.lessThanOrEqualTo(0) || dec.greaterThan(1)) {
-      throw new Error('O teor químico deve ser um valor decimal estritamente entre 0 e 1 (ex: 0.9999).');
+    if (dec.greaterThan(1) && dec.lessThanOrEqualTo(100)) {
+      dec = dec.dividedBy(100);
+    }
+    if (dec.lessThan(0) || dec.greaterThan(1)) {
+      throw new Error('O teor químico deve ser um valor decimal entre 0 e 1 (ex: 0.9999 ou 1.0) ou percentual até 100.');
     }
     this._value = dec.toDecimalPlaces(4);
   }

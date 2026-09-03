@@ -18,7 +18,19 @@ import {
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { PlusCircle, Trash2, PackageSearch } from "lucide-react";
+import {
+  PlusCircle,
+  Trash2,
+  PackageSearch,
+  FileText,
+  ShoppingBag,
+  CreditCard,
+  Building2,
+  TrendingUp,
+  CheckCircle2,
+  RotateCcw,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import Decimal from "decimal.js";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -184,7 +196,7 @@ export function NewSaleForm({ onSave }: any) {
       assignedLots = [{
         inventoryLotId: newItemData.inventoryLotId,
         quantity: newItemData.quantity
-      }];
+      } as any];
     } else if (product && product.inventoryLots && product.inventoryLots.length > 0) {
       // Automatic FIFO allocation
       let remainingToAssign = new Decimal(newItemData.quantity);
@@ -211,7 +223,7 @@ export function NewSaleForm({ onSave }: any) {
           assignedLots.push({
             inventoryLotId: lot.id,
             quantity: amountFromThisLot.toNumber()
-          });
+          } as any);
           remainingToAssign = remainingToAssign.minus(amountFromThisLot);
         }
       }
@@ -379,7 +391,7 @@ export function NewSaleForm({ onSave }: any) {
   return (
     <form
       onSubmit={handleSubmit(onFinalizeSale)}
-      className="flex flex-col h-full bg-background p-1 rounded-lg"
+      className="flex flex-col h-full bg-background min-h-0"
     >
       <AddItemModal
         open={isAddItemModalOpen}
@@ -401,16 +413,40 @@ export function NewSaleForm({ onSave }: any) {
           onLotsSelected={handleLotsSelected}
         />
       )}
-      <div className="flex flex-col lg:flex-row flex-1 gap-4">
-        <div className="w-full lg:w-1/3 space-y-4">
-          <Card className="h-full">
-            <CardHeader className="p-3 md:p-6 pb-2">
-              <CardTitle className="text-base md:text-lg">1. Dados da Venda</CardTitle>
+
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-4 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-1">
+        {/* Coluna Esquerda: Dados da Venda */}
+        <div className="w-full lg:col-span-5 xl:col-span-4 flex flex-col gap-4 lg:overflow-y-auto lg:pr-2">
+          <Card className="border shadow-sm">
+            <CardHeader className="p-3.5 pb-2 border-b bg-muted/10">
+              <CardTitle className="text-sm md:text-base font-semibold flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                1. Dados da Venda
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 p-3 md:p-6 pt-0">
-              <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                <div className="space-y-1">
-                  <Label className="text-xs">Data da Venda</Label>
+            <CardContent className="space-y-3.5 p-3.5 pt-3">
+              {/* Cliente */}
+              <Controller
+                name="clientId"
+                control={control}
+                render={({ field }) => (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Cliente *</Label>
+                    <Combobox
+                      options={clients.map((c) => ({ value: c.id, label: c.name }))}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Buscar ou selecionar cliente..."
+                    />
+                    <p className="text-[11px] text-destructive">{typeof errors.clientId?.message === "string" ? errors.clientId.message : ""}</p>
+                  </div>
+                )}
+              />
+
+              {/* Data da Venda e Nº Pedido */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Data da Venda</Label>
                   <Input
                     type="date"
                     className="h-9 text-xs"
@@ -422,8 +458,8 @@ export function NewSaleForm({ onSave }: any) {
                   name="orderNumber"
                   control={control}
                   render={({ field }) => (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Nº Pedido (Opcional)</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium">Nº Pedido (Opcional)</Label>
                       <Input
                         {...field}
                         type="number"
@@ -437,105 +473,43 @@ export function NewSaleForm({ onSave }: any) {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
-                <Controller
-                  name="clientId"
-                  control={control}
-                  render={({ field }) => (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Cliente</Label>
-                      <Combobox
-                        options={clients.map((c) => ({ value: c.id, label: c.name }))}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Selecione..."
-                      />
-                      <p className="text-[11px] text-destructive">{typeof errors.clientId?.message === "string" ? errors.clientId.message : ""}</p>
-                    </div>
-                  )}
-                />
-                <Controller
-                  name="paymentConditionId"
-                  control={control}
-                  render={({ field }) => (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Condição de Pagamento</Label>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>
-                          {paymentOptions.map(option => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-[11px] text-destructive">{typeof errors.paymentConditionId?.message === "string" ? errors.paymentConditionId.message : ""}</p>
-                    </div>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px]">Ouro (R$)</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-xs"
-                    value={saleGoldQuote}
-                    onChange={(e) => setSaleGoldQuote(Number(e.target.value))}
-                    step="0.01"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px]">Prata (R$)</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-xs"
-                    value={saleSilverQuote}
-                    onChange={(e) => setSaleSilverQuote(Number(e.target.value))}
-                    step="0.01"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px]">Frete (R$)</Label>
-                  <Input
-                    type="number"
-                    className="h-9 text-xs"
-                    value={freightAmount}
-                    onChange={(e) => setFreightAmount(Number(e.target.value))}
-                    step="0.01"
-                  />
-                </div>
-              </div>
-
+              {/* Condição de Pagamento */}
               <Controller
-                name="observation"
+                name="paymentConditionId"
                 control={control}
                 render={({ field }) => (
-                  <div className="space-y-1">
-                    <Label className="text-xs">Observações</Label>
-                    <Textarea
-                      {...field}
-                      placeholder="Observações adicionais..."
-                      className="resize-none h-16 text-xs"
-                    />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Condição de Pagamento *</Label>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione a condição..." /></SelectTrigger>
+                      <SelectContent>
+                        {paymentOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-destructive">{typeof errors.paymentConditionId?.message === "string" ? errors.paymentConditionId.message : ""}</p>
                   </div>
                 )}
               />
 
+              {/* Parcelamento Cartão (Condicional) */}
               {paymentConditionId === "CREDIT_CARD" && (
                 <Controller
                   name="numberOfInstallments"
                   control={control}
                   render={({ field }) => (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Parcelamento (Cartão)</Label>
+                    <div className="p-2.5 bg-muted/30 rounded-lg border space-y-1.5">
+                      <Label className="text-xs font-medium flex items-center gap-1.5">
+                        <CreditCard className="h-3.5 w-3.5 text-primary" /> Parcelamento (Cartão)
+                      </Label>
                       <Select
                         onValueChange={(value) => field.onChange(parseInt(value, 10))}
                         value={field.value?.toString() || "1"}
                       >
-                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione as parcelas..." /></SelectTrigger>
                         <SelectContent>
                           {fees.length > 0 ? (
                             fees.map((feeRule) => (
@@ -553,147 +527,253 @@ export function NewSaleForm({ onSave }: any) {
                 />
               )}
 
+              {/* Conta Corrente (Condicional À Vista) */}
               {currentPaymentMethod === 'A_VISTA' && (
                 <Controller
                   name="contaCorrenteId"
                   control={control}
                   render={({ field }) => (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Receber em</Label>
+                    <div className="p-2.5 bg-muted/30 rounded-lg border space-y-1.5">
+                      <Label className="text-xs font-medium flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-primary" /> Receber em (Conta Corrente)
+                      </Label>
                       <Select onValueChange={field.onChange} value={field.value || ""}>
-                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione a conta..." /></SelectTrigger>
                         <SelectContent>
                           {contasCorrentes.map((c) => (
                             <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                          ))}</SelectContent>
+                          ))}
+                        </SelectContent>
                       </Select>
                       <p className="text-[11px] text-destructive">{typeof errors.contaCorrenteId?.message === "string" ? errors.contaCorrenteId.message : ""}</p>
                     </div>
                   )}
                 />
               )}
+
+              {/* Cotações do Dia & Frete */}
+              <div className="p-3 bg-muted/20 rounded-lg border space-y-2">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <TrendingUp className="h-3.5 w-3.5 text-amber-500" /> Cotações do Dia & Frete
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Ouro (R$/g)</Label>
+                    <Input
+                      type="number"
+                      className="h-8 text-xs font-medium"
+                      value={saleGoldQuote}
+                      onChange={(e) => setSaleGoldQuote(Number(e.target.value))}
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Prata (R$/g)</Label>
+                    <Input
+                      type="number"
+                      className="h-8 text-xs font-medium"
+                      value={saleSilverQuote}
+                      onChange={(e) => setSaleSilverQuote(Number(e.target.value))}
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Frete (R$)</Label>
+                    <Input
+                      type="number"
+                      className="h-8 text-xs font-medium"
+                      value={freightAmount}
+                      onChange={(e) => setFreightAmount(Number(e.target.value))}
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Observações */}
+              <Controller
+                name="observation"
+                control={control}
+                render={({ field }) => (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Observações</Label>
+                    <Textarea
+                      {...field}
+                      placeholder="Observações adicionais da venda..."
+                      className="resize-none h-16 text-xs"
+                    />
+                  </div>
+                )}
+              />
             </CardContent>
           </Card>
         </div>
-        <div className="w-full lg:w-2/3 space-y-4 flex flex-col">
-          <Card className="flex-1 flex flex-col">
-            <CardHeader className="flex-row items-center justify-between">
-              <CardTitle className="text-lg">Itens da Venda</CardTitle>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddNewItem}>
-                <PlusCircle className="mr-2 h-4 w-4" />
+
+        {/* Coluna Direita: Itens da Venda e Fechamento */}
+        <div className="w-full lg:col-span-7 xl:col-span-8 flex flex-col min-h-0 h-full">
+          <Card className="flex-1 flex flex-col min-h-0 border rounded-xl overflow-hidden shadow-sm bg-card">
+            <CardHeader className="p-3.5 md:p-4 border-b flex-row items-center justify-between bg-muted/10">
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4 text-primary" />
+                <CardTitle className="text-base font-semibold">2. Itens da Venda</CardTitle>
+                <Badge variant="secondary" className="text-xs font-medium px-2 py-0.5">
+                  {items.length} {items.length === 1 ? 'item' : 'itens'}
+                </Badge>
+              </div>
+              <Button type="button" size="sm" onClick={handleAddNewItem} className="gap-1.5 shadow-sm">
+                <PlusCircle className="h-4 w-4" />
                 Adicionar Item
               </Button>
             </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-hidden">
-              <ScrollArea className="h-[350px] w-full">
+
+            <CardContent className="flex-1 p-0 min-h-0 overflow-y-auto">
+              {items.length > 0 ? (
                 <div className="min-w-full overflow-x-auto">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-muted/30 sticky top-0 z-10">
                       <TableRow>
-                        <TableHead className="w-[40%]">Produto</TableHead>
-                        <TableHead>Qtd</TableHead>
-                        <TableHead>Preço Unit.</TableHead>
-                        <TableHead>Lotes</TableHead>
-                        <TableHead className="text-right">Subtotal</TableHead>
-                        <TableHead></TableHead>
+                        <TableHead className="w-[38%]">Produto</TableHead>
+                        <TableHead className="w-[14%] text-center">Qtd</TableHead>
+                        <TableHead className="w-[18%] text-right">Preço Unit.</TableHead>
+                        <TableHead className="w-[12%] text-center">Lotes</TableHead>
+                        <TableHead className="w-[14%] text-right">Subtotal</TableHead>
+                        <TableHead className="w-[4%]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {items.length > 0 ? (
-                        items.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell>
-                              <span className="font-medium">{item.name}</span>
-                              {item.laborPercentage !== undefined && (
-                                <div className="text-xs text-muted-foreground">
-                                  Mão de obra: {item.laborPercentage}%
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  // Allow typing decimals, but limit precision if needed or just pass as string then parse
-                                  handleUpdateItem(index, 'quantity', val === '' ? 0 : parseFloat(val));
-                                }}
-                                className="w-24"
-                                step="0.01"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={item.price}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  handleUpdateItem(index, 'price', val === '' ? 0 : parseFloat(val));
-                                }}
-                                className="w-24"
-                                step="0.01"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Button type="button" variant="outline" size="sm" onClick={() => openLotSelector(index)}>
-                                <PackageSearch className="mr-2 h-4 w-4" />
-                                ({item.lots.length})
-                              </Button>
-                            </TableCell>
-                            <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
-                            <TableCell>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(index)}>
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center h-full">
-                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                              <p>Nenhum item adicionado.</p>
-                              <p className="text-sm">Clique em "Adicionar Item" para começar.</p>
-                            </div>
+                      {items.map((item, index) => (
+                        <TableRow key={index} className="hover:bg-muted/40 transition-colors">
+                          <TableCell className="py-2.5">
+                            <span className="font-medium text-sm text-foreground block">{item.name}</span>
+                            {item.laborPercentage !== undefined && (
+                              <span className="inline-block mt-0.5 text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                Mão de obra: {item.laborPercentage}%
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center py-2.5">
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                handleUpdateItem(index, 'quantity', val === '' ? 0 : parseFloat(val));
+                              }}
+                              className="w-20 mx-auto h-8 text-xs text-center font-medium"
+                              step="0.01"
+                            />
+                          </TableCell>
+                          <TableCell className="text-right py-2.5">
+                            <Input
+                              type="number"
+                              value={item.price}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                handleUpdateItem(index, 'price', val === '' ? 0 : parseFloat(val));
+                              }}
+                              className="w-24 ml-auto h-8 text-xs text-right font-medium"
+                              step="0.01"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center py-2.5">
+                            <Button
+                              type="button"
+                              variant={item.lots?.length > 0 ? "secondary" : "outline"}
+                              size="sm"
+                              onClick={() => openLotSelector(index)}
+                              className="h-8 px-2.5 text-xs gap-1.5 font-medium"
+                              title="Gerenciar lotes do item"
+                            >
+                              <PackageSearch className="h-3.5 w-3.5" />
+                              <span>{item.lots?.length || 0}</span>
+                            </Button>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-sm py-2.5">
+                            {formatCurrency(item.price * item.quantity)}
+                          </TableCell>
+                          <TableCell className="py-2.5 text-center">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveItem(index)}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
-                      )}
+                      ))}
                     </TableBody>
                   </Table>
                 </div>
-              </ScrollArea>
-            </CardContent>
-            <div className="flex flex-col space-y-2 text-right p-4 border-t">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatCurrency(totalAmount)}</span>
-              </div>
-              {feeAmount > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Taxa do Cartão ({feePercentage.toFixed(2)}%)
-                    {absorbCreditCardFee && " (Absorvida pela empresa)"}
-                  </span>
-                  <span>{formatCurrency(feeAmount)}</span>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full min-h-[260px] p-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
+                    <PackageSearch className="h-6 w-6" />
+                  </div>
+                  <p className="font-semibold text-sm text-foreground">Nenhum item adicionado à venda</p>
+                  <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
+                    Clique no botão abaixo para selecionar os produtos, definir quantidades e associar lotes.
+                  </p>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddNewItem} className="gap-2 text-xs">
+                    <PlusCircle className="h-3.5 w-3.5 text-primary" /> Adicionar Primeiro Item
+                  </Button>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Frete</span>
-                <span>{formatCurrency(freightAmount)}</span>
+            </CardContent>
+
+            {/* Fechamento Financeiro & Botão Salvar Integrado */}
+            <div className="border-t bg-muted/15 p-3.5 md:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+              <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
+                <div>
+                  Subtotal: <span className="font-semibold text-foreground">{formatCurrency(totalAmount)}</span>
+                </div>
+                {feeAmount > 0 && (
+                  <div>
+                    Taxa Cartão ({feePercentage.toFixed(2)}%):{" "}
+                    <span className="font-semibold text-foreground">
+                      {formatCurrency(feeAmount)}
+                      {absorbCreditCardFee && " (Absorvida)"}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  Frete: <span className="font-semibold text-foreground">{formatCurrency(freightAmount)}</span>
+                </div>
               </div>
-              <div className="flex justify-between text-xl font-bold pt-2 border-t">
-                <span>Total</span>
-                <span>{formatCurrency(finalAmount)}</span>
+
+              <div className="flex items-center justify-between md:justify-end gap-5 pt-2 md:pt-0 border-t md:border-t-0">
+                <div className="text-left md:text-right">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                    Total Geral
+                  </span>
+                  <span className="text-2xl md:text-3xl font-black text-primary tracking-tight">
+                    {formatCurrency(finalAmount)}
+                  </span>
+                </div>
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isSubmitting}
+                  className="h-11 md:h-12 px-6 md:px-8 text-sm md:text-base font-bold shadow-md hover:shadow-lg transition-all gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RotateCcw className="h-4 w-4 animate-spin" />
+                      <span>Finalizando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5" />
+                      <span>Salvar Venda</span>
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </Card>
         </div>
-      </div>
-      <div className="mt-6 flex justify-end">
-        <Button type="submit" size="lg" disabled={isSubmitting}>
-          {isSubmitting ? "Finalizando..." : "Salvar Venda"}
-        </Button>
       </div>
     </form>
   );

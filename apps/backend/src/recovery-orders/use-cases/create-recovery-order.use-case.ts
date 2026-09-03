@@ -84,12 +84,17 @@ export class CreateRecoveryOrderUseCase {
       );
     }
 
-    const invalidStatusAnalyses = analyses.filter(
-      (analise) =>
-        analise.status !== StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO,
-    );
+    const invalidStatusAnalyses = analyses.filter((analise) => {
+      const statusValue =
+        (analise as any).statusValue ||
+        (analise as any).status?.value ||
+        (analise as any).status;
+      return statusValue !== StatusAnaliseQuimica.APROVADO_PARA_RECUPERACAO;
+    });
     if (invalidStatusAnalyses.length > 0) {
-      console.error(`[CREATE_RECOVERY_ORDER] Conflict: Analyses not in APROVADO_PARA_RECUPERACAO status. IDs: ${invalidStatusAnalyses.map(a => a.id).join(', ')}`);
+      console.error(
+        `[CREATE_RECOVERY_ORDER] Conflict: Analyses not in APROVADO_PARA_RECUPERACAO status. IDs: ${invalidStatusAnalyses.map(a => a.id).join(', ')}`,
+      );
       throw new ConflictException(
         'Algumas análises químicas não estão com o status APROVADO_PARA_RECUPERACAO.',
       );
@@ -161,10 +166,17 @@ export class CreateRecoveryOrderUseCase {
 
       // Update status of chemical analyses
       for (const analise of analyses) {
-        analise.update({
-          status: StatusAnaliseQuimica.EM_RECUPERACAO,
-          ordemDeRecuperacaoId: createdRecoveryOrder.id.toString(),
-        });
+        if (typeof (analise as any).update === 'function') {
+          (analise as any).update({
+            status: StatusAnaliseQuimica.EM_RECUPERACAO,
+            ordemDeRecuperacaoId: createdRecoveryOrder.id.toString(),
+          });
+        } else if (typeof (analise as any).updateDetails === 'function') {
+          (analise as any).updateDetails({
+            status: StatusAnaliseQuimica.EM_RECUPERACAO,
+            ordemDeRecuperacaoId: createdRecoveryOrder.id.toString(),
+          });
+        }
         await this.analiseRepository.save(analise, organizationId, tx as any);
       }
 

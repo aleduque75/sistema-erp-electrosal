@@ -7,10 +7,9 @@ describe('PurityVO', () => {
     expect(vo.toPercentage()).toBe(99.95);
   });
 
-  it('should throw error for values <= 0 or > 1', () => {
-    expect(() => new PurityVO(0)).toThrow('O teor químico deve ser um valor decimal estritamente entre 0 e 1');
-    expect(() => new PurityVO(-0.5)).toThrow('O teor químico deve ser um valor decimal estritamente entre 0 e 1');
-    expect(() => new PurityVO(1.05)).toThrow('O teor químico deve ser um valor decimal estritamente entre 0 e 1');
+  it('should throw error for invalid values', () => {
+    expect(() => new PurityVO(-0.5)).toThrow('O teor químico deve ser um valor decimal entre 0 e 1');
+    expect(() => new PurityVO(105)).toThrow('O teor químico deve ser um valor decimal entre 0 e 1');
   });
 
   it('should calculate pure metal yield from gross weight', () => {

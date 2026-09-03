@@ -4,8 +4,10 @@ export interface ChemicalAnalysesFilters {
   status?: string | string[];
   clienteId?: string;
   metalType?: string;
-  dataInicio?: Date;
-  dataFim?: Date;
+  dataInicio?: Date | string;
+  dataFim?: Date | string;
+  startDate?: Date | string;
+  endDate?: Date | string;
   numeroAnalise?: string;
 }
 
@@ -25,6 +27,8 @@ export abstract class ChemicalAnalysesRepository {
   abstract findAnalisesAprovadasSemOrdem(organizationId: string, clienteId?: string, tx?: any): Promise<any[]>;
 
   abstract delete(id: string, organizationId: string, tx?: any): Promise<void>;
+
+  abstract getNextCrrNumber(organizationId: string, tx?: any): Promise<string>;
 
   abstract executeInTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T>;
 }

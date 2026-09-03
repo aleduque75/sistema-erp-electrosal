@@ -141,7 +141,7 @@ export default function AnalisesQuimicasPage() {
             <Combobox
               options={[{ value: 'all', label: 'Todos' }, ...clients.map(client => ({ value: client.id, label: client.name }))]}
               value={clientFilter}
-              onChange={setClientFilter}
+              onChange={(value) => setClientFilter(value || 'all')}
               placeholder="Selecione um cliente..."
             />
           </div>

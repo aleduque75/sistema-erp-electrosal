@@ -6,6 +6,7 @@ import { TipoMetal } from '../enums/tipo-metal.enum';
 
 export interface AnaliseQuimicaProps {
   id?: string;
+  organizationId?: string;
   clienteId?: string | null;
   cliente?: { name: string };
   metalType: TipoMetal;
@@ -61,6 +62,7 @@ export class AnaliseQuimica extends AggregateRoot<AnaliseQuimicaProps> {
     return new AnaliseQuimica(props, id);
   }
 
+  get organizationId(): string | undefined { return this.props.organizationId; }
   get clienteId(): string | null | undefined { return this.props.clienteId; }
   get metalType(): TipoMetal { return this.props.metalType; }
   get cliente(): { name: string } | undefined { return this.props.cliente; }

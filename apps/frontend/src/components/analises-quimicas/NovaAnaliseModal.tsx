@@ -27,16 +27,26 @@ export function NovaAnaliseModal({ onAnaliseCreated }: NovaAnaliseModalProps) {
   const onSubmit = async (values: AnaliseQuimicaFormValues) => {
     setIsSubmitting(true);
     try {
-      await createAnaliseQuimica(values);
+      await createAnaliseQuimica({
+        clienteId: values.clienteId,
+        metalType: values.metalType,
+        dataEntrada: values.dataEntrada ? values.dataEntrada.toISOString() : undefined,
+        descricaoMaterial: values.descricaoMaterial,
+        volumeOuPesoEntrada: Number(values.volumeOuPesoEntrada),
+        unidadeEntrada: values.unidadeEntrada,
+        observacoes: values.observacoes,
+      });
       toast.success("Sucesso!", {
         description: "Nova análise química registrada.",
       });
       setIsOpen(false);
       onAnaliseCreated(); // Callback to refresh the list
-    } catch (error) {
+    } catch (error: any) {
       console.error("Falha ao criar análise:", error);
+      const apiMessage = error?.response?.data?.message || error?.message || "Ocorreu um erro ao registrar a análise. Tente novamente.";
+      const description = Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage;
       toast.error("Erro ao salvar", {
-        description: "Ocorreu um erro ao registrar a análise. Tente novamente.",
+        description,
       });
     } finally {
       setIsSubmitting(false);

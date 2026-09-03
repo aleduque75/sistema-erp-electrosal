@@ -28,8 +28,8 @@ import { getPessoas } from "@/services/pessoasApi";
 
 const formSchema = z.object({
   clienteId: z.string().uuid({ message: "Por favor, selecione um cliente." }),
-  metalType: z.enum(['AU', 'AG', 'RH'], { required_error: "O tipo de metal é obrigatório." }),
-  dataEntrada: z.date({ required_error: "A data de entrada é obrigatória." }),
+  metalType: z.enum(['AU', 'AG', 'RH']),
+  dataEntrada: z.date({ message: "A data de entrada é obrigatória." }),
   descricaoMaterial: z.string().min(1, { message: "A descrição do material é obrigatória." }),
   volumeOuPesoEntrada: z.coerce.number().min(0, { message: "O valor deve ser no mínimo zero." }),
   unidadeEntrada: z.string().min(1, { message: "A unidade é obrigatória." }),
@@ -66,16 +66,21 @@ export function AnaliseQuimicaForm({
   }, []);
 
   const form = useForm<AnaliseQuimicaFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: initialData || {
+      clienteId: "",
+      metalType: "AU",
+      descricaoMaterial: "",
+      volumeOuPesoEntrada: 0,
+      unidadeEntrada: "Lt",
       dataEntrada: new Date(),
-      metalType: 'AU',
+      observacoes: "",
     },
   });
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={(form as any).handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
