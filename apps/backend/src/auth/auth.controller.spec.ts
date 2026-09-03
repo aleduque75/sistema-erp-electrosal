@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { RegisterUserUseCase } from './use-cases/register-user.use-case';
+import { LoginUserUseCase } from './use-cases/login-user.use-case';
+import { GetUserProfileUseCase } from './use-cases/get-user-profile.use-case';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -10,11 +12,16 @@ describe('AuthController', () => {
       controllers: [AuthController],
       providers: [
         {
-          provide: AuthService,
-          useValue: {
-            register: jest.fn(),
-            login: jest.fn(),
-          },
+          provide: RegisterUserUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: LoginUserUseCase,
+          useValue: { execute: jest.fn() },
+        },
+        {
+          provide: GetUserProfileUseCase,
+          useValue: { execute: jest.fn() },
         },
       ],
     }).compile();

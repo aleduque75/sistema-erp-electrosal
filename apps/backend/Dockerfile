@@ -7,7 +7,7 @@ RUN npm install -g pnpm@9.0.6
 COPY . .
 
 # Instala tudo (incluindo devDeps)
-RUN pnpm install --frozen-lockfile
+RUN pnpm config set fetch-timeout 300000 && pnpm install --frozen-lockfile
 
 # 1. Build do Core, geração do Prisma Client e Build do Backend
 RUN pnpm --filter "@sistema-erp-electrosal/core" build

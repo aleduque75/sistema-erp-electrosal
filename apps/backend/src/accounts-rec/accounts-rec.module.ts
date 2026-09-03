@@ -5,6 +5,8 @@ import { SettingsModule } from '../settings/settings.module';
 import { QuotationsModule } from '../quotations/quotations.module';
 import { SalesModule } from '../sales/sales.module';
 import { PureMetalLotsModule } from '../pure-metal-lots/pure-metal-lots.module';
+import { MetalCreditsModule } from '../metal-credits/metal-credits.module';
+import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
 import { AccountsRecRepository } from './repositories/account-rec.repository';
 import { PrismaAccountsRecRepository } from './repositories/prisma-account-rec.repository';
 import { CreateAccountRecUseCase } from './use-cases/create-account-rec.use-case';
@@ -27,6 +29,8 @@ import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
     QuotationsModule,
     SalesModule,
     PureMetalLotsModule,
+    MetalCreditsModule,
+    MetalAccountsModule,
   ],
   controllers: [AccountsRecController],
   providers: [
