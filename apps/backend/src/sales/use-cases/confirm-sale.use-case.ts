@@ -6,7 +6,7 @@ import { SettingsService } from '../../settings/settings.service';
 import { ConfirmSaleDto } from '../dtos/sales.dto';
 import Decimal from 'decimal.js';
 import { CalculateSaleAdjustmentUseCase } from './calculate-sale-adjustment.use-case';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreatePureMetalLotUseCase } from '../../pure-metal-lots/use-cases/create-pure-metal-lot.use-case';
 
 @Injectable()
 export class ConfirmSaleUseCase {
@@ -14,7 +14,7 @@ export class ConfirmSaleUseCase {
     private prisma: PrismaService,
     private settingsService: SettingsService,
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
-    private pureMetalLotsService: PureMetalLotsService,
+    private createPureMetalLotUseCase: CreatePureMetalLotUseCase,
   ) {}
 
   async execute(organizationId: string, userId: string, saleId: string, confirmSaleDto: ConfirmSaleDto) {
@@ -131,7 +131,7 @@ export class ConfirmSaleUseCase {
           ? await tx.accountRec.update({ where: { id: existingAccountRec.id }, data: accountRecData })
           : await tx.accountRec.create({ data: accountRecData });
 
-        await this.pureMetalLotsService.create(
+        await this.createPureMetalLotUseCase.execute(
           organizationId,
           {
             sourceType: 'PAGAMENTO_PEDIDO_CLIENTE',

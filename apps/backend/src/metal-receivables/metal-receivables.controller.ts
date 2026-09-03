@@ -1,12 +1,12 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { CurrentUser } from '@auth/decorators/current-user.decorator';
-import { MetalReceivablesService } from './metal-receivables.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { ListMetalReceivablesUseCase } from './use-cases/list-metal-receivables.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('metal-receivables')
 export class MetalReceivablesController {
-  constructor(private readonly receivablesService: MetalReceivablesService) {}
+  constructor(private readonly listMetalReceivablesUseCase: ListMetalReceivablesUseCase) {}
 
   @Get()
   findAll(
@@ -14,6 +14,6 @@ export class MetalReceivablesController {
     @Query('pessoaId') pessoaId?: string,
     @Query('status') status?: string,
   ) {
-    return this.receivablesService.findAll(organizationId, pessoaId, status);
+    return this.listMetalReceivablesUseCase.execute(organizationId, pessoaId, status);
   }
 }

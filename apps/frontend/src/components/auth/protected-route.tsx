@@ -14,7 +14,6 @@ interface ProtectedRouteProps {
 const SECTOR_ROUTES: Record<string, string> = {
     '/pcp': 'PCP',
     '/recovery-orders': 'PCP',
-    '/recuperacoes': 'PCP',
     '/chemical-reactions': 'PCP',
     '/financial': 'FINANCEIRO',
     '/transacoes': 'FINANCEIRO',

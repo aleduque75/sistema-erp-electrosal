@@ -1,111 +1,66 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import {
-  IMetalCreditRepository,
-  MetalCredit,
-  UniqueEntityID,
-} from '@sistema-erp-electrosal/core';
-import { MetalCredit as PrismaMetalCredit } from '@prisma/client';
-import { MetalCreditWithClientNameDto } from '../dtos/metal-credit-with-client-name.dto';
-import { MetalCreditWithUsageDto, MetalAccountEntryDto, SaleUsageDto } from '../dtos/metal-credit-with-usage.dto';
+import { MetalCreditsRepository } from './metal-credit.repository';
+import { MetalCreditEntity } from '../entities/metal-credit.entity';
+import { MetalCreditMapper } from '../mappers/metal-credit.mapper';
 
 @Injectable()
-export class PrismaMetalCreditRepository implements IMetalCreditRepository {
-  constructor(private prisma: PrismaService) {}
+export class PrismaMetalCreditRepository implements MetalCreditsRepository {
+  constructor(private readonly prisma: PrismaService) {}
 
-  private mapToDomain(dbData: PrismaMetalCredit): MetalCredit {
-    const { id, ...props } = dbData;
-    const metalCredit = MetalCredit.create(
-      {
-        ...props,
-      },
-      UniqueEntityID.create(id),
-    );
-    return metalCredit;
+  private getClient(tx?: any) {
+    return tx || this.prisma;
   }
 
-  async create(metalCredit: MetalCredit): Promise<MetalCredit> {
-    const data = {
-      id: metalCredit.id.toString(),
-      organizationId: metalCredit.organizationId,
-      clientId: metalCredit.clientId,
-      chemicalAnalysisId: metalCredit.chemicalAnalysisId,
-      metalType: metalCredit.metalType,
-      grams: metalCredit.grams,
-      date: metalCredit.date,
-    };
-
-    const dbMetalCredit = await this.prisma.metalCredit.create({ data });
-    return this.mapToDomain(dbMetalCredit);
+  async create(metalCredit: MetalCreditEntity, tx?: any): Promise<MetalCreditEntity> {
+    const data = MetalCreditMapper.toPersistence(metalCredit);
+    const created = await this.getClient(tx).metalCredit.create({ data });
+    return MetalCreditMapper.toDomain(created);
   }
 
-  async findById(id: UniqueEntityID): Promise<MetalCredit | null> {
-    const dbMetalCredit = await this.prisma.metalCredit.findUnique({
-      where: { id: id.toString() },
-    });
-
-    if (!dbMetalCredit) {
-      return null;
-    }
-
-    return this.mapToDomain(dbMetalCredit);
-  }
-
-  async updateGrams(
-    id: UniqueEntityID,
-    newGrams: number,
-    tx?: any,
-  ): Promise<MetalCredit> {
-    const prisma = tx || this.prisma;
-    const dbMetalCredit = await prisma.metalCredit.update({
-      where: { id: id.toString() },
-      data: { grams: newGrams },
-    });
-
-    return this.mapToDomain(dbMetalCredit);
-  }
-
-  async update(
-    id: string,
-    data: Partial<MetalCredit>,
-    organizationId: string,
-  ): Promise<MetalCredit> {
-    const dbMetalCredit = await this.prisma.metalCredit.update({
+  async findById(id: string, organizationId: string, tx?: any): Promise<MetalCreditEntity | null> {
+    const raw = await this.getClient(tx).metalCredit.findUnique({
       where: { id, organizationId },
-      data,
     });
-
-    return this.mapToDomain(dbMetalCredit);
+    if (!raw) return null;
+    return MetalCreditMapper.toDomain(raw);
   }
 
-  async findByClientId(
-    clientId: string,
-    organizationId: string,
-  ): Promise<MetalCredit[]> {
-    const dbMetalCredits = await this.prisma.metalCredit.findMany({
-      where: {
-        clientId,
-        organizationId,
-      },
-      orderBy: {
-        date: 'asc',
-      },
+  async findByClientId(clientId: string, organizationId: string, tx?: any): Promise<MetalCreditEntity[]> {
+    const records = await this.getClient(tx).metalCredit.findMany({
+      where: { clientId, organizationId },
+      orderBy: { date: 'asc' },
     });
-
-    return dbMetalCredits.map(this.mapToDomain);
+    return records.map(MetalCreditMapper.toDomain);
   }
 
-  async findAll(organizationId: string): Promise<MetalCredit[]> {
-    const dbMetalCredits = await this.prisma.metalCredit.findMany({
-      where: {
-        organizationId,
-      },
-      orderBy: {
-        date: 'asc',
-      },
+  async findAll(organizationId: string, tx?: any): Promise<MetalCreditEntity[]> {
+    const records = await this.getClient(tx).metalCredit.findMany({
+      where: { organizationId },
+      orderBy: { date: 'asc' },
     });
-
-    return dbMetalCredits.map(this.mapToDomain);
+    return records.map(MetalCreditMapper.toDomain);
   }
 
+  async update(metalCredit: MetalCreditEntity, tx?: any): Promise<MetalCreditEntity> {
+    if (!metalCredit.id) {
+      throw new Error('Não é possível atualizar crédito de metal sem ID.');
+    }
+    const data = MetalCreditMapper.toPersistence(metalCredit);
+    const updated = await this.getClient(tx).metalCredit.update({
+      where: { id: metalCredit.id },
+      data: {
+        grams: data.grams,
+        settledGrams: data.settledGrams,
+        status: data.status,
+        date: data.date,
+        pureMetalLotId: data.pureMetalLotId,
+      },
+    });
+    return MetalCreditMapper.toDomain(updated);
+  }
+
+  async executeInTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(fn);
+  }
 }

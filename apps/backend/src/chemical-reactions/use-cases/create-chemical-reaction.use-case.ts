@@ -4,7 +4,7 @@ import { CreateChemicalReactionDto } from '../dtos/create-chemical-reaction.dto'
 import { ChemicalReactionStatusPrisma, EntityType } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { GenerateNextNumberUseCase } from '../../common/use-cases/generate-next-number.use-case';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreatePureMetalLotMovementUseCase } from '../../pure-metal-lot-movements/use-cases/create-pure-metal-lot-movement.use-case';
 import { AddRawMaterialToChemicalReactionUseCase } from './add-raw-material.use-case';
 
 export interface CreateChemicalReactionCommand {
@@ -17,7 +17,7 @@ export class CreateChemicalReactionUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly generateNextNumberUseCase: GenerateNextNumberUseCase,
-    private readonly pureMetalLotsService: PureMetalLotsService,
+    private readonly createPureMetalLotMovementUseCase: CreatePureMetalLotMovementUseCase,
     private readonly addRawMaterialUseCase: AddRawMaterialToChemicalReactionUseCase,
   ) {}
 
@@ -73,15 +73,15 @@ export class CreateChemicalReactionUseCase {
           throw new BadRequestException(`Lote ${lot.id} não tem gramas suficientes. Restante: ${lot.remainingGrams}, Solicitado: ${lotInfo.gramsToUse}`);
         }
 
-        // Use PureMetalLotsService to create movement and update balance
-        await this.pureMetalLotsService.createPureMetalLotMovement(
-          organizationId,
-          lot.id,
+        // Use CreatePureMetalLotMovementUseCase to create movement and update balance
+        await this.createPureMetalLotMovementUseCase.execute(
           {
+            pureMetalLotId: lot.id,
             type: 'EXIT',
             grams: lotInfo.gramsToUse,
             notes: `Utilizado na Reação Química ${reactionNumber}`,
           },
+          organizationId,
           tx,
         );
 

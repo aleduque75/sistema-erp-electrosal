@@ -6,7 +6,7 @@ import { CalculateSaleAdjustmentUseCase } from '../../sales/use-cases/calculate-
 import { PayAccountsRecWithMetalDto } from '../dtos/pay-accounts-rec-with-metal.dto';
 import { Decimal } from 'decimal.js';
 import { TipoTransacaoPrisma, SaleStatus } from '@prisma/client';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreatePureMetalLotUseCase } from '../../pure-metal-lots/use-cases/create-pure-metal-lot.use-case';
 
 @Injectable()
 export class PayAccountsRecWithMetalUseCase {
@@ -17,7 +17,7 @@ export class PayAccountsRecWithMetalUseCase {
     private quotationsService: QuotationsService,
     private settingsService: SettingsService,
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
-    private pureMetalLotsService: PureMetalLotsService,
+    private createPureMetalLotUseCase: CreatePureMetalLotUseCase,
   ) {}
 
   async execute(
@@ -96,9 +96,9 @@ organizationId: string,
         },
       });
 
-      // 5. Create a new pure_metal_lot for the FULL received amount using PureMetalLotsService
+      // 5. Create a new pure_metal_lot for the FULL received amount using CreatePureMetalLotUseCase
       const description = `Pagamento da Venda #${accountsRec.sale?.orderNumber} - Cliente: ${accountsRec.sale?.pessoa.name}`
-      await this.pureMetalLotsService.create(
+      await this.createPureMetalLotUseCase.execute(
         organizationId,
         {
           sourceType: 'PAGAMENTO_PEDIDO_CLIENTE',

@@ -40,7 +40,6 @@ import { PdfImportModule } from './pdf-import/pdf-import.module';
 import { JsonImportsModule } from './json-imports/json-imports.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { AnalisesQuimicasModule } from './analises-quimicas';
-import { RecuperacoesModule } from './recuperacoes';
 import { RecoveryOrdersModule } from './recovery-orders/recovery-orders.module';
 import { MetalAccountsModule } from './metal-accounts/metal-accounts.module';
 import { MetalReceivablesModule } from './metal-receivables/metal-receivables.module';
@@ -117,7 +116,6 @@ import { OrganizationModule } from './organization/organization.module';
     JsonImportsModule,
     PurchaseOrdersModule,
     AnalisesQuimicasModule,
-    RecuperacoesModule,
     RecoveryOrdersModule,
     MetalAccountsModule,
     MetalReceivablesModule,

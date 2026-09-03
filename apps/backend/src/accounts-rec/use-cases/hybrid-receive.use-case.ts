@@ -9,7 +9,7 @@ import { HybridReceiveDto } from '../dtos/hybrid-receive.dto';
 import { Decimal } from 'decimal.js';
 import { SettingsService } from '../../settings/settings.service';
 import { CalculateSaleAdjustmentUseCase } from '../../sales/use-cases/calculate-sale-adjustment.use-case';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreatePureMetalLotUseCase } from '../../pure-metal-lots/use-cases/create-pure-metal-lot.use-case';
 
 enum TipoTransacaoPrisma {
   CREDITO = 'CREDITO',
@@ -22,7 +22,7 @@ export class HybridReceiveUseCase {
     private readonly prisma: PrismaService,
     private readonly settingsService: SettingsService,
     private readonly calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
-    private readonly pureMetalLotsService: PureMetalLotsService,
+    private readonly createPureMetalLotUseCase: CreatePureMetalLotUseCase,
   ) {}
 
   async execute(
@@ -327,7 +327,7 @@ export class HybridReceiveUseCase {
           }
 
           const description = `Pagamento da Venda #${accountRec.sale?.orderNumber} - Cliente: ${accountRec.sale?.pessoa.name}`;
-          await this.pureMetalLotsService.create(
+          await this.createPureMetalLotUseCase.execute(
             organizationId,
             {
               sourceType: 'PAGAMENTO_PEDIDO_CLIENTE',

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { MetalPaymentRepository } from '../repositories/metal-payment.repository';
-import { PayClientWithMetalDto } from '../dto/pay-client-with-metal.dto';
+import { PayClientWithMetalDto } from '../dtos/pay-client-with-metal.dto';
 import { MetalPaymentEntity } from '../entities/metal-payment.entity';
 import { MetalPaymentMapper, MetalPaymentResponseDto } from '../mappers/metal-payment.mapper';
 import { CreateTransacaoUseCase } from '../../transacoes/use-cases/create-transacao.use-case';

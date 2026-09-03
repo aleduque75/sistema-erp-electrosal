@@ -28,7 +28,6 @@ export * from './domain/analises-quimicas/dtos/update-analise-quimica.dto';
 export * from './domain/analises-quimicas/dtos/criar-analise-quimica.dto';
 export * from './domain/analises-quimicas/dtos/lancar-resultado-analise.dto';
 export * from './domain/analises-quimicas/dtos/listar-analises.query.dto';
-export * from './domain/recuperacoes/recuperacao.entity';
 export * from './domain/analises-quimicas/dtos/registrar-nova-analise.dto';
 
 // Explicitly re-export from _shared for direct access

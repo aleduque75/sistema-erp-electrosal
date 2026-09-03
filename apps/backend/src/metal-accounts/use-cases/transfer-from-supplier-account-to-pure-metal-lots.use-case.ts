@@ -4,6 +4,7 @@ import { TransferFromSupplierAccountDto } from '../dtos/transfer-from-supplier-a
 import { TipoMetal, TipoTransacaoPrisma, ContaCorrenteType, PureMetalLotStatus } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { QuotationsService } from '../../quotations/quotations.service';
+import { CreatePureMetalLotUseCase } from '../../pure-metal-lots/use-cases/create-pure-metal-lot.use-case';
 
 export interface TransferFromSupplierAccountToPureMetalLotsCommand {
   organizationId: string;
@@ -15,6 +16,7 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly quotationsService: QuotationsService,
+    private readonly createPureMetalLotUseCase: CreatePureMetalLotUseCase,
   ) {}
 
   async execute(command: TransferFromSupplierAccountToPureMetalLotsCommand): Promise<any> {
@@ -76,10 +78,10 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
         },
       });
 
-      // 5. Criar um novo pure_metal_lot (entrada no estoque da empresa)
-      await tx.pure_metal_lots.create({
-        data: {
-          organizationId,
+      // 5. Criar um novo pure_metal_lot (entrada no estoque da empresa) usando UseCase
+      await this.createPureMetalLotUseCase.execute(
+        organizationId,
+        {
           sourceType: 'SUPPLIER_ACCOUNT_TRANSFER',
           sourceId: supplierMetalAccountId,
           metalType: TipoMetal.AU,
@@ -87,9 +89,10 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
           remainingGrams: grams,
           purity: 1, // Assumindo pureza 100% para ouro transferido
           notes: `Transferência da Conta Fornecedor ${supplierAccount.nome}: ${notes}`,
-          entryDate: transferDate || new Date(), // Usa a data da transferência ou a data atual
+          entryDate: (transferDate ? new Date(transferDate) : new Date()).toISOString(),
         },
-      });
+        tx,
+      );
 
       // 6. Registrar a transação de crédito na conta de estoque de ouro (entrada de ouro)
       // Esta transação representa o aumento do ativo da empresa em ouro

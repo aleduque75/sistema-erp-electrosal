@@ -1,10 +1,11 @@
 import { Controller, Get, Param, UseGuards, Post, Body, Patch, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { MetalCreditsService } from './metal-credits.service';
 import { MetalCreditWithUsageDto } from './dtos/metal-credit-with-usage.dto';
 import { PayMetalCreditWithCashUseCase } from './use-cases/pay-metal-credit-with-cash.use-case';
 import { PayWithClientCreditUseCase } from './use-cases/pay-with-client-credit.use-case';
+import { ListMetalCreditsUseCase } from './use-cases/list-metal-credits.use-case';
+import { UpdateMetalCreditUseCase } from './use-cases/update-metal-credit.use-case';
 import { PayMetalCreditWithCashDto } from './dtos/pay-metal-credit-with-cash.dto';
 import { PayWithClientCreditDto } from './dtos/pay-with-client-credit.dto';
 import { UpdateMetalCreditDto } from './dtos/update-metal-credit.dto';
@@ -16,7 +17,8 @@ import { Response } from 'express';
 @Controller('metal-credits')
 export class MetalCreditsController {
   constructor(
-    private readonly metalCreditsService: MetalCreditsService,
+    private readonly listMetalCreditsUseCase: ListMetalCreditsUseCase,
+    private readonly updateMetalCreditUseCase: UpdateMetalCreditUseCase,
     private readonly payMetalCreditWithCashUseCase: PayMetalCreditWithCashUseCase,
     private readonly payWithClientCreditUseCase: PayWithClientCreditUseCase,
     private readonly gerarPdfMetalCreditUseCase: GerarPdfMetalCreditUseCase,
@@ -48,7 +50,7 @@ export class MetalCreditsController {
     @Body() data: UpdateMetalCreditDto,
     @CurrentUser('orgId') organizationId: string,
   ) {
-    return this.metalCreditsService.update(id, data, organizationId);
+    return this.updateMetalCreditUseCase.execute(id, data, organizationId);
   }
 
   @Post('pay-with-cash')
@@ -69,7 +71,7 @@ export class MetalCreditsController {
 
   @Get()
   async findAll(@CurrentUser('orgId') organizationId: string): Promise<MetalCreditWithUsageDto[]> {
-    return this.metalCreditsService.findAll(organizationId);
+    return this.listMetalCreditsUseCase.execute(organizationId);
   }
 
   @Get('client/:clientId')
@@ -77,6 +79,6 @@ export class MetalCreditsController {
     @CurrentUser('orgId') organizationId: string,
     @Param('clientId') clientId: string,
   ): Promise<MetalCreditWithUsageDto[]> {
-    return this.metalCreditsService.findByClientId(clientId, organizationId);
+    return this.listMetalCreditsUseCase.execute(organizationId, clientId);
   }
 }

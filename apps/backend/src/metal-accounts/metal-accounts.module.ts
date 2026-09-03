@@ -9,12 +9,11 @@ import { PrismaMetalAccountEntryRepository } from './repositories/prisma-metal-a
 import { CreateMetalAccountEntryUseCase } from './use-cases/create-metal-account-entry.use-case';
 import { FindAllMetalAccountEntriesUseCase } from './use-cases/find-all-metal-account-entries.use-case';
 import { TransferFromSupplierAccountToPureMetalLotsUseCase } from './use-cases/transfer-from-supplier-account-to-pure-metal-lots.use-case';
-import { QuotationsModule } from '../quotations/quotations.module'; // Adicionado
-// NOTE: Você precisa ter certeza de que IMetalAccountRepository e IMetalAccountEntryRepository
-// estão disponíveis no pacote @sistema-erp-electrosal/core
+import { QuotationsModule } from '../quotations/quotations.module';
+import { PureMetalLotsModule } from '../pure-metal-lots/pure-metal-lots.module';
 
 @Module({
-  imports: [QuotationsModule],
+  imports: [QuotationsModule, PureMetalLotsModule],
   controllers: [MetalAccountsController],
   providers: [
     PrismaService,

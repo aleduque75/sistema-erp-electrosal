@@ -14,7 +14,7 @@ import {
   PureMetalLotStatus,
   SaleStatus,
 } from '@prisma/client';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreatePureMetalLotUseCase } from '../../pure-metal-lots/use-cases/create-pure-metal-lot.use-case';
 
 @Injectable()
 export class PayAccountsRecWithMetalMultipleUseCase {
@@ -24,7 +24,7 @@ export class PayAccountsRecWithMetalMultipleUseCase {
     private prisma: PrismaService,
     private settingsService: SettingsService,
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
-    private pureMetalLotsService: PureMetalLotsService,
+    private createPureMetalLotUseCase: CreatePureMetalLotUseCase,
   ) {}
 
   async execute(
@@ -113,7 +113,7 @@ export class PayAccountsRecWithMetalMultipleUseCase {
       });
 
       for (const payment of payments) {
-        await this.pureMetalLotsService.create(
+        await this.createPureMetalLotUseCase.execute(
           organizationId,
           {
             sourceType: 'PAGAMENTO_PEDIDO_CLIENTE',

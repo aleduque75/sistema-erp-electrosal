@@ -3,7 +3,7 @@ import { IChemicalReactionRepository, IPureMetalLotRepository } from '@sistema-e
 import { UpdateChemicalReactionLotsDto } from '../dtos/update-chemical-reaction-lots.dto';
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../prisma/prisma.service';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreatePureMetalLotMovementUseCase } from '../../pure-metal-lot-movements/use-cases/create-pure-metal-lot-movement.use-case';
 
 export interface UpdateChemicalReactionLotsCommand {
   chemicalReactionId: string;
@@ -19,7 +19,7 @@ export class UpdateChemicalReactionLotsUseCase {
     @Inject('IPureMetalLotRepository')
     private readonly pureMetalLotRepository: IPureMetalLotRepository,
     private readonly prisma: PrismaService,
-    private readonly pureMetalLotsService: PureMetalLotsService,
+    private readonly createPureMetalLotMovementUseCase: CreatePureMetalLotMovementUseCase,
   ) {}
 
   async execute(command: UpdateChemicalReactionLotsCommand): Promise<void> {
@@ -50,14 +50,14 @@ export class UpdateChemicalReactionLotsUseCase {
       for (const lotId of lotsToRemove) {
         const chemicalReactionLot = currentChemicalReactionLots.find(crl => crl.pureMetalLotId === lotId);
         if (chemicalReactionLot) {
-          await this.pureMetalLotsService.createPureMetalLotMovement(
-            organizationId,
-            lotId,
+          await this.createPureMetalLotMovementUseCase.execute(
             {
+              pureMetalLotId: lotId,
               type: 'ENTRY',
               grams: chemicalReactionLot.gramsToUse,
               notes: `Removido da Reação Química ${chemicalReaction.props.reactionNumber}`,
             },
+            organizationId,
             this.prisma,
           );
 
@@ -75,14 +75,14 @@ export class UpdateChemicalReactionLotsUseCase {
             throw new NotFoundException(`Lote ${lot.props.lotNumber} não tem gramas suficientes. Restante: ${lot.props.remainingGrams}, Solicitado: ${lotInfo.gramsToUse}`);
           }
 
-          await this.pureMetalLotsService.createPureMetalLotMovement(
-            organizationId,
-            lotInfo.pureMetalLotId,
+          await this.createPureMetalLotMovementUseCase.execute(
             {
+              pureMetalLotId: lotInfo.pureMetalLotId,
               type: 'EXIT',
               grams: lotInfo.gramsToUse,
               notes: `Adicionado na Reação Química ${chemicalReaction.props.reactionNumber}`,
             },
+            organizationId,
             this.prisma,
           );
 
@@ -110,26 +110,26 @@ export class UpdateChemicalReactionLotsUseCase {
               throw new NotFoundException(`Lote ${lot.props.lotNumber} não tem gramas suficientes para a alteração. Restante: ${lot.props.remainingGrams}, Diferença: ${gramsDifference}`);
             }
 
-            await this.pureMetalLotsService.createPureMetalLotMovement(
-              organizationId,
-              lotInfo.pureMetalLotId,
+            await this.createPureMetalLotMovementUseCase.execute(
               {
+                pureMetalLotId: lotInfo.pureMetalLotId,
                 type: 'EXIT',
                 grams: gramsDifference.toNumber(),
                 notes: `Aumento de consumo na Reação Química ${chemicalReaction.props.reactionNumber}`,
               },
+              organizationId,
               this.prisma,
             );
           } else if (gramsDifference.lt(0)) {
             // Decreased usage, add back
-            await this.pureMetalLotsService.createPureMetalLotMovement(
-              organizationId,
-              lotInfo.pureMetalLotId,
+            await this.createPureMetalLotMovementUseCase.execute(
               {
+                pureMetalLotId: lotInfo.pureMetalLotId,
                 type: 'ENTRY',
                 grams: Math.abs(gramsDifference.toNumber()),
                 notes: `Redução de consumo na Reação Química ${chemicalReaction.props.reactionNumber}`,
               },
+              organizationId,
               this.prisma,
             );
           }

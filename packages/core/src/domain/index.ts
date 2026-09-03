@@ -13,7 +13,6 @@ export * from './pessoa';
 export * from './product';
 export * from './quotations';
 export * from './recovery-orders';
-export * from './recuperacoes';
 export * from './sale-item';
 export * from './sales';
 export * from './stock-movement';

@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReceivableStatus } from '@prisma/client';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreatePureMetalLotUseCase } from '../../pure-metal-lots/use-cases/create-pure-metal-lot.use-case';
 
 @Injectable()
 export class ReceiveMetalPaymentUseCase {
   constructor(
     private prisma: PrismaService,
-    private pureMetalLotsService: PureMetalLotsService,
+    private createPureMetalLotUseCase: CreatePureMetalLotUseCase,
   ) {}
 
   async execute(organizationId: string, metalReceivableId: string) {
@@ -31,8 +31,8 @@ export class ReceiveMetalPaymentUseCase {
         data: { status: ReceivableStatus.PAGO, receivedAt: new Date() },
       });
 
-      // 2. Create pure_metal_lot entry using PureMetalLotsService
-      await this.pureMetalLotsService.create(
+      // 2. Create pure_metal_lot entry using CreatePureMetalLotUseCase
+      await this.createPureMetalLotUseCase.execute(
         organizationId,
         {
           sourceType: 'METAL_RECEIVABLE',

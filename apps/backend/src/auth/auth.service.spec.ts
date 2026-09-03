@@ -58,7 +58,7 @@ describe('AuthService', () => {
       const result = await service.login(user);
 
       // Assert (Verificação): Verificamos se o resultado é o esperado
-      expect(result).toEqual({ accessToken: token });
+      expect(result).toEqual({ access_token: token });
       expect(mockJwtService.sign).toHaveBeenCalledWith({
         email: user.email,
         sub: user.id,

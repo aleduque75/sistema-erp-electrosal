@@ -4,14 +4,14 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { PureMetalLotsRepository } from '../pure-metal-lots.repository';
+import { PureMetalLotsRepository } from '../repositories/pure-metal-lot.repository';
 import * as puppeteer from 'puppeteer';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { format } from 'date-fns';
 import { Buffer } from 'buffer';
 import * as Handlebars from 'handlebars';
-import { PureMetalLotsService } from '../pure-metal-lots.service'; // To get formatted details
+import { GetPureMetalLotByIdUseCase } from './get-pure-metal-lot-by-id.use-case';
 
 export interface GerarPdfPureMetalLotCommand {
   lotId: string;
@@ -24,7 +24,7 @@ export class GerarPdfPureMetalLotUseCase {
 
   constructor(
     private readonly pureMetalLotsRepository: PureMetalLotsRepository,
-    private readonly pureMetalLotsService: PureMetalLotsService,
+    private readonly getPureMetalLotByIdUseCase: GetPureMetalLotByIdUseCase,
   ) {
     this.registerHandlebarsHelpers();
   }
@@ -88,8 +88,7 @@ export class GerarPdfPureMetalLotUseCase {
   async execute(command: GerarPdfPureMetalLotCommand): Promise<Buffer> {
     const { lotId, organizationId } = command;
 
-    // Use service to get enriched data (with origin details)
-    const lot = await this.pureMetalLotsService.findOne(organizationId, lotId);
+    const lot = await this.getPureMetalLotByIdUseCase.execute(organizationId, lotId);
     
     if (!lot) {
       throw new NotFoundException(
@@ -97,7 +96,7 @@ export class GerarPdfPureMetalLotUseCase {
       );
     }
 
-    const movements = await this.pureMetalLotsService.findPureMetalLotMovements(lotId, organizationId);
+    const movements = await this.pureMetalLotsRepository.findManyMovementsByPureMetalLotId(lotId, organizationId);
 
     // Caminho para o diretório de assets (dist ou src)
     const baseDir = process.env.NODE_ENV === 'production'

@@ -8,7 +8,7 @@ import { Decimal } from 'decimal.js';
 import { PayWithClientCreditDto } from '../dtos/pay-with-client-credit.dto';
 import { CreateMetalAccountEntryUseCase } from '../../metal-accounts/use-cases/create-metal-account-entry.use-case';
 import { CreateMetalAccountUseCase } from '../../metal-accounts/use-cases/create-metal-account.use-case';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreatePureMetalLotMovementUseCase } from '../../pure-metal-lot-movements/use-cases/create-pure-metal-lot-movement.use-case';
 
 @Injectable()
 export class PayWithClientCreditUseCase {
@@ -19,7 +19,7 @@ export class PayWithClientCreditUseCase {
     private readonly settingsService: SettingsService,
     private readonly createMetalAccountEntryUseCase: CreateMetalAccountEntryUseCase,
     private readonly createMetalAccountUseCase: CreateMetalAccountUseCase,
-    private readonly pureMetalLotsService: PureMetalLotsService,
+    private readonly createPureMetalLotMovementUseCase: CreatePureMetalLotMovementUseCase,
   ) {}
 
   async execute(organizationId: string, userId: string, dto: PayWithClientCreditDto) {
@@ -165,15 +165,15 @@ export class PayWithClientCreditUseCase {
       
       // 8. Deduct from Pure Metal Lot if linked
       if (metalCredit.pureMetalLotId) {
-        await this.pureMetalLotsService.createPureMetalLotMovement(
-          organizationId,
-          metalCredit.pureMetalLotId,
+        await this.createPureMetalLotMovementUseCase.execute(
           {
+            pureMetalLotId: metalCredit.pureMetalLotId,
             type: 'EXIT',
             grams: gramsToSettle.toNumber(),
             notes: `Baixa por pagamento de crédito de cliente - Transação: ${debitTransaction.id}`,
           },
-          tx
+          organizationId,
+          tx,
         );
       }
     });

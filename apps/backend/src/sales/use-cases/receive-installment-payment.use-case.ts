@@ -7,7 +7,8 @@ import { QuotationsService } from '../../quotations/quotations.service';
 import { CalculateSaleAdjustmentUseCase } from './calculate-sale-adjustment.use-case';
 import { Decimal } from 'decimal.js';
 import { startOfDay } from 'date-fns';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreatePureMetalLotUseCase } from '../../pure-metal-lots/use-cases/create-pure-metal-lot.use-case';
+import { CreatePureMetalLotMovementUseCase } from '../../pure-metal-lot-movements/use-cases/create-pure-metal-lot-movement.use-case';
 
 @Injectable()
 export class ReceiveInstallmentPaymentUseCase {
@@ -18,7 +19,8 @@ export class ReceiveInstallmentPaymentUseCase {
     private settingsService: SettingsService,
     private quotationsService: QuotationsService,
     private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
-    private pureMetalLotsService: PureMetalLotsService,
+    private createPureMetalLotUseCase: CreatePureMetalLotUseCase,
+    private createPureMetalLotMovementUseCase: CreatePureMetalLotMovementUseCase,
   ) {}
 
   async execute(
@@ -144,14 +146,14 @@ export class ReceiveInstallmentPaymentUseCase {
 
         // 1. Deduct from Pure Metal Lot if linked
         if (metalCredit.pureMetalLotId) {
-          await this.pureMetalLotsService.createPureMetalLotMovement(
-            organizationId,
-            metalCredit.pureMetalLotId,
+          await this.createPureMetalLotMovementUseCase.execute(
             {
+              pureMetalLotId: metalCredit.pureMetalLotId,
               type: 'EXIT',
               grams: new Decimal(amountInGrams).toNumber(),
               notes: `Baixa por pagamento de parcela - Venda #${installment.sale.orderNumber}`,
             },
+            organizationId,
             tx,
           );
         }
@@ -228,7 +230,7 @@ export class ReceiveInstallmentPaymentUseCase {
           },
         });
 
-        await this.pureMetalLotsService.create(
+        await this.createPureMetalLotUseCase.execute(
           organizationId,
           {
             sourceType: 'SALE_PAYMENT',

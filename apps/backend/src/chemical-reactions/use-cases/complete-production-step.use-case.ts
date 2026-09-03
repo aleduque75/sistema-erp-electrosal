@@ -4,7 +4,7 @@ import { ChemicalReactionStatusPrisma } from '@prisma/client';
 import { CompleteReactionDto } from '../dtos/complete-reaction.dto';
 import { QuotationsService } from '../../quotations/quotations.service';
 import Decimal from 'decimal.js';
-import { PureMetalLotsService } from '../../pure-metal-lots/pure-metal-lots.service';
+import { CreatePureMetalLotUseCase } from '../../pure-metal-lots/use-cases/create-pure-metal-lot.use-case';
 
 export interface CompleteProductionStepCommand {
   organizationId: string;
@@ -17,7 +17,7 @@ export class CompleteProductionStepUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly quotationsService: QuotationsService,
-    private readonly pureMetalLotsService: PureMetalLotsService,
+    private readonly createPureMetalLotUseCase: CreatePureMetalLotUseCase,
   ) { }
 
   private async getNextBatchNumber(organizationId: string, tx: any): Promise<string> {
@@ -161,9 +161,9 @@ export class CompleteProductionStepUseCase {
         },
       });
 
-      // Create lots for leftovers using PureMetalLotsService
+      // Create lots for leftovers using CreatePureMetalLotUseCase
       if (outputBasketLeftoverGrams && outputBasketLeftoverGrams > 0) {
-        await this.pureMetalLotsService.create(
+        await this.createPureMetalLotUseCase.execute(
           organizationId,
           {
             sourceType: 'REACTION_LEFTOVER',
@@ -179,7 +179,7 @@ export class CompleteProductionStepUseCase {
         );
       }
       if (outputDistillateLeftoverGrams > 0) {
-        await this.pureMetalLotsService.create(
+        await this.createPureMetalLotUseCase.execute(
           organizationId,
           {
             sourceType: 'REACTION_LEFTOVER',

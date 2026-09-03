@@ -14,14 +14,16 @@ import { AccountPay, Prisma, TipoTransacaoPrisma } from '@prisma/client';
 import { addMonths } from 'date-fns';
 import { Decimal } from 'decimal.js';
 import { SettingsService } from '../settings/settings.service';
-import { PureMetalLotsService } from '../pure-metal-lots/pure-metal-lots.service';
+import { GetPureMetalLotByIdUseCase } from '../pure-metal-lots/use-cases/get-pure-metal-lot-by-id.use-case';
+import { CreatePureMetalLotMovementUseCase } from '../pure-metal-lot-movements/use-cases/create-pure-metal-lot-movement.use-case';
 
 @Injectable()
 export class AccountsPayService {
   constructor(
     private prisma: PrismaService,
     private settingsService: SettingsService,
-    private pureMetalLotsService: PureMetalLotsService,
+    private getPureMetalLotByIdUseCase: GetPureMetalLotByIdUseCase,
+    private createPureMetalLotMovementUseCase: CreatePureMetalLotMovementUseCase,
   ) {}
 
   // Este método é para o WhatsApp, mais genérico
@@ -380,7 +382,7 @@ export class AccountsPayService {
   async payWithMetal(organizationId: string, userId: string, id: string, data: PayWithMetalDto): Promise<AccountPay> {
     const [accountToPay, pureMetalLot, settings] = await Promise.all([
         this.findOne(organizationId, id),
-        this.pureMetalLotsService.findOne(organizationId, data.pureMetalLotId),
+        this.getPureMetalLotByIdUseCase.execute(organizationId, data.pureMetalLotId).catch(() => null),
         this.settingsService.findOne(userId),
     ]);
 
@@ -409,14 +411,14 @@ export class AccountsPayService {
 
     return this.prisma.$transaction(async (tx) => {
         // Create pure metal lot movement
-        await this.pureMetalLotsService.createPureMetalLotMovement(
-            organizationId,
-            data.pureMetalLotId,
+        await this.createPureMetalLotMovementUseCase.execute(
             {
+                pureMetalLotId: data.pureMetalLotId,
                 type: 'EXIT',
                 grams: data.gramsToPay,
                 notes: `Pagamento da conta a pagar: ${accountToPay.description}`
             },
+            organizationId,
             tx
         );
 

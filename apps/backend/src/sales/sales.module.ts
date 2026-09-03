@@ -5,6 +5,7 @@ import { ProductsModule } from '../products/products.module';
 import { SettingsModule } from '../settings/settings.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PureMetalLotsModule } from '../pure-metal-lots/pure-metal-lots.module';
+import { PureMetalLotMovementsModule } from '../pure-metal-lot-movements/pure-metal-lot-movements.module';
 import { QuotationsModule } from '../quotations/quotations.module';
 import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
 
@@ -46,6 +47,7 @@ import { PrismaSaleRepository } from './repositories/prisma-sale.repository';
     QuotationsModule,
     MetalAccountsModule,
     PureMetalLotsModule,
+    PureMetalLotMovementsModule,
   ],
   controllers: [SalesController],
   providers: [

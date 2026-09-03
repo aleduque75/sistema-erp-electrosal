@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { QuotationsModule } from '../quotations/quotations.module';
 import { PureMetalLotsModule } from '../pure-metal-lots/pure-metal-lots.module';
+import { PureMetalLotMovementsModule } from '../pure-metal-lot-movements/pure-metal-lot-movements.module';
 import { ChemicalReactionsController } from './chemical-reactions.controller';
 import { CreateChemicalReactionUseCase } from './use-cases/create-chemical-reaction.use-case';
 import { CompleteProductionStepUseCase } from './use-cases/complete-production-step.use-case';
@@ -20,7 +21,7 @@ import { PrismaPureMetalLotRepository } from '../recovery-orders/repositories/pr
 import { MediaModule } from '../media/media.module';
 
 @Module({
-  imports: [PrismaModule, QuotationsModule, PureMetalLotsModule, MediaModule],
+  imports: [PrismaModule, QuotationsModule, PureMetalLotsModule, PureMetalLotMovementsModule, MediaModule],
   controllers: [ChemicalReactionsController],
   providers: [
     CreateChemicalReactionUseCase,
