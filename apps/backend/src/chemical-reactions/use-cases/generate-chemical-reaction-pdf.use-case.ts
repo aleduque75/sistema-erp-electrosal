@@ -187,6 +187,7 @@ export class GenerateChemicalReactionPdfUseCase {
       status: reaction.status,
       statusTranslated: statusMap[reaction.status] || reaction.status,
       metalType: reaction.metalType,
+      metalName: reaction.metalType === 'AG' ? 'Prata' : (reaction.metalType === 'AU' ? 'Ouro' : reaction.metalType || 'Metal'),
       productName: reaction.outputProduct?.name || 'Produto não definido',
       batchNumber: reaction.productionBatch?.batchNumber,
       notes: reaction.notes,

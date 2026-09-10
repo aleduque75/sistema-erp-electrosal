@@ -20,4 +20,12 @@ export class CompleteReactionDto {
   @IsOptional()
   @IsDateString()
   reactionDate?: string;
+
+  @IsNumber()
+  @IsOptional()
+  metalQuoteValue?: number;
+
+  @IsNumber()
+  @IsOptional()
+  goldQuoteValue?: number;
 }

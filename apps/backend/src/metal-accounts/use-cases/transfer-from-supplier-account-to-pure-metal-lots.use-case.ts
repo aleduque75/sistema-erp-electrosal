@@ -21,7 +21,18 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
 
   async execute(command: TransferFromSupplierAccountToPureMetalLotsCommand): Promise<any> {
     const { organizationId, dto } = command;
-    const { supplierMetalAccountId, grams, notes, transferDate, goldQuoteValue } = dto; // Captura transferDate e goldQuoteValue
+    const {
+      supplierMetalAccountId,
+      grams,
+      notes,
+      transferDate,
+      goldQuoteValue,
+      metalType = TipoMetal.AU,
+      metalGrams,
+      metalQuoteValue,
+      totalValueBRL,
+      goldEquivalentGrams,
+    } = dto;
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Validar a conta corrente do fornecedor de metal
@@ -37,48 +48,158 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
         throw new BadRequestException(`A conta ${supplierMetalAccountId} não é do tipo FORNECEDOR_METAL.`);
       }
 
-      // 2. Obter a cotação do ouro
+      // 2. Buscar contas contábeis necessárias
+      const contaEstoqueOuro = await tx.contaContabil.findFirstOrThrow({
+        where: { organizationId, codigo: '1.1.2' },
+      });
+      const contaPassivoFornecedor = await tx.contaContabil.findFirstOrThrow({
+        where: { organizationId, codigo: '2.1.1' },
+      });
+
+      if (metalType === TipoMetal.AG) {
+        // FLUXO DE TRANSFERÊNCIA DE PRATA (AG) COM CONTROLE EM OURO (AU)
+        const agGrams = metalGrams || grams;
+        if (!agGrams || agGrams <= 0) {
+          throw new BadRequestException('A quantidade de prata deve ser maior que zero.');
+        }
+
+        // Cotação da Prata
+        let silverSellPrice: Decimal;
+        if (metalQuoteValue !== undefined && metalQuoteValue > 0) {
+          silverSellPrice = new Decimal(metalQuoteValue);
+        } else {
+          const silverQuote = await this.quotationsService.findLatest(
+            TipoMetal.AG,
+            organizationId,
+            transferDate,
+          );
+          if (!silverQuote || !silverQuote.sellPrice) {
+            throw new BadRequestException('Nenhuma cotação de prata encontrada para a data especificada. Por favor, informe a cotação manualmente.');
+          }
+          silverSellPrice = new Decimal(silverQuote.sellPrice);
+        }
+
+        // Valor financeiro total em R$
+        let calculatedValueBRL: Decimal;
+        if (totalValueBRL !== undefined && totalValueBRL > 0) {
+          calculatedValueBRL = new Decimal(totalValueBRL);
+        } else {
+          calculatedValueBRL = new Decimal(agGrams).times(silverSellPrice);
+        }
+
+        // Cotação do Ouro para conversão do débito
+        let goldSellPrice: Decimal;
+        if (goldQuoteValue !== undefined && goldQuoteValue > 0) {
+          goldSellPrice = new Decimal(goldQuoteValue);
+        } else {
+          const goldQuote = await this.quotationsService.findLatest(
+            TipoMetal.AU,
+            organizationId,
+            transferDate,
+          );
+          if (!goldQuote || !goldQuote.sellPrice) {
+            throw new BadRequestException('Nenhuma cotação de ouro encontrada para a conversão da conta corrente. Por favor, informe a cotação do ouro manualmente.');
+          }
+          goldSellPrice = new Decimal(goldQuote.sellPrice);
+        }
+
+        // Equivalente em gramas de ouro
+        let auEquivalentGrams: number;
+        if (goldEquivalentGrams !== undefined && goldEquivalentGrams > 0) {
+          auEquivalentGrams = goldEquivalentGrams;
+        } else {
+          auEquivalentGrams = calculatedValueBRL.dividedBy(goldSellPrice).toDecimalPlaces(4).toNumber();
+        }
+
+        const formattedAgGrams = agGrams.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+        const formattedAgQuote = silverSellPrice.toNumber().toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const formattedBRL = calculatedValueBRL.toNumber().toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const formattedAuGrams = auEquivalentGrams.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+        const formattedAuQuote = goldSellPrice.toNumber().toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const txDescription = `Transferência de Prata para Estoque: ${formattedAgGrams}g Ag @ R$ ${formattedAgQuote}/g (R$ ${formattedBRL}) = ${formattedAuGrams}g Au @ R$ ${formattedAuQuote}/g${notes ? `. ${notes}` : ''}`;
+
+        // 3. Registrar o DÉBITO na conta do fornecedor (em Ouro e R$)
+        await tx.transacao.create({
+          data: {
+            organizationId,
+            tipo: TipoTransacaoPrisma.DEBITO,
+            valor: calculatedValueBRL.toNumber(),
+            moeda: 'BRL',
+            goldAmount: auEquivalentGrams, // Controlado em Au
+            descricao: txDescription,
+            dataHora: transferDate || new Date(),
+            contaContabilId: contaPassivoFornecedor.id,
+            contaCorrenteId: supplierMetalAccountId,
+          },
+        });
+
+        // 4. Criar o lote em pure_metal_lots de PRATA (AG)
+        await this.createPureMetalLotUseCase.execute(
+          organizationId,
+          {
+            sourceType: 'SUPPLIER_ACCOUNT_TRANSFER',
+            sourceId: supplierMetalAccountId,
+            metalType: TipoMetal.AG,
+            initialGrams: agGrams,
+            remainingGrams: agGrams,
+            purity: 1,
+            notes: `Transferência da Conta Fornecedor ${supplierAccount.nome}: ${formattedAgGrams}g Ag @ R$ ${formattedAgQuote}/g (R$ ${formattedBRL} = ${formattedAuGrams}g Au @ R$ ${formattedAuQuote}/g)${notes ? `. ${notes}` : ''}`,
+            entryDate: (transferDate ? new Date(transferDate) : new Date()).toISOString(),
+          },
+          tx,
+        );
+
+        // 5. Crédito contábil
+        await tx.transacao.create({
+          data: {
+            organizationId,
+            tipo: TipoTransacaoPrisma.CREDITO,
+            valor: calculatedValueBRL.toNumber(),
+            moeda: 'BRL',
+            goldAmount: auEquivalentGrams,
+            descricao: `Entrada de Prata no Estoque via Transferência de Fornecedor: ${formattedAgGrams}g Ag${notes ? `. ${notes}` : ''}`,
+            dataHora: transferDate || new Date(),
+            contaContabilId: contaEstoqueOuro.id,
+          },
+        });
+
+        return { message: 'Transferência de Prata realizada com sucesso.' };
+      }
+
+      // FLUXO PADRÃO (OURO - AU)
       let goldSellPrice: Decimal;
-      if (goldQuoteValue !== undefined) {
+      if (goldQuoteValue !== undefined && goldQuoteValue > 0) {
         goldSellPrice = new Decimal(goldQuoteValue);
       } else {
         const goldQuote = await this.quotationsService.findLatest(
           TipoMetal.AU,
           organizationId,
-          transferDate, // Passa a data para buscar a cotação mais próxima
+          transferDate,
         );
-        if (!goldQuote) {
-          throw new BadRequestException('Nenhuma cotação de ouro encontrada para a data especificada.');
+        if (!goldQuote || !goldQuote.sellPrice) {
+          throw new BadRequestException('Nenhuma cotação de ouro encontrada para a data especificada. Por favor, informe a cotação manualmente.');
         }
-        goldSellPrice = goldQuote.sellPrice;
+        goldSellPrice = new Decimal(goldQuote.sellPrice);
       }
       const valueBRL = new Decimal(grams).times(goldSellPrice);
 
-      // 3. Buscar contas contábeis necessárias
-      const contaEstoqueOuro = await tx.contaContabil.findFirstOrThrow({
-        where: { organizationId, codigo: '1.1.2' }, // Exemplo: 1.1.2 para Estoque de Ouro
-      });
-      const contaPassivoFornecedor = await tx.contaContabil.findFirstOrThrow({
-        where: { organizationId, codigo: '2.1.1' }, // Exemplo: 2.1.1 para Passivo de Fornecedores de Metal
-      });
-
-      // 4. Registrar a transação de débito na conta corrente do fornecedor (saída de ouro)
-      // Esta transação representa a diminuição da dívida/obrigação da empresa com o fornecedor em ouro
+      // Registrar a transação de débito na conta corrente do fornecedor (saída de ouro)
       await tx.transacao.create({
         data: {
           organizationId,
-          tipo: TipoTransacaoPrisma.DEBITO, // Débito na conta do fornecedor (passivo diminui)
+          tipo: TipoTransacaoPrisma.DEBITO,
           valor: valueBRL.toNumber(),
           moeda: 'BRL',
           goldAmount: grams,
-          descricao: `Transferência de Ouro para Estoque: ${notes}`,
-          dataHora: transferDate || new Date(), // Usa a data da transferência ou a data atual
-          contaContabilId: contaPassivoFornecedor.id, // Conta contábil do passivo do fornecedor
+          descricao: `Transferência de Ouro para Estoque: ${notes || ''}`,
+          dataHora: transferDate || new Date(),
+          contaContabilId: contaPassivoFornecedor.id,
           contaCorrenteId: supplierMetalAccountId,
         },
       });
 
-      // 5. Criar um novo pure_metal_lot (entrada no estoque da empresa) usando UseCase
+      // Criar um novo pure_metal_lot de OURO (AU)
       await this.createPureMetalLotUseCase.execute(
         organizationId,
         {
@@ -87,25 +208,24 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
           metalType: TipoMetal.AU,
           initialGrams: grams,
           remainingGrams: grams,
-          purity: 1, // Assumindo pureza 100% para ouro transferido
-          notes: `Transferência da Conta Fornecedor ${supplierAccount.nome}: ${notes}`,
+          purity: 1,
+          notes: `Transferência da Conta Fornecedor ${supplierAccount.nome}: ${notes || ''}`,
           entryDate: (transferDate ? new Date(transferDate) : new Date()).toISOString(),
         },
         tx,
       );
 
-      // 6. Registrar a transação de crédito na conta de estoque de ouro (entrada de ouro)
-      // Esta transação representa o aumento do ativo da empresa em ouro
+      // Registrar a transação de crédito na conta de estoque
       await tx.transacao.create({
         data: {
           organizationId,
-          tipo: TipoTransacaoPrisma.CREDITO, // Crédito na conta de estoque de ouro (ativo aumenta)
+          tipo: TipoTransacaoPrisma.CREDITO,
           valor: valueBRL.toNumber(),
           moeda: 'BRL',
           goldAmount: grams,
-          descricao: `Entrada de Ouro no Estoque via Transferência de Fornecedor: ${notes}`,
-          dataHora: transferDate || new Date(), // Usa a data da transferência ou a data atual
-          contaContabilId: contaEstoqueOuro.id, // Conta contábil do ativo de estoque de ouro
+          descricao: `Entrada de Ouro no Estoque via Transferência de Fornecedor: ${notes || ''}`,
+          dataHora: transferDate || new Date(),
+          contaContabilId: contaEstoqueOuro.id,
         },
       });
 

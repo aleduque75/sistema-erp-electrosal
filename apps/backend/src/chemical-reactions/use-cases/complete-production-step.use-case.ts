@@ -98,19 +98,37 @@ export class CompleteProductionStepUseCase {
       }
 
       // Get metal quote for costing
-      const metalQuote = await this.quotationsService.findLatest(reaction.metalType, organizationId);
-      if (!metalQuote) {
-        throw new BadRequestException(`Nenhuma cotação de ${reaction.metalType} encontrada para calcular o custo.`);
+      let metalBuyPrice: Decimal;
+      if (dto.metalQuoteValue !== undefined && dto.metalQuoteValue > 0) {
+        metalBuyPrice = new Decimal(dto.metalQuoteValue);
+      } else {
+        const metalQuote = await this.quotationsService.findLatest(reaction.metalType, organizationId);
+        if (metalQuote && metalQuote.buyPrice) {
+          metalBuyPrice = new Decimal(metalQuote.buyPrice);
+        } else {
+          // Fallback: se não houver cotação cadastrada no sistema, usa 0 sem bloquear o encerramento da produção
+          metalBuyPrice = new Decimal(0);
+        }
       }
-      const totalCost = totalGoldGrams.times(metalQuote.buyPrice);
-      const costPricePerGramOfProduct = goldInOutputProduct.gt(0) ? totalCost.dividedBy(outputProductGrams) : new Decimal(0);
+      const totalCost = totalGoldGrams.times(metalBuyPrice);
+      const costPricePerGramOfProduct = (goldInOutputProduct.gt(0) && totalCost.gt(0))
+        ? totalCost.dividedBy(outputProductGrams)
+        : new Decimal(0);
       
       // Calculate unit AU cost: Grams of AU used / Grams of Product produced
       // OR costPriceInBrl / goldQuotation. 
-      // Using costPrice / goldQuotation for consistency with purchase logic if it includes other costs.
-      const goldQuote = await this.quotationsService.findLatest('AU', organizationId);
-      const unitCostAu = (goldQuote && goldQuote.buyPrice && !goldQuote.buyPrice.isZero()) 
-        ? costPricePerGramOfProduct.dividedBy(goldQuote.buyPrice)
+      let goldBuyPrice: Decimal | null = null;
+      if (dto.goldQuoteValue !== undefined && dto.goldQuoteValue > 0) {
+        goldBuyPrice = new Decimal(dto.goldQuoteValue);
+      } else {
+        const goldQuote = await this.quotationsService.findLatest('AU', organizationId);
+        if (goldQuote && goldQuote.buyPrice && !goldQuote.buyPrice.isZero()) {
+          goldBuyPrice = new Decimal(goldQuote.buyPrice);
+        }
+      }
+
+      const unitCostAu = (goldBuyPrice && !goldBuyPrice.isZero() && costPricePerGramOfProduct.gt(0)) 
+        ? costPricePerGramOfProduct.dividedBy(goldBuyPrice)
         : null;
 
       // Determine the quantity to save based on the product's stock unit
@@ -131,7 +149,7 @@ export class CompleteProductionStepUseCase {
           remainingQuantity: stockQuantity,
           costPrice: costPricePerGramOfProduct.toDecimalPlaces(2),
           unitCostAu: unitCostAu,
-          goldQuotationAtAcquisition: goldQuote?.buyPrice,
+          goldQuotationAtAcquisition: goldBuyPrice,
           sourceType: 'REACTION',
           sourceId: reaction.id,
           receivedDate: completionDate,

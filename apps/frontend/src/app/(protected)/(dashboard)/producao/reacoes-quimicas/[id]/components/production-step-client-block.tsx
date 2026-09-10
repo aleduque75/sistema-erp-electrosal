@@ -25,17 +25,19 @@ enum ReactionLeftoverType {
 }
 
 const formSchema = z.object({
-  reactionDate: z.date({ required_error: 'A data da reação é obrigatória.' }),
+  reactionDate: z.date({ message: 'A data da reação é obrigatória.' }),
   batchNumber: z.string().optional(),
   outputProductGrams: z.coerce.number().positive('A quantidade produzida deve ser positiva.'),
   outputBasketLeftoverGrams: z.coerce.number().min(0, 'A quantidade do cesto não pode ser negativa.').default(0),
   outputDistillateLeftoverGrams: z.coerce.number().min(0, 'A quantidade do destilado não pode ser negativa.').default(0),
+  metalQuoteValue: z.coerce.number().optional(),
 });
 
 function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { reactionId: string; auUsedGrams: number; setIsOpen: (open: boolean) => void }) {
   const router = useRouter();
   const [reactionDetails, setReactionDetails] = useState<any>(null);
   const [loading, setIsPageLoading] = useState(true);
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
 
   useEffect(() => {
     api.get(`/chemical-reactions/${reactionId}`)
@@ -49,16 +51,38 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
   const metalSymbol = reactionDetails?.metalType || 'Au';
 
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       reactionDate: new Date(),
       outputProductGrams: 0,
       outputBasketLeftoverGrams: 0,
       outputDistillateLeftoverGrams: 0,
+      metalQuoteValue: undefined,
     }
   });
 
   const { setValue, getValues } = form;
+
+  // Busca cotação do metal da reação (AU ou AG)
+  useEffect(() => {
+    if (!reactionDetails?.metalType) return;
+    const fetchMetalQuote = async () => {
+      setIsLoadingQuote(true);
+      try {
+        const response = await api.get(`/quotations/latest?metal=${reactionDetails.metalType}`);
+        if (response.data?.buyPrice) {
+          setValue('metalQuoteValue', response.data.buyPrice);
+        } else {
+          toast.info(`Nenhuma cotação de ${reactionDetails.metalType} cadastrada. Você pode digitá-la manualmente no campo de cotação.`);
+        }
+      } catch (e) {
+        // silencioso
+      } finally {
+        setIsLoadingQuote(false);
+      }
+    };
+    fetchMetalQuote();
+  }, [reactionDetails, setValue]);
 
   const outputProductGrams = form.watch('outputProductGrams');
   const outputBasketLeftoverGrams = form.watch('outputBasketLeftoverGrams');
@@ -93,6 +117,7 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
       const payload = {
         ...values,
         reactionDate: format(values.reactionDate, 'yyyy-MM-dd'),
+        metalQuoteValue: values.metalQuoteValue || undefined,
       };
       await api.patch(`/chemical-reactions/${reactionId}/complete-production`, payload);
       toast.success('Sucesso!', { description: 'A etapa de produção foi completada e o estoque foi atualizado.' });
@@ -132,6 +157,24 @@ function CompleteProductionStepForm({ reactionId, auUsedGrams, setIsOpen }: { re
                   <FormLabel>Número do Lote (Opcional)</FormLabel>
                   <FormControl><Input placeholder="Deixe vazio para gerar automático" {...field} /></FormControl>
                   <FormDescription>Se vazio, o sistema gerará o próximo número sequencial.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField name="metalQuoteValue" control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cotação de {metalSymbol} (R$/g)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder={isLoadingQuote ? "Buscando cotação..." : "Ex: 9.02 (Se vazio no sistema, informe aqui)"}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Cotação para cálculo do custo do lote. Pode ser informada manualmente se não houver cotação cadastrada.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )} />

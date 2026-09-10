@@ -544,7 +544,7 @@ export default function ExtratoPage() {
                     </DropdownMenuItem>
                     {extrato?.contaCorrente.type === "FORNECEDOR_METAL" && (
                       <DropdownMenuItem onClick={() => setIsTransferModalOpen(true)}>
-                        <ArrowRightLeft className="mr-2 h-4 w-4" /> Transferir Ouro
+                        <ArrowRightLeft className="mr-2 h-4 w-4" /> Transferir Metal (Au / Ag)
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -1078,9 +1078,9 @@ export default function ExtratoPage() {
         {/* Novo Dialog para transferência */}
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Transferir Ouro para Lotes de Metal Puro</DialogTitle>
+            <DialogTitle>Transferir Metal para Lotes de Metal Puro</DialogTitle>
             <DialogDescription>
-              Realize a transferência de ouro desta conta para o estoque de
+              Realize a transferência de metal (Ouro ou Prata) desta conta para o estoque de
               lotes de metal puro.
             </DialogDescription>
           </DialogHeader>

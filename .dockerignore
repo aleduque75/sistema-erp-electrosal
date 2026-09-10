@@ -1,29 +1,57 @@
 
-# Ignorar dependências do Node, com exceção do cliente Prisma
+# Dependências e caches (nunca copiar para dentro do Docker)
 node_modules
-!node_modules/.prisma/client
-!node_modules/@prisma/client
+**/node_modules
+.pnpm-store
+**/.pnpm-store
+.turbo
+**/.turbo
 
-# Ignorar logs
-npm-debug.log
-yarn-debug.log
-yarn-error.log
-
-# Ignorar diretórios de build
+# Diretórios de build locais (evita transferir 1.3GB de .next!)
 dist
+**/dist
 .next
+**/.next
 
-# Ignorar arquivos do Docker
-Dockerfile
-docker-compose.yml
+# Controle de versão e ferramentas
+.git
+**/.git
+.github
+**/.github
+.agent
+**/.agent
 
-# Ignorar dados do banco de dados
-db_data
+# Backups e arquivos pesados locais
+*.sql
+**/*.sql
+*.jar
+**/*.jar
+uploads
+**/uploads
+data
+**/data
+npm
+**/npm
 
-# Ignorar arquivos de sistema
+# Logs
+*.log
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Docker e arquivos de config
+.dockerignore
+Dockerfile*
+**/Dockerfile*
+docker-compose*.yml
+.env*
+!.env.example
+
+# Arquivos de sistema e IDEs
 .DS_Store
 Thumbs.db
-
-# Ignorar arquivos de configuração de IDEs
 .vscode
 .idea
+

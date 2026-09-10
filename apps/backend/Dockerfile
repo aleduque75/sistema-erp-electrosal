@@ -1,6 +1,8 @@
 # Fase 1: Builder
 FROM node:20 AS builder
 WORKDIR /app
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN npm install -g pnpm@9.0.6
 
 # Copia tudo para o builder
