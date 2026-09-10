@@ -70,7 +70,8 @@ export class PrismaPureMetalLotsRepository implements PureMetalLotsRepository {
     }
 
     if (filters?.remainingGramsGt !== undefined) {
-      where.remainingGrams = { gt: filters.remainingGramsGt };
+      const threshold = filters.remainingGramsGt === 0 ? 0.005 : filters.remainingGramsGt;
+      where.remainingGrams = { gt: threshold };
     }
 
     const records = await this.getClient(tx).pure_metal_lots.findMany({
@@ -157,6 +158,29 @@ export class PrismaPureMetalLotsRepository implements PureMetalLotsRepository {
     return this.getClient(tx).pureMetalLotMovement.findMany({
       where: { pureMetalLotId, organizationId },
       orderBy: { date: 'desc' },
+    });
+  }
+
+  async createMovement(
+    data: {
+      organizationId: string;
+      pureMetalLotId: string;
+      type: 'ENTRY' | 'EXIT' | 'ADJUSTMENT';
+      grams: number;
+      notes?: string;
+      date?: Date;
+    },
+    tx?: any,
+  ): Promise<any> {
+    return this.getClient(tx).pureMetalLotMovement.create({
+      data: {
+        organizationId: data.organizationId,
+        pureMetalLotId: data.pureMetalLotId,
+        type: data.type,
+        grams: data.grams,
+        notes: data.notes,
+        date: data.date || new Date(),
+      },
     });
   }
 

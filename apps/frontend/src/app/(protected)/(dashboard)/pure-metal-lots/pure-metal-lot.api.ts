@@ -5,7 +5,7 @@ import api from '@/lib/api';
 export const getPureMetalLots = async (filters: { hideZeroed: boolean; metalType: string | 'all'; sourceType?: string | 'all' }): Promise<PureMetalLot[]> => {
   const params = new URLSearchParams();
   if (filters.hideZeroed) {
-    params.append('remainingGramsGt', '0');
+    params.append('remainingGramsGt', '0.005');
   }
   if (filters.metalType !== 'all') {
     params.append('metalType', filters.metalType);
@@ -29,6 +29,19 @@ export const updatePureMetalLot = async (id: string, data: Partial<PureMetalLot>
 
 export const deletePureMetalLot = async (id: string): Promise<void> => {
   await api.delete(`/pure-metal-lots/${id}`);
+};
+
+export const liquidatePureMetalLot = async (id: string, notes?: string): Promise<PureMetalLot> => {
+  const response = await api.post(`/pure-metal-lots/${id}/liquidate`, { notes });
+  return response.data;
+};
+
+export const liquidateNearZeroLots = async (
+  maxGramsThreshold: number = 0.05,
+  notes?: string,
+): Promise<{ success: boolean; liquidatedCount: number; liquidatedLotIds: string[] }> => {
+  const response = await api.post('/pure-metal-lots/liquidate-near-zero', { maxGramsThreshold, notes });
+  return response.data;
 };
 
 export const downloadPureMetalLotPdf = async (id: string): Promise<Blob> => {

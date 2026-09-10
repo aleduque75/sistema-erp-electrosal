@@ -11,6 +11,8 @@ import { UpdatePureMetalLotUseCase } from './use-cases/update-pure-metal-lot.use
 import { DeletePureMetalLotUseCase } from './use-cases/delete-pure-metal-lot.use-case';
 import { SellPureMetalLotUseCase } from './use-cases/sell-pure-metal-lot.use-case';
 import { GerarPdfPureMetalLotUseCase } from './use-cases/gerar-pdf-pure-metal-lot.use-case';
+import { LiquidatePureMetalLotUseCase } from './use-cases/liquidate-pure-metal-lot.use-case';
+import { LiquidateNearZeroLotsUseCase } from './use-cases/liquidate-near-zero-lots.use-case';
 
 @Module({
   imports: [PrismaModule, CommonModule],
@@ -27,6 +29,8 @@ import { GerarPdfPureMetalLotUseCase } from './use-cases/gerar-pdf-pure-metal-lo
     DeletePureMetalLotUseCase,
     SellPureMetalLotUseCase,
     GerarPdfPureMetalLotUseCase,
+    LiquidatePureMetalLotUseCase,
+    LiquidateNearZeroLotsUseCase,
   ],
   exports: [
     PureMetalLotsRepository,
@@ -37,6 +41,8 @@ import { GerarPdfPureMetalLotUseCase } from './use-cases/gerar-pdf-pure-metal-lo
     DeletePureMetalLotUseCase,
     SellPureMetalLotUseCase,
     GerarPdfPureMetalLotUseCase,
+    LiquidatePureMetalLotUseCase,
+    LiquidateNearZeroLotsUseCase,
   ],
 })
 export class PureMetalLotsModule {}

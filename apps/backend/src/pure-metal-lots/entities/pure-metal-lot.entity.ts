@@ -74,9 +74,14 @@ export class PureMetalLotEntity {
 
     const metalType = (params.metalType as TipoMetal) || TipoMetal.AU;
 
-    const statusVO = params.status != null
-      ? (params.status instanceof PureMetalLotStatusVO ? params.status : new PureMetalLotStatusVO(params.status))
-      : PureMetalLotStatusVO.fromGrams(initialGramsVO.value, remainingGramsVO.value);
+    const isZeroed = remainingGramsVO.value <= 0.005;
+    const effectiveRemainingGramsVO = isZeroed ? new MetalAmountVO(0, true) : remainingGramsVO;
+
+    const statusVO = isZeroed
+      ? new PureMetalLotStatusVO(PureMetalLotStatus.USED)
+      : (params.status != null
+          ? (params.status instanceof PureMetalLotStatusVO ? params.status : new PureMetalLotStatusVO(params.status))
+          : PureMetalLotStatusVO.fromGrams(initialGramsVO.value, effectiveRemainingGramsVO.value));
 
     const entryDate = params.entryDate
       ? (typeof params.entryDate === 'string' ? new Date(params.entryDate.includes('T') ? params.entryDate : `${params.entryDate}T12:00:00`) : params.entryDate)
@@ -89,7 +94,7 @@ export class PureMetalLotEntity {
       sourceId: params.sourceId,
       metalType,
       initialGrams: initialGramsVO,
-      remainingGrams: remainingGramsVO,
+      remainingGrams: effectiveRemainingGramsVO,
       purity: purityVO,
       status: statusVO,
       entryDate,
@@ -180,9 +185,20 @@ export class PureMetalLotEntity {
       throw new Error(`Quantidade insuficiente no lote. Disponível: ${this.props.remainingGrams.value}g, Solicitado: ${dec.toNumber()}g.`);
     }
 
-    const updatedRemaining = this.props.remainingGrams.minus(dec);
+    let updatedRemaining = this.props.remainingGrams.minus(dec);
+    if (updatedRemaining.decimal.lessThanOrEqualTo(0.005)) {
+      updatedRemaining = new MetalAmountVO(0, true);
+    }
     this.props.remainingGrams = updatedRemaining;
     this.props.status = PureMetalLotStatusVO.fromGrams(this.props.initialGrams.value, updatedRemaining.value);
+  }
+
+  liquidate(notes?: string): void {
+    this.props.remainingGrams = new MetalAmountVO(0, true);
+    this.props.status = new PureMetalLotStatusVO(PureMetalLotStatus.USED);
+    if (notes) {
+      this.props.notes = this.props.notes ? `${this.props.notes} (Liquidação: ${notes})` : `Liquidação: ${notes}`;
+    }
   }
 
   addGrams(amount: number | Decimal | MetalAmountVO): void {

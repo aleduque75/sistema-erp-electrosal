@@ -24,3 +24,16 @@ export const createPureMetalLot = async (data: Omit<PureMetalLot, 'id' | 'create
 export const deletePureMetalLot = async (id: string): Promise<void> => {
   await api.delete(`/pure-metal-lots/${id}`);
 };
+
+export const liquidatePureMetalLot = async (id: string, notes?: string): Promise<PureMetalLot> => {
+  const response = await api.post<PureMetalLot>(`/pure-metal-lots/${id}/liquidate`, { notes });
+  return response.data;
+};
+
+export const liquidateNearZeroLots = async (
+  maxGramsThreshold: number = 0.05,
+  notes?: string,
+): Promise<{ success: boolean; liquidatedCount: number; liquidatedLotIds: string[] }> => {
+  const response = await api.post('/pure-metal-lots/liquidate-near-zero', { maxGramsThreshold, notes });
+  return response.data;
+};

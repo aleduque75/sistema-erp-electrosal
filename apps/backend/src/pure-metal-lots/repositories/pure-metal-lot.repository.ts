@@ -40,5 +40,17 @@ export abstract class PureMetalLotsRepository {
     tx?: any,
   ): Promise<any[]>;
 
+  abstract createMovement(
+    data: {
+      organizationId: string;
+      pureMetalLotId: string;
+      type: 'ENTRY' | 'EXIT' | 'ADJUSTMENT';
+      grams: number;
+      notes?: string;
+      date?: Date;
+    },
+    tx?: any,
+  ): Promise<any>;
+
   abstract executeInTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T>;
 }

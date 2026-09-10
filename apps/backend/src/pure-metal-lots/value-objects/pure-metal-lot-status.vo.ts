@@ -33,7 +33,7 @@ export class PureMetalLotStatusVO {
   }
 
   static fromGrams(initialGrams: number, remainingGrams: number): PureMetalLotStatusVO {
-    if (remainingGrams <= 0) {
+    if (remainingGrams <= 0.005) {
       return new PureMetalLotStatusVO(PureMetalLotStatus.USED);
     }
     if (remainingGrams >= initialGrams) {

@@ -16,6 +16,8 @@ import { TipoMetal } from '@prisma/client';
 import { CreatePureMetalLotDto } from './dtos/create-pure-metal-lot.dto';
 import { UpdatePureMetalLotDto } from './dtos/update-pure-metal-lot.dto';
 import { SellPureMetalLotDto } from './dtos/sell-pure-metal-lot.dto';
+import { LiquidatePureMetalLotDto } from './dtos/liquidate-pure-metal-lot.dto';
+import { LiquidateNearZeroLotsDto } from './dtos/liquidate-near-zero-lots.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Request, Response } from 'express';
 import { CreatePureMetalLotUseCase } from './use-cases/create-pure-metal-lot.use-case';
@@ -25,6 +27,8 @@ import { UpdatePureMetalLotUseCase } from './use-cases/update-pure-metal-lot.use
 import { DeletePureMetalLotUseCase } from './use-cases/delete-pure-metal-lot.use-case';
 import { SellPureMetalLotUseCase } from './use-cases/sell-pure-metal-lot.use-case';
 import { GerarPdfPureMetalLotUseCase } from './use-cases/gerar-pdf-pure-metal-lot.use-case';
+import { LiquidatePureMetalLotUseCase } from './use-cases/liquidate-pure-metal-lot.use-case';
+import { LiquidateNearZeroLotsUseCase } from './use-cases/liquidate-near-zero-lots.use-case';
 
 @UseGuards(JwtAuthGuard)
 @Controller('pure-metal-lots')
@@ -37,6 +41,8 @@ export class PureMetalLotsController {
     private readonly deletePureMetalLotUseCase: DeletePureMetalLotUseCase,
     private readonly sellPureMetalLotUseCase: SellPureMetalLotUseCase,
     private readonly gerarPdfPureMetalLotUseCase: GerarPdfPureMetalLotUseCase,
+    private readonly liquidatePureMetalLotUseCase: LiquidatePureMetalLotUseCase,
+    private readonly liquidateNearZeroLotsUseCase: LiquidateNearZeroLotsUseCase,
   ) {}
 
   @Post()
@@ -84,6 +90,25 @@ export class PureMetalLotsController {
   ) {
     const organizationId = req.user['organizationId'];
     return this.updatePureMetalLotUseCase.execute(organizationId, id, updatePureMetalLotDto);
+  }
+
+  @Post('liquidate-near-zero')
+  liquidateNearZero(
+    @Req() req: Request,
+    @Body() dto: LiquidateNearZeroLotsDto,
+  ) {
+    const organizationId = req.user['organizationId'];
+    return this.liquidateNearZeroLotsUseCase.execute(organizationId, dto);
+  }
+
+  @Post(':id/liquidate')
+  liquidate(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() dto: LiquidatePureMetalLotDto,
+  ) {
+    const organizationId = req.user['organizationId'];
+    return this.liquidatePureMetalLotUseCase.execute(organizationId, id, dto);
   }
 
   @Post(':id/sell')

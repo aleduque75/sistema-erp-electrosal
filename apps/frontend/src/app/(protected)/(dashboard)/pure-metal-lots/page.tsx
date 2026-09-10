@@ -3,7 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PureMetalLot } from '@/types/pure-metal-lot';
-import { getPureMetalLots, createPureMetalLot, updatePureMetalLot, deletePureMetalLot } from './pure-metal-lot.api';
+import {
+  getPureMetalLots,
+  createPureMetalLot,
+  updatePureMetalLot,
+  deletePureMetalLot,
+  liquidateNearZeroLots,
+} from './pure-metal-lot.api';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -34,9 +40,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Package, Edit, Trash2, DollarSign } from 'lucide-react';
+import { MoreHorizontal, Eye, Package, Edit, Trash2, DollarSign, CheckCircle2, Sparkles } from 'lucide-react';
 import { PureMetalLotDetailsDialog } from './components/pure-metal-lot-details-dialog';
 import { SellPureMetalLotDialog } from './components/sell-pure-metal-lot-dialog';
+import { LiquidatePureMetalLotDialog } from './components/liquidate-pure-metal-lot-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Card,
   CardContent,
@@ -76,7 +93,8 @@ const formSchema = z.object({
 const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
   AVAILABLE: { label: 'Disponível', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' },
   PARTIALLY_USED: { label: 'Parcialmente Usado', color: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-500' },
-  DEPLETED: { label: 'Esgotado', color: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
+  USED: { label: 'Liquidado', color: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400' },
+  DEPLETED: { label: 'Liquidado', color: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400' },
   RESERVED: { label: 'Reservado', color: 'bg-blue-100 text-blue-800 border-blue-200', dot: 'bg-blue-500' },
 };
 
@@ -94,6 +112,10 @@ export default function PureMetalLotsPage() {
   const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [selectedLotForSell, setSelectedLotForSell] = useState<PureMetalLot | null>(null);
+  const [isLiquidateModalOpen, setIsLiquidateModalOpen] = useState(false);
+  const [selectedLotForLiquidate, setSelectedLotForLiquidate] = useState<PureMetalLot | null>(null);
+  const [isNearZeroConfirmOpen, setIsNearZeroConfirmOpen] = useState(false);
+  const [isLiquidatingNearZero, setIsLiquidatingNearZero] = useState(false);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -224,6 +246,27 @@ export default function PureMetalLotsPage() {
     setIsSellModalOpen(true);
   };
 
+  const handleOpenLiquidate = (lot: PureMetalLot) => {
+    setSelectedLotForLiquidate(lot);
+    setIsLiquidateModalOpen(true);
+  };
+
+  const handleConfirmLiquidateNearZero = async () => {
+    try {
+      setIsLiquidatingNearZero(true);
+      const res = await liquidateNearZeroLots(0.05, "Liquidação em massa de resíduos (≤ 0,05g)");
+      toast.success(`${res.liquidatedCount} lote(s) residual(is) liquidado(s) com sucesso!`);
+      setIsNearZeroConfirmOpen(false);
+      fetchPureMetalLots();
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || "Erro ao liquidar lotes residuais.";
+      toast.error(msg);
+      console.error("Erro ao liquidar lotes residuais:", error);
+    } finally {
+      setIsLiquidatingNearZero(false);
+    }
+  };
+
   const columns: ColumnDef<PureMetalLot>[] = [
     {
       accessorKey: "entryDate",
@@ -261,7 +304,10 @@ export default function PureMetalLotsPage() {
     {
       accessorKey: "remainingGrams",
       header: "Restante (g)",
-      cell: ({ row }) => <span className="font-bold">{row.original.remainingGrams.toFixed(2)}</span>,
+      cell: ({ row }) => {
+        const remaining = Number(row.original.remainingGrams || 0);
+        return <span className="font-bold">{remaining.toFixed(2)}</span>;
+      },
     },
     {
       accessorKey: "purity",
@@ -272,7 +318,9 @@ export default function PureMetalLotsPage() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const statusInfo = statusConfig[row.original.status as string] || { label: row.original.status, color: 'bg-gray-100', dot: 'bg-gray-400' };
+        const isZeroed = Number(row.original.remainingGrams || 0) <= 0.005;
+        const statusKey = isZeroed ? 'USED' : (row.original.status as string);
+        const statusInfo = statusConfig[statusKey] || { label: statusKey, color: 'bg-gray-100', dot: 'bg-gray-400' };
         return (
           <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color} border`}>
              <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${statusInfo.dot}`} />
@@ -285,6 +333,8 @@ export default function PureMetalLotsPage() {
       id: "actions",
       cell: ({ row }) => {
         const lot = row.original;
+        const isZeroed = Number(lot.remainingGrams || 0) <= 0.005;
+        const canLiquidate = !isZeroed || lot.status !== 'USED';
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -302,11 +352,20 @@ export default function PureMetalLotsPage() {
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={() => handleSell(lot)}
-                disabled={lot.remainingGrams <= 0}
+                disabled={isZeroed}
               >
                 <DollarSign className="w-4 h-4 mr-2" />
                 Vender Metal
               </DropdownMenuItem>
+              {canLiquidate && (
+                <DropdownMenuItem 
+                  onClick={() => handleOpenLiquidate(lot)}
+                  className="text-amber-700 dark:text-amber-400 focus:text-amber-800"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Liquidar Lote
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleEdit(lot)}>
                 <Edit className="w-4 h-4 mr-2" />
@@ -322,6 +381,10 @@ export default function PureMetalLotsPage() {
       },
     },
   ];
+
+  const nearZeroLotsCount = pureMetalLots.filter(
+    (l) => Number(l.remainingGrams || 0) <= 0.05 && (l.status !== 'USED' || Number(l.remainingGrams || 0) > 0)
+  ).length;
 
   if (loading) return <div>Carregando...</div>;
 
@@ -584,6 +647,19 @@ export default function PureMetalLotsPage() {
                     <SelectItem value="OUTROS">Outros</SelectItem>
                 </SelectContent>
             </Select>
+
+            {nearZeroLotsCount > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsNearZeroConfirmOpen(true)}
+                className="ml-auto border-amber-300 bg-amber-50/80 hover:bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 font-medium"
+              >
+                <Sparkles className="w-4 h-4 mr-1.5 text-amber-600 dark:text-amber-400" />
+                Liquidar Resíduos ({nearZeroLotsCount})
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -610,6 +686,39 @@ export default function PureMetalLotsPage() {
         onOpenChange={setIsSellModalOpen}
         onSuccess={fetchPureMetalLots}
       />
+
+      <LiquidatePureMetalLotDialog
+        lot={selectedLotForLiquidate}
+        isOpen={isLiquidateModalOpen}
+        onOpenChange={setIsLiquidateModalOpen}
+        onSuccess={fetchPureMetalLots}
+      />
+
+      <AlertDialog open={isNearZeroConfirmOpen} onOpenChange={setIsNearZeroConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-600" />
+              Liquidar Lotes Residuais
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Foram encontrados <strong>{nearZeroLotsCount}</strong> lote(s) com saldo residual igual ou inferior a 0,05 g (incluindo saldos zerados não baixados).
+              <br /><br />
+              Deseja liquidar todos eles de uma vez? Os saldos restantes serão zerados com movimentação de saída e os lotes passarão para o status <strong>Liquidado</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLiquidatingNearZero}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmLiquidateNearZero}
+              disabled={isLiquidatingNearZero}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {isLiquidatingNearZero ? "Liquidando..." : "Confirmar Liquidação"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
