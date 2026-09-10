@@ -60,5 +60,17 @@ export abstract class TransacaoRepository {
 
   abstract createAccountPay(data: any, tx?: any): Promise<any>;
 
+  abstract findPureMetalLotBySource(
+    sourceId: string,
+    organizationId: string,
+    tx?: any,
+  ): Promise<any | null>;
+
+  abstract deletePureMetalLotWithMovements(
+    lotId: string,
+    organizationId: string,
+    tx?: any,
+  ): Promise<void>;
+
   abstract executeInTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T>;
 }

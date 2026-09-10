@@ -24,6 +24,8 @@ describe('DeleteTransacaoUseCase', () => {
       updateAccountRec: jest.fn(),
       findTransactionsByAccountRec: jest.fn(),
       createAccountPay: jest.fn(),
+      findPureMetalLotBySource: jest.fn().mockResolvedValue(null),
+      deletePureMetalLotWithMovements: jest.fn().mockResolvedValue(undefined),
       executeInTransaction: jest.fn().mockImplementation((fn) => fn({})),
     };
 
@@ -51,7 +53,7 @@ describe('DeleteTransacaoUseCase', () => {
 
     await useCase.execute('tx-single', 'org-1');
 
-    expect(mockRepository.delete).toHaveBeenCalledWith('tx-single');
+    expect(mockRepository.delete).toHaveBeenCalledWith('tx-single', expect.anything());
   });
 
   it('should delete both transactions when it is a transfer', async () => {
@@ -81,5 +83,32 @@ describe('DeleteTransacaoUseCase', () => {
 
     expect(mockRepository.delete).toHaveBeenCalledWith('tx-2', expect.anything());
     expect(mockRepository.delete).toHaveBeenCalledWith('tx-1', expect.anything());
+  });
+
+  it('should delete linked pure metal lot when transaction created one', async () => {
+    const tx = TransacaoEntity.create({
+      id: 'tx-transfer',
+      tipo: TipoTransacaoPrisma.DEBITO,
+      valor: 500,
+      contaContabilId: 'cc-1',
+      organizationId: 'org-1',
+    });
+
+    mockRepository.findById.mockResolvedValue(tx);
+    mockRepository.findPureMetalLotBySource.mockResolvedValue({
+      id: 'lot-1',
+      initialGrams: 100,
+      remainingGrams: 100,
+      chemicalReactions: [],
+    });
+
+    await useCase.execute('tx-transfer', 'org-1');
+
+    expect(mockRepository.deletePureMetalLotWithMovements).toHaveBeenCalledWith(
+      'lot-1',
+      'org-1',
+      expect.anything(),
+    );
+    expect(mockRepository.delete).toHaveBeenCalledWith('tx-transfer', expect.anything());
   });
 });

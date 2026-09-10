@@ -26,6 +26,8 @@ describe('CreateTransferUseCase', () => {
       updateAccountRec: jest.fn(),
       findTransactionsByAccountRec: jest.fn(),
       createAccountPay: jest.fn(),
+      findPureMetalLotBySource: jest.fn(),
+      deletePureMetalLotWithMovements: jest.fn(),
       executeInTransaction: jest.fn().mockImplementation((fn) => fn({})),
     };
 

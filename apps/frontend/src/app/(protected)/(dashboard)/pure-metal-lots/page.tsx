@@ -207,8 +207,9 @@ export default function PureMetalLotsPage() {
       await deletePureMetalLot(lotId);
       toast.success('Lote de metal puro deletado com sucesso!');
       fetchPureMetalLots();
-    } catch (error) {
-      toast.error('Erro ao deletar lote de metal puro. Tente novamente.');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Erro ao deletar lote de metal puro. Tente novamente.';
+      toast.error(msg);
       console.error('Erro ao deletar lote de metal puro:', error);
     }
   };

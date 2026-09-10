@@ -199,6 +199,38 @@ export class PrismaTransacaoRepository extends TransacaoRepository {
     return client.accountPay.create({ data });
   }
 
+  async findPureMetalLotBySource(
+    sourceId: string,
+    organizationId: string,
+    tx?: any,
+  ): Promise<any | null> {
+    const client = tx || this.prisma;
+    return client.pure_metal_lots.findFirst({
+      where: {
+        organizationId,
+        sourceType: 'SUPPLIER_ACCOUNT_TRANSFER',
+        sourceId,
+      },
+      include: {
+        chemicalReactions: true,
+      },
+    });
+  }
+
+  async deletePureMetalLotWithMovements(
+    lotId: string,
+    organizationId: string,
+    tx?: any,
+  ): Promise<void> {
+    const client = tx || this.prisma;
+    await client.pureMetalLotMovement.deleteMany({
+      where: { pureMetalLotId: lotId, organizationId },
+    });
+    await client.pure_metal_lots.delete({
+      where: { id: lotId, organizationId },
+    });
+  }
+
   async executeInTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(async (tx) => fn(tx));
   }

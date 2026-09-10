@@ -112,7 +112,11 @@ export class PrismaPureMetalLotsRepository implements PureMetalLotsRepository {
   }
 
   async remove(id: string, organizationId: string, tx?: any): Promise<void> {
-    await this.getClient(tx).pure_metal_lots.delete({
+    const client = this.getClient(tx);
+    await client.pureMetalLotMovement.deleteMany({
+      where: { pureMetalLotId: id, organizationId },
+    });
+    await client.pure_metal_lots.delete({
       where: { id, organizationId },
     });
   }

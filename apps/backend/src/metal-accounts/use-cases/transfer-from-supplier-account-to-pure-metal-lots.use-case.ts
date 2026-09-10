@@ -120,7 +120,7 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
         const txDescription = `Transferência de Prata para Estoque: ${formattedAgGrams}g Ag @ R$ ${formattedAgQuote}/g (R$ ${formattedBRL}) = ${formattedAuGrams}g Au @ R$ ${formattedAuQuote}/g${notes ? `. ${notes}` : ''}`;
 
         // 3. Registrar o DÉBITO na conta do fornecedor (em Ouro e R$)
-        await tx.transacao.create({
+        const debitoTransacao = await tx.transacao.create({
           data: {
             organizationId,
             tipo: TipoTransacaoPrisma.DEBITO,
@@ -134,12 +134,12 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
           },
         });
 
-        // 4. Criar o lote em pure_metal_lots de PRATA (AG)
+        // 4. Criar o lote em pure_metal_lots de PRATA (AG) vinculado à transação
         await this.createPureMetalLotUseCase.execute(
           organizationId,
           {
             sourceType: 'SUPPLIER_ACCOUNT_TRANSFER',
-            sourceId: supplierMetalAccountId,
+            sourceId: debitoTransacao.id,
             metalType: TipoMetal.AG,
             initialGrams: agGrams,
             remainingGrams: agGrams,
@@ -151,7 +151,7 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
         );
 
         // 5. Crédito contábil
-        await tx.transacao.create({
+        const creditoTransacao = await tx.transacao.create({
           data: {
             organizationId,
             tipo: TipoTransacaoPrisma.CREDITO,
@@ -161,7 +161,13 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
             descricao: `Entrada de Prata no Estoque via Transferência de Fornecedor: ${formattedAgGrams}g Ag${notes ? `. ${notes}` : ''}`,
             dataHora: transferDate || new Date(),
             contaContabilId: contaEstoqueOuro.id,
+            linkedTransactionId: debitoTransacao.id,
           },
+        });
+
+        await tx.transacao.update({
+          where: { id: debitoTransacao.id },
+          data: { linkedTransactionId: creditoTransacao.id },
         });
 
         return { message: 'Transferência de Prata realizada com sucesso.' };
@@ -185,7 +191,7 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
       const valueBRL = new Decimal(grams).times(goldSellPrice);
 
       // Registrar a transação de débito na conta corrente do fornecedor (saída de ouro)
-      await tx.transacao.create({
+      const debitoTransacao = await tx.transacao.create({
         data: {
           organizationId,
           tipo: TipoTransacaoPrisma.DEBITO,
@@ -199,12 +205,12 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
         },
       });
 
-      // Criar um novo pure_metal_lot de OURO (AU)
+      // Criar um novo pure_metal_lot de OURO (AU) vinculado à transação
       await this.createPureMetalLotUseCase.execute(
         organizationId,
         {
           sourceType: 'SUPPLIER_ACCOUNT_TRANSFER',
-          sourceId: supplierMetalAccountId,
+          sourceId: debitoTransacao.id,
           metalType: TipoMetal.AU,
           initialGrams: grams,
           remainingGrams: grams,
@@ -216,7 +222,7 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
       );
 
       // Registrar a transação de crédito na conta de estoque
-      await tx.transacao.create({
+      const creditoTransacao = await tx.transacao.create({
         data: {
           organizationId,
           tipo: TipoTransacaoPrisma.CREDITO,
@@ -226,7 +232,13 @@ export class TransferFromSupplierAccountToPureMetalLotsUseCase {
           descricao: `Entrada de Ouro no Estoque via Transferência de Fornecedor: ${notes || ''}`,
           dataHora: transferDate || new Date(),
           contaContabilId: contaEstoqueOuro.id,
+          linkedTransactionId: debitoTransacao.id,
         },
+      });
+
+      await tx.transacao.update({
+        where: { id: debitoTransacao.id },
+        data: { linkedTransactionId: creditoTransacao.id },
       });
 
       return { message: 'Transferência realizada com sucesso.' };

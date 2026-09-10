@@ -66,8 +66,9 @@ export function PureMetalLotsTable() {
       await deletePureMetalLot(id);
       toast.success("Lote de metal puro excluído com sucesso!");
       fetchPureMetalLots();
-    } catch (error) {
-      toast.error("Erro ao excluir lote de metal puro.");
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || "Erro ao excluir lote de metal puro.";
+      toast.error(msg);
       console.error("Erro ao excluir lote de metal puro:", error);
     }
   };
