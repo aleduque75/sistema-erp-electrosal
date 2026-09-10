@@ -55,6 +55,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
 } from "@/components/ui/dropdown-menu";
 import { TransacaoForm } from "../../transacao-form";
 import { TransferForm } from "../../components/transfer-form"; // Adicionar esta linha
@@ -312,6 +313,60 @@ export default function ExtratoPage() {
     }
   }, [id, startDate, endDate]);
 
+  const handleOpenNovoLancamento = () => {
+    setEditingTransacao(null);
+    setIsLancamentoModalOpen(true);
+  };
+
+  const handleOpenGenericTransfer = () => {
+    setIsGenericTransferModalOpen(true);
+  };
+
+  // Atalhos de teclado: Alt+L / Ctrl+L (Lançamento) e Alt+T / Ctrl+T (Transferência)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Se algum modal estiver aberto, não dispara atalhos para não interferir na digitação
+      if (
+        isLancamentoModalOpen ||
+        isTransferModalOpen ||
+        isGenericTransferModalOpen ||
+        isDeleteModalOpen ||
+        isMediaModalOpen ||
+        isDetailsModalOpen
+      ) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      // Suporta Alt (Alt+L, Alt+T) ou Ctrl/Cmd (Ctrl+L, Ctrl+T, Ctrl+Alt+L, Ctrl+Alt+T)
+      const hasModifier = e.altKey || e.ctrlKey || e.metaKey;
+
+      if (!hasModifier) return;
+
+      if (key === "l") {
+        e.preventDefault();
+        e.stopPropagation();
+        handleOpenNovoLancamento();
+      } else if (key === "t") {
+        e.preventDefault();
+        e.stopPropagation();
+        handleOpenGenericTransfer();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    isLancamentoModalOpen,
+    isTransferModalOpen,
+    isGenericTransferModalOpen,
+    isDeleteModalOpen,
+    isMediaModalOpen,
+    isDetailsModalOpen,
+  ]);
+
   const handleSaveLancamento = () => {
     setIsLancamentoModalOpen(false);
     setEditingTransacao(null);
@@ -528,19 +583,34 @@ export default function ExtratoPage() {
                   </Button>
                 </div>
 
-                <Button size="sm" className="flex-1 md:flex-none" onClick={() => setIsLancamentoModalOpen(true)}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Novo Lançamento
+                <Button
+                  size="sm"
+                  className="flex-1 md:flex-none gap-2"
+                  onClick={handleOpenNovoLancamento}
+                  title="Novo Lançamento (Alt+L ou Ctrl+L)"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span>Novo Lançamento</span>
+                  <kbd className="hidden sm:inline-flex items-center rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1.5 py-0.5 text-[10px] font-mono font-medium leading-none text-white/90">
+                    Alt+L
+                  </kbd>
                 </Button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1 md:flex-none">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 md:flex-none"
+                      title="Mais Ações (Transferência: Alt+T ou Ctrl+T)"
+                    >
                       <ArrowRightLeft className="mr-2 h-4 w-4" /> Mais Ações
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setIsGenericTransferModalOpen(true)}>
+                    <DropdownMenuItem onClick={handleOpenGenericTransfer}>
                       <ArrowRightLeft className="mr-2 h-4 w-4" /> Transferência
+                      <DropdownMenuShortcut>Alt+T</DropdownMenuShortcut>
                     </DropdownMenuItem>
                     {extrato?.contaCorrente.type === "FORNECEDOR_METAL" && (
                       <DropdownMenuItem onClick={() => setIsTransferModalOpen(true)}>
