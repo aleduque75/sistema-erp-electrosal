@@ -21,6 +21,7 @@ import { PayAccountsRecWithMetalUseCase } from './use-cases/pay-accounts-rec-wit
 import { PayAccountsRecWithMetalCreditMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-credit-multiple.use-case';
 import { PayAccountsRecWithMetalMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-multiple.use-case';
 import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
+import { RevertAccountRecPaymentUseCase } from './use-cases/revert-account-rec-payment.use-case';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
     PayAccountsRecWithMetalCreditMultipleUseCase,
     PayAccountsRecWithMetalMultipleUseCase,
     HybridReceiveUseCase,
+    RevertAccountRecPaymentUseCase,
   ],
   exports: [
     AccountsRecRepository,
@@ -65,6 +67,7 @@ import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
     PayAccountsRecWithMetalCreditMultipleUseCase,
     PayAccountsRecWithMetalMultipleUseCase,
     HybridReceiveUseCase,
+    RevertAccountRecPaymentUseCase,
   ],
 })
 export class AccountsRecModule {}

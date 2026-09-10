@@ -68,6 +68,43 @@ export class DeleteTransacaoUseCase {
       }
 
       await this.transacaoRepository.delete(id, tx);
+
+      // 3. Se a transação pertencia a uma conta a receber, recalcula a conta a receber
+      if (transacao.accountRecId) {
+        const accountRec = await this.transacaoRepository.findAccountRec(
+          transacao.accountRecId,
+          tx,
+        );
+        if (accountRec) {
+          const remaining = await this.transacaoRepository.findTransactionsByAccountRec(
+            transacao.accountRecId,
+            tx,
+          );
+          const totalAmountPaid = remaining.reduce(
+            (sum, t) => sum + Number(t.valor),
+            0,
+          );
+          const totalGoldAmountPaid = remaining.reduce(
+            (sum, t) => sum + Number(t.goldAmount || 0),
+            0,
+          );
+          const isFullyPaid =
+            accountRec.goldAmount && Number(accountRec.goldAmount) > 0
+              ? totalGoldAmountPaid >= Number(accountRec.goldAmount) - 0.0001
+              : totalAmountPaid >= Number(accountRec.amount) - 0.01;
+
+          await this.transacaoRepository.updateAccountRec(
+            accountRec.id,
+            {
+              amountPaid: totalAmountPaid,
+              goldAmountPaid: totalGoldAmountPaid,
+              received: isFullyPaid,
+              receivedAt: isFullyPaid ? accountRec.receivedAt : null,
+            },
+            tx,
+          );
+        }
+      }
     });
   }
 }

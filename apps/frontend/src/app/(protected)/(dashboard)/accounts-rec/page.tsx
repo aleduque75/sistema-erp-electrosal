@@ -14,6 +14,16 @@ import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,6 +40,8 @@ interface AccountRec {
   dueDate: string;
   received: boolean;
   receivedAt?: string | null;
+  amountPaid?: number;
+  goldAmountPaid?: number;
   sale?: { id: string; orderNumber: number; observation?: string | null; createdAt?: string };
   pessoa?: { name: string };
   clientId: string;
@@ -54,6 +66,8 @@ export default function AccountsRecPage() {
   const [saleToView, setSaleToView] = useState<any | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [accountToEdit, setAccountToEdit] = useState<AccountRec | null>(null);
+  const [accountToRevert, setAccountToRevert] = useState<AccountRec | null>(null);
+  const [isReverting, setIsReverting] = useState(false);
 
   // Filters State
   const [filter, setFilter] = useState('');
@@ -126,6 +140,21 @@ export default function AccountsRecPage() {
     });
   };
 
+  const handleRevertAccountPayments = async () => {
+    if (!accountToRevert) return;
+    setIsReverting(true);
+    try {
+      await api.delete(`/accounts-rec/${accountToRevert.id}/payments`);
+      toast.success("Recebimento(s) estornado(s) com sucesso!");
+      setAccountToRevert(null);
+      fetchAccounts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Erro ao estornar recebimento(s).");
+    } finally {
+      setIsReverting(false);
+    }
+  };
+
   const columns: ColumnDef<AccountRec>[] = [
     {
       accessorKey: "description",
@@ -178,6 +207,7 @@ export default function AccountsRecPage() {
       id: "actions",
       cell: ({ row }) => {
         const account = row.original;
+        const hasPayment = account.received || Number(account.amountPaid || 0) > 0;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -190,6 +220,15 @@ export default function AccountsRecPage() {
               <DropdownMenuSeparator />
               {!account.received && (
                 <DropdownMenuItem onClick={() => setAccountToReceive(account)}>Registrar Recebimento</DropdownMenuItem>
+              )}
+              {hasPayment && (
+                <DropdownMenuItem
+                  onClick={() => setAccountToRevert(account)}
+                  className="text-destructive focus:text-destructive cursor-pointer"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Estornar Recebimento(s)
+                </DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -325,9 +364,49 @@ export default function AccountsRecPage() {
           <DialogHeader>
             <DialogTitle>Detalhes da Venda - Pedido #{saleToView?.orderNumber}</DialogTitle>
           </DialogHeader>
-          {saleToView ? <SaleDetailsView sale={saleToView} onReceivePayment={setAccountToReceive} onUpdate={() => handleViewSale(saleToView.id)} /> : <p>Carregando...</p>}
+          {saleToView ? (
+            <SaleDetailsView
+              sale={saleToView}
+              onReceivePayment={setAccountToReceive}
+              onUpdate={() => {
+                handleViewSale(saleToView.id);
+                fetchAccounts();
+              }}
+            />
+          ) : (
+            <p>Carregando...</p>
+          )}
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de confirmação para estorno de recebimentos da duplicata */}
+      <AlertDialog open={!!accountToRevert} onOpenChange={(open) => !open && setAccountToRevert(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Estornar Recebimento(s)</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span>
+                Deseja realmente estornar todos os recebimentos da duplicata{" "}
+                <strong className="text-foreground">{accountToRevert?.description}</strong> no valor de{" "}
+                <strong className="text-foreground">{formatCurrency(Number(accountToRevert?.amount))}</strong>?
+              </span>
+              <span className="block text-muted-foreground text-xs">
+                As transações financeiras geradas serão excluídas e o status da duplicata voltará a ser <strong>Pendente</strong>.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isReverting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRevertAccountPayments}
+              disabled={isReverting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isReverting ? "Estornando..." : "Confirmar Estorno"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -35,6 +35,7 @@ import { PayAccountsRecWithMetalMultipleDto } from './dtos/pay-accounts-rec-with
 import { PayAccountsRecWithMetalMultipleUseCase } from './use-cases/pay-accounts-rec-with-metal-multiple.use-case';
 import { HybridReceiveDto } from './dtos/hybrid-receive.dto';
 import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
+import { RevertAccountRecPaymentUseCase } from './use-cases/revert-account-rec-payment.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('accounts-rec')
@@ -52,6 +53,7 @@ export class AccountsRecController {
     private readonly payAccountsRecWithMetalCreditMultipleUseCase: PayAccountsRecWithMetalCreditMultipleUseCase,
     private readonly payAccountsRecWithMetalMultipleUseCase: PayAccountsRecWithMetalMultipleUseCase,
     private readonly hybridReceiveUseCase: HybridReceiveUseCase,
+    private readonly revertAccountRecPaymentUseCase: RevertAccountRecPaymentUseCase,
   ) {}
 
   @Post()
@@ -178,6 +180,23 @@ export class AccountsRecController {
     @Param('id') id: string,
   ) {
     return this.forceFinalizeAccountRecUseCase.execute(organizationId, id);
+  }
+
+  @Delete(':id/payments/:transactionId')
+  revertPayment(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+    @Param('transactionId') transactionId: string,
+  ) {
+    return this.revertAccountRecPaymentUseCase.execute(organizationId, id, transactionId);
+  }
+
+  @Delete(':id/payments')
+  revertAllPayments(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.revertAccountRecPaymentUseCase.execute(organizationId, id);
   }
 
   @Delete(':id')

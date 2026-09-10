@@ -111,4 +111,48 @@ describe('DeleteTransacaoUseCase', () => {
     );
     expect(mockRepository.delete).toHaveBeenCalledWith('tx-transfer', expect.anything());
   });
+
+  it('should recalculate accountRec when deleted transaction has accountRecId', async () => {
+    const tx = TransacaoEntity.create({
+      id: 'tx-acc-rec',
+      tipo: TipoTransacaoPrisma.CREDITO,
+      valor: 500,
+      contaContabilId: 'cc-1',
+      organizationId: 'org-1',
+      accountRecId: 'acc-1',
+    });
+
+    mockRepository.findById.mockResolvedValue(tx);
+    mockRepository.findAccountRec.mockResolvedValue({
+      id: 'acc-1',
+      amount: 1000,
+      amountPaid: 1000,
+      received: true,
+      receivedAt: new Date(),
+    });
+    mockRepository.findTransactionsByAccountRec.mockResolvedValue([
+      TransacaoEntity.create({
+        id: 'tx-remaining',
+        tipo: TipoTransacaoPrisma.CREDITO,
+        valor: 500,
+        contaContabilId: 'cc-1',
+        organizationId: 'org-1',
+        accountRecId: 'acc-1',
+      }),
+    ]);
+
+    await useCase.execute('tx-acc-rec', 'org-1');
+
+    expect(mockRepository.delete).toHaveBeenCalledWith('tx-acc-rec', expect.anything());
+    expect(mockRepository.updateAccountRec).toHaveBeenCalledWith(
+      'acc-1',
+      {
+        amountPaid: 500,
+        goldAmountPaid: 0,
+        received: false,
+        receivedAt: null,
+      },
+      expect.anything(),
+    );
+  });
 });
