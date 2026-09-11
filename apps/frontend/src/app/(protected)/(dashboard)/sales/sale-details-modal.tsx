@@ -5,9 +5,20 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import Decimal from 'decimal.js';
 import { useForm, Controller } from 'react-hook-form';
-import { RotateCcw, User, MapPin, Calendar, CreditCard } from 'lucide-react';
+import { RotateCcw, User, MapPin, Calendar, CreditCard, Trash2, AlertTriangle } from 'lucide-react';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -44,6 +55,8 @@ interface SaleDetailsModalProps {
 export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave }: SaleDetailsModalProps) {
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setIsPageLoading] = useState(true);
+  const [transactionToDelete, setTransactionToDelete] = useState<any | null>(null);
+  const [isDeletingTransaction, setIsDeletingTransaction] = useState(false);
 
   useEffect(() => {
     if (open && initialSale) {
@@ -64,10 +77,49 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
       // Refetch sale data
       const res = await api.get(`/sales/${sale.id}`);
       setSale(res.data);
+      if (onSave) onSave();
     } catch (err) {
       toast.error("Falha ao recalcular ajuste.");
     } finally {
       setIsPageLoading(false);
+    }
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!transactionToDelete || !sale) return;
+    setIsDeletingTransaction(true);
+    try {
+      if (transactionToDelete.accountRecId) {
+        try {
+          await api.delete(
+            `/accounts-rec/${transactionToDelete.accountRecId}/payments/${transactionToDelete.id}`
+          );
+        } catch (err: any) {
+          // Fallback para exclusão direta da transação
+          await api.delete(`/transacoes/${transactionToDelete.id}`);
+        }
+      } else {
+        await api.delete(`/transacoes/${transactionToDelete.id}`);
+      }
+
+      // Dispara o recálculo dos ajustes da venda para garantir atualização completa
+      try {
+        await api.post(`/sales/${sale.id}/recalculate-adjustment`);
+      } catch (recErr) {
+        console.warn("Recalculate adjustment failed:", recErr);
+      }
+
+      toast.success("Lançamento excluído com sucesso e venda recalculada!");
+      setTransactionToDelete(null);
+
+      // Recarrega os dados da venda atualizada no modal
+      const res = await api.get(`/sales/${sale.id}`);
+      setSale(res.data);
+      if (onSave) onSave();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Falha ao excluir lançamento.");
+    } finally {
+      setIsDeletingTransaction(false);
     }
   };
 
@@ -111,7 +163,6 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
   const uniqueTransactions = useMemo(() => {
     if (!sale) return [];
 
-    const transactions: any[] = [];
     const uniqueMap = new Map();
 
     // Aggregates transactions from direct receivables and installments
@@ -129,26 +180,27 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
           if (t && t.id && !uniqueMap.has(t.id)) {
             uniqueMap.set(t.id, {
               ...t,
+              accountRecId: t.accountRecId || ar.id,
               // Fallback for account name if missing from transaction
-              displayAccount: t.contaCorrente?.nome || t.contaContabil?.nome || ar.contaCorrente?.nome || 'N/A'
+              displayAccount: t.contaCorrente?.nome || t.contaContabil?.nome || ar.contaCorrente?.nome || 'N/A',
+              descricao: t.descricao || ar.description || 'Recebimento de Venda',
+              tipo: t.tipo || 'CREDITO'
             });
           }
         });
       } else if (ar.received && (Number(ar.goldAmountPaid || 0) > 0 || Number(ar.amountPaid || 0) > 0)) {
         // Fallback: If received but no linked transactions, show a virtual one
-        // BUT only if it actually has values, and prioritize metal credits
         const virtualId = `virtual-${ar.id}`;
         if (!uniqueMap.has(virtualId)) {
-          // If it's a BRL-only payment and we don't have a transaction, 
-          // we might want to hide it if there's a pending installment, 
-          // but if it's mark as RECEIVED, we should show something.
-          // However, avoid showing "Credit of Metal" for BRL payments.
           uniqueMap.set(virtualId, {
             id: virtualId,
-            data_hora: ar.receivedAt || ar.dueDate,
+            accountRecId: ar.id,
+            tipo: 'CREDITO',
+            dataHora: ar.receivedAt || ar.dueDate,
             valor: ar.amountPaid || ar.amount,
             goldAmount: ar.goldAmountPaid || ar.goldAmount,
             displayAccount: ar.contaCorrente?.nome || (Number(ar.goldAmountPaid || 0) > 0 ? 'Crédito de Metal' : 'Recebimento Direto'),
+            descricao: ar.description || 'Recebimento Direto',
             isVirtual: true
           });
         }
@@ -157,6 +209,30 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
 
     return Array.from(uniqueMap.values());
   }, [sale]);
+
+  const totals = useMemo(() => {
+    let netBRL = 0;
+    let netGold = 0;
+
+    uniqueTransactions.forEach((t) => {
+      const isDebit = t.tipo === 'DEBITO';
+      const val = Math.abs(Number(t.valor)) || 0;
+      const gold = Math.abs(Number(t.goldAmount)) || 0;
+
+      if (isDebit) {
+        netBRL -= val;
+        netGold -= gold;
+      } else {
+        netBRL += val;
+        netGold += gold;
+      }
+    });
+
+    return { netBRL, netGold };
+  }, [uniqueTransactions]);
+
+  const expectedAmount = Number(sale?.netAmount || sale?.totalAmount || 0);
+  const isOverpaid = expectedAmount > 0 && totals.netBRL > expectedAmount + 50;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -308,47 +384,182 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
 
             {/* Detalhes dos Pagamentos */}
             <Card className="border-none md:border shadow-none md:shadow-sm">
-              <CardHeader className="p-2 md:p-6 pb-0 md:pb-6">
-                <CardTitle className="text-xs md:text-sm font-bold uppercase tracking-widest text-muted-foreground">Detalhes dos Pagamentos</CardTitle>
+              <CardHeader className="p-2 md:p-6 pb-2 md:pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-xs md:text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                    Detalhes dos Pagamentos
+                  </CardTitle>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Revise os lançamentos e exclua pagamentos duplicados ou incorretos.
+                  </p>
+                </div>
+                {uniqueTransactions.length > 0 && (
+                  <Badge variant="outline" className="text-xs font-mono w-fit">
+                    {uniqueTransactions.length} {uniqueTransactions.length === 1 ? 'lançamento' : 'lançamentos'}
+                  </Badge>
+                )}
               </CardHeader>
-              <CardContent className="p-0 md:p-6">
-                <div className="hidden md:block">
+              <CardContent className="p-0 md:p-6 pt-0">
+                {isOverpaid && (
+                  <div className="mx-2 md:mx-0 mb-4 p-3 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/30 flex items-start gap-2 text-amber-800 dark:text-amber-300 text-xs">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <span className="font-bold">Aviso de Recebimento Excessivo: </span>
+                      O total líquido recebido ({formatCurrency(totals.netBRL)}) é superior ao valor do pedido ({formatCurrency(expectedAmount)}). 
+                      Caso haja lançamentos duplicados gerados após cancelamentos ou re-lançamentos, utilize o botão de lixeira na coluna de Ações abaixo para excluir o lançamento excedente.
+                    </div>
+                  </div>
+                )}
+
+                <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Conta Corrente</TableHead>
-                        <TableHead className="text-right">Valor (BRL)</TableHead>
-                        <TableHead className="text-right">Valor (Au)</TableHead>
+                        <TableHead className="w-[85px]">Data</TableHead>
+                        <TableHead className="w-[105px]">Tipo</TableHead>
+                        <TableHead className="min-w-[180px]">Descrição / Origem</TableHead>
+                        <TableHead className="min-w-[120px]">Conta Corrente</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">Valor (BRL)</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">Valor (Au)</TableHead>
+                        <TableHead className="w-[60px] text-center">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {uniqueTransactions.map((transacao) => (
-                        <TableRow key={transacao.id}>
-                          <TableCell>{formatDate(transacao.dataHora)}</TableCell>
-                          <TableCell>{transacao.displayAccount || 'N/A'}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(Number(transacao.valor))}</TableCell>
-                          <TableCell className="text-right">{formatGrams(Number(transacao.goldAmount))} g</TableCell>
-                        </TableRow>
-                      ))}
+                      {uniqueTransactions.map((transacao) => {
+                        const isDebit = transacao.tipo === 'DEBITO';
+                        return (
+                          <TableRow key={transacao.id} className={isDebit ? "bg-red-50/20 dark:bg-red-950/10" : ""}>
+                            <TableCell className="whitespace-nowrap text-xs font-medium">
+                              {formatDate(transacao.dataHora)}
+                            </TableCell>
+                            <TableCell>
+                              {isDebit ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200 dark:border-red-900">
+                                  Estorno
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300 border border-green-200 dark:border-green-900">
+                                  Recebimento
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-medium max-w-[220px] truncate" title={transacao.descricao || 'Recebimento de Venda'}>
+                              {transacao.descricao || 'Recebimento de Venda'}
+                            </TableCell>
+                            <TableCell className="text-xs font-medium">{transacao.displayAccount || 'N/A'}</TableCell>
+                            <TableCell className={`text-right text-xs font-bold tabular-nums whitespace-nowrap ${isDebit ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                              {isDebit ? '-' : '+'} {formatCurrency(Math.abs(Number(transacao.valor)))}
+                            </TableCell>
+                            <TableCell className={`text-right text-xs font-bold tabular-nums whitespace-nowrap ${isDebit ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
+                              {isDebit ? '-' : '+'} {formatGrams(Math.abs(Number(transacao.goldAmount)))} g
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {!transacao.isVirtual ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  title="Excluir este lançamento"
+                                  onClick={() => setTransactionToDelete(transacao)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              ) : (
+                                <span className="text-[10px] text-muted-foreground italic">-</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
-                </div>
 
-                {/* Mobile Mobile View */}
-                <div className="md:hidden divide-y divide-zinc-100 italic max-w-sm mx-auto">
-                  {uniqueTransactions.map((transacao) => (
-                    <div key={transacao.id} className="p-4 space-y-2">
-                      <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-tighter">
-                        <span>{formatDate(transacao.dataHora)}</span>
-                        <span>{transacao.displayAccount}</span>
-                      </div>
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-lg font-black text-zinc-950 font-mono tracking-tighter">{formatCurrency(Number(transacao.valor))}</span>
-                        <span className="text-xs text-amber-600 font-bold">{formatGrams(Number(transacao.goldAmount))} g</span>
+                  {/* Rodapé com Totais Líquidos */}
+                  {uniqueTransactions.length > 0 && (
+                    <div className="flex justify-between items-center px-4 py-3 bg-muted/40 border-t rounded-b-lg text-xs">
+                      <span className="font-bold text-muted-foreground uppercase tracking-wider">
+                        Total Líquido Recebido:
+                      </span>
+                      <div className="flex items-center gap-4">
+                        <span className="font-bold text-foreground font-mono text-sm">
+                          {formatCurrency(totals.netBRL)}
+                        </span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className="font-bold text-amber-600 dark:text-amber-400 font-mono text-sm">
+                          {formatGrams(totals.netGold)} g Au
+                        </span>
                       </div>
                     </div>
-                  ))}
+                  )}
+                </div>
+
+                {/* Mobile View */}
+                <div className="md:hidden space-y-2 p-2">
+                  {uniqueTransactions.map((transacao) => {
+                    const isDebit = transacao.tipo === 'DEBITO';
+                    return (
+                      <div
+                        key={transacao.id}
+                        className={`p-3 rounded-xl border text-xs space-y-2 ${
+                          isDebit
+                            ? "bg-red-50/20 border-red-200 dark:bg-red-950/20 dark:border-red-900"
+                            : "bg-card border-border/80"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                              {formatDate(transacao.dataHora)}
+                            </span>
+                            {isDebit ? (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300">
+                                Estorno
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300">
+                                Recebimento
+                              </span>
+                            )}
+                          </div>
+                          {!transacao.isVirtual && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              title="Excluir este lançamento"
+                              onClick={() => setTransactionToDelete(transacao)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="font-semibold text-foreground line-clamp-1">{transacao.descricao || 'Recebimento'}</p>
+                          <p className="text-[11px] text-muted-foreground">{transacao.displayAccount}</p>
+                        </div>
+
+                        <div className="flex justify-between items-baseline border-t pt-2 mt-1 border-border/40">
+                          <span className={`text-sm font-black tabular-nums ${isDebit ? 'text-red-600' : 'text-green-600'}`}>
+                            {isDebit ? '-' : '+'} {formatCurrency(Math.abs(Number(transacao.valor)))}
+                          </span>
+                          <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                            {isDebit ? '-' : '+'} {formatGrams(Math.abs(Number(transacao.goldAmount)))} g
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {uniqueTransactions.length > 0 && (
+                    <div className="p-3 bg-muted/40 rounded-xl border flex justify-between items-center text-xs">
+                      <span className="font-bold uppercase text-[10px] text-muted-foreground">Total Líquido:</span>
+                      <div className="text-right">
+                        <p className="font-black text-foreground">{formatCurrency(totals.netBRL)}</p>
+                        <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{formatGrams(totals.netGold)} g Au</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {uniqueTransactions.length === 0 && (
@@ -454,6 +665,51 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
             <DialogFooter className="p-4 pt-0">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
             </DialogFooter>
+
+            {/* Diálogo de confirmação para exclusão de lançamento de pagamento */}
+            <AlertDialog
+              open={!!transactionToDelete}
+              onOpenChange={(open) => !open && setTransactionToDelete(null)}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir Lançamento de Pagamento</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3 pt-2">
+                    <span className="block text-sm">
+                      Tem certeza que deseja excluir o lançamento{" "}
+                      <strong className="text-foreground">
+                        {transactionToDelete?.descricao || "Recebimento"}
+                      </strong>{" "}
+                      no valor de{" "}
+                      <strong className="text-foreground font-mono">
+                        {formatCurrency(Math.abs(Number(transactionToDelete?.valor)))}
+                      </strong>
+                      {transactionToDelete?.goldAmount ? ` (${formatGrams(Math.abs(Number(transactionToDelete.goldAmount)))} g Au)` : ""}?
+                    </span>
+                    {transactionToDelete?.displayAccount && (
+                      <span className="block text-xs text-muted-foreground">
+                        Conta Corrente afetada: <strong>{transactionToDelete.displayAccount}</strong>
+                      </span>
+                    )}
+                    <span className="block text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900">
+                      Esta ação removerá a movimentação financeira do extrato da conta corrente e recalculará automaticamente o lucro, equivalente em ouro e status desta venda.
+                    </span>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeletingTransaction}>
+                    Cancelar
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteTransaction}
+                    disabled={isDeletingTransaction}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeletingTransaction ? "Excluindo..." : "Confirmar Exclusão"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         ) : (
           <p>Não foi possível carregar os detalhes.</p>

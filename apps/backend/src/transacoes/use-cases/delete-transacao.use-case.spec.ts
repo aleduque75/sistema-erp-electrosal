@@ -155,4 +155,66 @@ describe('DeleteTransacaoUseCase', () => {
       expect.anything(),
     );
   });
+
+  it('should recalculate sale adjustment when deleted transaction belongs to a sale', async () => {
+    const mockCalculateSaleAdjustment = {
+      execute: jest.fn().mockResolvedValue({}),
+    } as any;
+
+    const useCaseWithSale = new DeleteTransacaoUseCase(
+      mockRepository,
+      mockCalculateSaleAdjustment,
+    );
+
+    const tx = TransacaoEntity.create({
+      id: 'tx-sale-rec',
+      tipo: TipoTransacaoPrisma.CREDITO,
+      valor: 500,
+      contaContabilId: 'cc-1',
+      organizationId: 'org-1',
+      accountRecId: 'acc-sale-1',
+    });
+
+    mockRepository.findById.mockResolvedValue(tx);
+    mockRepository.findAccountRec.mockResolvedValue({
+      id: 'acc-sale-1',
+      saleId: 'sale-123',
+      amount: 1000,
+      amountPaid: 1000,
+      received: true,
+      receivedAt: new Date(),
+    });
+    mockRepository.findTransactionsByAccountRec.mockResolvedValue([
+      TransacaoEntity.create({
+        id: 'tx-cred',
+        tipo: TipoTransacaoPrisma.CREDITO,
+        valor: 1000,
+        contaContabilId: 'cc-1',
+        organizationId: 'org-1',
+        accountRecId: 'acc-sale-1',
+      }),
+      TransacaoEntity.create({
+        id: 'tx-deb',
+        tipo: TipoTransacaoPrisma.DEBITO,
+        valor: 500,
+        contaContabilId: 'cc-1',
+        organizationId: 'org-1',
+        accountRecId: 'acc-sale-1',
+      }),
+    ]);
+
+    await useCaseWithSale.execute('tx-sale-rec', 'org-1');
+
+    expect(mockRepository.updateAccountRec).toHaveBeenCalledWith(
+      'acc-sale-1',
+      expect.objectContaining({
+        amountPaid: 500, // 1000 - 500
+      }),
+      expect.anything(),
+    );
+    expect(mockCalculateSaleAdjustment.execute).toHaveBeenCalledWith(
+      'sale-123',
+      'org-1',
+    );
+  });
 });
