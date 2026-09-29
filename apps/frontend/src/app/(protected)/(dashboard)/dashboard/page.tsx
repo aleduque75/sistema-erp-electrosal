@@ -32,7 +32,7 @@ export default function DashboardPage() {
       ]);
       setSummaryData(summaryRes.data);
       setCashFlowData(cashFlowRes.data);
-      setRecentSales(salesRes.data);
+      setRecentSales(salesRes.data?.data || (Array.isArray(salesRes.data) ? salesRes.data : []));
     } catch {
       toast.error("Falha ao carregar os dados do dashboard.");
     } finally {

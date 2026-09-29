@@ -326,19 +326,34 @@ export function TotalSalesChart() {
     <>
       <Tabs defaultValue="monthly">
         <Card className="border border-border/80 shadow-sm overflow-hidden">
-          <CardHeader className="p-4 sm:p-6 space-y-3.5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <CardHeader className="p-4 sm:p-6 space-y-3">
+            {/* Top Row: Title + Year Dropdown */}
+            <div className="flex items-center justify-between gap-3">
               <div className="space-y-0.5">
                 <CardTitle className="text-base sm:text-lg font-bold">Resumo Financeiro (Au)</CardTitle>
                 <CardDescription className="text-xs">Vendas e despesas em ouro por período.</CardDescription>
               </div>
 
-              {/* Metric Toggle Chips */}
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-[105px] h-8 text-xs rounded-xl shrink-0">
+                  <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos os anos</SelectItem>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Bottom Row: Metric Toggle Chips (left) + Period Tabs (right) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/40">
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setShowSales(!showSales)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
                     showSales
                       ? "bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-sm"
                       : "bg-muted/40 text-muted-foreground border border-transparent hover:bg-muted"
@@ -350,7 +365,7 @@ export function TotalSalesChart() {
                 <button
                   type="button"
                   onClick={() => setShowExpenses(!showExpenses)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
                     showExpenses
                       ? "bg-rose-500/20 text-rose-500 border border-rose-500/40 shadow-sm"
                       : "bg-muted/40 text-muted-foreground border border-transparent hover:bg-muted"
@@ -362,7 +377,7 @@ export function TotalSalesChart() {
                 <button
                   type="button"
                   onClick={() => setShowProfit(!showProfit)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
                     showProfit
                       ? "bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 shadow-sm"
                       : "bg-muted/40 text-muted-foreground border border-transparent hover:bg-muted"
@@ -372,23 +387,8 @@ export function TotalSalesChart() {
                   Lucro
                 </button>
               </div>
-            </div>
 
-            {/* Sub-header row: Year selector + Period Tabs */}
-            <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40">
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-[110px] h-8 text-xs rounded-xl">
-                  <SelectValue placeholder="Ano" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos</SelectItem>
-                  {availableYears.map(year => (
-                    <SelectItem key={year} value={year}>{year}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <TabsList className="h-8 p-0.5 rounded-xl bg-muted/60">
+              <TabsList className="h-8 p-0.5 rounded-xl bg-muted/60 ml-auto sm:ml-0">
                 <TabsTrigger value="monthly" className="text-xs px-2.5 py-1 rounded-lg">Mensal</TabsTrigger>
                 <TabsTrigger value="quarterly" className="text-xs px-2.5 py-1 rounded-lg">Trimestral</TabsTrigger>
                 <TabsTrigger value="semiannual" className="text-xs px-2.5 py-1 rounded-lg">Semestral</TabsTrigger>
