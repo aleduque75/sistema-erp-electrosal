@@ -53,34 +53,42 @@ export default function DashboardPage() {
       <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
 
       {summaryData && !summaryData.todayQuotationRegistered && (
-        <Alert variant="destructive" className="bg-destructive/10 border-destructive animate-pulse">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Cotação do Dia Pendente!</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>Você ainda não registrou a cotação manual de ouro para hoje. Os novos lançamentos podem usar valores desatualizados.</span>
-            <NovaQuotationModal
-              onSaveSuccess={fetchData}
-              trigger={
-                <button className="flex items-center gap-1 font-bold underline hover:text-primary">
-                  Registrar agora <ArrowRight className="h-4 w-4" />
-                </button>
-              }
-            />
-          </AlertDescription>
-        </Alert>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400 shadow-sm animate-pulse">
+          <div className="flex items-start sm:items-center gap-3">
+            <AlertCircle className="h-5 w-5 shrink-0 text-amber-500 dark:text-amber-400 mt-0.5 sm:mt-0" />
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-amber-500 dark:text-amber-400">
+                Cotação do Dia Pendente!
+              </h4>
+              <p className="text-xs text-amber-600/90 dark:text-amber-300/90 mt-0.5">
+                Você ainda não registrou a cotação manual de ouro para hoje. Os novos lançamentos podem usar valores desatualizados.
+              </p>
+            </div>
+          </div>
+          <NovaQuotationModal
+            onSaveSuccess={fetchData}
+            trigger={
+              <button className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-500 dark:text-amber-300 hover:underline px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-all shrink-0">
+                Registrar agora <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            }
+          />
+        </div>
       )}
 
       {/* Implementação das Tabs para organizar as visões */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="balanco-ouro" className="text-yellow-600 dark:text-yellow-400 font-semibold">
+        <TabsList className="bg-muted/60 p-1 rounded-xl border border-border/40 h-10">
+          <TabsTrigger value="overview" className="rounded-lg px-4 text-xs font-semibold">
+            Visão Geral
+          </TabsTrigger>
+          <TabsTrigger value="balanco-ouro" className="rounded-lg px-4 text-xs font-semibold text-amber-600 dark:text-amber-400">
             Balanço em Ouro
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {summaryData && <KpiCards data={summaryData} />}
             <ThirdPartyLoansCard />
             <MarketDataCards />
