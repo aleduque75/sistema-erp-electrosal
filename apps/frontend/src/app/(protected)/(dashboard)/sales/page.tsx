@@ -49,13 +49,34 @@ export default function SalesPage() {
     new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
   const statusConfig: { [key in Sale['status']]: { label: string; className: string } } = {
-    PENDENTE: { label: 'Pendente', className: 'text-yellow-600 bg-yellow-100' },
-    CONFIRMADO: { label: 'Confirmado', className: 'text-blue-600 bg-blue-100' },
-    A_SEPARAR: { label: 'A Separar', className: 'text-orange-600 bg-orange-100' },
-    SEPARADO: { label: 'Separado', className: 'text-purple-600 bg-purple-100' },
-    FINALIZADO: { label: 'Finalizado', className: 'text-[hsl(var(--status-finalizado-text))] bg-[hsl(var(--status-finalizado-bg))] border border-[hsl(var(--status-finalizado-text)/0.2)]' },
-    CANCELADO: { label: 'Cancelado', className: 'text-red-600 bg-red-600' },
-    PAGO_PARCIALMENTE: { label: 'Pago Parcial', className: 'text-cyan-600 bg-cyan-100' },
+    PENDENTE: {
+      label: 'Pendente',
+      className: 'text-amber-500 bg-amber-500/10 border-amber-500/30 dark:text-amber-400 dark:bg-amber-400/10',
+    },
+    CONFIRMADO: {
+      label: 'Confirmado',
+      className: 'text-blue-500 bg-blue-500/10 border-blue-500/30 dark:text-blue-400 dark:bg-blue-400/10',
+    },
+    A_SEPARAR: {
+      label: 'A Separar',
+      className: 'text-orange-500 bg-orange-500/10 border-orange-500/30 dark:text-orange-400 dark:bg-orange-400/10',
+    },
+    SEPARADO: {
+      label: 'Separado',
+      className: 'text-purple-500 bg-purple-500/10 border-purple-500/30 dark:text-purple-400 dark:bg-purple-400/10',
+    },
+    FINALIZADO: {
+      label: 'Finalizado',
+      className: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30 dark:text-emerald-400 dark:bg-emerald-400/10',
+    },
+    CANCELADO: {
+      label: 'Cancelado',
+      className: 'text-rose-500 bg-rose-500/10 border-rose-500/30 dark:text-rose-400 dark:bg-rose-400/10',
+    },
+    PAGO_PARCIALMENTE: {
+      label: 'Pago Parcial',
+      className: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/30 dark:text-cyan-400 dark:bg-cyan-400/10',
+    },
   };
 
   const [sales, setSales] = useState<Sale[]>([]);
@@ -345,7 +366,7 @@ ${itemsText}`;
         const status = row.original.status;
         const config = statusConfig[status] || { label: status, className: '' };
         return (
-          <Badge variant="outline" className={`border-none ${config.className}`}>
+          <Badge variant="outline" className={`border ${config.className} font-semibold text-xs`}>
             {config.label}
           </Badge>
         );
@@ -413,7 +434,7 @@ ${itemsText}`;
       header: () => <div className="text-right">Valor Total</div>,
       cell: ({ row }) => (
         <div className="text-right font-medium">
-          {formatCurrency(Number(row.original.adjustment?.paymentReceivedBRL || 0))}
+          {formatCurrency(Number(row.original.netAmount ?? row.original.totalAmount ?? 0))}
         </div>
       ),
     },
@@ -519,143 +540,196 @@ ${itemsText}`;
   ];
 
   return (
-    <div className="space-y-4 p-1 md:p-8">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">Vendas</h1>
-          <Badge variant="secondary" className="h-6">
-            {total} {total === 1 ? 'registro' : 'registros'}
-          </Badge>
+    <div className="space-y-4 p-2 sm:p-4 md:p-8">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">Vendas</h1>
+            <Badge variant="secondary" className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground border-border/50">
+              {(total || 0).toLocaleString('pt-BR')} {total === 1 ? 'registro' : 'registros'}
+            </Badge>
+          </div>
+          <div className="flex sm:hidden items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-xl border-border/80"
+              onClick={() => fetchSales()}
+              title="Atualizar lista"
+            >
+              <RotateCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              size="sm"
+              className="h-9 px-3.5 rounded-xl font-semibold gap-1.5 shadow-sm text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => setIsNewSaleModalOpen(true)}
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>Nova Venda</span>
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => fetchSales()} title="Atualizar lista">
+
+        <div className="hidden sm:flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-xl"
+            onClick={() => fetchSales()}
+            title="Atualizar lista"
+          >
             <RotateCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
-          <Dialog open={isNewSaleModalOpen} onOpenChange={setIsNewSaleModalOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Nova Venda
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[98vw] max-w-[1440px] h-[92vh] max-h-[960px] p-3 md:p-5 flex flex-col overflow-hidden">
-              <DialogHeader className="pb-2 border-b">
-                <DialogTitle className="text-lg md:text-xl font-bold flex items-center gap-2">
-                  <PlusCircle className="h-5 w-5 text-primary" />
-                  Registrar Nova Venda
-                </DialogTitle>
-              </DialogHeader>
-              <div className="flex-1 overflow-hidden min-h-0 pt-2">
-                <NewSaleForm onSave={handleSaveSuccess} />
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button
+            className="h-9 px-4 rounded-xl font-semibold gap-2 shadow-sm text-sm"
+            onClick={() => setIsNewSaleModalOpen(true)}
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>Nova Venda</span>
+          </Button>
         </div>
       </div>
 
+      {/* Global New Sale Modal Dialog */}
+      <Dialog open={isNewSaleModalOpen} onOpenChange={setIsNewSaleModalOpen}>
+        <DialogContent className="w-full h-[100dvh] sm:w-[98vw] sm:max-w-[1440px] sm:h-[95dvh] sm:max-h-[960px] p-2 sm:p-5 flex flex-col overflow-hidden">
+          <DialogHeader className="pb-2 border-b shrink-0">
+            <DialogTitle className="text-base sm:text-xl font-bold flex items-center gap-2">
+              <PlusCircle className="h-5 w-5 text-primary" />
+              Registrar Nova Venda
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0 pt-2">
+            <NewSaleForm onSave={handleSaveSuccess} />
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Desktop Filters */}
-      <Card className="hidden md:block">
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+      <Card className="hidden md:block border-border/80 shadow-sm">
+        <CardHeader className="py-3 px-6">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Filter className="h-4 w-4 text-primary" />
+            Filtros de Pesquisa
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Data Inicial</Label>
-              <Input id="startDate" type="date" value={filters.startDate} onChange={e => handleFilterChange('startDate', e.target.value)} />
+        <CardContent className="px-6 pb-4 pt-1">
+          <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+            <div className="space-y-1.5">
+              <Label htmlFor="startDate" className="text-xs text-muted-foreground font-medium">Data Inicial</Label>
+              <Input id="startDate" type="date" className="h-9 text-xs" value={filters.startDate} onChange={e => handleFilterChange('startDate', e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="endDate">Data Final</Label>
-              <Input id="endDate" type="date" value={filters.endDate} onChange={e => handleFilterChange('endDate', e.target.value)} />
+            <div className="space-y-1.5">
+              <Label htmlFor="endDate" className="text-xs text-muted-foreground font-medium">Data Final</Label>
+              <Input id="endDate" type="date" className="h-9 text-xs" value={filters.endDate} onChange={e => handleFilterChange('endDate', e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="orderNumber">Nº Pedido</Label>
-              <Input id="orderNumber" type="text" placeholder="Buscar número..." value={filters.orderNumber} onChange={e => handleFilterChange('orderNumber', e.target.value)} />
+            <div className="space-y-1.5">
+              <Label htmlFor="orderNumber" className="text-xs text-muted-foreground font-medium">Nº Pedido ou Cliente</Label>
+              <Input id="orderNumber" type="text" placeholder="Buscar pedido ou cliente..." className="h-9 text-xs" value={filters.orderNumber} onChange={e => handleFilterChange('orderNumber', e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label>Cliente</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground font-medium">Cliente</Label>
               <Combobox options={clients} value={filters.clientId ?? ''} onChange={value => handleFilterChange('clientId', value || '')} placeholder="Selecione um cliente..." />
             </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={filters.status} onValueChange={value => handleFilterChange('status', value)}>
-                <SelectTrigger>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground font-medium">Status</Label>
+              <Select value={filters.status || 'ALL'} onValueChange={value => handleFilterChange('status', value === 'ALL' ? '' : value)}>
+                <SelectTrigger className="h-9 text-xs">
                   <SelectValue placeholder="Selecione um status..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="ALL">Todos os status</SelectItem>
                   {Object.entries(statusConfig).map(([key, { label }]) => (
                     <SelectItem key={key} value={key}>{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2 col-span-1 md:col-span-2 lg:col-span-5 justify-end">
-              <Button type="submit">Filtrar</Button>
-              <Button type="button" variant="outline" onClick={handleClearFilters}>Limpar</Button>
+            <div className="flex gap-2 col-span-1 md:col-span-2 lg:col-span-5 justify-end pt-1">
+              <Button type="submit" size="sm" className="h-9 px-4 text-xs font-semibold">
+                Filtrar
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="h-9 px-4 text-xs" onClick={handleClearFilters}>
+                Limpar
+              </Button>
             </div>
           </form>
         </CardContent>
       </Card>
 
-      {/* Mobile Collapsible Filter Bar */}
+      {/* Mobile Search & Filter Bar */}
       <div className="md:hidden space-y-2">
         <div className="flex items-center gap-2">
-          <form onSubmit={handleFilterSubmit} className="flex-1 flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Buscar pedido ou cliente..."
-                value={filters.orderNumber}
-                onChange={e => handleFilterChange('orderNumber', e.target.value)}
-                className="pl-9 h-11 text-sm bg-card border-border shadow-sm rounded-lg"
-              />
-            </div>
+          <form onSubmit={handleFilterSubmit} className="flex-1 relative flex items-center">
+            <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Buscar pedido ou cliente..."
+              value={filters.orderNumber}
+              onChange={e => handleFilterChange('orderNumber', e.target.value)}
+              className="pl-9 pr-8 h-10 text-xs sm:text-sm bg-card border-border/80 shadow-sm rounded-xl focus-visible:ring-1"
+            />
+            {filters.orderNumber && (
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = { ...filters, orderNumber: '' };
+                  setFilters(updated);
+                  setPage(1);
+                  fetchSales(updated, 1);
+                }}
+                className="absolute right-2.5 text-muted-foreground hover:text-foreground p-1"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </form>
           <Button
             type="button"
             variant={isMobileFilterOpen || activeFilterCount > 0 ? "default" : "outline"}
-            className="h-11 px-3.5 gap-2 relative shadow-sm rounded-lg"
+            className="h-10 px-3.5 gap-1.5 relative shadow-sm rounded-xl shrink-0"
             onClick={() => setIsMobileFilterOpen(prev => !prev)}
           >
             <SlidersHorizontal className="h-4 w-4" />
             <span className="text-xs font-semibold">Filtros</span>
             {activeFilterCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground text-primary text-[11px] font-bold">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary-foreground text-primary text-[10px] font-black">
                 {activeFilterCount}
               </span>
             )}
-            {isMobileFilterOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {isMobileFilterOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           </Button>
         </div>
 
         {/* Collapsible Mobile Filter Panel */}
         {isMobileFilterOpen && (
-          <Card className="p-4 space-y-3 bg-card border border-border shadow-md rounded-xl animate-in fade-in-50 slide-in-from-top-2 duration-200">
+          <Card className="p-4 space-y-3 bg-card border border-border/80 shadow-lg rounded-2xl animate-in fade-in-50 slide-in-from-top-2 duration-200">
             <form onSubmit={(e) => { handleFilterSubmit(e); setIsMobileFilterOpen(false); }} className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label htmlFor="mobileStartDate" className="text-xs">Data Inicial</Label>
-                  <Input id="mobileStartDate" type="date" className="h-10 text-xs" value={filters.startDate} onChange={e => handleFilterChange('startDate', e.target.value)} />
+                  <Label htmlFor="mobileStartDate" className="text-xs font-medium text-muted-foreground">Data Inicial</Label>
+                  <Input id="mobileStartDate" type="date" className="h-9 text-xs rounded-lg" value={filters.startDate} onChange={e => handleFilterChange('startDate', e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="mobileEndDate" className="text-xs">Data Final</Label>
-                  <Input id="mobileEndDate" type="date" className="h-10 text-xs" value={filters.endDate} onChange={e => handleFilterChange('endDate', e.target.value)} />
+                  <Label htmlFor="mobileEndDate" className="text-xs font-medium text-muted-foreground">Data Final</Label>
+                  <Input id="mobileEndDate" type="date" className="h-9 text-xs rounded-lg" value={filters.endDate} onChange={e => handleFilterChange('endDate', e.target.value)} />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Cliente</Label>
+                <Label className="text-xs font-medium text-muted-foreground">Cliente</Label>
                 <Combobox options={clients} value={filters.clientId ?? ''} onChange={value => handleFilterChange('clientId', value || '')} placeholder="Selecione um cliente..." />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Status</Label>
-                <Select value={filters.status} onValueChange={value => handleFilterChange('status', value)}>
-                  <SelectTrigger className="h-10 text-xs">
-                    <SelectValue placeholder="Selecione um status..." />
+                <Label className="text-xs font-medium text-muted-foreground">Status</Label>
+                <Select value={filters.status || 'ALL'} onValueChange={value => handleFilterChange('status', value === 'ALL' ? '' : value)}>
+                  <SelectTrigger className="h-9 text-xs rounded-lg">
+                    <SelectValue placeholder="Todos os status" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="ALL">Todos os status</SelectItem>
                     {Object.entries(statusConfig).map(([key, { label }]) => (
                       <SelectItem key={key} value={key}>{label}</SelectItem>
                     ))}
@@ -663,11 +737,11 @@ ${itemsText}`;
                 </Select>
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <Button type="submit" className="flex-1 h-10 text-xs font-bold">
+              <div className="flex gap-2 pt-1">
+                <Button type="submit" className="flex-1 h-9 text-xs font-bold rounded-lg">
                   Aplicar Filtros
                 </Button>
-                <Button type="button" variant="outline" className="h-10 text-xs" onClick={handleClearFilters}>
+                <Button type="button" variant="outline" className="h-9 text-xs rounded-lg" onClick={() => { handleClearFilters(); setIsMobileFilterOpen(false); }}>
                   Limpar
                 </Button>
               </div>
@@ -676,52 +750,31 @@ ${itemsText}`;
         )}
       </div>
 
-      <Card className="border-none md:border md:shadow-sm bg-transparent md:bg-card">
-        <CardContent className="p-1 md:p-6 space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            {Object.keys(rowSelection).length > 0 && (
-              <div className="flex items-center gap-2">
-                <Button size="sm" onClick={handleBulkConfirm}>
-                  Confirmar {Object.keys(rowSelection).length} Venda(s)
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleCopyAsText}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copiar Texto
-                </Button>
-              </div>
-            )}
+      {/* Sub-header: Bulk Actions or Counter */}
+      <div className="flex items-center justify-between gap-2 px-1">
+        {Object.keys(rowSelection).length > 0 ? (
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleBulkConfirm} className="h-8 text-xs font-semibold rounded-lg">
+              Confirmar {Object.keys(rowSelection).length} Venda(s)
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleCopyAsText} className="h-8 text-xs rounded-lg">
+              <Copy className="mr-1.5 h-3.5 w-3.5" />
+              Copiar
+            </Button>
           </div>
-
-          {/* Pagination Header / Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-card/60 backdrop-blur border rounded-lg shadow-sm">
-            <div className="text-xs md:text-sm text-muted-foreground font-medium">
-              Mostrando <span className="font-bold text-foreground">{sales.length}</span> de <span className="font-bold text-foreground">{total}</span> registros
-            </div>
-            <div className="flex items-center gap-1.5 ml-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 px-3 text-xs font-semibold"
-                onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-                disabled={page <= 1 || loading}
-              >
-                Anterior
-              </Button>
-              <div className="text-xs font-bold px-2 py-1 bg-muted rounded">
-                {page} / {Math.ceil(total / limit) || 1}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 px-3 text-xs font-semibold"
-                onClick={() => setPage(prev => prev + 1)}
-                disabled={page >= Math.ceil(total / limit) || loading}
-              >
-                Próximo
-              </Button>
-            </div>
+        ) : (
+          <div className="text-xs text-muted-foreground font-medium">
+            Exibindo <strong>{(sales || []).length}</strong> de <strong>{(total || 0).toLocaleString('pt-BR')}</strong> vendas
           </div>
+        )}
 
+        <div className="text-[11px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
+          Pág {page} de {Math.ceil((total || 0) / limit) || 1}
+        </div>
+      </div>
+
+      <Card className="border-none md:border md:border-border/80 md:shadow-sm bg-transparent md:bg-card">
+        <CardContent className="p-0 md:p-6 space-y-4">
           {/* Desktop Table View */}
           <div className="hidden md:block">
             <DataTable
@@ -734,29 +787,29 @@ ${itemsText}`;
           </div>
 
           {/* Mobile Card List View */}
-          <div className="md:hidden space-y-2.5">
+          <div className="md:hidden space-y-3">
             {loading ? (
-              <div className="py-12 text-center text-muted-foreground italic text-sm">Carregando vendas...</div>
+              <div className="py-16 text-center text-muted-foreground italic text-sm">Carregando vendas...</div>
             ) : sales.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground italic text-sm">Nenhuma venda encontrada.</div>
+              <div className="py-16 text-center text-muted-foreground italic text-sm">Nenhuma venda encontrada.</div>
             ) : (
               sales.map((sale, idx) => {
                 const config = statusConfig[sale.status] || { label: sale.status, className: '' };
                 const saleItems = sale.saleItems || [];
-                const totalQty = saleItems.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0;
                 const isRevertible = sale.status === 'CONFIRMADO' || sale.status === 'FINALIZADO';
+                const totalCalculated = sale.netAmount ?? sale.totalAmount ?? 0;
 
                 return (
                   <div
                     key={sale.id}
-                    className="p-3.5 rounded-xl border border-border bg-card shadow-sm hover:border-primary/40 active:scale-[0.99] transition-all relative space-y-3"
+                    className="p-4 rounded-2xl border border-border/80 bg-card shadow-sm hover:border-primary/40 active:scale-[0.99] transition-all relative space-y-3"
                   >
-                    {/* Header Row: Checkbox + Pedido/Cliente + Status + Actions Menu */}
-                    <div className="flex items-start justify-between gap-2 border-b border-border/40 pb-2.5">
+                    {/* Header Row: Checkbox + Pedido/Data + Status Badge + Actions Menu */}
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Checkbox
                           checked={rowSelection[idx] || false}
-                          className="h-5 w-5 rounded border-muted-foreground/40"
+                          className="h-4 w-4 rounded border-muted-foreground/40 shrink-0"
                           onCheckedChange={(checked) => {
                             setRowSelection(prev => ({
                               ...prev,
@@ -764,23 +817,18 @@ ${itemsText}`;
                             }));
                           }}
                         />
-                        <div className="min-w-0" onClick={() => setSelectedSale(sale)}>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-black text-primary uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded">
-                              #{sale.orderNumber}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground">
-                              {formatDate(sale.createdAt)}
-                            </span>
-                          </div>
-                          <h3 className="font-bold text-sm text-foreground truncate mt-0.5">
-                            {sale.pessoa?.name}
-                          </h3>
+                        <div className="flex items-center gap-2 flex-wrap min-w-0" onClick={() => setSelectedSale(sale)}>
+                          <span className="text-xs font-black tracking-wide text-primary bg-primary/10 px-2 py-0.5 rounded-md font-mono">
+                            #{sale.orderNumber}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {formatDate(sale.createdAt)}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Badge variant="outline" className={`border-none ${config.className} text-[10px] font-extrabold px-2 py-0.5 rounded-full`}>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Badge variant="outline" className={`border ${config.className} text-[11px] font-bold px-2 py-0.5 rounded-md`}>
                           {config.label}
                         </Badge>
                         <DropdownMenu>
@@ -850,28 +898,62 @@ ${itemsText}`;
                       </div>
                     </div>
 
-                    {/* Middle Content Row: Products + Payment Method */}
-                    <div className="flex justify-between items-center text-xs text-muted-foreground" onClick={() => setSelectedSale(sale)}>
-                      <div className="line-clamp-1 pr-2">
-                        <span className="font-medium text-foreground">{totalQty} item(ns): </span>
-                        {saleItems.map(i => i.product?.name).filter(Boolean).join(', ') || 'Nenhum produto'}
+                    {/* Client Name */}
+                    <div className="cursor-pointer" onClick={() => setSelectedSale(sale)}>
+                      <h3 className="font-semibold text-sm sm:text-base text-foreground tracking-tight line-clamp-1">
+                        {sale.pessoa?.name || 'Cliente não identificado'}
+                      </h3>
+                    </div>
+
+                    {/* Products Pills List */}
+                    <div className="cursor-pointer space-y-1.5" onClick={() => setSelectedSale(sale)}>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {saleItems.length > 0 ? (
+                          saleItems.map((item, i) => {
+                            const qty = Number(item.quantity || 0);
+                            const formattedQty = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(qty);
+                            return (
+                              <span
+                                key={item.id || i}
+                                className="inline-flex items-center text-xs px-2.5 py-1 rounded-lg bg-secondary/80 text-secondary-foreground font-medium border border-border/40"
+                              >
+                                <span>{item.product?.name || 'Produto'}</span>
+                                <span className="ml-1.5 font-bold text-foreground opacity-90">({formattedQty}g)</span>
+                              </span>
+                            );
+                          })
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">Sem itens</span>
+                        )}
                       </div>
+                    </div>
+
+                    {/* Footer Row: Quotation + Total Amount */}
+                    <div
+                      className="pt-2.5 border-t border-border/50 flex items-center justify-between cursor-pointer"
+                      onClick={() => setSelectedSale(sale)}
+                    >
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">
+                          Cotação Au
+                        </span>
+                        <span className="text-xs font-semibold text-foreground">
+                          {formatCurrency(Number(sale.goldPrice))}
+                        </span>
+                      </div>
+
                       {sale.paymentAccountName && (
-                        <Badge variant="outline" className="border-border bg-muted/50 text-[10px] shrink-0 font-medium">
+                        <Badge variant="outline" className="border-border/60 bg-muted/40 text-[10px] font-medium hidden xs:inline-flex">
                           {sale.paymentAccountName}
                         </Badge>
                       )}
-                    </div>
 
-                    {/* Footer Row: Total Value + Action buttons */}
-                    <div className="flex justify-between items-center pt-1" onClick={() => setSelectedSale(sale)}>
-                      <div className="text-xs text-muted-foreground">
-                        Cotação: <span className="font-semibold">{formatCurrency(Number(sale.goldPrice))}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">Valor Total</span>
-                        <span className="font-black text-base text-emerald-500">
-                          {formatCurrency(Number(sale.adjustment?.paymentReceivedBRL || 0))}
+                      <div className="text-right space-y-0.5">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground block">
+                          Valor Total
+                        </span>
+                        <span className="font-black text-base text-emerald-500 dark:text-emerald-400">
+                          {formatCurrency(Number(totalCalculated))}
                         </span>
                       </div>
                     </div>
@@ -879,6 +961,42 @@ ${itemsText}`;
                 );
               })
             )}
+          </div>
+
+          {/* Pagination Footer Controls (Mobile & Desktop) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-3 pb-4 px-1 border-t border-border/40">
+            <div className="text-xs text-muted-foreground font-medium">
+              Página <strong>{page}</strong> de <strong>{Math.ceil((total || 0) / limit) || 1}</strong>
+            </div>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 text-xs font-semibold rounded-xl"
+                onClick={() => {
+                  setPage(prev => Math.max(prev - 1, 1));
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={page <= 1 || loading}
+              >
+                Anterior
+              </Button>
+              <div className="text-xs font-bold px-2.5 py-1.5 bg-muted rounded-lg">
+                {page} / {Math.ceil((total || 0) / limit) || 1}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 text-xs font-semibold rounded-xl"
+                onClick={() => {
+                  setPage(prev => prev + 1);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={page >= Math.ceil((total || 0) / limit) || loading}
+              >
+                Próximo
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

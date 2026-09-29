@@ -117,6 +117,19 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - Desacoplamento do `RecoveryOrdersController` eliminando a injeção direta de repositórios nas rotas HTTP.
    - Criação de 26 testes unitários no módulo `recovery-orders`.
    - **Total:** 147 testes unitários passando em 50 suítes no backend (`metal-payments`, `recovery-orders`, `transacoes`, `sale-adjustments`, `sales-movement-import`, `products`, `pessoa`, `sales`).
+### [29/09/2026]
+1. **Otimização Mobile da Criação e Edição de Vendas:**
+   - **Correção do Colapso de Itens (Altura 0px):** Removido `h-full` no container de itens do `NewSaleForm.tsx` em telas móveis, garantindo `min-h-[300px]` no card e `min-h-[200px]` no conteúdo para evitar compressão pelo motor flexbox.
+   - **Cards Touch-Friendly de Itens:** Substituída a tabela comprimida no mobile por cards dinâmicos exibindo produto, badge de mão de obra, inputs de quantidade e preço, botão de lote e exclusão.
+   - **Fixação do Rodapé e Ação de Finalizar Venda:** Adicionado rodapé fixo (`lg:hidden`) na base da tela com Subtotal, Frete, Total Geral e botão **"Salvar Venda"**, além de botão de ação rápida diretamente no topo de *1. Dados da Venda*.
+   - **Responsividade dos Modais:** Ajustado `AddItemModal.tsx` e `LotSelectionModal.tsx` com `max-h-[92vh]`, rolagem interna e níveis de camada `z-[70]` e `z-[80]`.
+   - **Correção de Camadas no Combobox:** `combobox.tsx` atualizado com `z-[100]` no `PopoverContent` para evitar que a lista de produtos feche ou renderize atrás do modal em dispositivos móveis.
+2. **Redesign Moderno de UI/UX da Listagem de Vendas (`/sales`):**
+   - **Correção Crítica de Valor Total (R$ 0,00):** O campo de valor total lia `adjustment?.paymentReceivedBRL || 0` (apenas conciliações bancárias). Corrigido tanto na tabela desktop quanto nos cards mobile para `sale.netAmount ?? sale.totalAmount ?? 0`.
+   - **Legibilidade de Itens:** Substituído o texto confuso `14.71 item(ns): Nome` por chips elegantes de produtos com peso formatado: `Nome do Produto (14,71g)`.
+   - **Remoção da Caixa de Paginação Fixa no Topo:** A caixa de paginação que ocupava espaço no topo do mobile foi movida para o rodapé e substituída no topo por um contador discreto (`Exibindo X de Y vendas • Pág Z de W`).
+   - **Contraste de Status no Dark Mode:** Atualizados os badges com tons translúcidos e bordas correspondentes (ex: `CANCELADO` corrigido de vermelho sobre vermelho para `text-rose-400 bg-rose-500/10 border-rose-500/30`).
+   - **Busca Híbrida no Backend:** `prisma-sale.repository.ts` aprimorado para buscar dinamicamente por número de pedido ou por nome de cliente na mesma barra de busca.
 
 ---
 

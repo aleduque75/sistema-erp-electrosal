@@ -86,3 +86,4 @@ uploads/
 backup_hoje.sql
 scripts/generate_*
 scripts/patch_*
+*.tsbuildinfo

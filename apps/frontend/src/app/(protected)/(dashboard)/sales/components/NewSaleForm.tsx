@@ -391,7 +391,7 @@ export function NewSaleForm({ onSave }: any) {
   return (
     <form
       onSubmit={handleSubmit(onFinalizeSale)}
-      className="flex flex-col h-full bg-background min-h-0"
+      className="flex-1 flex flex-col h-full min-h-0 bg-background overflow-hidden"
     >
       <AddItemModal
         open={isAddItemModalOpen}
@@ -414,15 +414,28 @@ export function NewSaleForm({ onSave }: any) {
         />
       )}
 
-      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-4 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-1">
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-4 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-1 pb-4">
         {/* Coluna Esquerda: Dados da Venda */}
         <div className="w-full lg:col-span-5 xl:col-span-4 flex flex-col gap-4 lg:overflow-y-auto lg:pr-2">
           <Card className="border shadow-sm">
-            <CardHeader className="p-3.5 pb-2 border-b bg-muted/10">
+            <CardHeader className="p-3.5 pb-2 border-b bg-muted/10 flex flex-row items-center justify-between">
               <CardTitle className="text-sm md:text-base font-semibold flex items-center gap-2">
                 <FileText className="h-4 w-4 text-primary" />
                 1. Dados da Venda
               </CardTitle>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="lg:hidden h-8 px-3 text-xs font-bold gap-1.5 shadow-sm"
+              >
+                {isSubmitting ? (
+                  <RotateCcw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                )}
+                <span>Salvar Venda</span>
+              </Button>
             </CardHeader>
             <CardContent className="space-y-3.5 p-3.5 pt-3">
               {/* Cliente */}
@@ -610,9 +623,9 @@ export function NewSaleForm({ onSave }: any) {
         </div>
 
         {/* Coluna Direita: Itens da Venda e Fechamento */}
-        <div className="w-full lg:col-span-7 xl:col-span-8 flex flex-col min-h-0 h-full">
-          <Card className="flex-1 flex flex-col min-h-0 border rounded-xl overflow-hidden shadow-sm bg-card">
-            <CardHeader className="p-3.5 md:p-4 border-b flex-row items-center justify-between bg-muted/10">
+        <div className="w-full lg:col-span-7 xl:col-span-8 flex flex-col min-h-0 lg:h-full">
+          <Card className="flex-1 flex flex-col min-h-[300px] lg:min-h-0 border rounded-xl overflow-hidden shadow-sm bg-card">
+            <CardHeader className="p-3.5 md:p-4 border-b flex-row items-center justify-between bg-muted/10 shrink-0">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4 text-primary" />
                 <CardTitle className="text-base font-semibold">2. Itens da Venda</CardTitle>
@@ -626,32 +639,37 @@ export function NewSaleForm({ onSave }: any) {
               </Button>
             </CardHeader>
 
-            <CardContent className="flex-1 p-0 min-h-0 overflow-y-auto">
+            <CardContent className="flex-1 p-0 min-h-[200px] lg:min-h-0 overflow-y-auto">
               {items.length > 0 ? (
-                <div className="min-w-full overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                      <TableRow>
-                        <TableHead className="w-[38%]">Produto</TableHead>
-                        <TableHead className="w-[14%] text-center">Qtd</TableHead>
-                        <TableHead className="w-[18%] text-right">Preço Unit.</TableHead>
-                        <TableHead className="w-[12%] text-center">Lotes</TableHead>
-                        <TableHead className="w-[14%] text-right">Subtotal</TableHead>
-                        <TableHead className="w-[4%]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((item, index) => (
-                        <TableRow key={index} className="hover:bg-muted/40 transition-colors">
-                          <TableCell className="py-2.5">
-                            <span className="font-medium text-sm text-foreground block">{item.name}</span>
+                <>
+                  {/* Visualização Mobile: Cards otimizados para toque (Samsung S23 e outros) */}
+                  <div className="md:hidden divide-y">
+                    {items.map((item, index) => (
+                      <div key={index} className="p-3.5 space-y-2.5 bg-card/60 hover:bg-muted/30 transition-colors">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <span className="font-semibold text-sm text-foreground block truncate">{item.name}</span>
                             {item.laborPercentage !== undefined && (
                               <span className="inline-block mt-0.5 text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                                 Mão de obra: {item.laborPercentage}%
                               </span>
                             )}
-                          </TableCell>
-                          <TableCell className="text-center py-2.5">
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveItem(index)}
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                            title="Remover item"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground mb-1 block">Quantidade</Label>
                             <Input
                               type="number"
                               value={item.quantity}
@@ -659,11 +677,12 @@ export function NewSaleForm({ onSave }: any) {
                                 const val = e.target.value;
                                 handleUpdateItem(index, 'quantity', val === '' ? 0 : parseFloat(val));
                               }}
-                              className="w-20 mx-auto h-8 text-xs text-center font-medium"
+                              className="h-8 text-xs font-medium"
                               step="0.01"
                             />
-                          </TableCell>
-                          <TableCell className="text-right py-2.5">
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground mb-1 block">Preço Unit. (R$)</Label>
                             <Input
                               type="number"
                               value={item.price}
@@ -671,44 +690,119 @@ export function NewSaleForm({ onSave }: any) {
                                 const val = e.target.value;
                                 handleUpdateItem(index, 'price', val === '' ? 0 : parseFloat(val));
                               }}
-                              className="w-24 ml-auto h-8 text-xs text-right font-medium"
+                              className="h-8 text-xs font-medium"
                               step="0.01"
                             />
-                          </TableCell>
-                          <TableCell className="text-center py-2.5">
-                            <Button
-                              type="button"
-                              variant={item.lots?.length > 0 ? "secondary" : "outline"}
-                              size="sm"
-                              onClick={() => openLotSelector(index)}
-                              className="h-8 px-2.5 text-xs gap-1.5 font-medium"
-                              title="Gerenciar lotes do item"
-                            >
-                              <PackageSearch className="h-3.5 w-3.5" />
-                              <span>{item.lots?.length || 0}</span>
-                            </Button>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-sm py-2.5">
-                            {formatCurrency(item.price * item.quantity)}
-                          </TableCell>
-                          <TableCell className="py-2.5 text-center">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveItem(index)}
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1 border-t border-muted/50">
+                          <Button
+                            type="button"
+                            variant={item.lots?.length > 0 ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => openLotSelector(index)}
+                            className="h-7 px-2.5 text-xs gap-1.5 font-medium"
+                            title="Gerenciar lotes"
+                          >
+                            <PackageSearch className="h-3.5 w-3.5" />
+                            <span>Lotes: {item.lots?.length || 0}</span>
+                          </Button>
+
+                          <div className="text-right">
+                            <span className="text-[10px] text-muted-foreground block">Subtotal</span>
+                            <span className="text-sm font-bold text-primary">
+                              {formatCurrency(item.price * item.quantity)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Visualização Desktop: Tabela clássica */}
+                  <div className="hidden md:block min-w-full overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                        <TableRow>
+                          <TableHead className="w-[38%]">Produto</TableHead>
+                          <TableHead className="w-[14%] text-center">Qtd</TableHead>
+                          <TableHead className="w-[18%] text-right">Preço Unit.</TableHead>
+                          <TableHead className="w-[12%] text-center">Lotes</TableHead>
+                          <TableHead className="w-[14%] text-right">Subtotal</TableHead>
+                          <TableHead className="w-[4%]"></TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {items.map((item, index) => (
+                          <TableRow key={index} className="hover:bg-muted/40 transition-colors">
+                            <TableCell className="py-2.5">
+                              <span className="font-medium text-sm text-foreground block">{item.name}</span>
+                              {item.laborPercentage !== undefined && (
+                                <span className="inline-block mt-0.5 text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  Mão de obra: {item.laborPercentage}%
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center py-2.5">
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  handleUpdateItem(index, 'quantity', val === '' ? 0 : parseFloat(val));
+                                }}
+                                className="w-20 mx-auto h-8 text-xs text-center font-medium"
+                                step="0.01"
+                              />
+                            </TableCell>
+                            <TableCell className="text-right py-2.5">
+                              <Input
+                                type="number"
+                                value={item.price}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  handleUpdateItem(index, 'price', val === '' ? 0 : parseFloat(val));
+                                }}
+                                className="w-24 ml-auto h-8 text-xs text-right font-medium"
+                                step="0.01"
+                              />
+                            </TableCell>
+                            <TableCell className="text-center py-2.5">
+                              <Button
+                                type="button"
+                                variant={item.lots?.length > 0 ? "secondary" : "outline"}
+                                size="sm"
+                                onClick={() => openLotSelector(index)}
+                                className="h-8 px-2.5 text-xs gap-1.5 font-medium"
+                                title="Gerenciar lotes do item"
+                              >
+                                <PackageSearch className="h-3.5 w-3.5" />
+                                <span>{item.lots?.length || 0}</span>
+                              </Button>
+                            </TableCell>
+                            <TableCell className="text-right font-semibold text-sm py-2.5">
+                              {formatCurrency(item.price * item.quantity)}
+                            </TableCell>
+                            <TableCell className="py-2.5 text-center">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveItem(index)}
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full min-h-[260px] p-8 text-center">
+                <div className="flex flex-col items-center justify-center p-6 md:p-8 text-center min-h-[220px]">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
                     <PackageSearch className="h-6 w-6" />
                   </div>
@@ -723,8 +817,8 @@ export function NewSaleForm({ onSave }: any) {
               )}
             </CardContent>
 
-            {/* Fechamento Financeiro & Botão Salvar Integrado */}
-            <div className="border-t bg-muted/15 p-3.5 md:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            {/* Fechamento Financeiro & Botão Salvar Integrado (Desktop) */}
+            <div className="hidden lg:flex border-t bg-muted/15 p-3.5 md:p-4 flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
               <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
                 <div>
                   Subtotal: <span className="font-semibold text-foreground">{formatCurrency(totalAmount)}</span>
@@ -773,6 +867,45 @@ export function NewSaleForm({ onSave }: any) {
               </div>
             </div>
           </Card>
+        </div>
+      </div>
+
+      {/* Rodapé Mobile Fixo: Total Geral e Botão Finalizar sempre visíveis no rodapé */}
+      <div className="lg:hidden shrink-0 border-t bg-card/95 backdrop-blur p-2.5 sm:p-3 shadow-lg z-20 space-y-2 mt-auto">
+        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+          <span>Subtotal: <strong className="text-foreground">{formatCurrency(totalAmount)}</strong></span>
+          {feeAmount > 0 && (
+            <span>Taxa: <strong className="text-foreground">{formatCurrency(feeAmount)}</strong></span>
+          )}
+          <span>Frete: <strong className="text-foreground">{formatCurrency(freightAmount)}</strong></span>
+        </div>
+        <div className="flex items-center justify-between gap-3 pt-1 border-t border-muted/50">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+              Total Geral
+            </span>
+            <span className="text-xl font-black text-primary tracking-tight">
+              {formatCurrency(finalAmount)}
+            </span>
+          </div>
+          <Button
+            type="submit"
+            size="lg"
+            disabled={isSubmitting}
+            className="h-11 px-5 text-sm font-bold shadow-md hover:shadow-lg transition-all gap-2 flex-1 max-w-[200px]"
+          >
+            {isSubmitting ? (
+              <>
+                <RotateCcw className="h-4 w-4 animate-spin" />
+                <span>Finalizando...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Salvar Venda</span>
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </form>

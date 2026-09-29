@@ -293,7 +293,18 @@ export class PrismaSaleRepository implements SalesRepository {
       whereClause.status = status;
     }
     if (orderNumber) {
-      whereClause.orderNumber = Number(orderNumber);
+      const trimmed = orderNumber.toString().trim();
+      const isOnlyDigits = /^\d+$/.test(trimmed);
+      if (isOnlyDigits) {
+        whereClause.OR = [
+          { orderNumber: Number(trimmed) },
+          { pessoa: { name: { contains: trimmed, mode: 'insensitive' } } },
+        ];
+      } else {
+        whereClause.pessoa = {
+          name: { contains: trimmed, mode: 'insensitive' },
+        };
+      }
     }
     if (startDate) {
       whereClause.createdAt = {

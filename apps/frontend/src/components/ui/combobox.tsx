@@ -32,6 +32,7 @@ interface ComboboxProps {
     searchPlaceholder?: string;
     emptyText?: string;
     disabled?: boolean;
+    popoverClassName?: string;
 }
 
 export function Combobox({ 
@@ -41,7 +42,8 @@ export function Combobox({
     placeholder = "Selecione uma opção...",
     searchPlaceholder = "Buscar opção...",
     emptyText = "Nenhuma opção encontrada.",
-    disabled = false
+    disabled = false,
+    popoverClassName
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -61,7 +63,7 @@ export function Combobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+      <PopoverContent className={cn("w-[--radix-popover-trigger-width] min-w-[280px] p-0 z-[100]", popoverClassName)}>
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandEmpty>{emptyText}</CommandEmpty>

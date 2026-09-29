@@ -176,127 +176,134 @@ export function AddItemModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px]">
-        <DialogHeader>
-          <DialogTitle>Adicionar Produto à Venda</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="w-[95vw] sm:max-w-[750px] max-h-[92vh] flex flex-col p-4 sm:p-6 z-[70] overflow-hidden">
+        <DialogHeader className="shrink-0 pb-2 border-b">
+          <DialogTitle className="text-base sm:text-lg">Adicionar Produto à Venda</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">
             Selecione o produto, lote e quantidades. O preço será calculado automaticamente.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end py-4">
-          <div className="sm:col-span-12">
-            <Label>Produto</Label>
-            <Combobox
-              options={products.map((p) => ({ value: p.id, label: p.name }))}
-              value={selectedProduct?.id}
-              onChange={(value) => {
-                const product = products.find((p) => p.id === value) || null;
-                setSelectedProduct(product);
-                setEntryQuantity(1);
-                setSelectedLot(null);
-                if (product?.name.includes('El Sal 68%')) {
-                  setEntryUnit('metal');
-                  setLaborPercentInput(5);
-                } else if (product?.name.includes('Cianeto de Prata 54%')) {
-                  setEntryUnit('metal');
-                  setLaborPercentInput(5);
-                } else {
-                  setEntryUnit('product');
-                  setLaborPercentInput(0);
-                }
-              }}
-              placeholder="Pesquise..."
-            />
-          </div>
 
-          {specialConfig ? (
-            <>
-              <div className="sm:col-span-3">
-                <Label>Qtd. Lançada</Label>
-                <Input
-                  type="number"
-                  value={entryQuantity}
-                  onChange={(e) => setEntryQuantity(e.target.value)}
-                  min="0.01"
-                  step="0.01"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Label>Unidade</Label>
-                <Select onValueChange={setEntryUnit} value={entryUnit}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="product">g {specialConfig.unitName}</SelectItem>
-                    <SelectItem value="metal">g {specialConfig.metal}</SelectItem>
+        <div className="flex-1 overflow-y-auto pr-1 py-3">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+            <div className="sm:col-span-12">
+              <Label className="text-xs font-semibold">Produto *</Label>
+              <Combobox
+                options={products.map((p) => ({ value: p.id, label: p.name }))}
+                value={selectedProduct?.id}
+                popoverClassName="z-[100]"
+                onChange={(value) => {
+                  const product = products.find((p) => p.id === value) || null;
+                  setSelectedProduct(product);
+                  setEntryQuantity(1);
+                  setSelectedLot(null);
+                  if (product?.name.includes('El Sal 68%')) {
+                    setEntryUnit('metal');
+                    setLaborPercentInput(5);
+                  } else if (product?.name.includes('Cianeto de Prata 54%')) {
+                    setEntryUnit('metal');
+                    setLaborPercentInput(5);
+                  } else {
+                    setEntryUnit('product');
+                    setLaborPercentInput(0);
+                  }
+                }}
+                placeholder="Pesquise o produto..."
+              />
+            </div>
+
+            {specialConfig ? (
+              <>
+                <div className="sm:col-span-3">
+                  <Label className="text-xs font-semibold">Qtd. Lançada</Label>
+                  <Input
+                    type="number"
+                    value={entryQuantity}
+                    onChange={(e) => setEntryQuantity(e.target.value)}
+                    min="0.01"
+                    step="0.01"
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label className="text-xs font-semibold">Unidade</Label>
+                  <Select onValueChange={setEntryUnit} value={entryUnit}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="z-[100]">
+                      <SelectItem value="product">g {specialConfig.unitName}</SelectItem>
+                      <SelectItem value="metal">g {specialConfig.metal}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="sm:col-span-2">
+                  <Label className="text-xs font-semibold">Mão de Obra (%)</Label>
+                  <Input
+                    type="number"
+                    value={laborPercentInput}
+                    onChange={(e) => setLaborPercentInput(e.target.value)}
+                    step="0.01"
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label className="text-xs font-semibold">Total {specialConfig.metal} (g)</Label>
+                  <Input type="number" value={totalMetalAmount.toFixed(2)} readOnly disabled className="font-bold h-9 text-xs bg-muted" />
+                </div>
+                <div className="sm:col-span-3">
+                  <Label className="text-xs font-semibold">Qtd. Final ({specialConfig.unitName})</Label>
+                  <Input type="number" value={finalQuantity.toFixed(2)} readOnly disabled className="h-9 text-xs bg-muted" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="sm:col-span-6">
+                  <Label className="text-xs font-semibold">Preço Unit. (R$)</Label>
+                  <Input type="number" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))} min="0" step="0.01" className="h-9 text-xs font-medium" />
+                </div>
+                <div className="sm:col-span-6">
+                  <Label className="text-xs font-semibold">Quantidade</Label>
+                  <Input type="number" value={entryQuantity} onChange={(e) => setEntryQuantity(e.target.value)} min="0.01" step="0.01" className="h-9 text-xs font-medium" />
+                </div>
+              </>
+            )}
+
+            {selectedProduct && selectedProduct.inventoryLots.length > 0 && (
+              <div className="sm:col-span-12">
+                <Label className="text-xs font-semibold">Lote de Produção (Opcional)</Label>
+                <Select onValueChange={setSelectedLot} value={selectedLot || ''}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Automático (FIFO) - Recomendado" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[100]">
+                    <SelectItem value="none">Automático (FIFO)</SelectItem>
+                    {selectedProduct.inventoryLots
+                      .map((lot) => {
+                        const used = items
+                          .filter((item) => item.inventoryLotId === lot.id)
+                          .reduce((acc, item) => acc + Number(item.quantity), 0);
+                        const available = lot.remainingQuantity - used;
+                        return { ...lot, available };
+                      })
+                      .filter((lot) => lot.available > 0.01)
+                      .map((lot) => (
+                        <SelectItem key={lot.id} value={lot.id}>
+                          Lote {lot.batchNumber || `#${lot.id.substring(0, 8)}`} (Disponível: {lot.available.toFixed(2)})
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="sm:col-span-2">
-                <Label>Mão de Obra (%)</Label>
-                <Input
-                  type="number"
-                  value={laborPercentInput}
-                  onChange={(e) => setLaborPercentInput(e.target.value)}
-                  step="0.01"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Label>Total {specialConfig.metal} (g)</Label>
-                <Input type="number" value={totalMetalAmount.toFixed(2)} readOnly disabled className="font-bold" />
-              </div>
-              <div className="sm:col-span-3">
-                <Label>Qtd. Final ({specialConfig.unitName})</Label>
-                <Input type="number" value={finalQuantity.toFixed(2)} readOnly disabled />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="sm:col-span-6">
-                <Label>Preço Unit.</Label>
-                <Input type="number" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))} min="0" step="0.01" />
-              </div>
-              <div className="sm:col-span-6">
-                <Label>Qtd.</Label>
-                <Input type="number" value={entryQuantity} onChange={(e) => setEntryQuantity(e.target.value)} min="0.01" step="0.01" />
-              </div>
-            </>
-          )}
-
-          {selectedProduct && selectedProduct.inventoryLots.length > 0 && (
-            <div className="sm:col-span-12">
-              <Label>Lote de Produção (Opcional)</Label>
-              <Select onValueChange={setSelectedLot} value={selectedLot || ''}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Automático (FIFO) - Recomendado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Automático (FIFO)</SelectItem>
-                  {selectedProduct.inventoryLots
-                    .map((lot) => {
-                      const used = items
-                        .filter((item) => item.inventoryLotId === lot.id)
-                        .reduce((acc, item) => acc + Number(item.quantity), 0);
-                      const available = lot.remainingQuantity - used;
-                      return { ...lot, available };
-                    })
-                    .filter((lot) => lot.available > 0.01)
-                    .map((lot) => (
-                      <SelectItem key={lot.id} value={lot.id}>
-                        Lote {lot.batchNumber || `#${lot.id.substring(0, 8)}`} (Disponível: {lot.available.toFixed(2)})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-        <DialogFooter>
+
+        <DialogFooter className="mt-3 pt-3 border-t flex flex-row justify-end gap-2 shrink-0">
           <DialogClose asChild>
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" size="sm" className="h-9 text-xs">
               Cancelar
             </Button>
           </DialogClose>
-          <Button type="button" onClick={handleConfirmAddItem}>
+          <Button type="button" size="sm" onClick={handleConfirmAddItem} className="h-9 text-xs font-semibold">
             Adicionar Item
           </Button>
         </DialogFooter>

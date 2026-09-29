@@ -129,44 +129,45 @@ export function LotSelectionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Selecionar Lotes para: {product?.name}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="w-[95vw] sm:max-w-4xl max-h-[92vh] flex flex-col p-4 sm:p-6 z-[80] overflow-hidden">
+        <DialogHeader className="shrink-0 pb-2 border-b">
+          <DialogTitle className="text-base sm:text-lg">Selecionar Lotes para: {product?.name}</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">
             Selecione os lotes de inventário para suprir a quantidade necessária do item.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
+
+        <div className="flex-1 overflow-y-auto pr-1 py-3 space-y-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 p-3 sm:p-4 bg-muted/40 rounded-lg text-center sm:text-left">
             <div>
-              <p className="font-medium">Quantidade Necessária</p>
-              <p className="text-2xl font-bold">{quantityRequired}</p>
+              <p className="text-xs font-medium text-muted-foreground">Necessária</p>
+              <p className="text-lg sm:text-2xl font-bold">{quantityRequired}</p>
             </div>
             <div>
-              <p className="font-medium">Quantidade Selecionada</p>
-              <p className="text-2xl font-bold">{getTotalSelectedQuantity()}</p>
+              <p className="text-xs font-medium text-muted-foreground">Selecionada</p>
+              <p className="text-lg sm:text-2xl font-bold">{getTotalSelectedQuantity()}</p>
             </div>
             <div>
-              <p className="font-medium">Quantidade Restante</p>
-              <p className={`text-2xl font-bold ${quantityRemaining < 0 ? 'text-destructive' : 'text-success'}`}>
+              <p className="text-xs font-medium text-muted-foreground">Restante</p>
+              <p className={`text-lg sm:text-2xl font-bold ${quantityRemaining < 0 ? 'text-destructive' : 'text-emerald-500'}`}>
                 {quantityRemaining.toFixed(2)}
               </p>
             </div>
           </div>
 
           {isLoading ? (
-            <p>Carregando lotes...</p>
+            <p className="text-xs text-muted-foreground text-center py-6">Carregando lotes...</p>
           ) : (
-            <div className="max-h-[400px] overflow-y-auto">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Lote</TableHead>
-                    <TableHead>Data de Recebimento</TableHead>
-                    <TableHead className="text-right">Custo</TableHead>
-                    <TableHead className="text-right">Qtd. Disponível</TableHead>
-                    <TableHead className="w-[150px] text-right">Qtd. a Usar</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="text-xs">Lote</TableHead>
+                    <TableHead className="text-xs">Data Recebimento</TableHead>
+                    <TableHead className="text-right text-xs">Custo</TableHead>
+                    <TableHead className="text-right text-xs">Disponível</TableHead>
+                    <TableHead className="w-[120px] sm:w-[150px] text-right text-xs">Qtd. a Usar</TableHead>
+                    <TableHead className="w-[40px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -176,10 +177,10 @@ export function LotSelectionModal({
                     
                     return (
                       <TableRow key={lot.id}>
-                        <TableCell>{lot.batchNumber}</TableCell>
-                        <TableCell>{format(new Date(lot.receivedDate), 'dd/MM/yyyy')}</TableCell>
-                        <TableCell className="text-right">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lot.costPrice)}</TableCell>
-                        <TableCell className="text-right">{remainingAfterSelection.toFixed(2)}</TableCell>
+                        <TableCell className="text-xs font-medium">{lot.batchNumber}</TableCell>
+                        <TableCell className="text-xs">{format(new Date(lot.receivedDate), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell className="text-right text-xs">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lot.costPrice)}</TableCell>
+                        <TableCell className="text-right text-xs font-medium">{remainingAfterSelection.toFixed(2)}</TableCell>
                         <TableCell className="text-right">
                           <Input
                             type="number"
@@ -188,7 +189,7 @@ export function LotSelectionModal({
                             onChange={(e) => handleQuantityChange(lot.id, parseFloat(e.target.value) || 0)}
                             max={remainingAfterSelection.toNumber()}
                             min={0}
-                            className="text-right"
+                            className="text-right h-8 text-xs font-medium"
                           />
                         </TableCell>
                         <TableCell>
@@ -198,6 +199,7 @@ export function LotSelectionModal({
                             size="icon"
                             onClick={() => handleAutoFill(lot.id, remainingAfterSelection.toNumber())}
                             title="Preencher automaticamente"
+                            className="h-8 w-8 text-primary"
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -210,9 +212,10 @@ export function LotSelectionModal({
             </div>
           )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleConfirm}>Confirmar Seleção</Button>
+
+        <DialogFooter className="mt-3 pt-3 border-t flex flex-row justify-end gap-2 shrink-0">
+          <Button type="button" variant="outline" size="sm" onClick={onClose} className="h-9 text-xs">Cancelar</Button>
+          <Button type="button" size="sm" onClick={handleConfirm} className="h-9 text-xs font-semibold">Confirmar Seleção</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
