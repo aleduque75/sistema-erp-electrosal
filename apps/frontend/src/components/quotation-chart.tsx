@@ -153,11 +153,11 @@ export function QuotationChart() {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="space-y-1">
-          <CardTitle>Cotações de Metais</CardTitle>
-          <CardDescription>
+    <Card className="border border-border/80 shadow-sm overflow-hidden">
+      <CardHeader className="p-4 sm:p-6 pb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="space-y-0.5">
+          <CardTitle className="text-base sm:text-lg font-bold">Cotações de Metais</CardTitle>
+          <CardDescription className="text-xs">
             Histórico de preços de compra e venda desde 2020.
           </CardDescription>
         </div>
@@ -167,7 +167,7 @@ export function QuotationChart() {
             setSelectedMetal(value as "BOTH" | "GOLD" | "SILVER")
           }
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[150px] h-8 text-xs rounded-xl">
             <SelectValue placeholder="Selecionar Metal" />
           </SelectTrigger>
           <SelectContent>
@@ -177,17 +177,21 @@ export function QuotationChart() {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent>
-        <div style={{ width: "100%", height: 350 }}>
+      <CardContent className="p-2 sm:p-6 pt-0">
+        <div className="w-full h-[320px] sm:h-[350px] pt-1">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
+            <AreaChart data={data} margin={{ top: 10, right: 12, left: 16, bottom: 6 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
+              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} dy={5} />
               <YAxis
-                tickFormatter={(value) => `R$ ${value.toLocaleString("pt-BR")}`}
+                width={65}
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tickFormatter={(value) => `R$ ${Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
+              <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
               {/* Gold */}
               {(selectedMetal === "BOTH" || selectedMetal === "GOLD") && (
                 <>

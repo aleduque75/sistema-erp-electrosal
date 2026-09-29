@@ -215,28 +215,104 @@ export function TotalSalesChart() {
   };
 
   const renderChart = (chartData: PeriodData[], periodType: 'monthly' | 'quarterly' | 'semiannual') => (
-    <ResponsiveContainer width="100%" height={350}>
-      <BarChart data={chartData} onClick={(data) => handleBarClick(data, periodType)} style={{cursor: 'pointer'}}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="period" />
-        <YAxis tickFormatter={(value) => `${Number(value).toFixed(2)}g`} />
-        <Tooltip content={({ active, payload, label }) => {
-          if (active && payload && payload.length) {
-            return (
-              <div className="bg-background border p-2 rounded-md shadow-md">
-                <p className="label font-bold">{`${label}`}</p>
-                {Array.isArray(payload) && payload.map((p, i) => <p key={i} style={{ color: p.fill }}>{`${p.name}: ${Number(p.value).toFixed(4)}g`}</p>)}
-              </div>
-            );
-          }
-          return null;
-        }} />
-        <Legend />
-        {showSales && <Bar dataKey="totalSalesGold" name="Vendas (Au)" fill="#FFD700" />}
-        {showExpenses && <Bar dataKey="totalExpensesGold" name="Despesas (Au)" fill="#dc2626" />}
-        {showProfit && <Bar dataKey="totalProfitGold" name="Lucro (Au)" fill="#22c55e" />}
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="w-full h-[320px] sm:h-[360px] pt-1">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={chartData}
+          onClick={(data) => handleBarClick(data, periodType)}
+          style={{ cursor: 'pointer' }}
+          margin={{ top: 10, right: 12, left: 16, bottom: 6 }}
+        >
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke="hsl(var(--border))"
+            strokeOpacity={0.5}
+          />
+          <XAxis
+            dataKey="period"
+            tickLine={false}
+            axisLine={false}
+            tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+            dy={5}
+          />
+          <YAxis
+            width={65}
+            tickLine={false}
+            axisLine={false}
+            tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+            tickFormatter={(value) => {
+              const num = Number(value || 0);
+              if (num >= 1000) {
+                return `${(num / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}kg`;
+              }
+              return `${num.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}g`;
+            }}
+          />
+          <Tooltip
+            cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+            content={({ active, payload, label }) => {
+              if (active && payload && payload.length) {
+                return (
+                  <div className="bg-card/95 backdrop-blur-md border border-border shadow-xl p-3 rounded-xl space-y-1.5 min-w-[170px] text-xs">
+                    <p className="font-bold text-foreground border-b border-border/50 pb-1">{label}</p>
+                    {payload.map((p: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: p.fill }} />
+                          {p.name}:
+                        </span>
+                        <span className="font-bold text-foreground font-mono">
+                          {Number(p.value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}g
+                        </span>
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-muted-foreground/70 italic pt-1 border-t border-border/30">
+                      Clique para ver detalhes
+                    </p>
+                  </div>
+                );
+              }
+              return null;
+            }}
+          />
+          <Legend
+            verticalAlign="bottom"
+            height={36}
+            iconType="circle"
+            iconSize={8}
+            wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+          />
+          {showSales && (
+            <Bar
+              dataKey="totalSalesGold"
+              name="Vendas (Au)"
+              fill="#F59E0B"
+              radius={[6, 6, 0, 0]}
+              maxBarSize={45}
+            />
+          )}
+          {showExpenses && (
+            <Bar
+              dataKey="totalExpensesGold"
+              name="Despesas (Au)"
+              fill="#EF4444"
+              radius={[6, 6, 0, 0]}
+              maxBarSize={45}
+            />
+          )}
+          {showProfit && (
+            <Bar
+              dataKey="totalProfitGold"
+              name="Lucro (Au)"
+              fill="#10B981"
+              radius={[6, 6, 0, 0]}
+              maxBarSize={45}
+            />
+          )}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 
   const salesTotal = useMemo(() => selectedPeriodDetails?.sales.reduce((sum, item) => sum + Number(item.goldValue), 0) || 0, [selectedPeriodDetails]);
@@ -249,21 +325,80 @@ export function TotalSalesChart() {
   return (
     <>
       <Tabs defaultValue="monthly">
-        <Card>
-          <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-            <div className="space-y-1"><CardTitle>Resumo Financeiro (Au)</CardTitle><CardDescription>Vendas e despesas em ouro por período.</CardDescription></div>
-            <div className="flex flex-col sm:flex-row items-center gap-2">
-              <div className="flex items-center space-x-2"><Checkbox id="show-sales" checked={showSales} onCheckedChange={(c) => setShowSales(Boolean(c))} /><Label htmlFor="show-sales">Vendas</Label></div>
-              <div className="flex items-center space-x-2"><Checkbox id="show-expenses" checked={showExpenses} onCheckedChange={(c) => setShowExpenses(Boolean(c))} /><Label htmlFor="show-expenses">Despesas</Label></div>
-              <div className="flex items-center space-x-2"><Checkbox id="show-profit" checked={showProfit} onCheckedChange={(c) => setShowProfit(Boolean(c))} /><Label htmlFor="show-profit">Lucro</Label></div>
-              <Select value={selectedYear} onValueChange={setSelectedYear}><SelectTrigger className="w-auto md:w-[130px]"><SelectValue placeholder="Ano" /></SelectTrigger><SelectContent><SelectItem value="ALL">Todos</SelectItem>{availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
-              <TabsList><TabsTrigger value="monthly">Mensal</TabsTrigger><TabsTrigger value="quarterly">Trimestral</TabsTrigger><TabsTrigger value="semiannual">Semestral</TabsTrigger></TabsList>
+        <Card className="border border-border/80 shadow-sm overflow-hidden">
+          <CardHeader className="p-4 sm:p-6 space-y-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="space-y-0.5">
+                <CardTitle className="text-base sm:text-lg font-bold">Resumo Financeiro (Au)</CardTitle>
+                <CardDescription className="text-xs">Vendas e despesas em ouro por período.</CardDescription>
+              </div>
+
+              {/* Metric Toggle Chips */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowSales(!showSales)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    showSales
+                      ? "bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-sm"
+                      : "bg-muted/40 text-muted-foreground border border-transparent hover:bg-muted"
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${showSales ? "bg-amber-500" : "bg-muted-foreground/50"}`} />
+                  Vendas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowExpenses(!showExpenses)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    showExpenses
+                      ? "bg-rose-500/20 text-rose-500 border border-rose-500/40 shadow-sm"
+                      : "bg-muted/40 text-muted-foreground border border-transparent hover:bg-muted"
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${showExpenses ? "bg-rose-500" : "bg-muted-foreground/50"}`} />
+                  Despesas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowProfit(!showProfit)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    showProfit
+                      ? "bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 shadow-sm"
+                      : "bg-muted/40 text-muted-foreground border border-transparent hover:bg-muted"
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${showProfit ? "bg-emerald-500" : "bg-muted-foreground/50"}`} />
+                  Lucro
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-header row: Year selector + Period Tabs */}
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40">
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-[110px] h-8 text-xs rounded-xl">
+                  <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos</SelectItem>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <TabsList className="h-8 p-0.5 rounded-xl bg-muted/60">
+                <TabsTrigger value="monthly" className="text-xs px-2.5 py-1 rounded-lg">Mensal</TabsTrigger>
+                <TabsTrigger value="quarterly" className="text-xs px-2.5 py-1 rounded-lg">Trimestral</TabsTrigger>
+                <TabsTrigger value="semiannual" className="text-xs px-2.5 py-1 rounded-lg">Semestral</TabsTrigger>
+              </TabsList>
             </div>
           </CardHeader>
-          <CardContent>
-            <TabsContent value="monthly">{renderChart(filteredData.monthly, 'monthly')}</TabsContent>
-            <TabsContent value="quarterly">{renderChart(filteredData.quarterly, 'quarterly')}</TabsContent>
-            <TabsContent value="semiannual">{renderChart(filteredData.semiannual, 'semiannual')}</TabsContent>
+          <CardContent className="p-2 sm:p-6 pt-0">
+            <TabsContent value="monthly" className="m-0">{renderChart(filteredData.monthly, 'monthly')}</TabsContent>
+            <TabsContent value="quarterly" className="m-0">{renderChart(filteredData.quarterly, 'quarterly')}</TabsContent>
+            <TabsContent value="semiannual" className="m-0">{renderChart(filteredData.semiannual, 'semiannual')}</TabsContent>
           </CardContent>
         </Card>
       </Tabs>
