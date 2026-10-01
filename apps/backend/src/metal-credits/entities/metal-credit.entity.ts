@@ -32,7 +32,7 @@ export class MetalCreditEntity {
     metalType: TipoMetal | string;
     grams: number | string | Decimal;
     settledGrams?: number | string | Decimal | null;
-    status?: string | MetalCreditStatus | MetalCreditStatusVO;
+    status?: string | MetalCreditStatus | MetalCreditStatusVO | null;
     date?: Date | string;
     pureMetalLotId?: string | null;
     createdAt?: Date;
@@ -45,23 +45,28 @@ export class MetalCreditEntity {
       throw new Error('ID do cliente é obrigatório.');
     }
 
-    const gramsDec = new Decimal(params.grams);
-    if (gramsDec.isNaN() || gramsDec.lessThanOrEqualTo(0)) {
-      throw new Error('A quantidade de crédito em gramas deve ser estritamente positiva.');
+    const gramsDec = params.grams != null ? new Decimal(params.grams) : new Decimal(0);
+    if (gramsDec.isNaN()) {
+      throw new Error('A quantidade de crédito em gramas deve ser um número válido.');
     }
+    const safeGramsDec = gramsDec.isNegative() ? new Decimal(0) : gramsDec;
 
     const settledGramsDec = params.settledGrams != null ? new Decimal(params.settledGrams) : new Decimal(0);
-    if (settledGramsDec.isNegative()) {
-      throw new Error('A quantidade liquidada não pode ser negativa.');
-    }
+    const safeSettledGramsDec = (settledGramsDec.isNaN() || settledGramsDec.isNegative()) ? new Decimal(0) : settledGramsDec;
 
-    const statusVO = params.status != null
+    const statusVO = params.status != null && params.status !== ''
       ? (params.status instanceof MetalCreditStatusVO ? params.status : new MetalCreditStatusVO(params.status))
-      : MetalCreditStatusVO.fromGrams(gramsDec.toNumber(), settledGramsDec.toNumber());
+      : (safeGramsDec.isZero() ? new MetalCreditStatusVO(MetalCreditStatus.PAID) : MetalCreditStatusVO.fromGrams(safeGramsDec.toNumber(), safeSettledGramsDec.toNumber()));
 
-    const date = params.date
-      ? (typeof params.date === 'string' ? new Date(params.date.includes('T') ? params.date : `${params.date}T12:00:00`) : params.date)
-      : new Date();
+    let date = new Date();
+    if (params.date) {
+      const parsedDate = typeof params.date === 'string'
+        ? new Date(params.date.includes('T') ? params.date : `${params.date}T12:00:00`)
+        : params.date;
+      if (!isNaN(parsedDate.getTime())) {
+        date = parsedDate;
+      }
+    }
 
     return new MetalCreditEntity({
       id: params.id,
@@ -69,8 +74,8 @@ export class MetalCreditEntity {
       clientId: params.clientId,
       chemicalAnalysisId: params.chemicalAnalysisId,
       metalType: (params.metalType as TipoMetal) || TipoMetal.AU,
-      grams: gramsDec.toDecimalPlaces(4),
-      settledGrams: settledGramsDec.toDecimalPlaces(4),
+      grams: safeGramsDec.toDecimalPlaces(4),
+      settledGrams: safeSettledGramsDec.toDecimalPlaces(4),
       status: statusVO,
       date,
       pureMetalLotId: params.pureMetalLotId,
@@ -136,7 +141,7 @@ export class MetalCreditEntity {
   }
 
   getRemainingGrams(): Decimal {
-    return this.props.grams.minus(this.props.settledGrams);
+    return Decimal.max(0, this.props.grams.minus(this.props.settledGrams));
   }
 
   canSettle(amount: number | Decimal): boolean {

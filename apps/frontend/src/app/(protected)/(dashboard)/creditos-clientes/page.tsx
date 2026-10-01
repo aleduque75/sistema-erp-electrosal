@@ -73,9 +73,10 @@ export default function CreditosClientesPage() {
     setIsFetching(true);
     try {
       const creditsResponse = await api.get<MetalCreditWithUsageDto[]>("/metal-credits");
-      setCredits(creditsResponse.data);
-    } catch (err) {
-      toast.error("Falha ao carregar dados.");
+      setCredits(Array.isArray(creditsResponse.data) ? creditsResponse.data : []);
+    } catch (err: any) {
+      console.error("Erro ao carregar créditos de metal:", err);
+      toast.error(err?.response?.data?.message || "Falha ao carregar dados.");
     } finally {
       setIsFetching(false);
     }

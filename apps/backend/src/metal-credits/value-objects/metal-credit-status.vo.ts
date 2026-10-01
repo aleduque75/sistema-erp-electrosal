@@ -3,25 +3,38 @@ import { MetalCreditStatus } from '@prisma/client';
 export class MetalCreditStatusVO {
   private readonly _value: MetalCreditStatus;
 
-  constructor(status: string | MetalCreditStatus) {
+  constructor(status?: string | MetalCreditStatus | null) {
+    if (!status) {
+      this._value = MetalCreditStatus.PENDING;
+      return;
+    }
     const upper = String(status).trim().toUpperCase();
-    if (upper === 'PENDING' || upper === MetalCreditStatus.PENDING) {
+    if (
+      upper === 'PENDING' ||
+      upper === 'DISPONIVEL' ||
+      upper === 'DISPONÍVEL' ||
+      upper === MetalCreditStatus.PENDING
+    ) {
       this._value = MetalCreditStatus.PENDING;
     } else if (
       upper === 'PARTIALLY_PAID' ||
       upper === 'PARTIALLY_SETTLED' ||
+      upper === 'PARCIAL' ||
       upper === MetalCreditStatus.PARTIALLY_PAID
     ) {
       this._value = MetalCreditStatus.PARTIALLY_PAID;
     } else if (
       upper === 'PAID' ||
       upper === 'SETTLED' ||
+      upper === 'PAGO' ||
+      upper === 'LIQUIDADO' ||
       upper === MetalCreditStatus.PAID
     ) {
       this._value = MetalCreditStatus.PAID;
     } else if (
       upper === 'CANCELED' ||
       upper === 'CANCELLED' ||
+      upper === 'CANCELADO' ||
       upper === MetalCreditStatus.CANCELED
     ) {
       this._value = MetalCreditStatus.CANCELED;

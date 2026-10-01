@@ -46,4 +46,31 @@ describe('MetalCreditEntity', () => {
 
     expect(() => credit.settleGrams(50)).toThrow('Saldo de crédito insuficiente para liquidação.');
   });
+
+  it('should allow 0 grams for settled/paid credits without throwing', () => {
+    const credit = MetalCreditEntity.create({
+      organizationId: 'org-1',
+      clientId: 'client-1',
+      metalType: TipoMetal.AU,
+      grams: 0,
+      settledGrams: 50,
+      status: MetalCreditStatus.PAID,
+    });
+
+    expect(credit.gramsNumber).toBe(0);
+    expect(credit.settledGramsNumber).toBe(50);
+    expect(credit.status.isPaid()).toBe(true);
+  });
+
+  it('should clamp negative grams to 0', () => {
+    const credit = MetalCreditEntity.create({
+      organizationId: 'org-1',
+      clientId: 'client-1',
+      metalType: TipoMetal.AU,
+      grams: -0.0001,
+    });
+
+    expect(credit.gramsNumber).toBe(0);
+    expect(credit.status.isPaid()).toBe(true);
+  });
 });

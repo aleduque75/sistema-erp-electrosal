@@ -53,7 +53,17 @@ const formSchema = z.object({
   paymentConditionId: z.string().min(1, "Selecione a condição de pagamento."),
   numberOfInstallments: z.coerce.number().int().min(1).optional(),
   contaCorrenteId: z.string().nullable().optional(),
-  orderNumber: z.coerce.number().int().positive().optional(),
+  orderNumber: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    })
+    .refine((val) => val === undefined || (Number.isInteger(val) && val > 0), {
+      message: "O número do pedido deve ser um número inteiro positivo.",
+    }),
   observation: z.string().optional(),
 });
 
@@ -190,16 +200,18 @@ export function NewSaleForm({ onSave }: any) {
   const handleAddItem = (newItemData: any) => {
     const product = products.find(p => p.id === newItemData.productId);
     let assignedLots: SaleItemLot[] = [];
+    const itemQuantity = Number(Number(newItemData.quantity).toFixed(2));
+    const itemPrice = Number(Number(newItemData.price).toFixed(2));
 
     if (newItemData.inventoryLotId) {
       // User manually selected a lot in the AddItemModal
       assignedLots = [{
         inventoryLotId: newItemData.inventoryLotId,
-        quantity: newItemData.quantity
+        quantity: itemQuantity
       } as any];
     } else if (product && product.inventoryLots && product.inventoryLots.length > 0) {
       // Automatic FIFO allocation
-      let remainingToAssign = new Decimal(newItemData.quantity);
+      let remainingToAssign = new Decimal(itemQuantity);
 
       // Sort lots by date (oldest first)
       const sortedLots = [...product.inventoryLots].sort(
@@ -222,19 +234,21 @@ export function NewSaleForm({ onSave }: any) {
           const amountFromThisLot = Decimal.min(remainingToAssign, availableInLot);
           assignedLots.push({
             inventoryLotId: lot.id,
-            quantity: amountFromThisLot.toNumber()
+            quantity: Number(amountFromThisLot.toFixed(2))
           } as any);
           remainingToAssign = remainingToAssign.minus(amountFromThisLot);
         }
       }
 
       if (remainingToAssign.gt(0.0001)) {
-        toast.warning(`Não foi possível alocar toda a quantidade nos lotes existentes. Faltam ${remainingToAssign.toFixed(4)}g`);
+        toast.warning(`Não foi possível alocar toda a quantidade nos lotes existentes. Faltam ${remainingToAssign.toFixed(2)}g`);
       }
     }
 
     const newItem = {
       ...newItemData,
+      quantity: itemQuantity,
+      price: itemPrice,
       lots: assignedLots,
     };
     setItems(currentItems => [...currentItems, newItem]);
@@ -388,9 +402,21 @@ export function NewSaleForm({ onSave }: any) {
     }
   };
 
+  const onInvalidSubmit = (formErrors: any) => {
+    console.error("Erros no formulário de venda:", formErrors);
+    const firstErrorMessage =
+      formErrors.clientId?.message ||
+      formErrors.paymentConditionId?.message ||
+      formErrors.orderNumber?.message ||
+      formErrors.contaCorrenteId?.message ||
+      "Por favor, verifique os campos obrigatórios do formulário.";
+    toast.error(firstErrorMessage);
+  };
+
   return (
     <form
-      onSubmit={handleSubmit(onFinalizeSale)}
+      noValidate
+      onSubmit={handleSubmit(onFinalizeSale, onInvalidSubmit)}
       className="flex-1 flex flex-col h-full min-h-0 bg-background overflow-hidden"
     >
       <AddItemModal
@@ -493,7 +519,7 @@ export function NewSaleForm({ onSave }: any) {
                 render={({ field }) => (
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">Condição de Pagamento *</Label>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione a condição..." /></SelectTrigger>
                       <SelectContent>
                         {paymentOptions.map(option => (
@@ -678,7 +704,7 @@ export function NewSaleForm({ onSave }: any) {
                                 handleUpdateItem(index, 'quantity', val === '' ? 0 : parseFloat(val));
                               }}
                               className="h-8 text-xs font-medium"
-                              step="0.01"
+                              step="any"
                             />
                           </div>
                           <div>
@@ -691,7 +717,7 @@ export function NewSaleForm({ onSave }: any) {
                                 handleUpdateItem(index, 'price', val === '' ? 0 : parseFloat(val));
                               }}
                               className="h-8 text-xs font-medium"
-                              step="0.01"
+                              step="any"
                             />
                           </div>
                         </div>
@@ -753,7 +779,7 @@ export function NewSaleForm({ onSave }: any) {
                                   handleUpdateItem(index, 'quantity', val === '' ? 0 : parseFloat(val));
                                 }}
                                 className="w-20 mx-auto h-8 text-xs text-center font-medium"
-                                step="0.01"
+                                step="any"
                               />
                             </TableCell>
                             <TableCell className="text-right py-2.5">
@@ -765,7 +791,7 @@ export function NewSaleForm({ onSave }: any) {
                                   handleUpdateItem(index, 'price', val === '' ? 0 : parseFloat(val));
                                 }}
                                 className="w-24 ml-auto h-8 text-xs text-right font-medium"
-                                step="0.01"
+                                step="any"
                               />
                             </TableCell>
                             <TableCell className="text-center py-2.5">

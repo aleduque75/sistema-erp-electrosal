@@ -25,6 +25,9 @@ export class CreateMetalCreditUseCase {
     if (!command.clientId) {
       throw new BadRequestException('Client ID é obrigatório.');
     }
+    if (command.grams == null || Number(command.grams) <= 0) {
+      throw new BadRequestException('A quantidade de crédito em gramas deve ser estritamente positiva.');
+    }
 
     const entity = MetalCreditEntity.create({
       organizationId: command.organizationId,

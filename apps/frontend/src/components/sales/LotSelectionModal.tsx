@@ -184,7 +184,7 @@ export function LotSelectionModal({
                         <TableCell className="text-right">
                           <Input
                             type="number"
-                            step="0.01"
+                            step="any"
                             value={selectedQty}
                             onChange={(e) => handleQuantityChange(lot.id, parseFloat(e.target.value) || 0)}
                             max={remainingAfterSelection.toNumber()}

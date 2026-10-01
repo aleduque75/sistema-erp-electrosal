@@ -89,26 +89,29 @@ export function AddItemModal({
     const quant = typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity;
     if (isNaN(quant)) return 0;
     // Se a unidade for o metal (AU/AG), retorna a quantidade digitada
-    if (entryUnit === 'metal') return quant;
+    if (entryUnit === 'metal') return Number(quant.toFixed(2));
     // Se a unidade for o produto final (Sal/Cianeto), converte para metal
-    return quant * specialConfig.factor;
+    return Number((quant * specialConfig.factor).toFixed(2));
   }, [entryQuantity, entryUnit, specialConfig]);
 
   const totalMetalAmount = useMemo(() => {
     const laborPercent = typeof laborPercentInput === 'string' ? parseFloat(laborPercentInput) : (laborPercentInput || 0);
     const laborGrams = metalAmount * (laborPercent / 100);
-    return metalAmount + laborGrams;
+    return Number((metalAmount + laborGrams).toFixed(2));
   }, [metalAmount, laborPercentInput]);
 
   const finalQuantity = useMemo(() => {
     const quant = typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity;
     if (isNaN(quant)) return 0;
     if (specialConfig) {
-      // Se a unidade for o metal, converte para a quantidade do produto final
-      if (entryUnit === 'metal') return quant / specialConfig.factor;
-      return quant;
+      // Se a unidade for o metal, converte para a quantidade do produto final com 2 casas decimais
+      if (entryUnit === 'metal') {
+        const raw = quant / specialConfig.factor;
+        return Number(raw.toFixed(2));
+      }
+      return Number(quant.toFixed(2));
     }
-    return quant;
+    return Number(quant.toFixed(2));
   }, [entryQuantity, entryUnit, specialConfig]);
 
   const calculatedItemPrice = useMemo(() => {
@@ -119,15 +122,15 @@ export function AddItemModal({
       if (metalAmount <= 0) return 0;
       const totalBRL = totalMetalAmount * quote;
       if (finalQuantity === 0) return 0;
-      return totalBRL / finalQuantity;
+      return Number((totalBRL / finalQuantity).toFixed(2));
     } else {
-      return Number(selectedProduct.price);
+      return Number(Number(selectedProduct.price).toFixed(2));
     }
   }, [selectedProduct, specialConfig, saleGoldQuote, saleSilverQuote, metalAmount, totalMetalAmount, finalQuantity]);
 
   useEffect(() => {
     if (selectedProduct && !specialConfig) {
-      setItemPrice(Number(selectedProduct.price));
+      setItemPrice(Number(Number(selectedProduct.price).toFixed(2)));
     } else {
       setItemPrice(calculatedItemPrice);
     }
@@ -162,8 +165,8 @@ export function AddItemModal({
     onAddItem({
       productId: selectedProduct.id,
       name: selectedProduct.name,
-      quantity: finalQuantity,
-      price: itemPrice,
+      quantity: Number(finalQuantity.toFixed(2)),
+      price: Number(itemPrice.toFixed(2)),
       inventoryLotId: lotIdToUse || undefined,
       batchNumber: lot?.batchNumber,
       laborPercentage: specialConfig ? (typeof laborPercentInput === 'string' ? parseFloat(laborPercentInput) : laborPercentInput) : undefined,
@@ -221,7 +224,7 @@ export function AddItemModal({
                     value={entryQuantity}
                     onChange={(e) => setEntryQuantity(e.target.value)}
                     min="0.01"
-                    step="0.01"
+                    step="any"
                     className="h-9 text-xs"
                   />
                 </div>
@@ -241,7 +244,7 @@ export function AddItemModal({
                     type="number"
                     value={laborPercentInput}
                     onChange={(e) => setLaborPercentInput(e.target.value)}
-                    step="0.01"
+                    step="any"
                     className="h-9 text-xs"
                   />
                 </div>
@@ -258,11 +261,11 @@ export function AddItemModal({
               <>
                 <div className="sm:col-span-6">
                   <Label className="text-xs font-semibold">Preço Unit. (R$)</Label>
-                  <Input type="number" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))} min="0" step="0.01" className="h-9 text-xs font-medium" />
+                  <Input type="number" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))} min="0" step="any" className="h-9 text-xs font-medium" />
                 </div>
                 <div className="sm:col-span-6">
                   <Label className="text-xs font-semibold">Quantidade</Label>
-                  <Input type="number" value={entryQuantity} onChange={(e) => setEntryQuantity(e.target.value)} min="0.01" step="0.01" className="h-9 text-xs font-medium" />
+                  <Input type="number" value={entryQuantity} onChange={(e) => setEntryQuantity(e.target.value)} min="0.01" step="any" className="h-9 text-xs font-medium" />
                 </div>
               </>
             )}
