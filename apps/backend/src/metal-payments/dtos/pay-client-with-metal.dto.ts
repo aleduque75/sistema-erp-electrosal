@@ -8,7 +8,7 @@ export class PayClientWithMetalDto {
   pureMetalLotId: string;
 
   @IsNumber()
-  @Min(0.01)
+  @Min(0.0001)
   grams: number;
 
   @IsOptional()

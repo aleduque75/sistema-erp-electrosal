@@ -13,6 +13,8 @@ import { User } from '@prisma/client';
 import { GerarPdfMetalCreditUseCase } from './use-cases/gerar-pdf-metal-credit.use-case';
 import { Response } from 'express';
 
+import { LiquidateMetalCreditUseCase } from './use-cases/liquidate-metal-credit.use-case';
+
 @UseGuards(AuthGuard('jwt'))
 @Controller('metal-credits')
 export class MetalCreditsController {
@@ -22,7 +24,17 @@ export class MetalCreditsController {
     private readonly payMetalCreditWithCashUseCase: PayMetalCreditWithCashUseCase,
     private readonly payWithClientCreditUseCase: PayWithClientCreditUseCase,
     private readonly gerarPdfMetalCreditUseCase: GerarPdfMetalCreditUseCase,
+    private readonly liquidateMetalCreditUseCase: LiquidateMetalCreditUseCase,
   ) {}
+
+  @Post(':id/liquidate')
+  async liquidate(
+    @Param('id') id: string,
+    @CurrentUser('orgId') organizationId: string,
+    @Body() dto?: { notes?: string },
+  ) {
+    return this.liquidateMetalCreditUseCase.execute(id, organizationId, dto);
+  }
 
   @Get(':id/pdf')
   async generatePdf(

@@ -22,7 +22,7 @@ export class PrismaMetalPaymentRepository implements MetalPaymentRepository {
     organizationId: string,
     tx?: any,
   ): Promise<{ id: string; metalType: TipoMetal; remainingGrams: number; lotNumber?: string | null } | null> {
-    const lot = await this.getClient(tx).pureMetalLot.findFirst({
+    const lot = await this.getClient(tx).pure_metal_lots.findFirst({
       where: { id: lotId, organizationId },
       select: { id: true, metalType: true, remainingGrams: true, lotNumber: true },
     });
@@ -47,6 +47,7 @@ export class PrismaMetalPaymentRepository implements MetalPaymentRepository {
 
     const movement = await client.pureMetalLotMovement.create({
       data: {
+        organizationId,
         pureMetalLotId: lotId,
         type: data.type,
         grams: data.grams,
@@ -54,7 +55,7 @@ export class PrismaMetalPaymentRepository implements MetalPaymentRepository {
       },
     });
 
-    await client.pureMetalLot.update({
+    await client.pure_metal_lots.update({
       where: { id: lotId },
       data: {
         remainingGrams: {

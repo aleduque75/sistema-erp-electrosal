@@ -16,6 +16,7 @@ import { MetalAccountsModule } from '../metal-accounts/metal-accounts.module';
 import { PureMetalLotsModule } from '../pure-metal-lots/pure-metal-lots.module';
 import { PureMetalLotMovementsModule } from '../pure-metal-lot-movements/pure-metal-lot-movements.module';
 import { GerarPdfMetalCreditUseCase } from './use-cases/gerar-pdf-metal-credit.use-case';
+import { LiquidateMetalCreditUseCase } from './use-cases/liquidate-metal-credit.use-case';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { GerarPdfMetalCreditUseCase } from './use-cases/gerar-pdf-metal-credit.u
     PayMetalCreditWithCashUseCase,
     PayWithClientCreditUseCase,
     GerarPdfMetalCreditUseCase,
+    LiquidateMetalCreditUseCase,
   ],
   exports: [
     MetalCreditsRepository,
@@ -56,6 +58,7 @@ import { GerarPdfMetalCreditUseCase } from './use-cases/gerar-pdf-metal-credit.u
     PayMetalCreditWithCashUseCase,
     PayWithClientCreditUseCase,
     GerarPdfMetalCreditUseCase,
+    LiquidateMetalCreditUseCase,
   ],
 })
 export class MetalCreditsModule {}

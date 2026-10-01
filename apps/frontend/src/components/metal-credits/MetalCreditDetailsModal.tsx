@@ -5,7 +5,17 @@ import { AnaliseQuimicaWithClientNameDto } from "@/types/analise-quimica-with-cl
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
-import { Printer, User, Calendar, Scale, Coins, History, Info, MapPin, FileText } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Printer, User, Calendar, Scale, Coins, History, Info, MapPin, FileText, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
@@ -13,6 +23,7 @@ interface MetalCreditDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   credit: MetalCreditWithUsageDto | null;
+  onSuccess?: () => void;
 }
 
 const formatGrams = (value?: number) => {
@@ -32,10 +43,12 @@ const formatCurrency = (value?: number) =>
     value || 0
   );
 
-export function MetalCreditDetailsModal({ isOpen, onClose, credit }: MetalCreditDetailsModalProps) {
+export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess }: MetalCreditDetailsModalProps) {
   const [chemicalAnalysisDetails, setChemicalAnalysisDetails] = useState<AnaliseQuimicaWithClientNameDto | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isConfirmLiquidateOpen, setIsConfirmLiquidateOpen] = useState(false);
+  const [isLiquidating, setIsLiquidating] = useState(false);
 
   useEffect(() => {
     if (isOpen && credit?.chemicalAnalysisId) {
@@ -74,6 +87,24 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit }: MetalCredit
       toast.error("Falha ao gerar o PDF.");
     } finally {
       setIsPrinting(false);
+    }
+  };
+
+  const handleLiquidate = async () => {
+    if (!credit) return;
+    try {
+      setIsLiquidating(true);
+      await api.post(`/metal-credits/${credit.id}/liquidate`, {
+        reason: "Liquidação manual de saldo residual",
+      });
+      toast.success("Saldo residual liquidado com sucesso!");
+      setIsConfirmLiquidateOpen(false);
+      onSuccess?.();
+      onClose();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Erro ao liquidar saldo do crédito.");
+    } finally {
+      setIsLiquidating(false);
     }
   };
 
@@ -156,9 +187,23 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit }: MetalCredit
                   <span className="text-muted-foreground">Já Utilizado:</span>
                   <span className="font-medium text-red-500">-{formatGrams(originalGrams - Number(credit.grams))}</span>
                 </div>
-                <div className="flex justify-between text-sm border-t pt-2 font-bold">
+                <div className="flex justify-between items-center text-sm border-t pt-2 font-bold">
                   <span className="text-primary">Saldo Final:</span>
-                  <span className="text-primary">{formatGrams(Number(credit.grams))}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-primary">{formatGrams(Number(credit.grams))}</span>
+                    {Number(credit.grams) > 0 && credit.status !== "PAID" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100"
+                        onClick={() => setIsConfirmLiquidateOpen(true)}
+                        title="Liquidar e zerar este resíduo de saldo"
+                      >
+                        Liquidar
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -185,7 +230,7 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit }: MetalCredit
                     </div>
                     <div className="flex justify-between text-sm border-t pt-2">
                       <span className="text-muted-foreground">Entrada:</span>
-                      <span>{formatDate(chemicalAnalysisDetails.dataEntrada.toString())}</span>
+                      <span>{formatDate(chemicalAnalysisDetails.dataEntrada?.toString())}</span>
                     </div>
                   </div>
                 ) : (
@@ -263,14 +308,66 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit }: MetalCredit
           </div>
         </div>
 
-        <DialogFooter className="p-6 bg-muted/30 border-t flex-row items-center justify-between sm:justify-between">
-          <Button variant="outline" size="sm" onClick={handlePrintPdf} disabled={isPrinting}>
-            <Printer className="mr-2 h-4 w-4" />
-            {isPrinting ? "Gerando..." : "Imprimir Extrato PDF"}
-          </Button>
+        <DialogFooter className="p-6 bg-muted/30 border-t flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handlePrintPdf} disabled={isPrinting}>
+              <Printer className="mr-2 h-4 w-4" />
+              {isPrinting ? "Gerando..." : "Imprimir Extrato PDF"}
+            </Button>
+            {Number(credit.grams) > 0 && credit.status !== "PAID" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsConfirmLiquidateOpen(true)}
+                disabled={isLiquidating}
+                className="bg-amber-500/10 text-amber-800 dark:text-amber-300 hover:bg-amber-500/20 border-amber-300 dark:border-amber-700"
+              >
+                <CheckCircle2 className="mr-1.5 h-4 w-4 text-amber-600 dark:text-amber-400" />
+                Liquidar Saldo ({formatGrams(Number(credit.grams))})
+              </Button>
+            )}
+          </div>
           <Button size="sm" onClick={onClose}>Fechar Detalhes</Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={isConfirmLiquidateOpen} onOpenChange={setIsConfirmLiquidateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Liquidar Saldo Residual?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 pt-2 text-left">
+              <p>
+                Deseja liquidar definitivamente o saldo residual de{" "}
+                <strong className="text-foreground">{formatGrams(Number(credit.grams))}</strong> ({credit.metalType}) do cliente{" "}
+                <strong className="text-foreground">{credit.clientName}</strong>?
+              </p>
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-xs text-amber-900 dark:text-amber-200">
+                Esta ação dará baixa no resíduo, mudará o status do crédito para <strong>Esgotado / Pago</strong> e registrará o ajuste contábil de metal.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLiquidating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLiquidate}
+              disabled={isLiquidating}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {isLiquidating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Liquidando...
+                </>
+              ) : (
+                "Confirmar Liquidação"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

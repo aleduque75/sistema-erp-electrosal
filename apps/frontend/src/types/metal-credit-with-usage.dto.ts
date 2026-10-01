@@ -24,5 +24,7 @@ export interface MetalAccountEntryDto {
 }
 
 export interface MetalCreditWithUsageDto extends MetalCreditWithClientNameDto {
+  status: string;
+  settledGrams?: number;
   usageEntries: MetalAccountEntryDto[];
 }

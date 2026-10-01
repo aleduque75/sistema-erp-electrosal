@@ -284,6 +284,7 @@ export default function CreditosClientesPage() {
         isOpen={isDetailsModalOpen}
         onClose={() => setDetailsModalOpen(false)}
         credit={selectedCredit}
+        onSuccess={fetchData}
       />
 
       <PayWithCashModal

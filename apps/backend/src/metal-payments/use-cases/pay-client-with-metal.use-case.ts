@@ -163,7 +163,7 @@ export class PayClientWithMetalUseCase {
         await this.metalPaymentRepository.updateMetalCredit(
           credit.id,
           {
-            grams: newGrams.toNumber(),
+            grams: newStatus === MetalCreditStatus.PAID ? 0 : newGrams.toNumber(),
             settledGrams: newSettledGrams.toNumber(),
             status: newStatus,
           },
