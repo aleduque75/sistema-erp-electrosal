@@ -36,6 +36,8 @@ import { PayAccountsRecWithMetalMultipleUseCase } from './use-cases/pay-accounts
 import { HybridReceiveDto } from './dtos/hybrid-receive.dto';
 import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
 import { RevertAccountRecPaymentUseCase } from './use-cases/revert-account-rec-payment.use-case';
+import { SplitAccountRecDto } from './dtos/split-account-rec.dto';
+import { SplitAccountRecUseCase } from './use-cases/split-account-rec.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('accounts-rec')
@@ -54,6 +56,7 @@ export class AccountsRecController {
     private readonly payAccountsRecWithMetalMultipleUseCase: PayAccountsRecWithMetalMultipleUseCase,
     private readonly hybridReceiveUseCase: HybridReceiveUseCase,
     private readonly revertAccountRecPaymentUseCase: RevertAccountRecPaymentUseCase,
+    private readonly splitAccountRecUseCase: SplitAccountRecUseCase,
   ) {}
 
   @Post()
@@ -87,6 +90,15 @@ export class AccountsRecController {
     @Body() updateDto: UpdateAccountRecDto,
   ) {
     return this.updateAccountRecUseCase.execute(organizationId, id, updateDto);
+  }
+
+  @Post(':id/split')
+  split(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+    @Body() splitDto: SplitAccountRecDto,
+  ) {
+    return this.splitAccountRecUseCase.execute(organizationId, id, splitDto);
   }
 
   @Post(':id/hybrid-receive')

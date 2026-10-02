@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Scissors } from 'lucide-react';
 
 interface AccountRec {
   id: string;
@@ -26,11 +27,13 @@ interface AccountRec {
   dueDate: string;
   received: boolean;
   receivedAt?: string | null;
+  amountPaid?: number;
 }
 
 interface EditAccountRecFormProps {
   accountRec: AccountRec;
   onSave: () => void;
+  onOpenSplit?: () => void;
 }
 
 const formSchema = z.object({
@@ -39,7 +42,7 @@ const formSchema = z.object({
   dueDate: z.string().min(1, 'A data de vencimento é obrigatória.'),
 });
 
-export function EditAccountRecForm({ accountRec, onSave }: EditAccountRecFormProps) {
+export function EditAccountRecForm({ accountRec, onSave, onOpenSplit }: EditAccountRecFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -108,6 +111,20 @@ export function EditAccountRecForm({ accountRec, onSave }: EditAccountRecFormPro
         <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
           {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
         </Button>
+
+        {!accountRec.received && Number(accountRec.amountPaid || 0) === 0 && onOpenSplit && (
+          <div className="pt-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onOpenSplit}
+              className="w-full gap-2 text-xs border-dashed text-primary hover:text-primary hover:bg-primary/5"
+            >
+              <Scissors className="h-3.5 w-3.5" />
+              Dividir este Vencimento em Parcelas
+            </Button>
+          </div>
+        )}
       </form>
     </Form>
   );

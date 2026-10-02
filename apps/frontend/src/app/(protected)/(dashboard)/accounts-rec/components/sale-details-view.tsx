@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
+import { InstallmentList } from "@/components/sales/InstallmentList";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,6 +82,7 @@ interface AccountRec {
 }
 
 interface Sale {
+  id?: string;
   pessoa: {
     name: string;
     logradouro?: string | null;
@@ -94,6 +96,7 @@ interface Sale {
   status: string;
   saleItems: SaleItem[];
   accountsRec: AccountRec[];
+  installments?: any[];
   totalAmount: number;
   feeAmount: number;
   goldValue: number | null;
@@ -109,7 +112,7 @@ interface Sale {
 
 interface SaleDetailsViewProps {
   sale: Sale;
-  onReceivePayment?: (accountRec: AccountRec) => void;
+  onReceivePayment?: (accountRec: any) => void;
   onUpdate?: () => void;
 }
 
@@ -301,6 +304,17 @@ export function SaleDetailsView({ sale, onReceivePayment, onUpdate }: SaleDetail
             </Table>
           </CardContent>
         </Card>
+      )}
+
+      {/* Parcelas da Venda */}
+      {sale.installments && sale.installments.length > 0 && (
+        <InstallmentList
+          installments={sale.installments as any}
+          saleId={sale.id || ''}
+          onInstallmentPaid={() => {
+            if (onUpdate) onUpdate();
+          }}
+        />
       )}
 
       {/* Botões de Ação */}

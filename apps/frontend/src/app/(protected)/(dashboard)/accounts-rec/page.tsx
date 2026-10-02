@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { MoreHorizontal, ArrowUpDown, RotateCcw } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, RotateCcw, Scissors } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { DateRange } from 'react-day-picker';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -31,6 +31,7 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { ReceivePaymentForm } from './components/receive-payment-form';
 import { EditAccountRecForm } from './components/edit-account-rec-form';
 import { SaleDetailsView } from './components/sale-details-view';
+import { SplitAccountRecModal } from './components/split-account-rec-modal';
 
 // Interfaces
 interface AccountRec {
@@ -66,6 +67,7 @@ export default function AccountsRecPage() {
   const [saleToView, setSaleToView] = useState<any | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [accountToEdit, setAccountToEdit] = useState<AccountRec | null>(null);
+  const [accountToSplit, setAccountToSplit] = useState<AccountRec | null>(null);
   const [accountToRevert, setAccountToRevert] = useState<AccountRec | null>(null);
   const [isReverting, setIsReverting] = useState(false);
 
@@ -217,6 +219,12 @@ export default function AccountsRecPage() {
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => handleViewSale(account.sale?.id!)} disabled={!account.sale}>Visualizar Venda</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleEdit(account)}>Editar</DropdownMenuItem>
+              {!account.received && Number(account.amountPaid || 0) === 0 && (
+                <DropdownMenuItem onClick={() => setAccountToSplit(account)}>
+                  <Scissors className="mr-2 h-4 w-4" />
+                  Dividir Lançamento
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               {!account.received && (
                 <DropdownMenuItem onClick={() => setAccountToReceive(account)}>Registrar Recebimento</DropdownMenuItem>
@@ -319,6 +327,12 @@ export default function AccountsRecPage() {
                           <DropdownMenuItem onClick={() => handleEdit(account)}>
                             Editar
                           </DropdownMenuItem>
+                          {!account.received && Number(account.amountPaid || 0) === 0 && (
+                            <DropdownMenuItem onClick={() => setAccountToSplit(account)}>
+                              <Scissors className="mr-2 h-4 w-4" />
+                              Dividir Lançamento
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator />
                           {!account.received && (
                             <DropdownMenuItem onClick={() => setAccountToReceive(account)}>
@@ -354,9 +368,29 @@ export default function AccountsRecPage() {
           <DialogHeader>
             <DialogTitle>Editar Conta a Receber</DialogTitle>
           </DialogHeader>
-          {accountToEdit && <EditAccountRecForm accountRec={accountToEdit} onSave={handleSaveEdit} />}
+          {accountToEdit && (
+            <EditAccountRecForm
+              accountRec={accountToEdit}
+              onSave={handleSaveEdit}
+              onOpenSplit={() => {
+                const acc = accountToEdit;
+                setIsEditModalOpen(false);
+                setAccountToSplit(acc);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal para Dividir Conta a Receber */}
+      <SplitAccountRecModal
+        isOpen={!!accountToSplit}
+        onClose={() => setAccountToSplit(null)}
+        accountRec={accountToSplit}
+        onSuccess={() => {
+          fetchAccounts();
+        }}
+      />
 
       {/* Modal para Visualizar a Venda */}
       <Dialog open={isViewSaleModalOpen} onOpenChange={setIsViewSaleModalOpen}>
