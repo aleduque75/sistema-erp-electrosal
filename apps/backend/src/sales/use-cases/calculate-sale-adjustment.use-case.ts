@@ -251,9 +251,23 @@ export class CalculateSaleAdjustmentUseCase {
           const saleItemLots = (item as any).saleItemLots;
           if (saleItemLots && saleItemLots.length > 0) {
             for (const lot of saleItemLots) {
-              const lotCostAu = new Decimal(lot.inventoryLot.unitCostAu || 0).times(new Decimal(lot.quantity));
+              let lotUnitCostAu = new Decimal(lot.inventoryLot.unitCostAu || 0);
+
+              if (lotUnitCostAu.isZero()) {
+                const lotCostPrice = new Decimal(lot.inventoryLot.costPrice || item.costPriceAtSale || 0);
+                const refGoldPrice = lot.inventoryLot.goldQuotationAtAcquisition
+                  ? new Decimal(lot.inventoryLot.goldQuotationAtAcquisition)
+                  : (goldPrice || paymentQuotation);
+                if (refGoldPrice && refGoldPrice.gt(0) && lotCostPrice.gt(0)) {
+                  lotUnitCostAu = lotCostPrice.dividedBy(refGoldPrice);
+                }
+              }
+
+              const lotCostAu = lotUnitCostAu.times(new Decimal(lot.quantity));
               totalCostGrams = totalCostGrams.plus(lotCostAu);
             }
+          } else {
+            totalCostGrams = totalCostGrams.plus(saleExpectedGrams);
           }
         }
       } else {
@@ -270,12 +284,20 @@ export class CalculateSaleAdjustmentUseCase {
         if (saleItemLots && saleItemLots.length > 0) {
           for (const lot of saleItemLots) {
             const lotCostPrice = new Decimal(lot.inventoryLot.costPrice || 0);
-            const lotCostAu = new Decimal(lot.inventoryLot.unitCostAu || 0).times(new Decimal(lot.quantity));
+            let lotCostAu = new Decimal(lot.inventoryLot.unitCostAu || 0);
+
+            if (lotCostAu.isZero()) {
+              const refGoldPrice = lot.inventoryLot.goldQuotationAtAcquisition
+                ? new Decimal(lot.inventoryLot.goldQuotationAtAcquisition)
+                : (goldPrice || paymentQuotation);
+              if (refGoldPrice && refGoldPrice.gt(0) && lotCostPrice.gt(0)) {
+                lotCostAu = lotCostPrice.dividedBy(refGoldPrice);
+              }
+            }
             
-            // Increment totalCostGrams - here we might also need to check isSilverSale, 
-            // but usually COST_BASED is not used for pure AU content tracking.
+            // Increment totalCostGrams
             if (isSilverSale) {
-               totalCostGrams = totalCostGrams.plus(lotCostAu);
+               totalCostGrams = totalCostGrams.plus(lotCostAu.times(new Decimal(lot.quantity)));
             }
 
             if (lotCostPrice.isZero()) {

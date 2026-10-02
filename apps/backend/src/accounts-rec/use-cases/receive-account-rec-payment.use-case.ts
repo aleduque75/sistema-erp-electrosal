@@ -122,7 +122,11 @@ export class ReceiveAccountRecPaymentUseCase {
         new Decimal(0),
       );
 
-      const isFullyPaid = totalAmountPaid.greaterThanOrEqualTo(accountToReceive.amount);
+      const isBrlPaid = totalAmountPaid.greaterThanOrEqualTo(accountToReceive.amount.minus(0.01));
+      const isGoldPaid = accountToReceive.goldAmount && new Decimal(accountToReceive.goldAmount).gt(0)
+        ? totalGoldAmountPaid.greaterThanOrEqualTo(new Decimal(accountToReceive.goldAmount).minus(0.0001))
+        : false;
+      const isFullyPaid = isBrlPaid || isGoldPaid;
 
       const updated = await tx.accountRec.update({
         where: { id },
@@ -153,6 +157,23 @@ export class ReceiveAccountRecPaymentUseCase {
           where: { id: accountToReceive.saleId },
           data: { goldPrice: paymentQuotation },
         });
+      }
+
+      if (accountToReceive.saleId && isFullyPaid) {
+        const pendingAccounts = await tx.accountRec.count({
+          where: {
+            saleId: accountToReceive.saleId,
+            id: { not: id },
+            received: false,
+          },
+        });
+
+        if (pendingAccounts === 0) {
+          await tx.sale.update({
+            where: { id: accountToReceive.saleId },
+            data: { status: 'FINALIZADO' },
+          });
+        }
       }
 
       return updated;

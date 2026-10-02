@@ -415,47 +415,41 @@ export class HybridReceiveUseCase {
       }
 
       const totalAmount = new Decimal(accountRec.amount);
-      let isFullyPaid = false;
-
-      if (accountRec.goldAmount && new Decimal(accountRec.goldAmount).gt(0)) {
-        isFullyPaid = updatedGoldAmountPaid.gte(new Decimal(accountRec.goldAmount).minus(0.0001)); // Tolerância para comparação
-      } else {
-        isFullyPaid = updatedAmountPaid.gte(totalAmount.minus(0.01)); // Tolerância para comparação
-      }
-
+      const isBrlPaid = updatedAmountPaid.gte(totalAmount.minus(0.01));
+      const isGoldPaid = accountRec.goldAmount && new Decimal(accountRec.goldAmount).gt(0)
+        ? updatedGoldAmountPaid.gte(new Decimal(accountRec.goldAmount).minus(0.0001))
+        : false;
+      const isFullyPaid = isBrlPaid || isGoldPaid || dto.finalize === true;
 
       if (isFullyPaid) {
-        if (dto.finalize) {
-          await tx.accountRec.update({
-            where: { id: accountRec.id },
-            data: { received: true, receivedAt: new Date(dto.receivedAt) },
+        await tx.accountRec.update({
+          where: { id: accountRec.id },
+          data: { received: true, receivedAt: new Date(dto.receivedAt) },
+        });
+
+        // Sincronizar o status da parcela da venda (SaleInstallment) vinculada a esta duplicata
+        await tx.saleInstallment.updateMany({
+          where: { accountRecId: accountRec.id },
+          data: { status: 'PAID', paidAt: new Date(dto.receivedAt) },
+        });
+
+        if (accountRec.saleId) {
+          // Verificar se todas as duplicatas da venda foram recebidas para finalizar a venda
+          const pendingAccounts = await tx.accountRec.count({
+            where: {
+              saleId: accountRec.saleId,
+              id: { not: accountRec.id },
+              received: false,
+            },
           });
 
-          if (accountRec.sale) {
-            // Se o DTO.finalize for true, ele tem precedência e finaliza a venda.
-            if (dto.finalize) {
-              await tx.sale.update({
-                where: { id: accountRec.saleId! },
-                data: { status: 'FINALIZADO' },
-              });
-            } 
-            // Se não, verificamos a flag da AccountRec para decidir se atualizamos o status.
-            else if (!accountRec.doNotUpdateSaleStatus) {
-              await tx.sale.update({
-                where: { id: accountRec.saleId! },
-                data: { status: 'FINALIZADO' },
-              });
-            }
+          if (pendingAccounts === 0 && !accountRec.doNotUpdateSaleStatus) {
+            await tx.sale.update({
+              where: { id: accountRec.saleId },
+              data: { status: 'FINALIZADO' },
+            });
           }
         }
-        
-        const overpaymentTolerance = new Decimal(1.00);
-        const totalAmountInBRL = (accountRec.goldAmount && new Decimal(accountRec.goldAmount).gt(0))
-          ? new Decimal(accountRec.goldAmount).times(quotation)
-          : totalAmount;
-
-        const overpayment = updatedAmountPaid.minus(totalAmountInBRL);
-
       }
 
       return { message: 'Recebimento híbrido processado com sucesso.' };

@@ -58,7 +58,10 @@ export class CompleteProductionStepUseCase {
     return this.prisma.$transaction(async (tx) => {
       const reaction = await tx.chemical_reactions.findUnique({
         where: { id: reactionId, organizationId },
-        include: { outputProduct: true },
+        include: {
+          outputProduct: true,
+          rawMaterialsUsed: { include: { rawMaterial: true } },
+        },
       });
 
       if (!reaction) {
@@ -110,8 +113,19 @@ export class CompleteProductionStepUseCase {
           metalBuyPrice = new Decimal(0);
         }
       }
-      const totalCost = totalGoldGrams.times(metalBuyPrice);
-      const costPricePerGramOfProduct = (goldInOutputProduct.gt(0) && totalCost.gt(0))
+
+      // O custo de metal do lote acabado deve considerar apenas o metal efetivamente incorporado ao produto:
+      // As sobras no cesto e no destilado permanecem no estoque/ciclo da empresa para reuso.
+      const metalConsumedInProduct = goldInOutputProduct.gt(0) ? goldInOutputProduct : totalGoldGrams;
+      const metalCost = metalConsumedInProduct.times(metalBuyPrice);
+
+      const rawMaterialsCost = (reaction.rawMaterialsUsed || []).reduce(
+        (sum, rm) => sum.plus(new Decimal(rm.cost || 0)),
+        new Decimal(0),
+      );
+
+      const totalCost = metalCost.plus(rawMaterialsCost);
+      const costPricePerGramOfProduct = (outputProductGrams > 0 && totalCost.gt(0))
         ? totalCost.dividedBy(outputProductGrams)
         : new Decimal(0);
       
