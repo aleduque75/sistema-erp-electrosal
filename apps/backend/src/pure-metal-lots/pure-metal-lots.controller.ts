@@ -88,7 +88,7 @@ export class PureMetalLotsController {
     @Param('id') id: string,
     @Body() updatePureMetalLotDto: UpdatePureMetalLotDto,
   ) {
-    const organizationId = req.user['organizationId'];
+    const organizationId = req.user['organizationId'] || req.user['orgId'];
     return this.updatePureMetalLotUseCase.execute(organizationId, id, updatePureMetalLotDto);
   }
 

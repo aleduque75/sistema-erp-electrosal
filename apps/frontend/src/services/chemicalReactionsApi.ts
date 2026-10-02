@@ -9,3 +9,11 @@ export const getChemicalReactionById = async (
   const response = await apiClient.get(`/chemical-reactions/${id}`);
   return response.data;
 };
+
+export const updateChemicalReaction = async (
+  id: string,
+  data: { reactionDate?: string; notes?: string; outputProductId?: string },
+): Promise<ChemicalReactionDetails> => {
+  const response = await apiClient.patch(`/chemical-reactions/${id}`, data);
+  return response.data;
+};

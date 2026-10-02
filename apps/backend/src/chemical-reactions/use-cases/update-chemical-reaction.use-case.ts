@@ -27,7 +27,7 @@ export class UpdateChemicalReactionUseCase {
       chemicalReaction.props.reactionDate = new Date(dto.reactionDate);
     }
 
-    if (dto.notes) {
+    if (dto.notes !== undefined) {
       chemicalReaction.props.notes = dto.notes;
     }
 

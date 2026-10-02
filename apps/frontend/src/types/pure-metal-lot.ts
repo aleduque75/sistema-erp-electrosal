@@ -23,6 +23,7 @@ export interface PureMetalLot {
   status: PureMetalLotStatus;
   entryDate: string;
   notes?: string;
+  description?: string | null;
   createdAt: string;
   updatedAt: string;
   saleId?: string;

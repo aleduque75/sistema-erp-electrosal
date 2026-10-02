@@ -17,6 +17,10 @@ export class UpdatePureMetalLotDto extends PartialType(CreatePureMetalLotDto) {
   @IsOptional()
   notes?: string;
 
+  @IsString()
+  @IsOptional()
+  description?: string;
+
   @IsNumber()
   @IsOptional()
   @Type(() => Number)

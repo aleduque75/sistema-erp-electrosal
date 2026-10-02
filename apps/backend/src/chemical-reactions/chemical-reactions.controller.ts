@@ -70,7 +70,7 @@ export class ChemicalReactionsController {
     @Body() dto: UpdateChemicalReactionDto,
     @Req() req,
   ) {
-    const organizationId = req.user?.orgId;
+    const organizationId = req.user?.orgId || req.user?.organizationId;
     const command = { chemicalReactionId: id, organizationId, dto };
     return this.updateChemicalReactionUseCase.execute(command);
   }
@@ -190,7 +190,9 @@ export class ChemicalReactionsController {
     return {
       ...reaction,
       lots: reaction.lots.map(lot => ({
-        ...lot.pureMetalLot,
+        ...(lot.pureMetalLot || {}),
+        pureMetalLotId: lot.pureMetalLotId,
+        id: lot.pureMetalLot?.id || lot.pureMetalLotId,
         gramsToUse: lot.gramsToUse,
       })),
       medias: reaction.medias?.map(m => ({

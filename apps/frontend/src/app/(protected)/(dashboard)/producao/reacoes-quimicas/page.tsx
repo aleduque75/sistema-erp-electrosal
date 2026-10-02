@@ -445,6 +445,8 @@ export default function ChemicalReactionsPage() {
         reaction={selectedReaction}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onUpdate={fetchReactions}
+        onPrintPdf={handlePrintPdf}
       />
       {selectedReaction && (
         <PureMetalLotSelectionModal
