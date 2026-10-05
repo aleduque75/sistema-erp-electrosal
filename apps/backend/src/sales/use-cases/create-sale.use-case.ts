@@ -51,7 +51,7 @@ export class CreateSaleUseCase {
     let totalCommissionAmount = new Decimal(0);
     const commissionDetails: any[] = [];
     const saleItemsToCreate: Prisma.SaleItemCreateWithoutSaleInput[] = [];
-    const inventoryLotUpdates: { id: string; quantity: number }[] = [];
+    const inventoryLotUpdates: { id: string; quantity: number; setToZero?: boolean }[] = [];
 
     for (const item of items) {
       const product = productsInDb.find((p) => p.id === item.productId);
@@ -76,22 +76,34 @@ export class CreateSaleUseCase {
           if (!inventoryLot) throw new NotFoundException(`Lote de inventário com ID ${lot.inventoryLotId} não encontrado.`);
 
           const lotQuantity = new Decimal(lot.quantity);
-          if (lotQuantity.greaterThan(new Decimal(inventoryLot.remainingQuantity))) {
-            throw new BadRequestException(`Quantidade insuficiente no lote ${inventoryLot.batchNumber} para o produto ${product.name}. Disponível: ${inventoryLot.remainingQuantity}, Solicitado: ${lotQuantity}.`);
+          const remainingQuantity = new Decimal(inventoryLot.remainingQuantity);
+          let effectiveLotQuantity = lotQuantity;
+
+          if (lotQuantity.greaterThan(remainingQuantity)) {
+            const difference = lotQuantity.minus(remainingQuantity);
+            // Tolerância de até 0.02g para absorver dízimas de conversão de ouro/prata e arredondamentos de tela
+            if (difference.lessThanOrEqualTo(new Decimal('0.02'))) {
+              effectiveLotQuantity = remainingQuantity;
+            } else {
+              throw new BadRequestException(`Quantidade insuficiente no lote ${inventoryLot.batchNumber} para o produto ${product.name}. Disponível: ${inventoryLot.remainingQuantity}, Solicitado: ${lotQuantity}.`);
+            }
           }
 
           const lotCostPrice = new Decimal(inventoryLot.costPrice);
-          itemTotalCost = itemTotalCost.plus(lotCostPrice.times(lotQuantity));
+          itemTotalCost = itemTotalCost.plus(lotCostPrice.times(effectiveLotQuantity));
           
           saleItemLotsToCreate.push({
             inventoryLotId: lot.inventoryLotId,
-            quantity: lot.quantity,
+            quantity: effectiveLotQuantity.toNumber(),
             isStockDeducted: !isSeparationFlow,
           });
 
+          const willBeEmpty = remainingQuantity.minus(effectiveLotQuantity).abs().lessThanOrEqualTo(new Decimal('0.0001'));
+
           inventoryLotUpdates.push({
             id: lot.inventoryLotId,
-            quantity: lot.quantity,
+            quantity: effectiveLotQuantity.toNumber(),
+            setToZero: willBeEmpty,
           });
         }
       }
@@ -229,11 +241,11 @@ export class CreateSaleUseCase {
     
     // Round the total lot quantity to 2 decimal places for comparison, as the item.quantity seems to follow this precision.
     const roundedTotalLotQuantity = totalLotQuantity.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
-    const itemQuantityDecimal = new Decimal(item.quantity);
+    const itemQuantityDecimal = new Decimal(item.quantity).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
     const difference = roundedTotalLotQuantity.minus(itemQuantityDecimal).abs();
 
-    if (difference.greaterThan(new Decimal('0.0001'))) {
+    if (difference.greaterThan(new Decimal('0.02'))) {
       throw new BadRequestException(`A soma das quantidades dos lotes para o produto ${productName} (${totalLotQuantity}) não corresponde à quantidade total do item (${item.quantity}).`);
     }
   }
@@ -272,7 +284,7 @@ export class CreateSaleUseCase {
     return { netAmount, goldPrice, goldValue };
   }
 
-  private async updateInventoryAndCreateStockMovements(inventoryLotUpdates: { id: string; quantity: number }[], sale: any) {
+  private async updateInventoryAndCreateStockMovements(inventoryLotUpdates: { id: string; quantity: number; setToZero?: boolean }[], sale: any) {
     const stockMovementsToCreate: Prisma.StockMovementCreateManyInput[] = [];
 
     for (const saleItem of sale.saleItems) {
@@ -293,11 +305,13 @@ export class CreateSaleUseCase {
       ...inventoryLotUpdates.map((lotUpdate) =>
         this.prisma.inventoryLot.update({
           where: { id: lotUpdate.id },
-          data: {
-            remainingQuantity: {
-              decrement: lotUpdate.quantity,
-            },
-          },
+          data: lotUpdate.setToZero
+            ? { remainingQuantity: 0 }
+            : {
+                remainingQuantity: {
+                  decrement: lotUpdate.quantity,
+                },
+              },
         }),
       ),
       ...sale.saleItems.map((item: any) =>

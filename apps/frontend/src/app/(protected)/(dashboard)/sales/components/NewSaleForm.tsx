@@ -203,25 +203,29 @@ export function NewSaleForm({ onSave }: any) {
     const itemQuantity = Number(Number(newItemData.quantity).toFixed(2));
     const itemPrice = Number(Number(newItemData.price).toFixed(2));
 
-    if (newItemData.inventoryLotId) {
-      // User manually selected a lot in the AddItemModal
-      assignedLots = [{
-        inventoryLotId: newItemData.inventoryLotId,
-        quantity: itemQuantity
-      } as any];
-    } else if (product && product.inventoryLots && product.inventoryLots.length > 0) {
-      // Automatic FIFO allocation
+    if (product && product.inventoryLots && product.inventoryLots.length > 0) {
       let remainingToAssign = new Decimal(itemQuantity);
 
-      // Sort lots by date (oldest first)
-      const sortedLots = [...product.inventoryLots].sort(
-        (a, b) => new Date(a.receivedDate).getTime() - new Date(b.receivedDate).getTime()
-      );
+      // Ordenar lotes por data (mais antigo primeiro / FIFO)
+      const sortedLots = [...product.inventoryLots].sort((a, b) => {
+        const dateA = new Date(a.receivedDate || (a as any).createdAt).getTime();
+        const dateB = new Date(b.receivedDate || (b as any).createdAt).getTime();
+        return (isNaN(dateA) ? 0 : dateA) - (isNaN(dateB) ? 0 : dateB);
+      });
 
-      for (const lot of sortedLots) {
-        if (remainingToAssign.lte(0)) break;
+      // Se o usuário selecionou um lote específico no modal, prioriza ele como primeiro e transborda o restante por FIFO
+      let candidateLots = sortedLots;
+      if (newItemData.inventoryLotId) {
+        const selected = sortedLots.find(l => l.id === newItemData.inventoryLotId);
+        if (selected) {
+          candidateLots = [selected, ...sortedLots.filter(l => l.id !== newItemData.inventoryLotId)];
+        }
+      }
 
-        // Calculate available in this lot (subtracting what's already in other items of this sale)
+      for (const lot of candidateLots) {
+        if (remainingToAssign.lte(0.0001)) break;
+
+        // Calcular disponível no lote (descontando o que já está em outros itens desta venda)
         const alreadyUsedInSale = items
           .filter(item => item.productId === product.id)
           .flatMap(item => item.lots || [])
@@ -231,18 +235,53 @@ export function NewSaleForm({ onSave }: any) {
         const availableInLot = new Decimal(lot.remainingQuantity).minus(alreadyUsedInSale);
 
         if (availableInLot.gt(0)) {
-          const amountFromThisLot = Decimal.min(remainingToAssign, availableInLot);
-          assignedLots.push({
-            inventoryLotId: lot.id,
-            quantity: Number(amountFromThisLot.toFixed(2))
-          } as any);
-          remainingToAssign = remainingToAssign.minus(amountFromThisLot);
+          const rawAmount = Decimal.min(remainingToAssign, availableInLot);
+          
+          // Arredondamento seguro: se o arredondamento para 2 casas for maior que o disponível, arredonda para baixo
+          let roundedAmount = Number(rawAmount.toFixed(2));
+          if (new Decimal(roundedAmount).gt(availableInLot)) {
+            roundedAmount = Number(rawAmount.toDecimalPlaces(2, Decimal.ROUND_DOWN).toNumber());
+          }
+
+          if (roundedAmount > 0) {
+            assignedLots.push({
+              inventoryLotId: lot.id,
+              quantity: roundedAmount
+            } as any);
+            remainingToAssign = remainingToAssign.minus(roundedAmount);
+          }
         }
       }
 
-      if (remainingToAssign.gt(0.0001)) {
+      // Se sobrou micro resíduo de arredondamento (<= 0.02) e temos lotes com capacidade restante, ajusta
+      if (remainingToAssign.gt(0) && remainingToAssign.lte(0.02) && assignedLots.length > 0) {
+        for (const lot of candidateLots) {
+          if (remainingToAssign.lte(0.0001)) break;
+          const assigned = assignedLots.find(a => a.inventoryLotId === lot.id);
+          if (assigned) {
+            const alreadyUsed = items
+              .filter(item => item.productId === product.id)
+              .flatMap(item => item.lots || [])
+              .filter(l => l.inventoryLotId === lot.id)
+              .reduce((sum, l) => sum.plus(l.quantity), new Decimal(0));
+            const availableLeft = new Decimal(lot.remainingQuantity).minus(alreadyUsed).minus(assigned.quantity);
+            if (availableLeft.gte(remainingToAssign)) {
+              assigned.quantity = Number(new Decimal(assigned.quantity).plus(remainingToAssign).toFixed(2));
+              remainingToAssign = new Decimal(0);
+              break;
+            }
+          }
+        }
+      }
+
+      if (remainingToAssign.gt(0.01)) {
         toast.warning(`Não foi possível alocar toda a quantidade nos lotes existentes. Faltam ${remainingToAssign.toFixed(2)}g`);
       }
+    } else if (newItemData.inventoryLotId) {
+      assignedLots = [{
+        inventoryLotId: newItemData.inventoryLotId,
+        quantity: itemQuantity
+      } as any];
     }
 
     const newItem = {

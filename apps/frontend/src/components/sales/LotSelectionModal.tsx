@@ -99,8 +99,14 @@ export function LotSelectionModal({
       return;
     }
 
-    const amountToFill = Decimal.min(remainingNeeded, available).toNumber();
-    handleQuantityChange(lotId, amountToFill);
+    const availableDecimal = new Decimal(available);
+    let amountToFill = Decimal.min(remainingNeeded, availableDecimal);
+    let roundedAmount = Number(amountToFill.toFixed(2));
+    if (new Decimal(roundedAmount).gt(availableDecimal)) {
+      roundedAmount = Number(amountToFill.toDecimalPlaces(2, Decimal.ROUND_DOWN).toNumber());
+    }
+
+    handleQuantityChange(lotId, roundedAmount);
   };
 
   const getTotalSelectedQuantity = () => {
@@ -111,7 +117,7 @@ export function LotSelectionModal({
     const totalSelected = getTotalSelectedQuantity();
     const required = new Decimal(quantityRequired);
 
-    if (required.minus(totalSelected).abs().greaterThan('0.01')) {
+    if (required.minus(totalSelected).abs().greaterThan('0.02')) {
       toast.warning(`A quantidade selecionada (${totalSelected}) não corresponde à quantidade necessária (${quantityRequired}).`);
       return;
     }
