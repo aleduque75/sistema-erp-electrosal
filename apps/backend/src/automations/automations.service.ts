@@ -144,9 +144,25 @@ export class AutomationsService {
         received: false,
         ...(orRecConditions.length > 0 ? { OR: orRecConditions } : {}),
       },
-      include: { sale: { include: { pessoa: true } } },
+      include: {
+        sale: {
+          include: {
+            pessoa: true,
+            metalReceivable: true,
+            saleItems: {
+              include: {
+                product: {
+                  include: {
+                    productGroup: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       orderBy: { dueDate: 'asc' },
-      take: 5,
+      take: 10,
     });
 
     // 4. Fetch Bank Accounts (to receive money into)
@@ -194,6 +210,9 @@ export class AutomationsService {
       }),
     ]);
 
+    const auPrice = Number(latestAu?.buyPrice || 715);
+    const agPrice = Number(latestAg?.buyPrice || 6.5);
+
     return {
       sales: saleMatches.map((s) => ({
         id: s.id,
@@ -204,15 +223,20 @@ export class AutomationsService {
         paymentMethod: s.paymentMethod,
         date: s.createdAt,
       })),
-      pendingReceivables: pendingAccountRecs.map((ar) => ({
-        id: ar.id,
-        description: ar.description,
-        amount: Number(ar.amount),
-        dueDate: ar.dueDate,
-        saleId: ar.saleId,
-        orderNumber: ar.sale?.orderNumber,
-        clientName: ar.sale?.pessoa?.name,
-      })),
+      pendingReceivables: pendingAccountRecs.map((ar) => {
+        const info = this.resolveReceivableInfo(ar, auPrice, agPrice);
+        return {
+          id: ar.id,
+          description: ar.description,
+          amount: info.pendente,
+          metalGrams: info.metalGrams,
+          metalUnit: info.metalUnit,
+          dueDate: ar.dueDate,
+          saleId: ar.saleId,
+          orderNumber: ar.sale?.orderNumber,
+          clientName: ar.sale?.pessoa?.name,
+        };
+      }),
       bankAccounts: bankAccounts.map((b) => ({
         id: b.id,
         name: b.nome,
@@ -846,6 +870,74 @@ export class AutomationsService {
     return { text, inline_keyboard };
   }
 
+  resolveReceivableInfo(
+    item: any,
+    auPrice: number,
+    agPrice: number,
+  ): {
+    pendente: number;
+    metalGrams: number;
+    metalUnit: 'Au' | 'Ag';
+    isSilver: boolean;
+  } {
+    const desc = (
+      (item.description || '') +
+      ' ' +
+      (item.sale?.observation || '')
+    ).toLowerCase();
+    const metalRecType = item.sale?.metalReceivable?.metalType;
+
+    let isSilver =
+      metalRecType === 'AG' ||
+      desc.includes('ag') ||
+      desc.includes('prata') ||
+      desc.includes('silver') ||
+      desc.includes('54%');
+
+    if (!isSilver && item.sale?.saleItems && item.sale.saleItems.length > 0) {
+      isSilver = item.sale.saleItems.some((si: any) => {
+        const prodName = (
+          (si.product?.name || '') +
+          ' ' +
+          (si.product?.productGroup?.name || '')
+        ).toLowerCase();
+        return (
+          prodName.includes('prata') ||
+          prodName.includes('silver') ||
+          prodName.includes('ag ') ||
+          prodName.includes('54%')
+        );
+      });
+    }
+
+    const metalUnit: 'Au' | 'Ag' = isSilver ? 'Ag' : 'Au';
+    const price = isSilver ? agPrice || 6.5 : auPrice || 715;
+
+    let pendente = Number(item.amount) - Number(item.amountPaid || 0);
+    let metalGrams = item.goldAmount ? Number(item.goldAmount) : 0;
+
+    // Se pendente for 0 (ex: vendas em metal ou parcelamento onde amount no AccountRec é 0)
+    if (pendente <= 0) {
+      if (item.sale?.netAmount && Number(item.sale.netAmount) > 0) {
+        pendente = Number(item.sale.netAmount);
+      } else if (metalGrams > 0 && price > 0) {
+        pendente = metalGrams * price;
+      }
+    }
+
+    // Se metalGrams estiver zerado mas temos valor em R$, estimamos as gramas pelo metal correspondente
+    if (metalGrams <= 0 && price > 0 && pendente > 0) {
+      metalGrams = pendente / price;
+    }
+
+    return {
+      pendente,
+      metalGrams,
+      metalUnit,
+      isSilver,
+    };
+  }
+
   async buildClientSummary(clienteId: string): Promise<{ text: string; inline_keyboard: any[][] }> {
     const organizationId = this.getOrganizationId();
     const clientAcc = await this.prisma.contaCorrente.findFirst({
@@ -881,8 +973,12 @@ export class AutomationsService {
     const saldoGold = initialGold + creditosGold - debitosGold;
 
     // Cotação do dia para referência
-    const quoteData = await this.getQuotationForDate(new Date(), 'AU');
-    const goldPrice = quoteData.price || 715;
+    const [quoteAu, quoteAg] = await Promise.all([
+      this.getQuotationForDate(new Date(), 'AU'),
+      this.getQuotationForDate(new Date(), 'AG'),
+    ]);
+    const goldPrice = quoteAu.price || 715;
+    const silverPrice = quoteAg.price || 6.5;
 
     // 2. Buscar Pessoa para achar pedidos/duplicatas em aberto
     const pessoa = await this.prisma.pessoa.findFirst({
@@ -900,7 +996,23 @@ export class AutomationsService {
           received: false,
           sale: { pessoaId: pessoa.id },
         },
-        include: { sale: true },
+        include: {
+          sale: {
+            include: {
+              pessoa: true,
+              metalReceivable: true,
+              saleItems: {
+                include: {
+                  product: {
+                    include: {
+                      productGroup: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
         orderBy: { dueDate: 'asc' },
         take: 5,
       });
@@ -924,15 +1036,15 @@ export class AutomationsService {
     if (saldoBRL < -0.01 || saldoGold < -0.001) {
       const devBRL = Math.abs(saldoBRL).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
       const devGold = Math.abs(saldoGold).toFixed(3);
-      text += `🔴 *Saldo Devedor:* R$ ${devBRL} (${devGold} g Au)\n`;
+      text += `🔴 *Saldo Devedor:* R$ ${devBRL} (${devGold} g Metal)\n`;
     } else if (saldoBRL > 0.01 || saldoGold > 0.001) {
       const credBRL = saldoBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
       const credGold = saldoGold.toFixed(3);
-      text += `🟢 *Saldo Credor (Adiantamento):* R$ ${credBRL} (${credGold} g Au)\n`;
+      text += `🟢 *Saldo Credor (Adiantamento):* R$ ${credBRL} (${credGold} g Metal)\n`;
     } else {
       text += `⚪ *Saldo:* R$ 0,00 (Sem pendências em conta)\n`;
     }
-    text += `_Cotação Au Hoje: R$ ${goldPrice},00 / g_\n\n`;
+    text += `_Cotação Hoje: Au R$ ${goldPrice}/g | Ag R$ ${silverPrice}/g_\n\n`;
 
     // Títulos / Pedidos em aberto
     if (openReceivables.length > 0) {
@@ -942,14 +1054,15 @@ export class AutomationsService {
       text += `📦 *TÍTULOS / PEDIDOS EM ABERTO (${openReceivables.length}):*\n`;
       let totalAberto = 0;
       openReceivables.forEach((rec) => {
-        const val = Number(rec.amount) - Number(rec.amountPaid || 0);
-        totalAberto += val;
+        const info = this.resolveReceivableInfo(rec, goldPrice, silverPrice);
+        totalAberto += info.pendente;
         const num = rec.sale?.orderNumber ? `#${rec.sale.orderNumber}` : 'Venda';
         const dStr = new Date(rec.dueDate).toLocaleDateString('pt-BR');
         const isVencido = new Date(rec.dueDate) < today;
         const diffDays = Math.max(1, Math.floor((today.getTime() - new Date(rec.dueDate).getTime()) / (1000 * 60 * 60 * 24)));
         const tag = isVencido ? `⚠️ Vencido há ${diffDays}d` : `Vence em ${dStr}`;
-        text += `• ${num}: R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${tag})\n`;
+        const metalStr = info.metalGrams > 0 ? ` (${info.metalGrams.toFixed(info.isSilver ? 2 : 3)} g ${info.metalUnit})` : '';
+        text += `• ${num}: R$ ${info.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${metalStr} (${tag})\n`;
       });
       text += `*Total em Títulos:* R$ ${totalAberto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`;
     } else {
@@ -1006,8 +1119,30 @@ export class AutomationsService {
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
 
-    const quoteData = await this.getQuotationForDate(new Date(), 'AU');
-    const goldPrice = quoteData.price || 715;
+    const [quoteAu, quoteAg] = await Promise.all([
+      this.getQuotationForDate(new Date(), 'AU'),
+      this.getQuotationForDate(new Date(), 'AG'),
+    ]);
+    const goldPrice = quoteAu.price || 715;
+    const silverPrice = quoteAg.price || 6.5;
+
+    const includeSale = {
+      sale: {
+        include: {
+          pessoa: true,
+          metalReceivable: true,
+          saleItems: {
+            include: {
+              product: {
+                include: {
+                  productGroup: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
 
     // 1. Vencem Hoje
     const vencemHoje = await this.prisma.accountRec.findMany({
@@ -1016,7 +1151,7 @@ export class AutomationsService {
         received: false,
         dueDate: { gte: today, lte: endOfToday },
       },
-      include: { sale: { include: { pessoa: true } } },
+      include: includeSale,
       orderBy: { dueDate: 'asc' },
     });
 
@@ -1027,7 +1162,7 @@ export class AutomationsService {
         received: false,
         dueDate: { lt: today },
       },
-      include: { sale: { include: { pessoa: true } } },
+      include: includeSale,
       orderBy: { dueDate: 'asc' },
     });
 
@@ -1037,18 +1172,28 @@ export class AutomationsService {
 
     let totalHoje = 0;
     let goldHoje = 0;
+    let silverHoje = 0;
     vencemHoje.forEach((item) => {
-      const pend = Number(item.amount) - Number(item.amountPaid || 0);
-      totalHoje += pend;
-      goldHoje += item.goldAmount ? Number(item.goldAmount) : (goldPrice > 0 ? pend / goldPrice : 0);
+      const info = this.resolveReceivableInfo(item, goldPrice, silverPrice);
+      totalHoje += info.pendente;
+      if (info.isSilver) {
+        silverHoje += info.metalGrams;
+      } else {
+        goldHoje += info.metalGrams;
+      }
     });
 
     let totalVenc = 0;
     let goldVenc = 0;
+    let silverVenc = 0;
     vencidos.forEach((item) => {
-      const pend = Number(item.amount) - Number(item.amountPaid || 0);
-      totalVenc += pend;
-      goldVenc += item.goldAmount ? Number(item.goldAmount) : (goldPrice > 0 ? pend / goldPrice : 0);
+      const info = this.resolveReceivableInfo(item, goldPrice, silverPrice);
+      totalVenc += info.pendente;
+      if (info.isSilver) {
+        silverVenc += info.metalGrams;
+      } else {
+        goldVenc += info.metalGrams;
+      }
     });
 
     const dataHojeFormatada = new Date().toLocaleDateString('pt-BR');
@@ -1057,15 +1202,20 @@ export class AutomationsService {
     if (vencemHoje.length > 0) {
       text += `⏰ *VENCEM HOJE (${vencemHoje.length} título${vencemHoje.length > 1 ? 's' : ''}):*\n`;
       vencemHoje.slice(0, 5).forEach((h) => {
+        const info = this.resolveReceivableInfo(h, goldPrice, silverPrice);
         const num = h.sale?.orderNumber ? `#${h.sale.orderNumber}` : 'Venda';
         const cli = (h.sale?.pessoa?.name || h.description || 'Cliente').replace(/[*_`]/g, '');
-        const pend = Number(h.amount) - Number(h.amountPaid || 0);
-        text += `• ${num} - ${cli}: *R$ ${pend.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n`;
+        const metalTag = info.metalGrams > 0 ? ` (${info.metalGrams.toFixed(info.isSilver ? 2 : 3)} g ${info.metalUnit})` : '';
+        text += `• ${num} - ${cli}: *R$ ${info.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${metalTag}\n`;
       });
       if (vencemHoje.length > 5) {
         text += `_... e mais ${vencemHoje.length - 5} título(s) hoje_\n`;
       }
-      text += `💰 Previsto para hoje: *R$ ${totalHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (${goldHoje.toFixed(3)} g Au)\n\n`;
+      const hojeMetalParts: string[] = [];
+      if (goldHoje > 0.001) hojeMetalParts.push(`${goldHoje.toFixed(3)} g Au`);
+      if (silverHoje > 0.001) hojeMetalParts.push(`${silverHoje.toFixed(2)} g Ag`);
+      const hojeMetalStr = hojeMetalParts.length > 0 ? ` (${hojeMetalParts.join(' | ')})` : '';
+      text += `💰 Previsto para hoje: *R$ ${totalHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${hojeMetalStr}\n\n`;
     } else {
       text += `⏰ *VENCEM HOJE:* Nenhum título previsto para hoje.\n\n`;
     }
@@ -1073,17 +1223,22 @@ export class AutomationsService {
     if (vencidos.length > 0) {
       text += `🔴 *EM ATRASO / VENCIDOS (${vencidos.length} título${vencidos.length > 1 ? 's' : ''}):*\n`;
       vencidos.slice(0, 5).forEach((v) => {
+        const info = this.resolveReceivableInfo(v, goldPrice, silverPrice);
         const num = v.sale?.orderNumber ? `#${v.sale.orderNumber}` : 'Venda';
         const cli = (v.sale?.pessoa?.name || v.description || 'Cliente').replace(/[*_`]/g, '');
-        const pend = Number(v.amount) - Number(v.amountPaid || 0);
         const diffTime = today.getTime() - new Date(v.dueDate).getTime();
         const diffDays = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
-        text += `• ${num} - ${cli}: *R$ ${pend.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (⚠️ ${diffDays}d)\n`;
+        const metalTag = info.metalGrams > 0 ? ` (${info.metalGrams.toFixed(info.isSilver ? 2 : 3)} g ${info.metalUnit})` : '';
+        text += `• ${num} - ${cli}: *R$ ${info.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${metalTag} (⚠️ ${diffDays}d)\n`;
       });
       if (vencidos.length > 5) {
         text += `_... e mais ${vencidos.length - 5} título(s) em atraso_\n`;
       }
-      text += `⚠️ Total em atraso: *R$ ${totalVenc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (${goldVenc.toFixed(3)} g Au)\n\n`;
+      const vencMetalParts: string[] = [];
+      if (goldVenc > 0.001) vencMetalParts.push(`${goldVenc.toFixed(3)} g Au`);
+      if (silverVenc > 0.001) vencMetalParts.push(`${silverVenc.toFixed(2)} g Ag`);
+      const vencMetalStr = vencMetalParts.length > 0 ? ` (${vencMetalParts.join(' | ')})` : '';
+      text += `⚠️ Total em atraso: *R$ ${totalVenc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${vencMetalStr}\n\n`;
     } else {
       text += `🎉 *VENCIDOS:* Nenhum título em atraso!\n\n`;
     }
@@ -1270,8 +1425,12 @@ export class AutomationsService {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const quoteData = await this.getQuotationForDate(new Date(), 'AU');
-        const goldPrice = quoteData.price || 715;
+        const [quoteAu, quoteAg] = await Promise.all([
+          this.getQuotationForDate(new Date(), 'AU'),
+          this.getQuotationForDate(new Date(), 'AG'),
+        ]);
+        const auPrice = quoteAu.price || 715;
+        const agPrice = quoteAg.price || 6.5;
 
         const vencidos = await this.prisma.accountRec.findMany({
           where: {
@@ -1283,6 +1442,16 @@ export class AutomationsService {
             sale: {
               include: {
                 pessoa: true,
+                metalReceivable: true,
+                saleItems: {
+                  include: {
+                    product: {
+                      include: {
+                        productGroup: true,
+                      },
+                    },
+                  },
+                },
               },
             },
           },
@@ -1300,19 +1469,23 @@ export class AutomationsService {
           text += '🎉 *Parabéns! Não há nenhum título vencido no momento.*\n';
         } else {
           let somaValor = 0;
-          let somaGold = 0;
+          let somaAu = 0;
+          let somaAg = 0;
 
           vencidos.forEach((item, idx) => {
-            const pendente = Number(item.amount) - Number(item.amountPaid || 0);
-            const gold = item.goldAmount ? Number(item.goldAmount) : (goldPrice > 0 ? pendente / goldPrice : 0);
-            somaValor += pendente;
-            somaGold += gold;
+            const info = this.resolveReceivableInfo(item, auPrice, agPrice);
+            somaValor += info.pendente;
+            if (info.isSilver) {
+              somaAg += info.metalGrams;
+            } else {
+              somaAu += info.metalGrams;
+            }
 
             const diffTime = today.getTime() - new Date(item.dueDate).getTime();
             const diffDays = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
             const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
             const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
-            const valStr = pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            const valStr = info.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
             inline_keyboard.push([
               {
@@ -1322,7 +1495,12 @@ export class AutomationsService {
             ]);
           });
 
-          text += `📊 *Total em atraso:* *R$ ${somaValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (${somaGold.toFixed(3)} g Au)\n`;
+          const metalParts: string[] = [];
+          if (somaAu > 0.001) metalParts.push(`${somaAu.toFixed(3)} g Au`);
+          if (somaAg > 0.001) metalParts.push(`${somaAg.toFixed(2)} g Ag`);
+          const metalStr = metalParts.length > 0 ? ` (${metalParts.join(' | ')})` : '';
+
+          text += `📊 *Total em atraso:* *R$ ${somaValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${metalStr}\n`;
           text += `Exibindo os *${vencidos.length}* títulos com maior atraso.\nClique para ver detalhes ou baixar:`;
         }
 
@@ -1347,15 +1525,20 @@ export class AutomationsService {
         if (item) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
-          const pendente = Number(item.amount) - Number(item.amountPaid || 0);
+          const [quoteAu, quoteAg] = await Promise.all([
+            this.getQuotationForDate(new Date(), 'AU'),
+            this.getQuotationForDate(new Date(), 'AG'),
+          ]);
+          const info = this.resolveReceivableInfo(item, quoteAu.price || 715, quoteAg.price || 6.5);
           const diffTime = today.getTime() - new Date(item.dueDate).getTime();
           const diffDays = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
           const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
           const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
           const dStr = new Date(item.dueDate).toLocaleDateString('pt-BR');
           const tel = item.sale?.pessoa?.phone ? `\n• Contato: *${item.sale.pessoa.phone}*` : '';
+          const metalTag = info.metalGrams > 0 ? ` (${info.metalGrams.toFixed(info.isSilver ? 2 : 3)} g ${info.metalUnit})` : '';
 
-          const text = `🔴 *DETALHES DO TÍTULO VENCIDO*\n\n• Pedido: *${num}*\n• Cliente: *${cli}*${tel}\n• Valor: *R$ ${pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n• Data de Vencimento: *${dStr}*\n• Situação: ⚠️ *Vencido há ${diffDays} dia(s)*\n\nDeseja dar baixa neste recebimento?`;
+          const text = `🔴 *DETALHES DO TÍTULO VENCIDO*\n\n• Pedido: *${num}*\n• Cliente: *${cli}*${tel}\n• Valor: *R$ ${info.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${metalTag}\n• Data de Vencimento: *${dStr}*\n• Situação: ⚠️ *Vencido há ${diffDays} dia(s)*\n\nDeseja dar baixa neste recebimento?`;
           const inline_keyboard = [
             [{ text: '💰 Dar Baixa / Receber Agora', callback_data: `bx_venc_${idx}` }],
             [{ text: '⬅️ Voltar aos Vencidos', callback_data: 'cobranca_vencidos' }],
@@ -1380,11 +1563,16 @@ export class AutomationsService {
           sessionData.selectedOrderNumber = item.sale?.orderNumber;
           await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
+          const [quoteAu, quoteAg] = await Promise.all([
+            this.getQuotationForDate(new Date(), 'AU'),
+            this.getQuotationForDate(new Date(), 'AG'),
+          ]);
+          const info = this.resolveReceivableInfo(item, quoteAu.price || 715, quoteAg.price || 6.5);
           const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
           const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
-          const pend = Number(item.amount) - Number(item.amountPaid || 0);
+          const metalTag = info.metalGrams > 0 ? ` (${info.metalGrams.toFixed(info.isSilver ? 2 : 3)} g ${info.metalUnit})` : '';
 
-          const text = `🏦 *DESTINO DO PAGAMENTO*\n\nPedido: *${num}* (${cli})\nValor: *R$ ${pend.toFixed(2)}*\n\nEm qual conta o cliente efetuou o depósito?`;
+          const text = `🏦 *DESTINO DO PAGAMENTO*\n\nPedido: *${num}* (${cli})\nValor: *R$ ${info.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${metalTag}\n\nEm qual conta o cliente efetuou o depósito?`;
           const inline_keyboard = [
             [
               { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
@@ -1414,8 +1602,12 @@ export class AutomationsService {
         next7Days.setDate(next7Days.getDate() + 7);
         next7Days.setHours(23, 59, 59, 999);
 
-        const quoteData = await this.getQuotationForDate(new Date(), 'AU');
-        const goldPrice = quoteData.price || 715;
+        const [quoteAu, quoteAg] = await Promise.all([
+          this.getQuotationForDate(new Date(), 'AU'),
+          this.getQuotationForDate(new Date(), 'AG'),
+        ]);
+        const auPrice = quoteAu.price || 715;
+        const agPrice = quoteAg.price || 6.5;
 
         const aVencer = await this.prisma.accountRec.findMany({
           where: {
@@ -1430,6 +1622,16 @@ export class AutomationsService {
             sale: {
               include: {
                 pessoa: true,
+                metalReceivable: true,
+                saleItems: {
+                  include: {
+                    product: {
+                      include: {
+                        productGroup: true,
+                      },
+                    },
+                  },
+                },
               },
             },
           },
@@ -1447,19 +1649,23 @@ export class AutomationsService {
           text += 'ℹ️ *Nenhum título previsto para os próximos 7 dias.*\n';
         } else {
           let somaValor = 0;
-          let somaGold = 0;
+          let somaAu = 0;
+          let somaAg = 0;
 
           aVencer.forEach((item, idx) => {
-            const pendente = Number(item.amount) - Number(item.amountPaid || 0);
-            const gold = item.goldAmount ? Number(item.goldAmount) : (goldPrice > 0 ? pendente / goldPrice : 0);
-            somaValor += pendente;
-            somaGold += gold;
+            const info = this.resolveReceivableInfo(item, auPrice, agPrice);
+            somaValor += info.pendente;
+            if (info.isSilver) {
+              somaAg += info.metalGrams;
+            } else {
+              somaAu += info.metalGrams;
+            }
 
             const dStr = new Date(item.dueDate).toLocaleDateString('pt-BR');
             const isHoje = new Date(item.dueDate).toDateString() === today.toDateString();
             const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
             const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
-            const valStr = pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            const valStr = info.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             const tag = isHoje ? '⏰ HOJE' : dStr;
 
             inline_keyboard.push([
@@ -1470,7 +1676,12 @@ export class AutomationsService {
             ]);
           });
 
-          text += `📊 *Total previsto:* *R$ ${somaValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (${somaGold.toFixed(3)} g Au)\n`;
+          const metalParts: string[] = [];
+          if (somaAu > 0.001) metalParts.push(`${somaAu.toFixed(3)} g Au`);
+          if (somaAg > 0.001) metalParts.push(`${somaAg.toFixed(2)} g Ag`);
+          const metalStr = metalParts.length > 0 ? ` (${metalParts.join(' | ')})` : '';
+
+          text += `📊 *Total previsto:* *R$ ${somaValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${metalStr}\n`;
           text += `Clique para ver detalhes ou registrar baixa:`;
         }
 
@@ -1495,14 +1706,19 @@ export class AutomationsService {
         if (item) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
-          const pendente = Number(item.amount) - Number(item.amountPaid || 0);
+          const [quoteAu, quoteAg] = await Promise.all([
+            this.getQuotationForDate(new Date(), 'AU'),
+            this.getQuotationForDate(new Date(), 'AG'),
+          ]);
+          const info = this.resolveReceivableInfo(item, quoteAu.price || 715, quoteAg.price || 6.5);
           const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
           const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
           const dStr = new Date(item.dueDate).toLocaleDateString('pt-BR');
           const isHoje = new Date(item.dueDate).toDateString() === today.toDateString();
           const tel = item.sale?.pessoa?.phone ? `\n• Contato: *${item.sale.pessoa.phone}*` : '';
+          const metalTag = info.metalGrams > 0 ? ` (${info.metalGrams.toFixed(info.isSilver ? 2 : 3)} g ${info.metalUnit})` : '';
 
-          const text = `⏰ *DETALHES DO TÍTULO A VENCER*\n\n• Pedido: *${num}*\n• Cliente: *${cli}*${tel}\n• Valor: *R$ ${pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n• Data de Vencimento: *${dStr}* ${isHoje ? '*(Vence HOJE)*' : ''}\n\nDeseja registrar o recebimento deste valor?`;
+          const text = `⏰ *DETALHES DO TÍTULO A VENCER*\n\n• Pedido: *${num}*\n• Cliente: *${cli}*${tel}\n• Valor: *R$ ${info.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${metalTag}\n• Data de Vencimento: *${dStr}* ${isHoje ? '*(Vence HOJE)*' : ''}\n\nDeseja registrar o recebimento deste valor?`;
           const inline_keyboard = [
             [{ text: '💰 Registrar Recebimento / Baixa', callback_data: `bx_avenc_${idx}` }],
             [{ text: '⬅️ Voltar aos a Vencer', callback_data: 'cobranca_avencer' }],
@@ -1527,11 +1743,16 @@ export class AutomationsService {
           sessionData.selectedOrderNumber = item.sale?.orderNumber;
           await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
+          const [quoteAu, quoteAg] = await Promise.all([
+            this.getQuotationForDate(new Date(), 'AU'),
+            this.getQuotationForDate(new Date(), 'AG'),
+          ]);
+          const info = this.resolveReceivableInfo(item, quoteAu.price || 715, quoteAg.price || 6.5);
           const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
           const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
-          const pend = Number(item.amount) - Number(item.amountPaid || 0);
+          const metalTag = info.metalGrams > 0 ? ` (${info.metalGrams.toFixed(info.isSilver ? 2 : 3)} g ${info.metalUnit})` : '';
 
-          const text = `🏦 *DESTINO DO PAGAMENTO*\n\nPedido: *${num}* (${cli})\nValor: *R$ ${pend.toFixed(2)}*\n\nEm qual conta o cliente efetuou o depósito?`;
+          const text = `🏦 *DESTINO DO PAGAMENTO*\n\nPedido: *${num}* (${cli})\nValor: *R$ ${info.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${metalTag}\n\nEm qual conta o cliente efetuou o depósito?`;
           const inline_keyboard = [
             [
               { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
@@ -1615,7 +1836,8 @@ export class AutomationsService {
             const num = p.orderNumber ? `#${p.orderNumber}` : 'Venda';
             const cli = p.clientName || 'Cliente';
             const val = p.amount ? `R$ ${Number(p.amount).toFixed(2)}` : '';
-            inline_keyboard.push([{ text: `${num} - ${cli.substring(0, 15)} ${val}`.trim(), callback_data: `ped_${idx}` }]);
+            const metal = p.metalGrams ? ` (${Number(p.metalGrams).toFixed(p.metalUnit === 'Ag' ? 2 : 3)} g ${p.metalUnit})` : '';
+            inline_keyboard.push([{ text: `${num} - ${cli.substring(0, 15)}: ${val}${metal}`.trim(), callback_data: `ped_${idx}` }]);
           });
         } else {
           text = 'ℹ️ *Nenhum pedido pendente encontrado no momento.*';
@@ -1640,7 +1862,9 @@ export class AutomationsService {
         sessionData.selectedOrderNumber = selected.orderNumber;
         await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
-        const text = `🏦 *DESTINO DO PAGAMENTO*\n\nPedido: *#${selected.orderNumber || ''}*\n\nEm qual conta o cliente efetuou o depósito?`;
+        const metalInfo = selected.metalGrams ? ` (${Number(selected.metalGrams).toFixed(selected.metalUnit === 'Ag' ? 2 : 3)} g ${selected.metalUnit})` : '';
+        const valInfo = selected.amount ? `\nValor: *R$ ${Number(selected.amount).toFixed(2)}*${metalInfo}` : '';
+        const text = `🏦 *DESTINO DO PAGAMENTO*\n\nPedido: *#${selected.orderNumber || ''}* (${selected.clientName || 'Cliente'})${valInfo}\n\nEm qual conta o cliente efetuou o depósito?`;
         const inline_keyboard = [
           [
             { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
