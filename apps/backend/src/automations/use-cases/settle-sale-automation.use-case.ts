@@ -242,6 +242,11 @@ export class SettleSaleAutomationUseCase {
             data: { status: 'FINALIZADO' },
           });
         }
+      } else {
+        await tx.sale.update({
+          where: { id: sale.id },
+          data: { status: 'PENDENTE' },
+        });
       }
 
       return {

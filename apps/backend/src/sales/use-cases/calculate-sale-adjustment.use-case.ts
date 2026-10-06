@@ -151,20 +151,14 @@ export class CalculateSaleAdjustmentUseCase {
     // We always track profit in GOLD (AU) for this user's business model.
     let paymentQuotation: Decimal | null = goldPrice;
 
-    // Calculate Projected Metal Revenue in AU:
-    // Sum of gold already registered in transactions + equivalent AU of outstanding BRL balance at current rate
-    let metalRevenueAU = allTransactions.reduce((sum, t) => {
+    // Calculate Actual Metal Received so far vs Projected Revenue in AU:
+    const actualReceivedGrams = allTransactions.reduce((sum, t) => {
       const grams = new Decimal(t.goldAmount || 0);
       return t.tipo === 'DEBITO' ? sum.minus(grams) : sum.plus(grams);
     }, new Decimal(0));
 
-    // If there is an outstanding BRL balance, project how much AU it represents
-    if (outstandingBRL.gt(0) && goldPrice && goldPrice.gt(0)) {
-      const pendingAU = outstandingBRL.dividedBy(goldPrice);
-      metalRevenueAU = metalRevenueAU.plus(pendingAU);
-    }
-
-    paymentEquivalentGrams = metalRevenueAU;
+    // Actual metal received so far across all transactions:
+    paymentEquivalentGrams = actualReceivedGrams;
 
     // Determine the effective quotation for display:
     // If we have payments, use the weighted average rate. Otherwise, use current gold price.
@@ -425,31 +419,28 @@ export class CalculateSaleAdjustmentUseCase {
     this.logger.log(`Dados do ajuste: ${JSON.stringify(adjustmentData, null, 2)}`);
 
     const adjustAccountRec = async (client: PrismaTransactionClient) => {
-      // Lógica existente para ajuste de AccountRec em BRL
+      // Ajuste de AccountRec SOMENTE se os gramas de ouro foram EFETIVAMENTE quitados pelo cliente nas transações
+      // e houver saldo residual mínimo em BRL decorrente de variação cambial (Grams Satisfied)
       if (
         primaryAccountRec &&
-        paymentEquivalentGrams &&
+        actualReceivedGrams &&
         saleExpectedGrams &&
-        paymentEquivalentGrams.greaterThanOrEqualTo(saleExpectedGrams) &&
-        outstandingBRL.greaterThan(new Decimal(0.01)) // Check for a positive outstanding BRL balance
+        saleExpectedGrams.gt(0) &&
+        actualReceivedGrams.greaterThanOrEqualTo(saleExpectedGrams.minus(0.001)) &&
+        outstandingBRL.greaterThan(new Decimal(0.01))
       ) {
-        this.logger.log(`[SALE_ADJUSTMENT] Ajustando AccountRec ${primaryAccountRec.id} para a venda ${saleId}. Saldo BRL pendente: ${outstandingBRL.toFixed(2)}`);
+        this.logger.log(`[SALE_ADJUSTMENT] Gramas de ouro totalmente satisfeitos (${actualReceivedGrams.toFixed(4)} >= ${saleExpectedGrams.toFixed(4)}). Ajustando AccountRec ${primaryAccountRec.id} para a venda ${saleId}.`);
 
-        // Se os gramas de ouro foram satisfeitos, apenas ajustamos o valor do AccountRec 
-        // para o valor efetivamente recebido em BRL, sem criar transação de perda.
         await client.accountRec.update({
           where: { id: primaryAccountRec.id },
           data: {
             amount: paymentReceivedBRL,
             amountPaid: paymentReceivedBRL,
-            received: outstandingBRL.lessThanOrEqualTo(new Decimal(0.01)),
+            received: true,
           },
         });
-        this.logger.log(`[SALE_ADJUSTMENT] AccountRec ${primaryAccountRec.id} ajustado para o valor pago (Grams Satisfied) sem criar transação de perda.`);
         return;
       }
-
-      // TODO: Implementar lógica para quando o BRL está pendente e o ouro NÃO foi totalmente satisfeito.
     };
 
     const saveAdjustment = async (client: PrismaTransactionClient) => {
@@ -459,13 +450,23 @@ export class CalculateSaleAdjustmentUseCase {
         update: adjustmentData,
       });
 
+      // NÃO sobrescrever netAmount com pagamento parcial! 
+      // Manter o valor total original da venda se ainda houver saldo pendente
+      const isSaleFullyPaid = (saleExpectedGrams.gt(0) && actualReceivedGrams.gte(saleExpectedGrams.minus(0.001))) ||
+        (sale.netAmount && paymentReceivedBRL.gte(new Decimal(sale.netAmount).minus(0.01)));
+
+      const updateSaleData: any = {
+        goldPrice: paymentQuotation,
+        totalCost: totalCostBRL,
+      };
+
+      if (isSaleFullyPaid && paymentReceivedBRL.gt(0)) {
+        updateSaleData.netAmount = paymentReceivedBRL;
+      }
+
       await client.sale.update({
         where: { id: saleId },
-        data: {
-          netAmount: paymentReceivedBRL,
-          goldPrice: paymentQuotation,
-          totalCost: totalCostBRL,
-        },
+        data: updateSaleData,
       });
     };
 

@@ -42,6 +42,13 @@ export class AutomationsController {
     return this.automationsService.settleSale(body);
   }
 
+  @Post('restore-sale-receivable')
+  async restoreSaleReceivable(
+    @Body() body: { orderNumber?: number; saleId?: string },
+  ) {
+    return this.automationsService.restoreSaleReceivable(body);
+  }
+
   @Post('transfer-supplier')
   async transferToSupplier(
     @Body()

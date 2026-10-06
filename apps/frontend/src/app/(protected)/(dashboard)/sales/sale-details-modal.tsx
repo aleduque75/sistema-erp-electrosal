@@ -85,6 +85,25 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
     }
   };
 
+  const handleReopenSale = async () => {
+    if (!sale) return;
+    setIsPageLoading(true);
+    try {
+      const primaryRec = sale.accountsRec?.[0];
+      if (primaryRec?.id) {
+        await api.post(`/accounts-rec/${primaryRec.id}/reopen`);
+      }
+      toast.success("Venda reaberta e retornada para A Receber!");
+      const res = await api.get(`/sales/${sale.id}`);
+      setSale(res.data);
+      if (onSave) onSave();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Falha ao reabrir venda.");
+    } finally {
+      setIsPageLoading(false);
+    }
+  };
+
   const handleDeleteTransaction = async () => {
     if (!transactionToDelete || !sale) return;
     setIsDeletingTransaction(true);
@@ -244,7 +263,19 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
           <p>Carregando...</p>
         ) : sale ? (
           <>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              {(sale.status === 'FINALIZADO' || (sale.accountsRec && sale.accountsRec.some((ar: any) => ar.received))) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReopenSale}
+                  disabled={loading}
+                  className="text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950 font-medium"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Voltar para A Receber
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={handleRecalculate} disabled={loading}>
                 <RotateCcw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 Recalcular Lucro/Ajuste

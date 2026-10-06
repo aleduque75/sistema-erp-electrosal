@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { CreateExpenseAutomationDto } from './dto/create-expense-automation.dto';
 import { TelegramBotService } from './services/telegram-bot.service';
@@ -11,10 +11,14 @@ import { SearchLookupUseCase } from './use-cases/search-lookup.use-case';
 import { HandleOrderLookupUseCase } from './use-cases/handle-order-lookup.use-case';
 import { SendDailyDueSummaryUseCase } from './use-cases/send-daily-due-summary.use-case';
 import { HandleTelegramUpdateUseCase } from './use-cases/handle-telegram-update.use-case';
+import { PrismaService } from '../prisma/prisma.service';
+import { ReopenAccountRecUseCase } from '../accounts-rec/use-cases/reopen-account-rec.use-case';
 
 @Injectable()
 export class AutomationsService {
   constructor(
+    private readonly prisma: PrismaService,
+    private readonly reopenAccountRecUseCase: ReopenAccountRecUseCase,
     private readonly telegramBotService: TelegramBotService,
     private readonly createExpenseAutomationUseCase: CreateExpenseAutomationUseCase,
     private readonly receiptLookupUseCase: ReceiptLookupUseCase,
@@ -145,5 +149,42 @@ export class AutomationsService {
 
   buildClientSummary(clienteId: string) {
     return this.telegramBotService.buildClientSummary(clienteId);
+  }
+
+  async restoreSaleReceivable(params: { orderNumber?: number; saleId?: string }) {
+    let sale: any = null;
+    if (params.orderNumber) {
+      sale = await this.prisma.sale.findFirst({
+        where: { orderNumber: Number(params.orderNumber) },
+        include: { accountsRec: true },
+      });
+    } else if (params.saleId) {
+      sale = await this.prisma.sale.findFirst({
+        where: { id: params.saleId },
+        include: { accountsRec: true },
+      });
+    }
+
+    if (!sale) {
+      throw new NotFoundException('Venda não encontrada para restauração.');
+    }
+
+    const primaryRec = sale.accountsRec?.[0];
+    if (!primaryRec) {
+      throw new NotFoundException('Nenhum título a receber encontrado para esta venda.');
+    }
+
+    const updatedAccount = await this.reopenAccountRecUseCase.execute(
+      sale.organizationId,
+      primaryRec.id,
+    );
+
+    return {
+      success: true,
+      message: `Venda #${sale.orderNumber} reaberta e restaurada para A Receber com sucesso!`,
+      saleId: sale.id,
+      orderNumber: sale.orderNumber,
+      accountRec: updatedAccount,
+    };
   }
 }

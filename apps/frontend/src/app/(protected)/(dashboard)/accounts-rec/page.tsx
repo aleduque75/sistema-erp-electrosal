@@ -157,6 +157,16 @@ export default function AccountsRecPage() {
     }
   };
 
+  const handleReopenAccount = async (account: AccountRec) => {
+    try {
+      await api.post(`/accounts-rec/${account.id}/reopen`);
+      toast.success("Título reaberto e retornado para A Receber!");
+      fetchAccounts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Erro ao reabrir título.");
+    }
+  };
+
   const columns: ColumnDef<AccountRec>[] = [
     {
       accessorKey: "description",
@@ -228,6 +238,15 @@ export default function AccountsRecPage() {
               <DropdownMenuSeparator />
               {!account.received && (
                 <DropdownMenuItem onClick={() => setAccountToReceive(account)}>Registrar Recebimento</DropdownMenuItem>
+              )}
+              {account.received && (
+                <DropdownMenuItem
+                  onClick={() => handleReopenAccount(account)}
+                  className="text-amber-600 focus:text-amber-600 cursor-pointer font-medium"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Voltar para A Receber
+                </DropdownMenuItem>
               )}
               {hasPayment && (
                 <DropdownMenuItem

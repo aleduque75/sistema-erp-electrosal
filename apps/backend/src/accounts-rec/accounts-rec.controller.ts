@@ -38,6 +38,7 @@ import { HybridReceiveUseCase } from './use-cases/hybrid-receive.use-case';
 import { RevertAccountRecPaymentUseCase } from './use-cases/revert-account-rec-payment.use-case';
 import { SplitAccountRecDto } from './dtos/split-account-rec.dto';
 import { SplitAccountRecUseCase } from './use-cases/split-account-rec.use-case';
+import { ReopenAccountRecUseCase } from './use-cases/reopen-account-rec.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('accounts-rec')
@@ -57,6 +58,7 @@ export class AccountsRecController {
     private readonly hybridReceiveUseCase: HybridReceiveUseCase,
     private readonly revertAccountRecPaymentUseCase: RevertAccountRecPaymentUseCase,
     private readonly splitAccountRecUseCase: SplitAccountRecUseCase,
+    private readonly reopenAccountRecUseCase: ReopenAccountRecUseCase,
   ) {}
 
   @Post()
@@ -192,6 +194,22 @@ export class AccountsRecController {
     @Param('id') id: string,
   ) {
     return this.forceFinalizeAccountRecUseCase.execute(organizationId, id);
+  }
+
+  @Post(':id/reopen')
+  reopen(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.reopenAccountRecUseCase.execute(organizationId, id);
+  }
+
+  @Patch(':id/reopen')
+  reopenPatch(
+    @CurrentUser('orgId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.reopenAccountRecUseCase.execute(organizationId, id);
   }
 
   @Delete(':id/payments/:transactionId')
