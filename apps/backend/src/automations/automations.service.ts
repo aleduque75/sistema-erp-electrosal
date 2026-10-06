@@ -124,6 +124,11 @@ export class AutomationsService {
 
     // 3. Search pending AccountRec
     const orRecConditions: any[] = [];
+    if (orderNumber) {
+      orRecConditions.push({
+        sale: { orderNumber },
+      });
+    }
     if (payer && payer.trim().length >= 3) {
       orRecConditions.push({
         description: { contains: payer.trim(), mode: 'insensitive' },
@@ -161,8 +166,8 @@ export class AutomationsService {
           },
         },
       },
-      orderBy: { dueDate: 'asc' },
-      take: 10,
+      orderBy: { dueDate: 'desc' },
+      take: 30,
     });
 
     // 4. Fetch Bank Accounts (to receive money into)
@@ -1102,6 +1107,155 @@ export class AutomationsService {
     return { text, inline_keyboard };
   }
 
+  async handleOrderNumberLookup(
+    chatId: string,
+    orderNum: number,
+    session: any,
+    messageId?: number,
+  ) {
+    const organizationId = this.getOrganizationId();
+    const sessionData = session?.data || {};
+
+    const [quoteAu, quoteAg] = await Promise.all([
+      this.getQuotationForDate(new Date(), 'AU'),
+      this.getQuotationForDate(new Date(), 'AG'),
+    ]);
+    const auPrice = quoteAu.price || 715;
+    const agPrice = quoteAg.price || 6.5;
+
+    const sale = await this.prisma.sale.findFirst({
+      where: {
+        organizationId,
+        orderNumber: orderNum,
+      },
+      include: {
+        pessoa: true,
+        accountsRec: true,
+        metalReceivable: true,
+        saleItems: {
+          include: {
+            product: {
+              include: {
+                productGroup: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!sale) {
+      const errorText = `⚠️ *Pedido #${orderNum} não encontrado no sistema.*\n\nVerifique o número e tente novamente, ou digite outro número diretamente aqui:`;
+      const errorKeyboard = [
+        [{ text: '🔍 Tentar Outro Número', callback_data: 'buscar_num_pedido' }],
+        [{ text: '📦 Ver Pedidos em Aberto', callback_data: 'sub_rec_pedidos' }],
+        [{ text: '⬅️ Menu Principal', callback_data: 'menu_principal' }],
+      ];
+
+      if (messageId) {
+        await this.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text: errorText,
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard: errorKeyboard },
+        });
+      } else {
+        await this.callTelegramApi('sendMessage', {
+          chat_id: chatId,
+          text: errorText,
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard: errorKeyboard },
+        });
+      }
+      return { ok: true };
+    }
+
+    sessionData.selectedSaleId = sale.id;
+    sessionData.selectedOrderNumber = sale.orderNumber;
+    sessionData.waitingFor = null;
+    await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+    const cli = (sale.pessoa?.name || 'Cliente').replace(/[*_`]/g, '');
+    const dataCriacao = new Date(sale.createdAt).toLocaleDateString('pt-BR');
+    const tel = sale.pessoa?.phone ? `\n• *Telefone:* ${sale.pessoa.phone}` : '';
+
+    // Avaliar contas a receber e status de pagamento
+    const pendingAccount = sale.accountsRec.find((ar) => !ar.received);
+    const hasAnyAccount = sale.accountsRec.length > 0;
+    const allReceived = hasAnyAccount && sale.accountsRec.every((ar) => ar.received);
+
+    let valStr = '';
+    let metalTag = '';
+
+    if (pendingAccount) {
+      const info = this.resolveReceivableInfo(pendingAccount, auPrice, agPrice);
+      valStr = `R$ ${info.pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+      if (info.metalGrams > 0) {
+        metalTag = ` (${info.metalGrams.toFixed(info.isSilver ? 2 : 3)} g ${info.metalUnit})`;
+      }
+    } else {
+      const net = Number(sale.netAmount || sale.totalAmount || 0);
+      valStr = `R$ ${net.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+      if (sale.goldValue && Number(sale.goldValue) > 0) {
+        metalTag = ` (${Number(sale.goldValue).toFixed(3)} g Au)`;
+      }
+    }
+
+    let statusDesc = '';
+    if (allReceived) {
+      statusDesc = '🟢 *Totalmente Recebido / Quitado*';
+    } else if (pendingAccount) {
+      const dStr = new Date(pendingAccount.dueDate).toLocaleDateString('pt-BR');
+      statusDesc = `🔴 *Pendente de Recebimento* (Venc: ${dStr})`;
+    } else if (sale.paymentMethod === 'A_VISTA') {
+      statusDesc = '🟢 *Pago à Vista*';
+    } else {
+      statusDesc = `🟡 *Pendente (${sale.status})*`;
+    }
+
+    let text = `📦 *DETALHES DO PEDIDO #${sale.orderNumber}*\n\n`;
+    text += `• *Cliente:* ${cli}${tel}\n`;
+    text += `• *Data da Venda:* ${dataCriacao}\n`;
+    text += `• *Valor:* *${valStr}*${metalTag}\n`;
+    text += `• *Forma de Pagto:* ${sale.paymentMethod || 'A Combinar'}\n`;
+    text += `• *Situação:* ${statusDesc}\n\n`;
+
+    const inline_keyboard: any[] = [];
+
+    if (!allReceived) {
+      text += `Deseja registrar o recebimento deste pedido agora?`;
+      inline_keyboard.push([
+        { text: '💰 Registrar Recebimento / Dar Baixa', callback_data: `sel_ped_sale_${sale.id}` },
+      ]);
+    } else {
+      text += `ℹ️ *Este pedido já consta como quitado no sistema.*`;
+    }
+
+    inline_keyboard.push([
+      { text: '🔍 Buscar Outro Pedido', callback_data: 'buscar_num_pedido' },
+      { text: '⬅️ Menu Principal', callback_data: 'menu_principal' },
+    ]);
+
+    if (messageId) {
+      await this.callTelegramApi('editMessageText', {
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard },
+      });
+    } else {
+      await this.callTelegramApi('sendMessage', {
+        chat_id: chatId,
+        text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard },
+      });
+    }
+    return { ok: true };
+  }
+
   @Cron('0 30 8 * * *', { timeZone: 'America/Sao_Paulo' })
   async handleDailyMorningReminder() {
     try {
@@ -1829,19 +1983,24 @@ export class AutomationsService {
         sessionData.cachedReceivables = pending;
         await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
-        let text = '📦 *PEDIDOS EM ABERTO NO ERP*\n\nSelecione o pedido para dar baixa:';
+        let text = '📦 *PEDIDOS EM ABERTO NO ERP*\n\n';
+        text += 'Selecione um pedido abaixo ou *digite o número do pedido no chat* (ex: `32042`):\n';
         const inline_keyboard: any[] = [];
         if (pending.length > 0) {
-          pending.slice(0, 5).forEach((p: any, idx: number) => {
+          pending.slice(0, 8).forEach((p: any, idx: number) => {
             const num = p.orderNumber ? `#${p.orderNumber}` : 'Venda';
-            const cli = p.clientName || 'Cliente';
+            const cli = (p.clientName || 'Cliente').slice(0, 14);
             const val = p.amount ? `R$ ${Number(p.amount).toFixed(2)}` : '';
             const metal = p.metalGrams ? ` (${Number(p.metalGrams).toFixed(p.metalUnit === 'Ag' ? 2 : 3)} g ${p.metalUnit})` : '';
-            inline_keyboard.push([{ text: `${num} - ${cli.substring(0, 15)}: ${val}${metal}`.trim(), callback_data: `ped_${idx}` }]);
+            inline_keyboard.push([{ text: `${num} - ${cli}: ${val}${metal}`.trim(), callback_data: `ped_${idx}` }]);
           });
         } else {
           text = 'ℹ️ *Nenhum pedido pendente encontrado no momento.*';
         }
+
+        inline_keyboard.push([
+          { text: '🔍 Digitar Nº do Pedido', callback_data: 'buscar_num_pedido' },
+        ]);
         inline_keyboard.push([{ text: '⬅️ Voltar', callback_data: 'menu_rec' }]);
 
         await this.callTelegramApi('editMessageText', {
@@ -1852,6 +2011,97 @@ export class AutomationsService {
           reply_markup: { inline_keyboard },
         });
         return { ok: true };
+      }
+
+      if (data === 'buscar_num_pedido') {
+        sessionData.waitingFor = 'buscar_pedido';
+        await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        const text = '🔍 *BUSCA DE PEDIDO POR NÚMERO*\n\n👉 *Digite o número do pedido no chat* (ex: `32042`):';
+        await this.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: '⬅️ Voltar aos Pedidos', callback_data: 'sub_rec_pedidos' }]],
+          },
+        });
+        return { ok: true };
+      }
+
+      if (data.startsWith('sel_ped_sale_')) {
+        const saleId = data.replace('sel_ped_sale_', '');
+        const sale = await this.prisma.sale.findUnique({
+          where: { id: saleId },
+          include: {
+            pessoa: true,
+            accountsRec: true,
+            metalReceivable: true,
+            saleItems: {
+              include: {
+                product: {
+                  include: {
+                    productGroup: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (sale) {
+          sessionData.selectedSaleId = sale.id;
+          sessionData.selectedOrderNumber = sale.orderNumber;
+          await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+          const [quoteAu, quoteAg] = await Promise.all([
+            this.getQuotationForDate(new Date(), 'AU'),
+            this.getQuotationForDate(new Date(), 'AG'),
+          ]);
+          const auPrice = quoteAu.price || 715;
+          const agPrice = quoteAg.price || 6.5;
+
+          const pendingAccount = sale.accountsRec.find((ar) => !ar.received);
+          let pendente = Number(sale.netAmount || sale.totalAmount || 0);
+          let metalTag = '';
+
+          if (pendingAccount) {
+            const info = this.resolveReceivableInfo(pendingAccount, auPrice, agPrice);
+            pendente = info.pendente;
+            if (info.metalGrams > 0) {
+              metalTag = ` (${info.metalGrams.toFixed(info.isSilver ? 2 : 3)} g ${info.metalUnit})`;
+            }
+          }
+
+          const cli = (sale.pessoa?.name || 'Cliente').replace(/[*_`]/g, '');
+
+          const text = `🏦 *DESTINO DO PAGAMENTO*\n\nPedido: *#${sale.orderNumber}* (${cli})\nValor: *R$ ${pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${metalTag}\n\nEm qual conta o cliente efetuou o depósito?`;
+          const inline_keyboard = [
+            [
+              { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
+              { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
+            ],
+            [{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }],
+            [{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sale.orderNumber}` }],
+          ];
+
+          await this.callTelegramApi('editMessageText', {
+            chat_id: chatId,
+            message_id: messageId,
+            text,
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard },
+          });
+          return { ok: true };
+        }
+      }
+
+      if (data.startsWith('voltar_ped_')) {
+        const num = parseInt(data.replace('voltar_ped_', ''), 10);
+        if (!isNaN(num)) {
+          return this.handleOrderNumberLookup(chatId, num, session, messageId);
+        }
       }
 
       if (data.startsWith('ped_')) {
@@ -2790,6 +3040,24 @@ export class AutomationsService {
           reply_markup: { inline_keyboard },
         });
         return { ok: true };
+      }
+
+      // E.0) Usuário digitou número de pedido (ex: 32042, #32042, pedido 32042)
+      const orderNumMatch = text.match(/(?:pedido|ped|#)?\s*(\d{4,7})\b/i);
+      const isPureNumber = /^\s*#?\d{4,7}\s*$/.test(text);
+
+      if (
+        sessionData.waitingFor === 'buscar_pedido' ||
+        isPureNumber ||
+        (orderNumMatch && (text.toLowerCase().includes('pedido') || text.toLowerCase().includes('ped') || text.startsWith('#')))
+      ) {
+        const numStr = orderNumMatch ? orderNumMatch[1] : text.replace(/\D/g, '');
+        const orderNum = parseInt(numStr, 10);
+        if (!isNaN(orderNum) && orderNum > 0) {
+          sessionData.waitingFor = null;
+          await this.saveTelegramSession(chatId, session.fileId, sessionData);
+          return this.handleOrderNumberLookup(chatId, orderNum, session);
+        }
       }
 
       // E.1) Atalho por comando de texto para cobranças/vencidos
