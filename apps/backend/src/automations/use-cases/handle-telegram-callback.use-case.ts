@@ -696,6 +696,29 @@ export class HandleTelegramCallbackUseCase {
       return { ok: true };
     }
 
+    if (data === 'mudar_valor_baixa') {
+      sessionData.waitingFor = 'valor_baixa_pedido';
+      await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+      const text = `💵 *ALTERAR VALOR DA BAIXA*\n\n` +
+        `• Pedido: *#${sessionData.selectedOrderNumber || ''}*\n` +
+        `• Valor atual: *R$ ${Number(sessionData.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n` +
+        `👉 *Digite o novo valor a ser baixado em R$* no chat agora (ex: \`28810\` ou \`28810,00\`):`;
+
+      const inline_keyboard = [
+        [{ text: '⬅️ Voltar', callback_data: 'voltar_destino_baixa' }],
+      ];
+
+      await this.telegramBotService.callTelegramApi('editMessageText', {
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard },
+      });
+      return { ok: true };
+    }
+
 
     if (data.startsWith('voltar_ped_')) {
       const num = parseInt(data.replace('voltar_ped_', ''), 10);

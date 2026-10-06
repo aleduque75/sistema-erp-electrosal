@@ -358,10 +358,13 @@ export class TelegramBotService {
     ]);
     inline_keyboard.push([{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }]);
     inline_keyboard.push([
+      { text: '💵 Alterar Valor', callback_data: 'mudar_valor_baixa' },
       { text: '📅 Alterar Data', callback_data: 'mudar_data_baixa' },
-      { text: '📈 Alterar Cotação', callback_data: 'mudar_cotacao_baixa' },
     ]);
-    inline_keyboard.push([{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sale.orderNumber}` }]);
+    inline_keyboard.push([
+      { text: '📈 Alterar Cotação', callback_data: 'mudar_cotacao_baixa' },
+      { text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sale.orderNumber}` },
+    ]);
 
     if (messageId) {
       await this.callTelegramApi('editMessageText', {
