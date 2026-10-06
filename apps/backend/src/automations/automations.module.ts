@@ -24,10 +24,13 @@ import { HandleTelegramCallbackUseCase } from './use-cases/handle-telegram-callb
 import { HandleTelegramMessageUseCase } from './use-cases/handle-telegram-message.use-case';
 import { HandleTelegramUpdateUseCase } from './use-cases/handle-telegram-update.use-case';
 
+import { AccountsRecModule } from '../accounts-rec/accounts-rec.module';
+
 @Module({
   imports: [
     ConfigModule,
     AccountsPayModule,
+    AccountsRecModule,
     PrismaModule,
     SalesModule,
     TransacoesModule,

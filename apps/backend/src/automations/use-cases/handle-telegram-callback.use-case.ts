@@ -6,6 +6,8 @@ import { SettleSaleAutomationUseCase } from './settle-sale-automation.use-case';
 import { TransferToSupplierUseCase } from './transfer-to-supplier.use-case';
 import { CreateDirectExpenseUseCase } from './create-direct-expense.use-case';
 import { HandleOrderLookupUseCase } from './handle-order-lookup.use-case';
+import { SplitAccountRecUseCase } from '../../accounts-rec/use-cases/split-account-rec.use-case';
+import Decimal from 'decimal.js';
 
 @Injectable()
 export class HandleTelegramCallbackUseCase {
@@ -17,6 +19,7 @@ export class HandleTelegramCallbackUseCase {
     private readonly transferToSupplierUseCase: TransferToSupplierUseCase,
     private readonly createDirectExpenseUseCase: CreateDirectExpenseUseCase,
     private readonly handleOrderLookupUseCase: HandleOrderLookupUseCase,
+    private readonly splitAccountRecUseCase: SplitAccountRecUseCase,
   ) {}
 
   async execute(cb: any) {
@@ -658,6 +661,193 @@ export class HandleTelegramCallbackUseCase {
       }
     }
 
+    if (data.startsWith('parcial_ped_')) {
+      const saleId = data.replace('parcial_ped_', '');
+      const sale = await this.prisma.sale.findUnique({
+        where: { id: saleId },
+        include: { pessoa: true, accountsRec: true },
+      });
+      if (sale) {
+        sessionData.selectedSaleId = sale.id;
+        sessionData.selectedOrderNumber = sale.orderNumber;
+        sessionData.waitingFor = 'valor_baixa_pedido';
+        await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        const pendingAccount = sale.accountsRec.find((ar) => !ar.received);
+        const pendente = pendingAccount
+          ? Number(pendingAccount.amount) - Number(pendingAccount.amountPaid || 0)
+          : Number(sale.netAmount || sale.totalAmount || 0);
+
+        const text = `💵 *BAIXA PARCIAL - PEDIDO #${sale.orderNumber}*\n\n` +
+          `• Cliente: *${(sale.pessoa?.name || 'Cliente').replace(/[*_`]/g, '')}*\n` +
+          `• Saldo em Aberto: *R$ ${pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n` +
+          `👉 *Digite o valor a ser baixado em R$* no chat agora (ex: \`2000\` ou \`5480\`):`;
+
+        await this.telegramBotService.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sale.orderNumber}` }],
+              [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
+            ],
+          },
+        });
+        return { ok: true };
+      }
+    }
+
+    if (data.startsWith('dividir_ped_')) {
+      const saleId = data.replace('dividir_ped_', '');
+      const sale = await this.prisma.sale.findUnique({
+        where: { id: saleId },
+        include: { pessoa: true, accountsRec: { where: { received: false }, orderBy: { dueDate: 'asc' } } },
+      });
+
+      if (!sale || sale.accountsRec.length === 0) {
+        await this.telegramBotService.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text: `⚠️ *Este pedido não possui lançamentos a receber em aberto para dividir.*`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sale?.orderNumber || ''}` }],
+            ],
+          },
+        });
+        return { ok: true };
+      }
+
+      const targetRec = sale.accountsRec[0];
+      const valAberto = Number(targetRec.amount) - Number(targetRec.amountPaid || 0);
+      const valStr = valAberto.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      sessionData.targetAccountRecId = targetRec.id;
+      sessionData.selectedSaleId = sale.id;
+      sessionData.selectedOrderNumber = sale.orderNumber;
+      await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+      const text = `✂️ *DIVIDIR LANÇAMENTO NO ERP*\n\n` +
+        `• Pedido: *#${sale.orderNumber}* (${(sale.pessoa?.name || 'Cliente').replace(/[*_`]/g, '')})\n` +
+        `• Valor em Aberto: *R$ ${valStr}*\n\n` +
+        `Em quantas parcelas você deseja dividir este título no ERP?`;
+
+      const inline_keyboard = [
+        [
+          { text: '2x (30 e 60 dias)', callback_data: `div_exec_${sale.id}_2` },
+          { text: '3x (30, 60 e 90 dias)', callback_data: `div_exec_${sale.id}_3` },
+        ],
+        [
+          { text: '4x (30, 60, 90 e 120 dias)', callback_data: `div_exec_${sale.id}_4` },
+        ],
+        [{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sale.orderNumber}` }],
+      ];
+
+      await this.telegramBotService.callTelegramApi('editMessageText', {
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard },
+      });
+      return { ok: true };
+    }
+
+    if (data.startsWith('div_exec_')) {
+      const parts = data.replace('div_exec_', '').split('_');
+      const saleId = parts[0];
+      const n = parseInt(parts[1], 10) || 2;
+
+      const sale = await this.prisma.sale.findUnique({
+        where: { id: saleId },
+        include: { pessoa: true, accountsRec: { where: { received: false }, orderBy: { dueDate: 'asc' } } },
+      });
+
+      const targetRec = sale?.accountsRec?.[0];
+      if (!sale || !targetRec) {
+        await this.telegramBotService.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text: `⚠️ *Não foi possível localizar o título a receber deste pedido.*`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sale?.orderNumber || ''}` }]],
+          },
+        });
+        return { ok: true };
+      }
+
+      const totalVal = new Decimal(targetRec.amount);
+      const partVal = totalVal.dividedBy(n).toDecimalPlaces(2);
+      let sumParts = new Decimal(0);
+      const installments: any[] = [];
+      const baseDate = new Date(targetRec.dueDate || new Date());
+
+      for (let i = 1; i <= n; i++) {
+        const isLast = i === n;
+        const amt = isLast ? totalVal.minus(sumParts) : partVal;
+        sumParts = sumParts.plus(amt);
+
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + 30 * (i - 1));
+        const dateStr = d.toISOString().split('T')[0];
+
+        installments.push({
+          amount: amt.toNumber(),
+          dueDate: dateStr,
+          description: `${targetRec.description.replace(/\s*-\s*Parcela\s*\d+\/\d+/gi, '')} - Parcela ${i}/${n}`,
+        });
+      }
+
+      try {
+        await this.splitAccountRecUseCase.execute(
+          this.telegramBotService.getOrganizationId(),
+          targetRec.id,
+          { installments },
+        );
+
+        let successText = `🎉 *LANÇAMENTO DIVIDIDO COM SUCESSO!*\n\n` +
+          `O título de *R$ ${totalVal.toNumber().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* do Pedido *#${sale.orderNumber}* foi dividido em ${n} parcelas no ERP:\n\n`;
+
+        installments.forEach((inst, idx) => {
+          const dFmt = new Date(inst.dueDate + 'T12:00:00').toLocaleDateString('pt-BR');
+          successText += `• *Parcela ${idx + 1}/${n}:* R$ ${inst.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (Venc: ${dFmt})\n`;
+        });
+
+        successText += `\n✅ Lançamentos gerados no Contas a Receber!`;
+
+        await this.telegramBotService.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text: successText,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📦 Ver Pedido Atualizado', callback_data: `voltar_ped_${sale.orderNumber}` }],
+              [{ text: '📱 Menu Principal', callback_data: 'menu_principal' }],
+            ],
+          },
+        });
+        return { ok: true };
+      } catch (err: any) {
+        console.error('Erro ao dividir lançamento via Telegram:', err);
+        await this.telegramBotService.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text: `❌ *Erro ao dividir lançamento:* ${err.message || 'Erro inesperado'}\n\nVerifique se o lançamento já possui pagamentos parciais no ERP.`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sale.orderNumber}` }],
+            ],
+          },
+        });
+        return { ok: true };
+      }
+    }
+
     if (data.startsWith('ped_')) {
       const idx = parseInt(data.replace('ped_', ''), 10);
       const pending = sessionData.cachedReceivables || [];
@@ -696,20 +886,56 @@ export class HandleTelegramCallbackUseCase {
         bsa: 'ad06430a-88c2-41c7-9236-6dea0598bd7d',
       };
       const contaCorrenteId = contasMap[contaKey] || contasMap.itau;
-      const res = await this.settleSaleAutomationUseCase.execute({
-        saleId: sessionData.selectedSaleId,
-        contaCorrenteId,
-        fileId: session.fileId,
-      });
 
-      await this.telegramBotService.clearTelegramSession(chatId);
-      await this.telegramBotService.callTelegramApi('editMessageText', {
-        chat_id: chatId,
-        message_id: messageId,
-        text: `🎉 *BAIXA CONFIRMADA COM SUCESSO!*\n\n${res.message}\n\n✅ Status da Venda atualizado no ERP\n💰 Saldo lançado na Conta Corrente\n📎 Comprovante arquivado no AWS S3`,
-        parse_mode: 'Markdown',
-      });
-      return { ok: true };
+      try {
+        const res = await this.settleSaleAutomationUseCase.execute({
+          saleId: sessionData.selectedSaleId,
+          contaCorrenteId,
+          amount: sessionData.amount,
+          date: sessionData.operationDate,
+          observation: sessionData.description,
+          fileId: session.fileId,
+        });
+
+        await this.telegramBotService.clearTelegramSession(chatId);
+
+        let confirmText = `🎉 *BAIXA REGISTRADA COM SUCESSO!*\n\n${res.message}\n\n`;
+        if (res.isFullyPaid) {
+          confirmText += `✅ *Pedido 100% Quitado no ERP*\n`;
+        } else {
+          confirmText += `⚠️ *Baixa Parcial Registrada*\n• Restam: *R$ ${res.remainingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* a receber\n`;
+        }
+        confirmText += `💰 Saldo lançado em: *${res.contaCorrenteNome}*\n📎 Comprovante arquivado no AWS S3`;
+
+        await this.telegramBotService.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text: confirmText,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📦 Ver Outros Pedidos', callback_data: 'sub_rec_pedidos' }],
+              [{ text: '📱 Menu Principal', callback_data: 'menu_principal' }],
+            ],
+          },
+        });
+        return { ok: true };
+      } catch (err: any) {
+        console.error('Erro ao dar baixa em venda:', err);
+        await this.telegramBotService.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text: `❌ *Erro ao registrar baixa:*\n\n_${err.message || 'Erro inesperado'}_\n\nVerifique se o pedido já foi baixado ou tente novamente.`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🔄 Tentar Novamente', callback_data: `sel_ped_sale_${sessionData.selectedSaleId}` }],
+              [{ text: '⬅️ Voltar aos Pedidos', callback_data: 'sub_rec_pedidos' }],
+            ],
+          },
+        });
+        return { ok: true };
+      }
     }
 
     if (data === 'sub_rec_clientes') {

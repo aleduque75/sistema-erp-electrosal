@@ -126,9 +126,13 @@ export class HandleOrderLookupUseCase {
     const inline_keyboard: any[] = [];
 
     if (!allReceived) {
-      text += `Deseja registrar o recebimento deste pedido agora?`;
+      text += `Escolha a ação desejada para este pedido:`;
       inline_keyboard.push([
-        { text: '💰 Registrar Recebimento / Dar Baixa', callback_data: `sel_ped_sale_${sale.id}` },
+        { text: `💰 Baixar Total (${valStr})`, callback_data: `sel_ped_sale_${sale.id}` },
+        { text: '💵 Baixar Outro Valor', callback_data: `parcial_ped_${sale.id}` },
+      ]);
+      inline_keyboard.push([
+        { text: '✂️ Dividir Lançamento', callback_data: `dividir_ped_${sale.id}` },
       ]);
     } else {
       text += `ℹ️ *Este pedido já consta como quitado no sistema.*`;

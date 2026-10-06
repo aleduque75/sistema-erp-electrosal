@@ -53,6 +53,47 @@ export class HandleTelegramMessageUseCase {
       return { ok: true };
     }
 
+    // B.0) Usuário digitou o valor para baixa de pedido (parcial ou customizado)
+    if (sessionData.waitingFor === 'valor_baixa_pedido') {
+      const { amount, date, description } = this.telegramBotService.parseValueAndDate(text);
+      if (amount && amount > 0) {
+        sessionData.amount = amount;
+        if (date) {
+          sessionData.operationDate = date.toISOString();
+        }
+        if (description) {
+          sessionData.description = description;
+        }
+        sessionData.waitingFor = null;
+        await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        const formattedAmount = amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        const numStr = sessionData.selectedOrderNumber ? `#${sessionData.selectedOrderNumber}` : '';
+
+        const replyText = `🏦 *DESTINO DO PAGAMENTO (BAIXA)*\n\n` +
+          `Pedido: *${numStr}*\n` +
+          `Valor a baixar: *R$ ${formattedAmount}*${sessionData.description ? `\nHistórico: *${sessionData.description}*` : ''}\n\n` +
+          `Em qual conta o cliente efetuou o depósito?`;
+
+        const inline_keyboard = [
+          [
+            { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
+            { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
+          ],
+          [{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }],
+          [{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sessionData.selectedOrderNumber || ''}` }],
+        ];
+
+        await this.telegramBotService.callTelegramApi('sendMessage', {
+          chat_id: chatId,
+          text: replyText,
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard },
+        });
+        return { ok: true };
+      }
+    }
+
     // B) Usuário digitou o valor de uma despesa
     if (sessionData.waitingFor === 'valor_despesa') {
       const { amount, date, description } = this.telegramBotService.parseValueAndDate(text);
