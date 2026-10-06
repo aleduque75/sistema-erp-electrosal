@@ -75,7 +75,7 @@ export class AutomationsController {
   @Get('search')
   async searchLookup(
     @Query('q') q?: string,
-    @Query('type') type?: 'categoria' | 'conta',
+    @Query('type') type?: 'categoria' | 'conta' | 'cliente',
   ) {
     return this.automationsService.searchLookup({ q, type });
   }

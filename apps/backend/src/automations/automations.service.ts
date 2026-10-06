@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { ConfirmSaleUseCase } from '../sales/use-cases/confirm-sale.use-case';
 import { CreateTransferUseCase } from '../transacoes/use-cases/create-transfer.use-case';
 import { MediaService } from '../media/media.service';
+import { Cron } from '@nestjs/schedule';
 import Decimal from 'decimal.js';
 
 @Injectable()
@@ -493,7 +494,7 @@ export class AutomationsService {
     };
   }
 
-  async searchLookup(query: { q?: string; type?: 'categoria' | 'conta' }) {
+  async searchLookup(query: { q?: string; type?: 'categoria' | 'conta' | 'cliente' }) {
     const organizationId = this.getOrganizationId();
     const { q, type } = query;
     const searchTerm = (q || '').trim();
@@ -521,6 +522,20 @@ export class AutomationsService {
           ...(searchTerm ? { nome: { contains: searchTerm, mode: 'insensitive' } } : {}),
         },
         take: 6,
+        orderBy: { nome: 'asc' },
+      });
+      return { results };
+    }
+
+    if (type === 'cliente') {
+      const results = await this.prisma.contaCorrente.findMany({
+        where: {
+          organizationId,
+          isActive: true,
+          type: 'CLIENTE',
+          ...(searchTerm ? { nome: { contains: searchTerm, mode: 'insensitive' } } : {}),
+        },
+        take: 8,
         orderBy: { nome: 'asc' },
       });
       return { results };
@@ -831,6 +846,279 @@ export class AutomationsService {
     return { text, inline_keyboard };
   }
 
+  async buildClientSummary(clienteId: string): Promise<{ text: string; inline_keyboard: any[][] }> {
+    const organizationId = this.getOrganizationId();
+    const clientAcc = await this.prisma.contaCorrente.findFirst({
+      where: { id: clienteId, organizationId },
+    });
+
+    if (!clientAcc) {
+      return {
+        text: '⚠️ *Cliente não encontrado no sistema.*',
+        inline_keyboard: [[{ text: '⬅️ Voltar', callback_data: 'sub_rec_clientes' }]],
+      };
+    }
+
+    // 1. Calcular saldo atual da conta corrente (BRL e Gold)
+    const agregados = await this.prisma.transacao.groupBy({
+      by: ['tipo'],
+      where: { contaCorrenteId: clienteId },
+      _sum: {
+        valor: true,
+        goldAmount: true,
+      },
+    });
+
+    const creditosBRL = agregados.find((a) => a.tipo === 'CREDITO')?._sum.valor?.toNumber() || 0;
+    const debitosBRL = agregados.find((a) => a.tipo === 'DEBITO')?._sum.valor?.toNumber() || 0;
+    const creditosGold = agregados.find((a) => a.tipo === 'CREDITO')?._sum.goldAmount?.toNumber() || 0;
+    const debitosGold = agregados.find((a) => a.tipo === 'DEBITO')?._sum.goldAmount?.toNumber() || 0;
+
+    const initialBRL = Number(clientAcc.initialBalanceBRL || 0);
+    const initialGold = Number(clientAcc.initialBalanceGold || 0);
+
+    const saldoBRL = initialBRL + creditosBRL - debitosBRL;
+    const saldoGold = initialGold + creditosGold - debitosGold;
+
+    // Cotação do dia para referência
+    const quoteData = await this.getQuotationForDate(new Date(), 'AU');
+    const goldPrice = quoteData.price || 715;
+
+    // 2. Buscar Pessoa para achar pedidos/duplicatas em aberto
+    const pessoa = await this.prisma.pessoa.findFirst({
+      where: {
+        organizationId,
+        name: { equals: clientAcc.nome, mode: 'insensitive' },
+      },
+    });
+
+    let openReceivables: any[] = [];
+    if (pessoa) {
+      openReceivables = await this.prisma.accountRec.findMany({
+        where: {
+          organizationId,
+          received: false,
+          sale: { pessoaId: pessoa.id },
+        },
+        include: { sale: true },
+        orderBy: { dueDate: 'asc' },
+        take: 5,
+      });
+    }
+
+    // 3. Buscar últimas 2 movimentações
+    const ultimasTransacoes = await this.prisma.transacao.findMany({
+      where: { contaCorrenteId: clienteId },
+      orderBy: { dataHora: 'desc' },
+      take: 2,
+    });
+
+    const nomeLimpo = clientAcc.nome.replace(/[*_`]/g, '');
+    let text = `👤 *RESUMO DO CLIENTE*\n\n`;
+    text += `• *Nome:* ${nomeLimpo}\n`;
+    if (pessoa?.phone) {
+      text += `• *Telefone:* ${pessoa.phone}\n`;
+    }
+    text += `\n⚖️ *SITUAÇÃO DA CONTA CORRENTE:*\n`;
+
+    if (saldoBRL < -0.01 || saldoGold < -0.001) {
+      const devBRL = Math.abs(saldoBRL).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      const devGold = Math.abs(saldoGold).toFixed(3);
+      text += `🔴 *Saldo Devedor:* R$ ${devBRL} (${devGold} g Au)\n`;
+    } else if (saldoBRL > 0.01 || saldoGold > 0.001) {
+      const credBRL = saldoBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      const credGold = saldoGold.toFixed(3);
+      text += `🟢 *Saldo Credor (Adiantamento):* R$ ${credBRL} (${credGold} g Au)\n`;
+    } else {
+      text += `⚪ *Saldo:* R$ 0,00 (Sem pendências em conta)\n`;
+    }
+    text += `_Cotação Au Hoje: R$ ${goldPrice},00 / g_\n\n`;
+
+    // Títulos / Pedidos em aberto
+    if (openReceivables.length > 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      text += `📦 *TÍTULOS / PEDIDOS EM ABERTO (${openReceivables.length}):*\n`;
+      let totalAberto = 0;
+      openReceivables.forEach((rec) => {
+        const val = Number(rec.amount) - Number(rec.amountPaid || 0);
+        totalAberto += val;
+        const num = rec.sale?.orderNumber ? `#${rec.sale.orderNumber}` : 'Venda';
+        const dStr = new Date(rec.dueDate).toLocaleDateString('pt-BR');
+        const isVencido = new Date(rec.dueDate) < today;
+        const diffDays = Math.max(1, Math.floor((today.getTime() - new Date(rec.dueDate).getTime()) / (1000 * 60 * 60 * 24)));
+        const tag = isVencido ? `⚠️ Vencido há ${diffDays}d` : `Vence em ${dStr}`;
+        text += `• ${num}: R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${tag})\n`;
+      });
+      text += `*Total em Títulos:* R$ ${totalAberto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`;
+    } else {
+      text += `📦 *Títulos:* Nenhum pedido/duplicata em aberto.\n\n`;
+    }
+
+    // Últimas movimentações
+    if (ultimasTransacoes.length > 0) {
+      text += `🕒 *ÚLTIMA(S) MOVIMENTAÇÃO(ÕES):*\n`;
+      ultimasTransacoes.forEach((tx) => {
+        const dt = new Date(tx.dataHora).toLocaleDateString('pt-BR');
+        const sinal = tx.tipo === 'CREDITO' ? '🟢 Crédito' : '🔴 Débito';
+        const v = Number(tx.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        const desc = (tx.descricao || '').replace(/[*_`]/g, '');
+        text += `• ${dt} - ${sinal} R$ ${v}${desc ? ` (${desc})` : ''}\n`;
+      });
+      text += '\n';
+    }
+
+    text += `━━━━━━━━━━━━━━━━━━━━\nEscolha a operação desejada:`;
+
+    const inline_keyboard: any[][] = [
+      [{ text: '💰 Registrar Recebimento / Depósito', callback_data: `cli_rec_${clienteId}` }],
+    ];
+
+    if (openReceivables.length > 0) {
+      inline_keyboard.push([
+        { text: `📦 Baixar Pedidos Deste Cliente (${openReceivables.length})`, callback_data: `cli_peds_${clienteId}` },
+      ]);
+    }
+
+    inline_keyboard.push([
+      { text: '⬅️ Voltar aos Clientes', callback_data: 'sub_rec_clientes' },
+      { text: '❌ Cancelar', callback_data: 'cancelar' },
+    ]);
+
+    return { text, inline_keyboard };
+  }
+
+  @Cron('0 30 8 * * *', { timeZone: 'America/Sao_Paulo' })
+  async handleDailyMorningReminder() {
+    try {
+      await this.sendDailyDueSummary();
+    } catch (err) {
+      console.error('Erro ao executar cron diário de cobranças do Telegram:', err);
+    }
+  }
+
+  async sendDailyDueSummary(targetChatId?: string) {
+    const organizationId = this.getOrganizationId();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const quoteData = await this.getQuotationForDate(new Date(), 'AU');
+    const goldPrice = quoteData.price || 715;
+
+    // 1. Vencem Hoje
+    const vencemHoje = await this.prisma.accountRec.findMany({
+      where: {
+        organizationId,
+        received: false,
+        dueDate: { gte: today, lte: endOfToday },
+      },
+      include: { sale: { include: { pessoa: true } } },
+      orderBy: { dueDate: 'asc' },
+    });
+
+    // 2. Vencidos (Anteriores a hoje)
+    const vencidos = await this.prisma.accountRec.findMany({
+      where: {
+        organizationId,
+        received: false,
+        dueDate: { lt: today },
+      },
+      include: { sale: { include: { pessoa: true } } },
+      orderBy: { dueDate: 'asc' },
+    });
+
+    if (vencemHoje.length === 0 && vencidos.length === 0 && !targetChatId) {
+      return;
+    }
+
+    let totalHoje = 0;
+    let goldHoje = 0;
+    vencemHoje.forEach((item) => {
+      const pend = Number(item.amount) - Number(item.amountPaid || 0);
+      totalHoje += pend;
+      goldHoje += item.goldAmount ? Number(item.goldAmount) : (goldPrice > 0 ? pend / goldPrice : 0);
+    });
+
+    let totalVenc = 0;
+    let goldVenc = 0;
+    vencidos.forEach((item) => {
+      const pend = Number(item.amount) - Number(item.amountPaid || 0);
+      totalVenc += pend;
+      goldVenc += item.goldAmount ? Number(item.goldAmount) : (goldPrice > 0 ? pend / goldPrice : 0);
+    });
+
+    const dataHojeFormatada = new Date().toLocaleDateString('pt-BR');
+    let text = `🌅 *RESUMO DIÁRIO DE COBRANÇAS - ERP ELECTROSAL*\n📅 *${dataHojeFormatada}*\n\n`;
+
+    if (vencemHoje.length > 0) {
+      text += `⏰ *VENCEM HOJE (${vencemHoje.length} título${vencemHoje.length > 1 ? 's' : ''}):*\n`;
+      vencemHoje.slice(0, 5).forEach((h) => {
+        const num = h.sale?.orderNumber ? `#${h.sale.orderNumber}` : 'Venda';
+        const cli = (h.sale?.pessoa?.name || h.description || 'Cliente').replace(/[*_`]/g, '');
+        const pend = Number(h.amount) - Number(h.amountPaid || 0);
+        text += `• ${num} - ${cli}: *R$ ${pend.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n`;
+      });
+      if (vencemHoje.length > 5) {
+        text += `_... e mais ${vencemHoje.length - 5} título(s) hoje_\n`;
+      }
+      text += `💰 Previsto para hoje: *R$ ${totalHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (${goldHoje.toFixed(3)} g Au)\n\n`;
+    } else {
+      text += `⏰ *VENCEM HOJE:* Nenhum título previsto para hoje.\n\n`;
+    }
+
+    if (vencidos.length > 0) {
+      text += `🔴 *EM ATRASO / VENCIDOS (${vencidos.length} título${vencidos.length > 1 ? 's' : ''}):*\n`;
+      vencidos.slice(0, 5).forEach((v) => {
+        const num = v.sale?.orderNumber ? `#${v.sale.orderNumber}` : 'Venda';
+        const cli = (v.sale?.pessoa?.name || v.description || 'Cliente').replace(/[*_`]/g, '');
+        const pend = Number(v.amount) - Number(v.amountPaid || 0);
+        const diffTime = today.getTime() - new Date(v.dueDate).getTime();
+        const diffDays = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+        text += `• ${num} - ${cli}: *R$ ${pend.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (⚠️ ${diffDays}d)\n`;
+      });
+      if (vencidos.length > 5) {
+        text += `_... e mais ${vencidos.length - 5} título(s) em atraso_\n`;
+      }
+      text += `⚠️ Total em atraso: *R$ ${totalVenc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (${goldVenc.toFixed(3)} g Au)\n\n`;
+    } else {
+      text += `🎉 *VENCIDOS:* Nenhum título em atraso!\n\n`;
+    }
+
+    text += `━━━━━━━━━━━━━━━━━━━━\n💡 _Abra a Central de Cobranças para ver os detalhes ou registrar baixas no sistema._`;
+
+    const inline_keyboard = [
+      [{ text: '⚠️ Abrir Central de Cobranças', callback_data: 'menu_cobrancas' }],
+      [{ text: '📱 Menu Principal', callback_data: 'menu_principal' }],
+    ];
+
+    if (targetChatId) {
+      await this.callTelegramApi('sendMessage', {
+        chat_id: targetChatId,
+        text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard },
+      });
+    } else {
+      const chats = await this.prisma.$queryRawUnsafe<any[]>(
+        `SELECT DISTINCT chat_id FROM erp.telegram_sessions WHERE chat_id IS NOT NULL`,
+      );
+      if (chats && chats.length > 0) {
+        for (const c of chats) {
+          await this.callTelegramApi('sendMessage', {
+            chat_id: c.chat_id,
+            text,
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard },
+          });
+        }
+      }
+    }
+  }
+
   async getTelegramSession(chatId: string) {
     const rows = await this.prisma.$queryRawUnsafe<any[]>(
       `SELECT chat_id, file_id, data FROM erp.telegram_sessions WHERE chat_id = $1`,
@@ -903,9 +1191,10 @@ export class AutomationsService {
             { text: '💸 Pagamento / Despesa', callback_data: 'menu_desp' },
           ],
           [
+            { text: '⚠️ Cobranças / Vencimentos', callback_data: 'menu_cobrancas' },
             { text: '📊 Cotações de Hoje', callback_data: 'menu_cotacoes' },
-            { text: '❌ Cancelar', callback_data: 'cancelar' },
           ],
+          [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
         ];
 
         await this.callTelegramApi('editMessageText', {
@@ -916,6 +1205,351 @@ export class AutomationsService {
           reply_markup: { inline_keyboard },
         });
         return { ok: true };
+      }
+
+      if (data === 'menu_cobrancas') {
+        const organizationId = this.getOrganizationId();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+
+        const next7Days = new Date(today);
+        next7Days.setDate(next7Days.getDate() + 7);
+        next7Days.setHours(23, 59, 59, 999);
+
+        const totalVencidos = await this.prisma.accountRec.count({
+          where: {
+            organizationId,
+            received: false,
+            dueDate: { lt: today },
+          },
+        });
+
+        const totalVencemHoje = await this.prisma.accountRec.count({
+          where: {
+            organizationId,
+            received: false,
+            dueDate: { gte: today, lte: endOfToday },
+          },
+        });
+
+        const totalProx7Dias = await this.prisma.accountRec.count({
+          where: {
+            organizationId,
+            received: false,
+            dueDate: { gt: endOfToday, lte: next7Days },
+          },
+        });
+
+        let text = '⚠️ *CENTRAL DE COBRANÇAS E VENCIMENTOS*\n\n';
+        text += `🔴 *Vencidos (Em atraso):* *${totalVencidos}* título(s)\n`;
+        text += `⏰ *Vencem Hoje:* *${totalVencemHoje}* título(s)\n`;
+        text += `📅 *Próximos 7 dias:* *${totalProx7Dias}* título(s)\n\n`;
+        text += 'Selecione a opção que deseja visualizar:';
+
+        const inline_keyboard = [
+          [{ text: `🔴 Ver Vencidos (${totalVencidos})`, callback_data: 'cobranca_vencidos' }],
+          [{ text: `⏰ Ver a Vencer (${totalVencemHoje + totalProx7Dias})`, callback_data: 'cobranca_avencer' }],
+          [{ text: '⬅️ Voltar ao Menu Principal', callback_data: 'menu_principal' }],
+        ];
+
+        await this.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard },
+        });
+        return { ok: true };
+      }
+
+      if (data === 'cobranca_vencidos') {
+        const organizationId = this.getOrganizationId();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const quoteData = await this.getQuotationForDate(new Date(), 'AU');
+        const goldPrice = quoteData.price || 715;
+
+        const vencidos = await this.prisma.accountRec.findMany({
+          where: {
+            organizationId,
+            received: false,
+            dueDate: { lt: today },
+          },
+          include: {
+            sale: {
+              include: {
+                pessoa: true,
+              },
+            },
+          },
+          orderBy: { dueDate: 'asc' },
+          take: 10,
+        });
+
+        sessionData.cachedVencidos = vencidos;
+        await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        let text = '🔴 *TÍTULOS VENCIDOS / EM ATRASO*\n\n';
+        const inline_keyboard: any[] = [];
+
+        if (vencidos.length === 0) {
+          text += '🎉 *Parabéns! Não há nenhum título vencido no momento.*\n';
+        } else {
+          let somaValor = 0;
+          let somaGold = 0;
+
+          vencidos.forEach((item, idx) => {
+            const pendente = Number(item.amount) - Number(item.amountPaid || 0);
+            const gold = item.goldAmount ? Number(item.goldAmount) : (goldPrice > 0 ? pendente / goldPrice : 0);
+            somaValor += pendente;
+            somaGold += gold;
+
+            const diffTime = today.getTime() - new Date(item.dueDate).getTime();
+            const diffDays = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+            const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
+            const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
+            const valStr = pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+            inline_keyboard.push([
+              {
+                text: `🔴 ${num} - ${cli.slice(0, 14)}: R$ ${valStr} (${diffDays}d)`,
+                callback_data: `venc_det_${idx}`,
+              },
+            ]);
+          });
+
+          text += `📊 *Total em atraso:* *R$ ${somaValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (${somaGold.toFixed(3)} g Au)\n`;
+          text += `Exibindo os *${vencidos.length}* títulos com maior atraso.\nClique para ver detalhes ou baixar:`;
+        }
+
+        inline_keyboard.push([
+          { text: '⬅️ Voltar às Cobranças', callback_data: 'menu_cobrancas' },
+          { text: '⬅️ Menu Principal', callback_data: 'menu_principal' },
+        ]);
+
+        await this.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard },
+        });
+        return { ok: true };
+      }
+
+      if (data.startsWith('venc_det_')) {
+        const idx = parseInt(data.replace('venc_det_', ''), 10);
+        const item = (sessionData.cachedVencidos || [])[idx];
+        if (item) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const pendente = Number(item.amount) - Number(item.amountPaid || 0);
+          const diffTime = today.getTime() - new Date(item.dueDate).getTime();
+          const diffDays = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+          const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
+          const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
+          const dStr = new Date(item.dueDate).toLocaleDateString('pt-BR');
+          const tel = item.sale?.pessoa?.phone ? `\n• Contato: *${item.sale.pessoa.phone}*` : '';
+
+          const text = `🔴 *DETALHES DO TÍTULO VENCIDO*\n\n• Pedido: *${num}*\n• Cliente: *${cli}*${tel}\n• Valor: *R$ ${pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n• Data de Vencimento: *${dStr}*\n• Situação: ⚠️ *Vencido há ${diffDays} dia(s)*\n\nDeseja dar baixa neste recebimento?`;
+          const inline_keyboard = [
+            [{ text: '💰 Dar Baixa / Receber Agora', callback_data: `bx_venc_${idx}` }],
+            [{ text: '⬅️ Voltar aos Vencidos', callback_data: 'cobranca_vencidos' }],
+          ];
+
+          await this.callTelegramApi('editMessageText', {
+            chat_id: chatId,
+            message_id: messageId,
+            text,
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard },
+          });
+          return { ok: true };
+        }
+      }
+
+      if (data.startsWith('bx_venc_')) {
+        const idx = parseInt(data.replace('bx_venc_', ''), 10);
+        const item = (sessionData.cachedVencidos || [])[idx];
+        if (item) {
+          sessionData.selectedSaleId = item.saleId || item.id;
+          sessionData.selectedOrderNumber = item.sale?.orderNumber;
+          await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+          const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
+          const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
+          const pend = Number(item.amount) - Number(item.amountPaid || 0);
+
+          const text = `🏦 *DESTINO DO PAGAMENTO*\n\nPedido: *${num}* (${cli})\nValor: *R$ ${pend.toFixed(2)}*\n\nEm qual conta o cliente efetuou o depósito?`;
+          const inline_keyboard = [
+            [
+              { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
+              { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
+            ],
+            [{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }],
+            [{ text: '⬅️ Voltar aos Vencidos', callback_data: 'cobranca_vencidos' }],
+          ];
+
+          await this.callTelegramApi('editMessageText', {
+            chat_id: chatId,
+            message_id: messageId,
+            text,
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard },
+          });
+          return { ok: true };
+        }
+      }
+
+      if (data === 'cobranca_avencer') {
+        const organizationId = this.getOrganizationId();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const next7Days = new Date(today);
+        next7Days.setDate(next7Days.getDate() + 7);
+        next7Days.setHours(23, 59, 59, 999);
+
+        const quoteData = await this.getQuotationForDate(new Date(), 'AU');
+        const goldPrice = quoteData.price || 715;
+
+        const aVencer = await this.prisma.accountRec.findMany({
+          where: {
+            organizationId,
+            received: false,
+            dueDate: {
+              gte: today,
+              lte: next7Days,
+            },
+          },
+          include: {
+            sale: {
+              include: {
+                pessoa: true,
+              },
+            },
+          },
+          orderBy: { dueDate: 'asc' },
+          take: 10,
+        });
+
+        sessionData.cachedAVencer = aVencer;
+        await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        let text = '⏰ *TÍTULOS A VENCER (HOJE E PRÓXIMOS 7 DIAS)*\n\n';
+        const inline_keyboard: any[] = [];
+
+        if (aVencer.length === 0) {
+          text += 'ℹ️ *Nenhum título previsto para os próximos 7 dias.*\n';
+        } else {
+          let somaValor = 0;
+          let somaGold = 0;
+
+          aVencer.forEach((item, idx) => {
+            const pendente = Number(item.amount) - Number(item.amountPaid || 0);
+            const gold = item.goldAmount ? Number(item.goldAmount) : (goldPrice > 0 ? pendente / goldPrice : 0);
+            somaValor += pendente;
+            somaGold += gold;
+
+            const dStr = new Date(item.dueDate).toLocaleDateString('pt-BR');
+            const isHoje = new Date(item.dueDate).toDateString() === today.toDateString();
+            const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
+            const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
+            const valStr = pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            const tag = isHoje ? '⏰ HOJE' : dStr;
+
+            inline_keyboard.push([
+              {
+                text: `${isHoje ? '⚡' : '📅'} ${num} - ${cli.slice(0, 12)}: R$ ${valStr} (${tag})`,
+                callback_data: `avenc_det_${idx}`,
+              },
+            ]);
+          });
+
+          text += `📊 *Total previsto:* *R$ ${somaValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (${somaGold.toFixed(3)} g Au)\n`;
+          text += `Clique para ver detalhes ou registrar baixa:`;
+        }
+
+        inline_keyboard.push([
+          { text: '⬅️ Voltar às Cobranças', callback_data: 'menu_cobrancas' },
+          { text: '⬅️ Menu Principal', callback_data: 'menu_principal' },
+        ]);
+
+        await this.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard },
+        });
+        return { ok: true };
+      }
+
+      if (data.startsWith('avenc_det_')) {
+        const idx = parseInt(data.replace('avenc_det_', ''), 10);
+        const item = (sessionData.cachedAVencer || [])[idx];
+        if (item) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const pendente = Number(item.amount) - Number(item.amountPaid || 0);
+          const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
+          const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
+          const dStr = new Date(item.dueDate).toLocaleDateString('pt-BR');
+          const isHoje = new Date(item.dueDate).toDateString() === today.toDateString();
+          const tel = item.sale?.pessoa?.phone ? `\n• Contato: *${item.sale.pessoa.phone}*` : '';
+
+          const text = `⏰ *DETALHES DO TÍTULO A VENCER*\n\n• Pedido: *${num}*\n• Cliente: *${cli}*${tel}\n• Valor: *R$ ${pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n• Data de Vencimento: *${dStr}* ${isHoje ? '*(Vence HOJE)*' : ''}\n\nDeseja registrar o recebimento deste valor?`;
+          const inline_keyboard = [
+            [{ text: '💰 Registrar Recebimento / Baixa', callback_data: `bx_avenc_${idx}` }],
+            [{ text: '⬅️ Voltar aos a Vencer', callback_data: 'cobranca_avencer' }],
+          ];
+
+          await this.callTelegramApi('editMessageText', {
+            chat_id: chatId,
+            message_id: messageId,
+            text,
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard },
+          });
+          return { ok: true };
+        }
+      }
+
+      if (data.startsWith('bx_avenc_')) {
+        const idx = parseInt(data.replace('bx_avenc_', ''), 10);
+        const item = (sessionData.cachedAVencer || [])[idx];
+        if (item) {
+          sessionData.selectedSaleId = item.saleId || item.id;
+          sessionData.selectedOrderNumber = item.sale?.orderNumber;
+          await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+          const num = item.sale?.orderNumber ? `#${item.sale.orderNumber}` : 'Venda';
+          const cli = (item.sale?.pessoa?.name || item.description || 'Cliente').replace(/[*_`]/g, '');
+          const pend = Number(item.amount) - Number(item.amountPaid || 0);
+
+          const text = `🏦 *DESTINO DO PAGAMENTO*\n\nPedido: *${num}* (${cli})\nValor: *R$ ${pend.toFixed(2)}*\n\nEm qual conta o cliente efetuou o depósito?`;
+          const inline_keyboard = [
+            [
+              { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
+              { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
+            ],
+            [{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }],
+            [{ text: '⬅️ Voltar aos a Vencer', callback_data: 'cobranca_avencer' }],
+          ];
+
+          await this.callTelegramApi('editMessageText', {
+            chat_id: chatId,
+            message_id: messageId,
+            text,
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard },
+          });
+          return { ok: true };
+        }
       }
 
       if (data === 'menu_cotacoes') {
@@ -955,7 +1589,7 @@ export class AutomationsService {
           '💰 *RECEBIMENTO DE CLIENTE*\n\nO valor depositado é referente a:\n\n1️⃣ *Baixar Pedido:* Pedidos pendentes no Contas a Receber (A Combinar / A Prazo).\n2️⃣ *Abater CC do Cliente:* Para clientes que compram à vista na Conta Corrente.';
         const inline_keyboard = [
           [{ text: '📦 Baixar Pedido (A Receber)', callback_data: 'sub_rec_pedidos' }],
-          [{ text: '👤 Abater da CC do Cliente', callback_data: 'sub_rec_clientes' }],
+          [{ text: '👤 Clientes / Conta Corrente', callback_data: 'sub_rec_clientes' }],
           [{ text: '⬅️ Voltar ao Menu Principal', callback_data: 'menu_principal' }],
         ];
         await this.callTelegramApi('editMessageText', {
@@ -1059,12 +1693,15 @@ export class AutomationsService {
         sessionData.cachedClientAccounts = clients;
         await this.saveTelegramSession(chatId, session.fileId, sessionData);
 
-        let text = '👤 *CLIENTES COM CONTA CORRENTE ATIVA*\n\nSelecione o cliente que efetuou o depósito:';
+        let text = '👤 *CLIENTES - CONTA CORRENTE*\n\nSelecione um cliente para abrir o *resumo financeiro* e operações:';
         const inline_keyboard: any[] = [];
-        clients.forEach((c: any) => {
+        clients.slice(0, 8).forEach((c: any) => {
           inline_keyboard.push([{ text: `👤 ${c.name}`, callback_data: `cli_${c.id}` }]);
         });
-        inline_keyboard.push([{ text: '⬅️ Voltar', callback_data: 'menu_rec' }]);
+        inline_keyboard.push([
+          { text: '🔍 Buscar Cliente por Nome', callback_data: 'busca_cliente_rec' },
+          { text: '⬅️ Voltar', callback_data: 'menu_rec' },
+        ]);
 
         await this.callTelegramApi('editMessageText', {
           chat_id: chatId,
@@ -1076,8 +1713,25 @@ export class AutomationsService {
         return { ok: true };
       }
 
-      if (data.startsWith('cli_')) {
-        const clienteId = data.replace('cli_', '');
+      if (data === 'busca_cliente_rec') {
+        sessionData.waitingFor = 'busca_cliente';
+        await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        const text = '🔍 *BUSCAR CLIENTE*\n\n👉 Digite no chat parte do nome do cliente que procura:';
+        await this.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: '⬅️ Voltar aos Clientes', callback_data: 'sub_rec_clientes' }]],
+          },
+        });
+        return { ok: true };
+      }
+
+      if (data.startsWith('cli_rec_')) {
+        const clienteId = data.replace('cli_rec_', '');
         const clientAcc = await this.prisma.contaCorrente.findUnique({
           where: { id: clienteId },
         });
@@ -1089,8 +1743,84 @@ export class AutomationsService {
         const inline_keyboard = [
           [{ text: '🏦 Minha Conta Itaú', callback_data: 'dep_cli_itau' }],
           [{ text: '🏭 Fornecedor Metal (BSA)', callback_data: 'dep_cli_bsa' }],
-          [{ text: '⬅️ Voltar aos Clientes', callback_data: 'sub_rec_clientes' }],
+          [{ text: '⬅️ Voltar ao Resumo', callback_data: `cli_${clienteId}` }],
         ];
+
+        await this.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard },
+        });
+        return { ok: true };
+      }
+
+      if (data.startsWith('cli_peds_')) {
+        const clienteId = data.replace('cli_peds_', '');
+        const clientAcc = await this.prisma.contaCorrente.findUnique({
+          where: { id: clienteId },
+        });
+        const pessoa = await this.prisma.pessoa.findFirst({
+          where: {
+            organizationId: this.getOrganizationId(),
+            name: { equals: clientAcc?.nome || '', mode: 'insensitive' },
+          },
+        });
+
+        const pending = pessoa
+          ? await this.prisma.accountRec.findMany({
+              where: {
+                organizationId: this.getOrganizationId(),
+                received: false,
+                sale: { pessoaId: pessoa.id },
+              },
+              include: { sale: { include: { pessoa: true } } },
+              orderBy: { dueDate: 'asc' },
+            })
+          : [];
+
+        sessionData.cachedReceivables = pending.map((ar) => ({
+          id: ar.id,
+          description: ar.description,
+          amount: Number(ar.amount) - Number(ar.amountPaid || 0),
+          dueDate: ar.dueDate,
+          saleId: ar.saleId,
+          orderNumber: ar.sale?.orderNumber,
+          clientName: ar.sale?.pessoa?.name,
+        }));
+        await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        const nome = clientAcc?.nome ? clientAcc.nome.replace(/[*_`]/g, '') : 'CLIENTE';
+        let text = `📦 *PEDIDOS EM ABERTO - ${nome.toUpperCase()}*\n\nSelecione o pedido para dar baixa:`;
+        const inline_keyboard: any[] = [];
+        if (sessionData.cachedReceivables.length > 0) {
+          sessionData.cachedReceivables.forEach((p: any, idx: number) => {
+            const num = p.orderNumber ? `#${p.orderNumber}` : 'Venda';
+            const val = p.amount ? `R$ ${Number(p.amount).toFixed(2)}` : '';
+            inline_keyboard.push([{ text: `${num} - ${val}`.trim(), callback_data: `ped_${idx}` }]);
+          });
+        } else {
+          text = `ℹ️ *Nenhum pedido pendente encontrado para este cliente.*`;
+        }
+        inline_keyboard.push([{ text: '⬅️ Voltar ao Resumo', callback_data: `cli_${clienteId}` }]);
+
+        await this.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard },
+        });
+        return { ok: true };
+      }
+
+      if (data.startsWith('cli_') && !data.startsWith('cli_rec_') && !data.startsWith('cli_peds_')) {
+        const clienteId = data.replace('cli_', '');
+        sessionData.selectedClienteId = clienteId;
+        await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        const { text, inline_keyboard } = await this.buildClientSummary(clienteId);
 
         await this.callTelegramApi('editMessageText', {
           chat_id: chatId,
@@ -1516,9 +2246,10 @@ export class AutomationsService {
             { text: '💸 Pagamento / Despesa', callback_data: 'menu_desp' },
           ],
           [
+            { text: '⚠️ Cobranças / Vencimentos', callback_data: 'menu_cobrancas' },
             { text: '📊 Cotações de Hoje', callback_data: 'menu_cotacoes' },
-            { text: '❌ Cancelar', callback_data: 'cancelar' },
           ],
+          [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
         ];
 
         await this.callTelegramApi('sendMessage', {
@@ -1805,7 +2536,53 @@ export class AutomationsService {
         return { ok: true };
       }
 
-      // E) Mensagem geral (ex: menu, ola, /start)
+      // D.2) Usuário digitou termo para buscar cliente
+      if (sessionData.waitingFor === 'busca_cliente') {
+        sessionData.waitingFor = null;
+        const search = await this.searchLookup({ type: 'cliente', q: text });
+        const results = search.results || [];
+        sessionData.cachedSearchClients = results;
+        await this.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        const inline_keyboard: any[] = [];
+        let replyText = '';
+        if (results.length > 0) {
+          replyText = '🔍 *CLIENTES ENCONTRADOS:*\n\nSelecione um cliente para abrir o resumo financeiro:';
+          results.forEach((c: any) => {
+            inline_keyboard.push([{ text: `👤 ${c.nome}`, callback_data: `cli_${c.id}` }]);
+          });
+        } else {
+          replyText = `⚠️ Nenhum cliente encontrado para "*${text}*".`;
+        }
+        inline_keyboard.push([
+          { text: '🔍 Buscar Outro Nome', callback_data: 'busca_cliente_rec' },
+          { text: '⬅️ Ver Todos os Clientes', callback_data: 'sub_rec_clientes' },
+        ]);
+
+        await this.callTelegramApi('sendMessage', {
+          chat_id: chatId,
+          text: replyText,
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard },
+        });
+        return { ok: true };
+      }
+
+      // E.1) Atalho por comando de texto para cobranças/vencidos
+      const cleanCmd = text.toLowerCase().trim();
+      if (
+        cleanCmd === '/cobrancas' ||
+        cleanCmd === 'cobrancas' ||
+        cleanCmd === 'cobrança' ||
+        cleanCmd === 'cobranca' ||
+        cleanCmd === '/vencidos' ||
+        cleanCmd === 'vencidos'
+      ) {
+        await this.sendDailyDueSummary(chatId);
+        return { ok: true };
+      }
+
+      // E.2) Mensagem geral (ex: menu, ola, /start)
       let replyText = '🏢 *ELECTROSAL - GESTÃO FINANCEIRA*\n\n';
       if (session.fileId) {
         replyText += '📸 *Comprovante em anexo na sessão!*\n\n';
@@ -1818,9 +2595,10 @@ export class AutomationsService {
           { text: '💸 Pagamento / Despesa', callback_data: 'menu_desp' },
         ],
         [
+          { text: '⚠️ Cobranças / Vencimentos', callback_data: 'menu_cobrancas' },
           { text: '📊 Cotações de Hoje', callback_data: 'menu_cotacoes' },
-          { text: '❌ Cancelar', callback_data: 'cancelar' },
         ],
+        [{ text: '❌ Cancelar', callback_data: 'cancelar' }],
       ];
 
       await this.callTelegramApi('sendMessage', {
