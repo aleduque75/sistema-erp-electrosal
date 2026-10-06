@@ -27,7 +27,22 @@ export class TelegramBotService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      return await res.json();
+      const data = await res.json();
+      if (!data.ok) {
+        console.error(`Telegram API error (${method}):`, data);
+        // Se falhar por erro de formatação Markdown ("can't parse entities"), reenviar sem parse_mode para garantir entrega
+        if (payload.parse_mode && data.description?.includes("can't parse entities")) {
+          const fallbackPayload = { ...payload };
+          delete fallbackPayload.parse_mode;
+          const retryRes = await fetch(`https://api.telegram.org/bot${this.botToken}/${method}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fallbackPayload),
+          });
+          return await retryRes.json();
+        }
+      }
+      return data;
     } catch (e) {
       console.error(`Erro ao chamar Telegram API (${method}):`, e);
       return null;

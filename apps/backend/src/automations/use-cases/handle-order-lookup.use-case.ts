@@ -113,14 +113,17 @@ export class HandleOrderLookupUseCase {
     } else if (sale.paymentMethod === 'A_VISTA') {
       statusDesc = '🟢 *Pago à Vista*';
     } else {
-      statusDesc = `🟡 *Pendente (${sale.status})*`;
+      const cleanStatus = (sale.status || '').replace(/_/g, ' ');
+      statusDesc = `🟡 *Pendente (${cleanStatus})*`;
     }
+
+    const cleanPaymentMethod = (sale.paymentMethod || 'A Combinar').replace(/_/g, ' ');
 
     let text = `📦 *DETALHES DO PEDIDO #${sale.orderNumber}*\n\n`;
     text += `• *Cliente:* ${cli}${tel}\n`;
     text += `• *Data da Venda:* ${dataCriacao}\n`;
     text += `• *Valor:* *${valStr}*${metalTag}\n`;
-    text += `• *Forma de Pagto:* ${sale.paymentMethod || 'A Combinar'}\n`;
+    text += `• *Forma de Pagto:* ${cleanPaymentMethod}\n`;
     text += `• *Situação:* ${statusDesc}\n\n`;
 
     const inline_keyboard: any[] = [];
