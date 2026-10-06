@@ -37,9 +37,11 @@ export class AutomationsService {
 
   async settleSale(dto: {
     saleId: string;
-    contaCorrenteId: string;
+    contaCorrenteId?: string;
+    existingTransacaoId?: string;
     amount?: number;
     date?: string;
+    quotation?: number;
     observation?: string;
     fileBase64?: string;
     mimeType?: string;

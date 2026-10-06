@@ -67,28 +67,56 @@ export class HandleTelegramMessageUseCase {
         sessionData.waitingFor = null;
         await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
 
-        const formattedAmount = amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        const numStr = sessionData.selectedOrderNumber ? `#${sessionData.selectedOrderNumber}` : '';
+        return this.telegramBotService.renderPaymentDestination({
+          chatId,
+          session,
+          sessionData,
+        });
+      }
+    }
 
-        const replyText = `🏦 *DESTINO DO PAGAMENTO (BAIXA)*\n\n` +
-          `Pedido: *${numStr}*\n` +
-          `Valor a baixar: *R$ ${formattedAmount}*${sessionData.description ? `\nHistórico: *${sessionData.description}*` : ''}\n\n` +
-          `Em qual conta o cliente efetuou o depósito?`;
+    // B.0.1) Usuário digitou uma nova data para a baixa do pedido
+    if (sessionData.waitingFor === 'mudar_data_baixa') {
+      const parsedDate = this.telegramBotService.parseDateOnly(text);
+      if (parsedDate) {
+        sessionData.operationDate = parsedDate.toISOString();
+        sessionData.waitingFor = null;
+        await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
 
-        const inline_keyboard = [
-          [
-            { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
-            { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
-          ],
-          [{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }],
-          [{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sessionData.selectedOrderNumber || ''}` }],
-        ];
-
+        return this.telegramBotService.renderPaymentDestination({
+          chatId,
+          session,
+          sessionData,
+        });
+      } else {
         await this.telegramBotService.callTelegramApi('sendMessage', {
           chat_id: chatId,
-          text: replyText,
+          text: `⚠️ *Data não reconhecida.* Digite a data no formato \`DD/MM/AAAA\` (ex: \`05/10/2026\` ou \`02/10\`):`,
           parse_mode: 'Markdown',
-          reply_markup: { inline_keyboard },
+        });
+        return { ok: true };
+      }
+    }
+
+    // B.0.2) Usuário digitou uma cotação personalizada para a baixa do pedido
+    if (sessionData.waitingFor === 'mudar_cotacao_baixa') {
+      const cleaned = text.replace(',', '.').replace(/[^0-9.]/g, '');
+      const num = parseFloat(cleaned);
+      if (!isNaN(num) && num > 0) {
+        sessionData.customQuotation = num;
+        sessionData.waitingFor = null;
+        await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        return this.telegramBotService.renderPaymentDestination({
+          chatId,
+          session,
+          sessionData,
+        });
+      } else {
+        await this.telegramBotService.callTelegramApi('sendMessage', {
+          chat_id: chatId,
+          text: `⚠️ *Valor de cotação inválido.* Digite um número positivo (ex: \`685\` ou \`715.50\`):`,
+          parse_mode: 'Markdown',
         });
         return { ok: true };
       }

@@ -204,6 +204,185 @@ export class TelegramBotService {
     }
   }
 
+  async findMatchingTransactionsForSale(saleId: string, orderNumber: number, amount: number) {
+    try {
+      const organizationId = this.getOrganizationId();
+      const numStr = String(orderNumber);
+
+      // 1. Transações que citam o número do pedido ou vinculadas à venda
+      const byDesc = await this.prisma.transacao.findMany({
+        where: {
+          organizationId,
+          tipo: 'CREDITO',
+          OR: [
+            { descricao: { contains: `#${numStr}` } },
+            { descricao: { contains: `Pedido #${numStr}` } },
+            { descricao: { contains: `Pedido ${numStr}` } },
+            { accountRec: { saleId } },
+          ],
+        },
+        include: { contaCorrente: { select: { id: true, nome: true } } },
+        orderBy: { dataHora: 'desc' },
+        take: 3,
+      });
+
+      // 2. Transações de crédito recentes com o mesmo valor (± 0.05) que ainda não estão vinculadas a nenhum título
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const byAmount = await this.prisma.transacao.findMany({
+        where: {
+          organizationId,
+          tipo: 'CREDITO',
+          valor: {
+            gte: amount - 0.05,
+            lte: amount + 0.05,
+          },
+          dataHora: { gte: thirtyDaysAgo },
+          accountRecId: null,
+        },
+        include: { contaCorrente: { select: { id: true, nome: true } } },
+        orderBy: { dataHora: 'desc' },
+        take: 3,
+      });
+
+      const map = new Map<string, any>();
+      byDesc.forEach((t) => map.set(t.id, { ...t, matchReason: 'ORDER_NUM' }));
+      byAmount.forEach((t) => {
+        if (!map.has(t.id)) map.set(t.id, { ...t, matchReason: 'EXACT_AMOUNT' });
+      });
+
+      return Array.from(map.values());
+    } catch (err) {
+      console.error('Erro ao buscar transações correspondentes para venda:', err);
+      return [];
+    }
+  }
+
+  async renderPaymentDestination(params: {
+    chatId: string;
+    session: any;
+    sessionData: any;
+    messageId?: number;
+  }) {
+    const { chatId, session, sessionData, messageId } = params;
+    const organizationId = this.getOrganizationId();
+    const saleId = sessionData.selectedSaleId;
+    if (!saleId) return { ok: false };
+
+    const sale = await this.prisma.sale.findFirst({
+      where: { id: saleId, organizationId },
+      include: {
+        pessoa: true,
+        accountsRec: true,
+        metalReceivable: true,
+        saleItems: {
+          include: {
+            product: {
+              include: { productGroup: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!sale) return { ok: false };
+
+    const paymentDate = sessionData.operationDate ? new Date(sessionData.operationDate) : new Date();
+    const dateFormatted = paymentDate.toLocaleDateString('pt-BR');
+    const isToday = paymentDate.toDateString() === new Date().toDateString();
+
+    const [quoteAu, quoteAg] = await Promise.all([
+      this.getQuotationForDate(paymentDate, 'AU'),
+      this.getQuotationForDate(paymentDate, 'AG'),
+    ]);
+    const defaultAu = quoteAu.price || 715;
+    const defaultAg = quoteAg.price || 6.5;
+
+    const pendingAccount = sale.accountsRec.find((ar) => !ar.received);
+    let defaultAmount = Number(sale.netAmount || sale.totalAmount || 0);
+
+    let isSilver = false;
+    if (pendingAccount) {
+      const info = this.resolveReceivableInfo(pendingAccount, defaultAu, defaultAg);
+      defaultAmount = info.pendente;
+      isSilver = info.isSilver;
+    }
+
+    const payAmount = sessionData.amount && sessionData.amount > 0 ? Number(sessionData.amount) : defaultAmount;
+    const unit = isSilver ? 'Ag' : 'Au';
+    const currentQuotation = sessionData.customQuotation && sessionData.customQuotation > 0
+      ? Number(sessionData.customQuotation)
+      : (isSilver ? defaultAg : defaultAu);
+
+    const metalGrams = currentQuotation > 0 ? payAmount / currentQuotation : 0;
+    const metalStr = `${metalGrams.toFixed(isSilver ? 2 : 4)} g ${unit}`;
+
+    const cli = (sale.pessoa?.name || 'Cliente').replace(/[*_`]/g, '');
+
+    // Verificar se já existe transação similar na conta corrente
+    const matchingTxs = await this.findMatchingTransactionsForSale(sale.id, sale.orderNumber, payAmount);
+
+    let text = `🏦 *DESTINO DO PAGAMENTO - PEDIDO #${sale.orderNumber}*\n\n`;
+    text += `• *Cliente:* ${cli}\n`;
+    text += `• *Valor a Baixar:* *R$ ${payAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n`;
+    text += `• *Data do Recebimento:* *${dateFormatted}* ${isToday ? '_(Hoje)_' : ''}\n`;
+    text += `• *Cotação ${unit}:* *R$ ${currentQuotation.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/g* (≈ *${metalStr}*)\n\n`;
+
+    const inline_keyboard: any[] = [];
+
+    if (matchingTxs.length > 0) {
+      text += `⚠️ *Atenção: Identificamos lançamento na conta corrente:*\n`;
+      matchingTxs.forEach((m) => {
+        const dStr = new Date(m.dataHora).toLocaleDateString('pt-BR');
+        const vStr = Number(m.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        const cNome = m.contaCorrente?.nome || 'Conta';
+        const dDesc = (m.descricao || '').trim();
+        text += `• *${cNome}*: R$ ${vStr} em ${dStr}\n  _${dDesc}_\n`;
+
+        inline_keyboard.push([
+          {
+            text: `🔗 Vincular ao Lançamento Existente (${cNome})`,
+            callback_data: `bx_link_${m.id}`,
+          },
+        ]);
+      });
+      text += `\nDeseja vincular ao lançamento existente (sem duplicar saldo) ou registrar novo crédito?\n`;
+    } else {
+      text += `Selecione a conta onde o recurso entrou:\n`;
+    }
+
+    inline_keyboard.push([
+      { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
+      { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
+    ]);
+    inline_keyboard.push([{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }]);
+    inline_keyboard.push([
+      { text: '📅 Alterar Data', callback_data: 'mudar_data_baixa' },
+      { text: '📈 Alterar Cotação', callback_data: 'mudar_cotacao_baixa' },
+    ]);
+    inline_keyboard.push([{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sale.orderNumber}` }]);
+
+    if (messageId) {
+      await this.callTelegramApi('editMessageText', {
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard },
+      });
+    } else {
+      await this.callTelegramApi('sendMessage', {
+        chat_id: chatId,
+        text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard },
+      });
+    }
+    return { ok: true };
+  }
+
+
   resolveReceivableInfo(
     item: any,
     auPrice: number,

@@ -589,70 +589,113 @@ export class HandleTelegramCallbackUseCase {
 
     if (data.startsWith('sel_ped_sale_')) {
       const saleId = data.replace('sel_ped_sale_', '');
-      const sale = await this.prisma.sale.findUnique({
-        where: { id: saleId },
-        include: {
-          pessoa: true,
-          accountsRec: true,
-          metalReceivable: true,
-          saleItems: {
-            include: {
-              product: {
-                include: {
-                  productGroup: true,
-                },
-              },
-            },
-          },
-        },
+      sessionData.selectedSaleId = saleId;
+      sessionData.amount = undefined; // Quitar o total
+      sessionData.operationDate = undefined;
+      sessionData.customQuotation = undefined;
+      sessionData.waitingFor = null;
+      await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+      return this.telegramBotService.renderPaymentDestination({
+        chatId,
+        session,
+        sessionData,
+        messageId,
       });
-
-      if (sale) {
-        sessionData.selectedSaleId = sale.id;
-        sessionData.selectedOrderNumber = sale.orderNumber;
-        await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
-
-        const [quoteAu, quoteAg] = await Promise.all([
-          this.telegramBotService.getQuotationForDate(new Date(), 'AU'),
-          this.telegramBotService.getQuotationForDate(new Date(), 'AG'),
-        ]);
-        const auPrice = quoteAu.price || 715;
-        const agPrice = quoteAg.price || 6.5;
-
-        const pendingAccount = sale.accountsRec.find((ar) => !ar.received);
-        let pendente = Number(sale.netAmount || sale.totalAmount || 0);
-        let metalTag = '';
-
-        if (pendingAccount) {
-          const info = this.telegramBotService.resolveReceivableInfo(pendingAccount, auPrice, agPrice);
-          pendente = info.pendente;
-          if (info.metalGrams > 0) {
-            metalTag = ` (${info.metalGrams.toFixed(info.isSilver ? 2 : 3)} g ${info.metalUnit})`;
-          }
-        }
-
-        const cli = (sale.pessoa?.name || 'Cliente').replace(/[*_`]/g, '');
-
-        const text = `🏦 *DESTINO DO PAGAMENTO*\n\nPedido: *#${sale.orderNumber}* (${cli})\nValor: *R$ ${pendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*${metalTag}\n\nEm qual conta o cliente efetuou o depósito?`;
-        const inline_keyboard = [
-          [
-            { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
-            { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
-          ],
-          [{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }],
-          [{ text: '⬅️ Voltar ao Pedido', callback_data: `voltar_ped_${sale.orderNumber}` }],
-        ];
-
-        await this.telegramBotService.callTelegramApi('editMessageText', {
-          chat_id: chatId,
-          message_id: messageId,
-          text,
-          parse_mode: 'Markdown',
-          reply_markup: { inline_keyboard },
-        });
-        return { ok: true };
-      }
     }
+
+    if (data === 'voltar_destino_baixa') {
+      sessionData.waitingFor = null;
+      await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+      return this.telegramBotService.renderPaymentDestination({
+        chatId,
+        session,
+        sessionData,
+        messageId,
+      });
+    }
+
+    if (data === 'mudar_data_baixa') {
+      sessionData.waitingFor = 'mudar_data_baixa';
+      await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+      const today = new Date();
+      const ontem = new Date(today);
+      ontem.setDate(ontem.getDate() - 1);
+      const anteontem = new Date(today);
+      anteontem.setDate(anteontem.getDate() - 2);
+
+      const fDate = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+      const currDateStr = sessionData.operationDate
+        ? new Date(sessionData.operationDate).toLocaleDateString('pt-BR')
+        : 'Hoje';
+
+      const text = `📅 *ALTERAR DATA DO PAGAMENTO*\n\n` +
+        `Data selecionada: *${currDateStr}*\n\n` +
+        `Clique em um dos atalhos rápidos abaixo ou digite qualquer data no chat (ex: \`01/10/2026\` ou \`02/10\`):`;
+
+      const inline_keyboard = [
+        [
+          { text: `📅 Hoje (${fDate(today)})`, callback_data: 'data_baixa_hoje' },
+          { text: `📅 Ontem (${fDate(ontem)})`, callback_data: 'data_baixa_ontem' },
+        ],
+        [
+          { text: `📅 Anteontem (${fDate(anteontem)})`, callback_data: 'data_baixa_anteontem' },
+        ],
+        [{ text: '⬅️ Voltar', callback_data: 'voltar_destino_baixa' }],
+      ];
+
+      await this.telegramBotService.callTelegramApi('editMessageText', {
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard },
+      });
+      return { ok: true };
+    }
+
+    if (data === 'data_baixa_hoje' || data === 'data_baixa_ontem' || data === 'data_baixa_anteontem') {
+      const d = new Date();
+      if (data === 'data_baixa_ontem') d.setDate(d.getDate() - 1);
+      if (data === 'data_baixa_anteontem') d.setDate(d.getDate() - 2);
+      sessionData.operationDate = d.toISOString();
+      sessionData.waitingFor = null;
+      await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+      return this.telegramBotService.renderPaymentDestination({
+        chatId,
+        session,
+        sessionData,
+        messageId,
+      });
+    }
+
+    if (data === 'mudar_cotacao_baixa') {
+      sessionData.waitingFor = 'mudar_cotacao_baixa';
+      await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+      const text = `📈 *ALTERAR COTAÇÃO DA BAIXA*\n\n` +
+        `• Pedido: *#${sessionData.selectedOrderNumber || ''}*\n` +
+        `• Cotação atual: *${sessionData.customQuotation ? `R$ ${Number(sessionData.customQuotation).toFixed(2)}/g` : 'Cotação oficial do dia'}*\n\n` +
+        `👉 *Digite a cotação desejada no chat agora* (ex: \`685\` ou \`715.50\`):`;
+
+      const inline_keyboard = [
+        [{ text: '⬅️ Voltar', callback_data: 'voltar_destino_baixa' }],
+      ];
+
+      await this.telegramBotService.callTelegramApi('editMessageText', {
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard },
+      });
+      return { ok: true };
+    }
+
 
     if (data.startsWith('voltar_ped_')) {
       const num = parseInt(data.replace('voltar_ped_', ''), 10);
@@ -878,7 +921,69 @@ export class HandleTelegramCallbackUseCase {
       return { ok: true };
     }
 
-    if (data.startsWith('bx_') && !data.startsWith('bx_venc_') && !data.startsWith('bx_avenc_')) {
+    if (data.startsWith('bx_link_')) {
+      const transacaoId = data.replace('bx_link_', '');
+      try {
+        const res = await this.settleSaleAutomationUseCase.execute({
+          saleId: sessionData.selectedSaleId,
+          existingTransacaoId: transacaoId,
+          amount: sessionData.amount,
+          date: sessionData.operationDate,
+          quotation: sessionData.customQuotation,
+          observation: sessionData.description,
+          fileId: session.fileId,
+        });
+
+        await this.telegramBotService.clearTelegramSession(chatId);
+
+        let confirmText = `🎉 *BAIXA VINCULADA COM SUCESSO!*\n\n${res.message}\n\n`;
+        if (res.isFullyPaid) {
+          confirmText += `✅ *Pedido 100% Quitado no ERP*\n`;
+        } else {
+          confirmText += `⚠️ *Baixa Parcial Vinculada*\n• Restam: *R$ ${res.remainingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* a receber\n`;
+        }
+        confirmText += `📅 Data: *${res.paymentDate.toLocaleDateString('pt-BR')}*\n`;
+        confirmText += `📈 Cotação: *R$ ${Number(res.quotation).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/g* (≈ ${Number(res.goldAmount).toFixed(4)} g)\n`;
+        confirmText += `🏦 Lançamento vinculado em: *${res.contaCorrenteNome}*\n`;
+        if (res.netProfitBRL !== null && res.netProfitBRL !== undefined) {
+          const sinal = res.netProfitBRL >= 0 ? '+' : '';
+          const sinalAu = res.netDiscrepancyGrams && res.netDiscrepancyGrams >= 0 ? '+' : '';
+          confirmText += `📊 *Lucro Apurado:* *${sinal}R$ ${res.netProfitBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (${sinalAu}${Number(res.netDiscrepancyGrams || 0).toFixed(4)} g Au)\n`;
+        }
+        confirmText += `🛡️ _Saldo bancário preservado sem duplicidade!_`;
+
+        await this.telegramBotService.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text: confirmText,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📦 Ver Outros Pedidos', callback_data: 'sub_rec_pedidos' }],
+              [{ text: '📱 Menu Principal', callback_data: 'menu_principal' }],
+            ],
+          },
+        });
+        return { ok: true };
+      } catch (err: any) {
+        console.error('Erro ao vincular lançamento em venda:', err);
+        await this.telegramBotService.callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text: `❌ *Erro ao vincular lançamento:*\n\n_${err.message || 'Erro inesperado'}_\n\nTente novamente.`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🔄 Tentar Novamente', callback_data: `sel_ped_sale_${sessionData.selectedSaleId}` }],
+              [{ text: '⬅️ Voltar aos Pedidos', callback_data: 'sub_rec_pedidos' }],
+            ],
+          },
+        });
+        return { ok: true };
+      }
+    }
+
+    if (data.startsWith('bx_') && !data.startsWith('bx_venc_') && !data.startsWith('bx_avenc_') && !data.startsWith('bx_link_')) {
       const contaKey = data.replace('bx_', '');
       const contasMap: Record<string, string> = {
         itau: '7e94781a-6db9-4da6-bd45-e2ec32e363c3',
@@ -893,6 +998,7 @@ export class HandleTelegramCallbackUseCase {
           contaCorrenteId,
           amount: sessionData.amount,
           date: sessionData.operationDate,
+          quotation: sessionData.customQuotation,
           observation: sessionData.description,
           fileId: session.fileId,
         });
@@ -905,7 +1011,15 @@ export class HandleTelegramCallbackUseCase {
         } else {
           confirmText += `⚠️ *Baixa Parcial Registrada*\n• Restam: *R$ ${res.remainingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* a receber\n`;
         }
-        confirmText += `💰 Saldo lançado em: *${res.contaCorrenteNome}*\n📎 Comprovante arquivado no AWS S3`;
+        confirmText += `📅 Data: *${res.paymentDate.toLocaleDateString('pt-BR')}*\n`;
+        confirmText += `📈 Cotação: *R$ ${Number(res.quotation).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/g* (≈ ${Number(res.goldAmount).toFixed(4)} g)\n`;
+        confirmText += `💰 Saldo lançado em: *${res.contaCorrenteNome}*\n`;
+        if (res.netProfitBRL !== null && res.netProfitBRL !== undefined) {
+          const sinal = res.netProfitBRL >= 0 ? '+' : '';
+          const sinalAu = res.netDiscrepancyGrams && res.netDiscrepancyGrams >= 0 ? '+' : '';
+          confirmText += `📊 *Lucro Apurado:* *${sinal}R$ ${res.netProfitBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}* (${sinalAu}${Number(res.netDiscrepancyGrams || 0).toFixed(4)} g Au)\n`;
+        }
+        confirmText += `📎 Comprovante arquivado no AWS S3`;
 
         await this.telegramBotService.callTelegramApi('editMessageText', {
           chat_id: chatId,

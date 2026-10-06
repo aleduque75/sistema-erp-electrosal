@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service';
 import { MediaService } from '../../media/media.service';
 import { TelegramBotService } from '../services/telegram-bot.service';
+import { CalculateSaleAdjustmentUseCase } from '../../sales/use-cases/calculate-sale-adjustment.use-case';
 import Decimal from 'decimal.js';
 
 @Injectable()
@@ -10,20 +11,23 @@ export class SettleSaleAutomationUseCase {
     private readonly prisma: PrismaService,
     private readonly mediaService: MediaService,
     private readonly telegramBotService: TelegramBotService,
+    private readonly calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
   ) {}
 
   async execute(dto: {
     saleId: string;
-    contaCorrenteId: string;
+    contaCorrenteId?: string;
+    existingTransacaoId?: string;
     amount?: number;
     date?: string;
+    quotation?: number;
     observation?: string;
     fileBase64?: string;
     mimeType?: string;
     fileId?: string;
   }) {
     const organizationId = this.telegramBotService.getOrganizationId();
-    const { saleId, contaCorrenteId } = dto;
+    const { saleId } = dto;
 
     const sale = await this.prisma.sale.findFirst({
       where: { id: saleId, organizationId },
@@ -53,16 +57,31 @@ export class SettleSaleAutomationUseCase {
       throw new NotFoundException(`Venda com ID ${saleId} não encontrada.`);
     }
 
-    const contaCorrente = await this.prisma.contaCorrente.findFirst({
-      where: { id: contaCorrenteId, organizationId },
-    });
+    let existingTx: any = null;
+    let contaCorrente: any = null;
 
-    if (!contaCorrente) {
-      throw new NotFoundException(`Conta Corrente com ID ${contaCorrenteId} não encontrada.`);
+    if (dto.existingTransacaoId) {
+      existingTx = await this.prisma.transacao.findFirst({
+        where: { id: dto.existingTransacaoId, organizationId },
+        include: { contaCorrente: true },
+      });
+      if (!existingTx) {
+        throw new NotFoundException(`Transação com ID ${dto.existingTransacaoId} não encontrada.`);
+      }
+      contaCorrente = existingTx.contaCorrente;
+    } else if (dto.contaCorrenteId) {
+      contaCorrente = await this.prisma.contaCorrente.findFirst({
+        where: { id: dto.contaCorrenteId, organizationId },
+      });
+      if (!contaCorrente) {
+        throw new NotFoundException(`Conta Corrente com ID ${dto.contaCorrenteId} não encontrada.`);
+      }
+    } else {
+      throw new BadRequestException('Conta Corrente ou Transação Existente deve ser informada.');
     }
 
-    // Buscar cotações do dia
-    const paymentDate = dto.date ? new Date(dto.date) : new Date();
+    // Buscar cotações do dia / data da operação
+    const paymentDate = dto.date ? new Date(dto.date) : (existingTx?.dataHora ? new Date(existingTx.dataHora) : new Date());
     const [quoteAu, quoteAg] = await Promise.all([
       this.telegramBotService.getQuotationForDate(paymentDate, 'AU'),
       this.telegramBotService.getQuotationForDate(paymentDate, 'AG'),
@@ -102,10 +121,13 @@ export class SettleSaleAutomationUseCase {
 
     // Calcular valores a pagar e saldo pendente
     const info = this.telegramBotService.resolveReceivableInfo(targetRec, auPrice, agPrice);
-    const quotation = info.isSilver ? agPrice : auPrice;
+    const quotation = dto.quotation && dto.quotation > 0
+      ? dto.quotation
+      : (existingTx?.goldPrice ? Number(existingTx.goldPrice) : (info.isSilver ? agPrice : auPrice));
+
     const remainingPending = Math.max(0, Number(targetRec.amount) - Number(targetRec.amountPaid || 0));
 
-    let payAmount = dto.amount && dto.amount > 0 ? Number(dto.amount) : remainingPending;
+    let payAmount = dto.amount && dto.amount > 0 ? Number(dto.amount) : (existingTx ? Number(existingTx.valor) : remainingPending);
     if (payAmount <= 0) {
       payAmount = remainingPending > 0 ? remainingPending : Number(sale.netAmount || sale.totalAmount || 0);
     }
@@ -138,26 +160,40 @@ export class SettleSaleAutomationUseCase {
 
     // Executar baixa no banco de dados via transação segura
     const result = await this.prisma.$transaction(async (tx) => {
-      // 1. Criar transação de crédito na conta corrente
-      const desc =
-        dto.observation ||
-        `Recebimento Pedido #${sale.orderNumber} - ${(sale.pessoa?.name || 'Cliente').trim()}`;
+      let transacao: any;
 
-      const transacao = await tx.transacao.create({
-        data: {
-          organizationId,
-          tipo: 'CREDITO',
-          valor: new Decimal(payAmount),
-          moeda: 'BRL',
-          goldAmount: new Decimal(goldAmount).toDecimalPlaces(4),
-          goldPrice: new Decimal(quotation),
-          descricao: desc,
-          dataHora: paymentDate,
-          contaCorrenteId: contaCorrente.id,
-          contaContabilId,
-          accountRecId: targetRec.id,
-        },
-      });
+      if (existingTx) {
+        // 1. Vincular transação já existente ao AccountRec sem duplicar
+        transacao = await tx.transacao.update({
+          where: { id: existingTx.id },
+          data: {
+            accountRecId: targetRec.id,
+            goldAmount: new Decimal(goldAmount).toDecimalPlaces(4),
+            goldPrice: new Decimal(quotation),
+          },
+        });
+      } else {
+        // 1. Criar nova transação de crédito na conta corrente
+        const desc =
+          dto.observation ||
+          `Recebimento Pedido #${sale.orderNumber} - ${(sale.pessoa?.name || 'Cliente').trim()}`;
+
+        transacao = await tx.transacao.create({
+          data: {
+            organizationId,
+            tipo: 'CREDITO',
+            valor: new Decimal(payAmount),
+            moeda: 'BRL',
+            goldAmount: new Decimal(goldAmount).toDecimalPlaces(4),
+            goldPrice: new Decimal(quotation),
+            descricao: desc,
+            dataHora: paymentDate,
+            contaCorrenteId: contaCorrente.id,
+            contaContabilId,
+            accountRecId: targetRec.id,
+          },
+        });
+      }
 
       // 2. Atualizar AccountRec com novos totais pagos
       const prevAmountPaid = Number(targetRec.amountPaid || 0);
@@ -238,9 +274,28 @@ export class SettleSaleAutomationUseCase {
       await this.telegramBotService.uploadTelegramFileToS3(dto.fileId, result.transacao.id);
     }
 
+    // 6. Recalcular lucro e ajustes da venda automaticamente
+    let netProfitBRL: number | null = null;
+    let netDiscrepancyGrams: number | null = null;
+
+    try {
+      await this.calculateSaleAdjustmentUseCase.execute(sale.id, organizationId);
+      const adjustment = await this.prisma.saleAdjustment.findUnique({
+        where: { saleId: sale.id },
+      });
+      if (adjustment) {
+        netProfitBRL = Number(adjustment.netProfitBRL);
+        netDiscrepancyGrams = Number(adjustment.netDiscrepancyGrams);
+      }
+    } catch (err) {
+      console.error(`Erro ao recalcular ajuste da venda #${sale.orderNumber}:`, err);
+    }
+
     const valorFormatado = payAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     let msg = `Venda #${sale.orderNumber} (${sale.pessoa?.name}) baixada com sucesso e creditada em ${contaCorrente.nome} (R$ ${valorFormatado})!`;
-    if (!result.isFullyPaid) {
+    if (existingTx) {
+      msg = `Venda #${sale.orderNumber} vinculada com sucesso ao lançamento existente em ${contaCorrente.nome} (R$ ${valorFormatado}) sem duplicar saldo!`;
+    } else if (!result.isFullyPaid) {
       msg = `Baixa parcial de R$ ${valorFormatado} registrada na Venda #${sale.orderNumber}! Restam R$ ${result.remainingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} pendentes.`;
     }
 
@@ -254,6 +309,12 @@ export class SettleSaleAutomationUseCase {
       clientName: sale.pessoa?.name,
       contaCorrenteNome: contaCorrente.nome,
       transacaoId: result.transacao.id,
+      paymentDate,
+      quotation,
+      goldAmount,
+      netProfitBRL,
+      netDiscrepancyGrams,
+      wasLinked: !!existingTx,
     };
   }
 }
