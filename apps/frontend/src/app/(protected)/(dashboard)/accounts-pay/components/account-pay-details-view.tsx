@@ -61,13 +61,10 @@ const formatCurrency = (value?: number | null) =>
     currency: "BRL",
   }).format(value || 0);
 
+import { formatDate } from '@/lib/date-utils';
+
 const formatGrams = (value?: number | null) =>
   value ? `${Number(value).toFixed(4)}g` : "N/A";
-  
-const formatDate = (dateString?: string | null) =>
-  dateString
-    ? new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
-    : "N/A";
 
 export function AccountPayDetailsView({ account }: AccountPayDetailsViewProps) {
   const [purchaseOrder, setPurchaseOrder] = useState<PurchaseOrder | null>(null);

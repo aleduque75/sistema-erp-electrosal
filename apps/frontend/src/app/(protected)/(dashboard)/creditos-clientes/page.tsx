@@ -34,16 +34,13 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
+import { formatDate } from "@/lib/date-utils";
+
 const formatGrams = (value?: number) => {
   return new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: 4,
     maximumFractionDigits: 4,
   }).format(value || 0) + " g";
-};
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return "";
-  return new Date(dateString).toLocaleDateString("pt-BR", { timeZone: 'UTC' });
 };
 
 // Status Configuration

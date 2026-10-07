@@ -32,6 +32,7 @@ import { ReceivePaymentForm } from './components/receive-payment-form';
 import { EditAccountRecForm } from './components/edit-account-rec-form';
 import { SaleDetailsView } from './components/sale-details-view';
 import { SplitAccountRecModal } from './components/split-account-rec-modal';
+import { formatDate } from '@/lib/date-utils';
 
 // Interfaces
 interface AccountRec {
@@ -52,11 +53,6 @@ interface AccountRec {
 interface SaleDetails extends AccountRec { /* Combine for simplicity */ }
 
 const formatCurrency = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
-const formatDate = (dateString?: string | null) => {
-  if (!dateString) return "N/A";
-  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return formatInTimeZone(new Date(dateString), userTimeZone, "dd/MM/yyyy");
-};
 
 export default function AccountsRecPage() {
   const router = useRouter();

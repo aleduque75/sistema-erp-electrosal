@@ -18,6 +18,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
+import { formatDate } from "@/lib/date-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,10 +64,6 @@ const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value || 0
   );
-const formatDate = (dateString?: string | null) =>
-  dateString
-    ? new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" })
-    : "N/A";
 
 export default function CreditCardBillsPage() {
   const { user, isLoading } = useAuth();

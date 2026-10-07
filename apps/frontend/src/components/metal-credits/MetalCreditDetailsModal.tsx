@@ -26,16 +26,13 @@ interface MetalCreditDetailsModalProps {
   onSuccess?: () => void;
 }
 
+import { formatDate } from "@/lib/date-utils";
+
 const formatGrams = (value?: number) => {
   return new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: 4,
     maximumFractionDigits: 4,
   }).format(value || 0) + " g";
-};
-
-const formatDate = (dateString?: string | null) => {
-  if (!dateString) return "N/A";
-  return new Date(dateString).toLocaleDateString("pt-BR", { timeZone: 'UTC' });
 };
 
 const formatCurrency = (value?: number) =>

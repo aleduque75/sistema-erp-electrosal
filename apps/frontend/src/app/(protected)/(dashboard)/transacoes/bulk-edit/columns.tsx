@@ -3,14 +3,12 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Transacao } from "@/lib/types"; // Assuming a shared types file
+import { formatDate } from "@/lib/date-utils";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value
   );
-
-const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 
 export const columns: ColumnDef<Transacao>[] = [
   {

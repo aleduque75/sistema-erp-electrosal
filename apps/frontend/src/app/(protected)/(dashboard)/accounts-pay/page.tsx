@@ -51,6 +51,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { Pessoa } from "@/@types/pessoa";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Combobox } from "@/components/ui/combobox";
+import { formatDate } from "@/lib/date-utils";
 
 interface AccountPay {
   id: string;
@@ -75,13 +76,9 @@ const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value || 0
   );
+
 const formatGrams = (value?: number | null) =>
   value ? `${Number(value).toFixed(4)}g` : "N/A";
-
-const formatDate = (dateString?: string | null) =>
-  dateString
-    ? formatInTimeZone(new Date(dateString), "UTC", "dd/MM/yyyy")
-    : "N/A";
 
 const INITIAL_DATE_RANGE = {
   from: addDays(new Date(), -30),

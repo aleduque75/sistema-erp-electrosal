@@ -15,6 +15,7 @@ import { Trash2 } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AddPaymentDialog } from "./add-payment-dialog"; // Import the new dialog component
+import { formatDate } from "@/lib/date-utils";
 
 // Interfaces
 import { SaleInstallment } from '@/types/sale';
@@ -336,7 +337,7 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
             {accountRec.sale?.pessoa?.name && <Badge variant="outline">Cliente: {accountRec.sale.pessoa.name}</Badge>}
             {accountRec.sale?.createdAt && (
               <Badge variant="outline">
-                Data do Pedido: {new Date(accountRec.sale.createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                Data do Pedido: {formatDate(accountRec.sale.createdAt)}
               </Badge>
             )}
           </div>

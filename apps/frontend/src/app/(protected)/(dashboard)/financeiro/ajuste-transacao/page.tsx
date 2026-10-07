@@ -13,11 +13,10 @@ import { ContaCorrente } from '@/types/conta-corrente'; // Assumindo que você t
 
 import { Sale } from '@/types/sale'; // Importar o tipo Sale
 
+import { formatDate } from '@/lib/date-utils';
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
-
-const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
 export default function AdjustTransactionPage() {
   const [orderNumber, setOrderNumber] = useState('');

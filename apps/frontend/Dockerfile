@@ -17,6 +17,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+ENV TZ=America/Sao_Paulo
+
+# Configuração do fuso horário de Brasília
+RUN apt-get update && apt-get install -y tzdata \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
+    && rm -rf /var/lib/apt/lists/*
 
 # O Next.js standalone precisa dessas três pastas:
 COPY --from=builder /app/apps/frontend/.next/standalone ./

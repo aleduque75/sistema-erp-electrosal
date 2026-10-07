@@ -24,6 +24,7 @@ RUN pnpm --filter backend --prod deploy /app/deployed-backend
 FROM node:20
 WORKDIR /app
 ENV NODE_ENV=production
+ENV TZ=America/Sao_Paulo
 
 # Variáveis que garantem que o Prisma use o motor certo no Debian
 ENV PRISMA_CLIENT_ENGINE_TYPE=binary
@@ -37,11 +38,13 @@ COPY --from=builder /app/apps/backend/prisma ./prisma
 COPY --from=builder /app/packages/core/dist ./packages/core/dist
 COPY --from=builder /app/apps/backend/dist ./dist
 
-# Dependências e Navegador para Puppeteer (Chromium nativo Debian/ARM64)
+# Dependências e Navegador para Puppeteer (Chromium nativo Debian/ARM64) + Fuso Horário Brasil
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
     ca-certificates \
+    tzdata \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/*
 
 # Configurações para o Puppeteer usar o Chromium nativo do sistema

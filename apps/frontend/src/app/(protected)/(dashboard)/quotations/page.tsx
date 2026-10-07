@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal } from "lucide-react";
+import { formatDate } from '@/lib/date-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,9 +61,6 @@ export default function QuotationsPage() {
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
       value || 0
     );
-
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
   const fetchQuotations = async () => {
     try {

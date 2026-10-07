@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { splitAccountRec, SplitInstallmentItem } from '@/services/accountsRecApi';
+import { formatDate } from '@/lib/date-utils';
 
 interface AccountRec {
   id: string;
@@ -250,7 +251,7 @@ export function SplitAccountRecModal({
                 </span>
                 <p className="font-semibold text-foreground line-clamp-1">{accountRec.description}</p>
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="h-3 w-3" /> Vencimento original: {new Date(accountRec.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                  <Calendar className="h-3 w-3" /> Vencimento original: {formatDate(accountRec.dueDate)}
                 </p>
               </div>
               <div className="text-right sm:border-l sm:pl-4">

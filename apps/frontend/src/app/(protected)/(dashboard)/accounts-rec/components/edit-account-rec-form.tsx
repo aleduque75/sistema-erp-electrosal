@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Scissors } from 'lucide-react';
+import { formatDateForInput } from '@/lib/date-utils';
 
 interface AccountRec {
   id: string;
@@ -44,23 +45,13 @@ const formSchema = z.object({
   dueDate: z.string().min(1, 'A data de vencimento é obrigatória.'),
 });
 
-const getFormattedDate = (dateStr?: string | null) => {
-  if (!dateStr) return '';
-  if (dateStr.includes('T')) return dateStr.split('T')[0];
-  try {
-    return new Date(dateStr).toISOString().split('T')[0];
-  } catch {
-    return dateStr;
-  }
-};
-
 export function EditAccountRecForm({ accountRec, onSave, onOpenSplit }: EditAccountRecFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       description: accountRec.description,
       amount: accountRec.amount,
-      dueDate: getFormattedDate(accountRec.dueDate),
+      dueDate: formatDateForInput(accountRec.dueDate),
     },
   });
 
@@ -68,7 +59,7 @@ export function EditAccountRecForm({ accountRec, onSave, onOpenSplit }: EditAcco
     form.reset({
       description: accountRec.description,
       amount: accountRec.amount,
-      dueDate: getFormattedDate(accountRec.dueDate),
+      dueDate: formatDateForInput(accountRec.dueDate),
     });
   }, [accountRec, form]);
 

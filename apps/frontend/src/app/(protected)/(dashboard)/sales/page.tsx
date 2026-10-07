@@ -39,14 +39,13 @@ import { EditObservationModal } from './components/EditObservationModal';
 import { UpdateShippingCostModal } from './components/UpdateShippingCostModal';
 import { ReceivePaymentForm } from '../accounts-rec/components/receive-payment-form';
 import { Sale } from '@/types/sale';
+import { formatDate } from '@/lib/date-utils';
 
 export default function SalesPage() {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
       value || 0
     );
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
   const statusConfig: { [key in Sale['status']]: { label: string; className: string } } = {
     PENDENTE: {
@@ -350,12 +349,7 @@ export default function SalesPage() {
     }
 
     const textToCopy = selectedSales.map(sale => {
-      const saleDate = new Date(sale.createdAt).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        timeZone: 'UTC'
-      });
+      const saleDate = formatDate(sale.createdAt);
 
       const pessoa = sale.pessoa as any; // Cast to any to access address fields if not typed in frontend yet
       const addressParts = [

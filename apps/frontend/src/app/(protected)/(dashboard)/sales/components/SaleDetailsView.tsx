@@ -25,10 +25,7 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value || 0
   );
-const formatDate = (dateString?: string | null) => {
-  if (!dateString) return "N/A";
-  return new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
-}
+import { formatDate } from "@/lib/date-utils";
 
 const formatGold = (value?: number | null) => {
   if (value == null) return "-";

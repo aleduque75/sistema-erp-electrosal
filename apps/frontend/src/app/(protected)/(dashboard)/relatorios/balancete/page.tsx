@@ -18,6 +18,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input"; // Importar Input
+import { formatDate } from "@/lib/date-utils";
 import { formatInTimeZone } from "date-fns-tz";
 
 interface TransactionDetail {
@@ -62,11 +63,6 @@ const formatCurrency = (value?: number | null) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value || 0
   );
-
-const formatDate = (dateString?: string | null) =>
-  dateString
-    ? formatInTimeZone(new Date(dateString), "UTC", "dd/MM/yyyy")
-    : "N/A";
 
 export default function TrialBalancePage() {
   const { user, isLoading } = useAuth();

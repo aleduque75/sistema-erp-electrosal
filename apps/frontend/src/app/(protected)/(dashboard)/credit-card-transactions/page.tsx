@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { CreditCardTransactionForm } from "./credit-card-transaction-form";
+import { formatDate } from "@/lib/date-utils";
 
 // Interfaces
 interface CreditCardTransaction {
@@ -37,8 +38,6 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value || 0
   );
-const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 
 // Componente da Página
 export default function CreditCardTransactionsPage() {

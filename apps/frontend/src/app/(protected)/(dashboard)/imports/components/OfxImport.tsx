@@ -36,9 +36,39 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { ContaContabilForm } from "@/components/forms/conta-contabil-form";
 import { TipoContaContabilPrisma } from "@/lib/types";
+import { formatDate } from "@/lib/date-utils";
+import { cn } from "@/lib/utils";
+import {
+  Check,
+  ChevronsUpDown,
+  ArrowRightLeft,
+  Tag,
+  Plus,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Building2,
+  Wallet,
+  CheckCheck,
+  RotateCcw,
+} from "lucide-react";
 
 // Interfaces
 interface ContaCorrente {
@@ -63,6 +93,8 @@ interface SelectionState {
   selected: boolean;
   contaContabilId?: string;
   description?: string;
+  isTransfer?: boolean;
+  destinationContaCorrenteId?: string;
 }
 
 interface UserSettings {
@@ -82,8 +114,198 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     value
   );
-const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+
+/**
+ * Combobox com campo de pesquisa do Shadcn para o Plano de Contas (Despesas / Receitas).
+ */
+function CategorySearchCombobox({
+  accounts,
+  value,
+  onChange,
+  onOpenCreateModal,
+  disabled,
+}: {
+  accounts: ContaContabil[];
+  value?: string;
+  onChange: (value: string) => void;
+  onOpenCreateModal: () => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedAccount = useMemo(
+    () => accounts.find((a) => a.id === value),
+    [accounts, value]
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className="w-full justify-between h-8 text-xs font-normal px-2.5 truncate"
+        >
+          {selectedAccount ? (
+            <span className="truncate flex items-center gap-1.5">
+              <span className="font-mono text-[10px] text-muted-foreground font-semibold">
+                {selectedAccount.codigo}
+              </span>
+              <span className="truncate">{selectedAccount.nome}</span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Selecione uma categoria...</span>
+          )}
+          <ChevronsUpDown className="ml-1.5 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[340px] p-0 z-[100]" align="start">
+        <Command>
+          <CommandInput
+            placeholder="Pesquisar categoria (nome ou código)..."
+            className="h-9 text-xs"
+          />
+          <CommandList className="max-h-[260px]">
+            <CommandEmpty className="py-2.5 text-center text-xs text-muted-foreground">
+              Nenhuma categoria encontrada.
+            </CommandEmpty>
+            <CommandGroup heading="Plano de Contas">
+              {accounts.map((acc) => (
+                <CommandItem
+                  key={acc.id}
+                  value={`${acc.codigo} ${acc.nome}`}
+                  onSelect={() => {
+                    onChange(acc.id);
+                    setOpen(false);
+                  }}
+                  className="text-xs py-1.5"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-3.5 w-3.5 shrink-0",
+                      value === acc.id ? "opacity-100 text-primary" : "opacity-0"
+                    )}
+                  />
+                  <span className="font-mono text-[10px] text-muted-foreground mr-1.5 shrink-0">
+                    {acc.codigo}
+                  </span>
+                  <span className="truncate font-medium">{acc.nome}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup>
+              <CommandItem
+                onSelect={() => {
+                  setOpen(false);
+                  onOpenCreateModal();
+                }}
+                className="text-xs text-primary font-semibold cursor-pointer py-1.5"
+              >
+                <Plus className="mr-2 h-3.5 w-3.5" />
+                + Criar nova categoria...
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/**
+ * Combobox com campo de pesquisa do Shadcn para Contas Correntes (Transferências entre contas).
+ */
+function TransferAccountCombobox({
+  accounts,
+  currentAccountId,
+  value,
+  onChange,
+  type,
+  disabled,
+}: {
+  accounts: ContaCorrente[];
+  currentAccountId: string;
+  value?: string;
+  onChange: (value: string) => void;
+  type: "CREDIT" | "DEBIT";
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const availableAccounts = useMemo(
+    () => accounts.filter((a) => a.id !== currentAccountId),
+    [accounts, currentAccountId]
+  );
+  const selectedAccount = useMemo(
+    () => availableAccounts.find((a) => a.id === value),
+    [availableAccounts, value]
+  );
+
+  const placeholder =
+    type === "DEBIT"
+      ? "Transferir para qual conta?..."
+      : "Transferência vinda de qual conta?...";
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className="w-full justify-between h-8 text-xs font-normal px-2.5 truncate border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/30"
+        >
+          {selectedAccount ? (
+            <span className="truncate flex items-center gap-1.5 text-blue-800 dark:text-blue-300 font-medium">
+              <Building2 className="w-3.5 h-3.5 shrink-0 text-blue-600" />
+              <span className="truncate">
+                {type === "DEBIT" ? "Para: " : "De: "}
+                {selectedAccount.nome}
+              </span>
+            </span>
+          ) : (
+            <span className="text-blue-600 dark:text-blue-400 font-medium">{placeholder}</span>
+          )}
+          <ChevronsUpDown className="ml-1.5 h-3.5 w-3.5 shrink-0 opacity-50 text-blue-600" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-0 z-[100]" align="start">
+        <Command>
+          <CommandInput placeholder="Pesquisar conta bancária..." className="h-9 text-xs" />
+          <CommandList className="max-h-[220px]">
+            <CommandEmpty className="py-2.5 text-center text-xs text-muted-foreground">
+              Nenhuma conta encontrada.
+            </CommandEmpty>
+            <CommandGroup heading={type === "DEBIT" ? "Conta de Destino" : "Conta de Origem"}>
+              {availableAccounts.map((acc) => (
+                <CommandItem
+                  key={acc.id}
+                  value={acc.nome}
+                  onSelect={() => {
+                    onChange(acc.id);
+                    setOpen(false);
+                  }}
+                  className="text-xs py-1.5"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-3.5 w-3.5 shrink-0",
+                      value === acc.id ? "opacity-100 text-blue-600" : "opacity-0"
+                    )}
+                  />
+                  <Building2 className="w-3.5 h-3.5 mr-2 text-muted-foreground shrink-0" />
+                  <span className="truncate font-medium">{acc.nome}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function OfxImport() {
   const [contasCorrentes, setContasCorrentes] = useState<ContaCorrente[]>([]);
@@ -92,11 +314,12 @@ export function OfxImport() {
 
   const [selectedContaCorrenteId, setSelectedContaCorrenteId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false); // Variável oficial de carregamento
+  const [isUploading, setIsUploading] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewTransaction[]>([]);
-  const [selections, setSelections] = useState<Record<string, SelectionState>>(
-    {}
-  );
+  const [selections, setSelections] = useState<Record<string, SelectionState>>({});
+
+  // Filtro de exibição: Todas, Somente Créditos, Somente Débitos
+  const [activeFilter, setActiveFilter] = useState<"ALL" | "CREDIT" | "DEBIT">("ALL");
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryType, setNewCategoryType] =
@@ -150,81 +373,66 @@ export function OfxImport() {
       const defaultReceitaId = userProfile?.settings?.defaultReceitaContaId;
       const defaultDespesaId = userProfile?.settings?.defaultDespesaContaId;
 
-      const initialSelections = newPreviewData.reduce((acc: Record<string, SelectionState>, t: PreviewTransaction) => {
-        let suggestedContaId: string | undefined = t.suggestedContaContabilId;
+      const otherAccounts = contasCorrentes.filter(
+        (c) => c.id !== selectedContaCorrenteId
+      );
 
-        if (t.status === "new" && !suggestedContaId) {
+      const initialSelections = newPreviewData.reduce(
+        (acc: Record<string, SelectionState>, t: PreviewTransaction) => {
           const searchDescription = t.description.toLowerCase();
-          const accountsToSearch = t.type === 'CREDIT' ? contasDeEntrada : contasDeSaida;
-          const defaultId = t.type === 'CREDIT' ? defaultReceitaId : defaultDespesaId;
 
-          const foundAccount = accountsToSearch.find(acc => searchDescription.includes(acc.nome.toLowerCase()));
+          // Detecção automática de transferência (termos chave ou menção a outras contas)
+          const isTransfKeyword =
+            searchDescription.includes("electrosal") ||
+            searchDescription.includes("transf") ||
+            searchDescription.includes("transferencia") ||
+            searchDescription.includes("transferência") ||
+            searchDescription.includes("entre contas") ||
+            searchDescription.includes("ted ") ||
+            searchDescription.includes("doc ") ||
+            searchDescription.includes("tef ");
 
-          if (foundAccount) {
-            suggestedContaId = foundAccount.id;
-          } else if (defaultId) {
-            suggestedContaId = defaultId;
+          const matchedOtherAccount = otherAccounts.find((c) =>
+            searchDescription.includes(c.nome.toLowerCase())
+          );
+
+          const autoIsTransfer = isTransfKeyword || !!matchedOtherAccount;
+
+          let suggestedContaId: string | undefined = t.suggestedContaContabilId;
+
+          if (!autoIsTransfer && t.status === "new" && !suggestedContaId) {
+            const accountsToSearch =
+              t.type === "CREDIT" ? contasDeEntrada : contasDeSaida;
+            const defaultId =
+              t.type === "CREDIT" ? defaultReceitaId : defaultDespesaId;
+
+            const foundAccount = accountsToSearch.find((a) =>
+              searchDescription.includes(a.nome.toLowerCase())
+            );
+
+            if (foundAccount) {
+              suggestedContaId = foundAccount.id;
+            } else if (defaultId) {
+              suggestedContaId = defaultId;
+            }
           }
-        }
 
-        acc[t.fitId] = {
-          selected: t.status === "new",
-          contaContabilId: suggestedContaId,
-          description: t.description,
-        };
-        return acc;
-      }, {});
+          acc[t.fitId] = {
+            selected: t.status === "new",
+            contaContabilId: suggestedContaId,
+            description: t.description,
+            isTransfer: autoIsTransfer,
+            destinationContaCorrenteId: matchedOtherAccount?.id || undefined,
+          };
+          return acc;
+        },
+        {}
+      );
       setSelections(initialSelections);
-
+      setActiveFilter("ALL");
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || "Erro ao pré-visualizar arquivo."
-      );
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleFinalImport = async () => {
-    const transactionsToImport = previewData
-      .filter((t) => selections[t.fitId]?.selected)
-      .map((t) => ({
-        fitId: t.fitId,
-        amount: t.amount,
-        description: selections[t.fitId]?.description ?? t.description,
-        postedAt: new Date(t.postedAt),
-        tipo: t.type === "CREDIT" ? "CREDITO" : "DEBITO",
-        contaContabilId: selections[t.fitId]?.contaContabilId,
-      }));
-
-    const unclassified = transactionsToImport.find((t) => !t.contaContabilId);
-    if (unclassified) {
-      toast.error(
-        `A transação "${unclassified.description}" precisa de uma categoria.`
-      );
-      return;
-    }
-
-    if (transactionsToImport.length === 0) {
-      toast.info("Nenhuma nova transação selecionada para importar.");
-      return;
-    }
-
-    setIsUploading(true);
-    const payload = {
-      contaCorrenteId: selectedContaCorrenteId,
-      transactions: transactionsToImport,
-    };
-
-    try {
-      const response = await api.post("/transacoes/bulk-create", payload);
-      toast.success(
-        `${response.data.count} transações importadas com sucesso!`
-      );
-      setPreviewData([]);
-    } catch (err: any) {
-      toast.error(
-        err.response?.data?.message || "Erro ao importar transações."
       );
     } finally {
       setIsUploading(false);
@@ -240,15 +448,18 @@ export function OfxImport() {
     const newSelections = { ...selections };
     newSelections[fitId] = { ...newSelections[fitId], [key]: value };
 
-    if (key === "contaContabilId" && originalDescription) {
+    // Propaga automaticamente para transações idênticas
+    if (
+      (key === "contaContabilId" ||
+        key === "isTransfer" ||
+        key === "destinationContaCorrenteId") &&
+      originalDescription
+    ) {
       previewData.forEach((t) => {
-        if (
-          t.description === originalDescription &&
-          t.fitId !== fitId
-        ) {
+        if (t.description === originalDescription && t.fitId !== fitId) {
           newSelections[t.fitId] = {
             ...newSelections[t.fitId],
-            contaContabilId: value,
+            [key]: value,
           };
         }
       });
@@ -256,18 +467,67 @@ export function OfxImport() {
     setSelections(newSelections);
   };
 
-  const selectableItemsCount = useMemo(
-    () => previewData.filter((t) => t.status === "new").length,
+  // Filtragem de dados pela aba selecionada
+  const filteredPreviewData = useMemo(() => {
+    if (activeFilter === "CREDIT") {
+      return previewData.filter((t) => t.type === "CREDIT");
+    }
+    if (activeFilter === "DEBIT") {
+      return previewData.filter((t) => t.type === "DEBIT");
+    }
+    return previewData;
+  }, [previewData, activeFilter]);
+
+  const totalCreditsCount = useMemo(
+    () => previewData.filter((t) => t.type === "CREDIT").length,
     [previewData]
   );
-  const selectedItemsCount = useMemo(
-    () => Object.values(selections).filter((s) => s.selected).length,
-    [selections]
+  const totalDebitsCount = useMemo(
+    () => previewData.filter((t) => t.type === "DEBIT").length,
+    [previewData]
   );
 
-  const handleToggleSelectAll = (checked: boolean) => {
-    const newSelections = { ...selections };
+  // Contadores e totais dos itens selecionados
+  const selectedStats = useMemo(() => {
+    let count = 0;
+    let totalDebits = 0;
+    let totalCredits = 0;
+
     previewData.forEach((t) => {
+      if (selections[t.fitId]?.selected) {
+        count++;
+        if (t.type === "DEBIT") {
+          totalDebits += t.amount;
+        } else {
+          totalCredits += t.amount;
+        }
+      }
+    });
+
+    return {
+      count,
+      totalDebits,
+      totalCredits,
+      net: totalCredits - totalDebits,
+    };
+  }, [previewData, selections]);
+
+  // Contadores para o checkbox mestre da lista visível filtrada
+  const selectableFilteredCount = useMemo(
+    () => filteredPreviewData.filter((t) => t.status === "new").length,
+    [filteredPreviewData]
+  );
+  const selectedFilteredCount = useMemo(
+    () =>
+      filteredPreviewData.filter(
+        (t) => t.status === "new" && selections[t.fitId]?.selected
+      ).length,
+    [filteredPreviewData, selections]
+  );
+
+  const handleToggleSelectFiltered = (checked: boolean) => {
+    const newSelections = { ...selections };
+    filteredPreviewData.forEach((t) => {
       if (t.status === "new") {
         newSelections[t.fitId] = {
           ...newSelections[t.fitId],
@@ -276,6 +536,125 @@ export function OfxImport() {
       }
     });
     setSelections(newSelections);
+  };
+
+  const handleSelectOnlyDebits = () => {
+    const newSelections = { ...selections };
+    previewData.forEach((t) => {
+      if (t.status === "new") {
+        newSelections[t.fitId] = {
+          ...newSelections[t.fitId],
+          selected: t.type === "DEBIT",
+        };
+      }
+    });
+    setSelections(newSelections);
+    setActiveFilter("DEBIT");
+    toast.info("Apenas débitos selecionados.");
+  };
+
+  const handleSelectOnlyCredits = () => {
+    const newSelections = { ...selections };
+    previewData.forEach((t) => {
+      if (t.status === "new") {
+        newSelections[t.fitId] = {
+          ...newSelections[t.fitId],
+          selected: t.type === "CREDIT",
+        };
+      }
+    });
+    setSelections(newSelections);
+    setActiveFilter("CREDIT");
+    toast.info("Apenas créditos selecionados.");
+  };
+
+  const handleClearSelection = () => {
+    const newSelections = { ...selections };
+    previewData.forEach((t) => {
+      if (newSelections[t.fitId]) {
+        newSelections[t.fitId] = {
+          ...newSelections[t.fitId],
+          selected: false,
+        };
+      }
+    });
+    setSelections(newSelections);
+  };
+
+  const handleFinalImport = async () => {
+    const selectedTransactions = previewData.filter(
+      (t) => selections[t.fitId]?.selected
+    );
+
+    if (selectedTransactions.length === 0) {
+      toast.info("Nenhuma nova transação selecionada para importar.");
+      return;
+    }
+
+    // Validações antes do envio
+    for (const t of selectedTransactions) {
+      const sel = selections[t.fitId];
+      if (sel?.isTransfer) {
+        if (!sel.destinationContaCorrenteId) {
+          toast.error(
+            `A transferência "${sel.description || t.description}" precisa de uma conta bancária de destino/origem.`
+          );
+          return;
+        }
+        if (sel.destinationContaCorrenteId === selectedContaCorrenteId) {
+          toast.error(
+            `A transferência "${sel.description || t.description}" não pode transferir para a mesma conta corrente.`
+          );
+          return;
+        }
+      } else {
+        if (!sel?.contaContabilId) {
+          toast.error(
+            `A transação "${sel?.description || t.description}" precisa de uma categoria no plano de contas.`
+          );
+          return;
+        }
+      }
+    }
+
+    setIsUploading(true);
+    const transactionsToImport = selectedTransactions.map((t) => {
+      const sel = selections[t.fitId];
+      return {
+        fitId: t.fitId,
+        amount: t.amount,
+        description: sel?.description ?? t.description,
+        postedAt: new Date(t.postedAt),
+        tipo: t.type === "CREDIT" ? "CREDITO" : "DEBITO",
+        contaContabilId: sel?.isTransfer
+          ? sel.contaContabilId || undefined
+          : sel?.contaContabilId,
+        isTransfer: !!sel?.isTransfer,
+        destinationContaCorrenteId: sel?.isTransfer
+          ? sel.destinationContaCorrenteId
+          : undefined,
+      };
+    });
+
+    const payload = {
+      contaCorrenteId: selectedContaCorrenteId,
+      transactions: transactionsToImport,
+    };
+
+    try {
+      const response = await api.post("/transacoes/bulk-create", payload);
+      toast.success(
+        `${response.data.count} transação(ões) processada(s) e importada(s) com sucesso!`
+      );
+      setPreviewData([]);
+      setSelectedFile(null);
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Erro ao importar transações."
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const openNewCategoryModal = (type: "CREDIT" | "DEBIT") => {
@@ -330,7 +709,11 @@ export function OfxImport() {
                 required
               />
             </div>
-            <Button type="submit" disabled={isUploading || isLoadingProfile} className="w-full">
+            <Button
+              type="submit"
+              disabled={isUploading || isLoadingProfile}
+              className="w-full"
+            >
               {isUploading ? "Analisando..." : "Analisar Arquivo"}
             </Button>
           </form>
@@ -341,150 +724,328 @@ export function OfxImport() {
 
   return (
     <>
-      <Card className="mx-auto my-8 max-w-6xl">
-        <CardHeader>
-          <CardTitle>Conciliação Bancária</CardTitle>
-          <CardDescription>
-            Selecione e categorize as novas transações que deseja importar.
-          </CardDescription>
+      <Card className="mx-auto my-6 max-w-6xl shadow-md border-border/80">
+        <CardHeader className="pb-3 border-b">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-primary" /> Conciliação Bancária OFX
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm mt-0.5">
+                Categorize como despesa/receita ou defina como transferência entre contas bancárias.
+              </CardDescription>
+            </div>
+
+            {/* Resumo financeiro rápido */}
+            <div className="flex flex-wrap items-center gap-2 text-xs bg-muted/50 p-2 rounded-lg border">
+              <span className="text-muted-foreground font-medium">Selecionados:</span>
+              <Badge variant="outline" className="font-semibold text-foreground">
+                {selectedStats.count} itens
+              </Badge>
+              {selectedStats.totalDebits > 0 && (
+                <Badge variant="outline" className="text-rose-600 border-rose-200 bg-rose-50/50">
+                  Saídas: - {formatCurrency(selectedStats.totalDebits)}
+                </Badge>
+              )}
+              {selectedStats.totalCredits > 0 && (
+                <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50/50">
+                  Entradas: + {formatCurrency(selectedStats.totalCredits)}
+                </Badge>
+              )}
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+
+        <CardContent className="pt-4 space-y-4">
+          {/* Barra de Filtros e Seleção Rápida */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 bg-muted/20 rounded-lg border">
+            {/* Tabs para filtrar Débito / Crédito */}
+            <Tabs
+              value={activeFilter}
+              onValueChange={(v) => setActiveFilter(v as any)}
+              className="w-full lg:w-auto"
+            >
+              <TabsList className="grid grid-cols-3 w-full lg:w-auto h-9">
+                <TabsTrigger value="ALL" className="text-xs">
+                  Todas ({previewData.length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="CREDIT"
+                  className="text-xs text-emerald-600 data-[state=active]:text-emerald-700 font-medium"
+                >
+                  <ArrowDownLeft className="w-3.5 h-3.5 mr-1" />
+                  Créditos ({totalCreditsCount})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="DEBIT"
+                  className="text-xs text-rose-600 data-[state=active]:text-rose-700 font-medium"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5 mr-1" />
+                  Débitos ({totalDebitsCount})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* Ações rápidas de seleção */}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="text-muted-foreground font-medium text-[11px] mr-1">
+                Ações de Seleção:
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs px-2.5"
+                onClick={() => handleToggleSelectFiltered(true)}
+              >
+                <CheckCheck className="w-3.5 h-3.5 mr-1 text-primary" />
+                Marcar Todos
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs px-2.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                onClick={handleSelectOnlyDebits}
+              >
+                <ArrowUpRight className="w-3.5 h-3.5 mr-1" />
+                Apenas Débitos
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs px-2.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                onClick={handleSelectOnlyCredits}
+              >
+                <ArrowDownLeft className="w-3.5 h-3.5 mr-1" />
+                Apenas Créditos
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs px-2 text-muted-foreground"
+                onClick={handleClearSelection}
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Limpar
+              </Button>
+            </div>
+          </div>
+
+          {/* Tabela de Transações */}
+          <div className="overflow-x-auto rounded-md border">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="w-[48px]">
                     <Checkbox
                       checked={
-                        selectableItemsCount > 0 &&
-                          selectedItemsCount === selectableItemsCount
+                        selectableFilteredCount > 0 &&
+                        selectedFilteredCount === selectableFilteredCount
                           ? true
-                          : selectedItemsCount > 0
-                            ? "indeterminate"
-                            : false
+                          : selectedFilteredCount > 0
+                          ? "indeterminate"
+                          : false
                       }
                       onCheckedChange={(checked) =>
-                        handleToggleSelectAll(!!checked)
+                        handleToggleSelectFiltered(!!checked)
                       }
                     />
                   </TableHead>
-                  <TableHead className="w-[120px]">Data</TableHead>
-                  <TableHead>Descrição (Editável)</TableHead>
-                  <TableHead className="w-[300px]">
-                    Categoria (Plano de Contas)
-                  </TableHead>
+                  <TableHead className="w-[100px]">Data</TableHead>
+                  <TableHead className="min-w-[200px]">Descrição (Editável)</TableHead>
+                  <TableHead className="w-[340px]">Classificação / Destino</TableHead>
                   <TableHead className="w-[120px] text-right">Valor</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead className="w-[90px] text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {previewData.map((t) => {
-                  const contasParaEsteItem =
-                    t.type === "CREDIT" ? contasDeEntrada : contasDeSaida;
-                  return (
-                    <TableRow
-                      key={t.fitId}
-                      className={t.status === "duplicate" ? "bg-muted/50" : ""}
-                    >
-                      <TableCell>
-                        <Checkbox
-                          checked={selections[t.fitId]?.selected || false}
-                          disabled={t.status === "duplicate"}
-                          onCheckedChange={(checked) =>
-                            handleSelectionChange(
-                              t.fitId,
-                              "selected",
-                              !!checked,
-                              t.description
-                            )
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>{formatDate(t.postedAt)}</TableCell>
-                      <TableCell>
-                        <Input
-                          type="text"
-                          defaultValue={t.description}
-                          onBlur={(e) =>
-                            handleSelectionChange(
-                              t.fitId,
-                              "description",
-                              e.target.value,
-                              t.description
-                            )
-                          }
-                          className="w-full h-8"
-                          disabled={t.status === "duplicate"}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {t.status === "new" && (
-                          <Select
-                            value={selections[t.fitId]?.contaContabilId || ""}
-                            onValueChange={(value) => {
-                              if (value === "---create-new---") {
-                                openNewCategoryModal(t.type);
-                              } else {
-                                handleSelectionChange(
-                                  t.fitId,
-                                  "contaContabilId",
-                                  value,
-                                  t.description
-                                );
-                              }
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {contasParaEsteItem.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.codigo} - {c.nome}
-                                </SelectItem>
-                              ))}
-                              <SelectItem
-                                value="---create-new---"
-                                className="text-blue-600 font-bold"
-                              >
-                                + Criar nova categoria...
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
+                {filteredPreviewData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-sm">
+                      Nenhuma transação encontrada para o filtro selecionado.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPreviewData.map((t) => {
+                    const sel = selections[t.fitId] || { selected: false };
+                    const isTransfer = !!sel.isTransfer;
+                    const contasParaEsteItem =
+                      t.type === "CREDIT" ? contasDeEntrada : contasDeSaida;
+
+                    return (
+                      <TableRow
+                        key={t.fitId}
+                        className={cn(
+                          t.status === "duplicate" ? "bg-muted/30 opacity-75" : "",
+                          sel.selected ? "bg-primary/5" : ""
                         )}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right font-medium ${t.type === "CREDIT" ? "text-green-600" : "text-red-600"}`}
                       >
-                        {t.type === "CREDIT" ? "+ " : "- "}
-                        {formatCurrency(Math.abs(t.amount))}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={t.status === "new" ? "default" : "secondary"}
+                        <TableCell>
+                          <Checkbox
+                            checked={sel.selected || false}
+                            disabled={t.status === "duplicate"}
+                            onCheckedChange={(checked) =>
+                              handleSelectionChange(
+                                t.fitId,
+                                "selected",
+                                !!checked,
+                                t.description
+                              )
+                            }
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {formatDate(t.postedAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="text"
+                            defaultValue={t.description}
+                            onBlur={(e) =>
+                              handleSelectionChange(
+                                t.fitId,
+                                "description",
+                                e.target.value,
+                                t.description
+                              )
+                            }
+                            className="w-full h-8 text-xs font-medium"
+                            disabled={t.status === "duplicate"}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {t.status === "new" && (
+                            <div className="space-y-1.5">
+                              {/* Seletor Categoria vs Transferência */}
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleSelectionChange(
+                                      t.fitId,
+                                      "isTransfer",
+                                      false,
+                                      t.description
+                                    )
+                                  }
+                                  className={cn(
+                                    "px-2 py-0.5 text-[11px] rounded transition-all font-medium flex items-center gap-1 cursor-pointer",
+                                    !isTransfer
+                                      ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                                      : "text-muted-foreground hover:bg-muted/80 bg-muted/40"
+                                  )}
+                                >
+                                  <Tag className="w-2.5 h-2.5" /> Categoria
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleSelectionChange(
+                                      t.fitId,
+                                      "isTransfer",
+                                      true,
+                                      t.description
+                                    )
+                                  }
+                                  className={cn(
+                                    "px-2 py-0.5 text-[11px] rounded transition-all font-medium flex items-center gap-1 cursor-pointer",
+                                    isTransfer
+                                      ? "bg-blue-600 text-white shadow-xs font-semibold"
+                                      : "text-muted-foreground hover:bg-muted/80 bg-muted/40"
+                                  )}
+                                >
+                                  <ArrowRightLeft className="w-2.5 h-2.5" /> Transferência
+                                </button>
+                              </div>
+
+                              {/* Campo de pesquisa de acordo com a modalidade */}
+                              {isTransfer ? (
+                                <TransferAccountCombobox
+                                  accounts={contasCorrentes}
+                                  currentAccountId={selectedContaCorrenteId}
+                                  value={sel.destinationContaCorrenteId}
+                                  type={t.type}
+                                  onChange={(val) =>
+                                    handleSelectionChange(
+                                      t.fitId,
+                                      "destinationContaCorrenteId",
+                                      val,
+                                      t.description
+                                    )
+                                  }
+                                />
+                              ) : (
+                                <CategorySearchCombobox
+                                  accounts={contasParaEsteItem}
+                                  value={sel.contaContabilId}
+                                  onChange={(val) =>
+                                    handleSelectionChange(
+                                      t.fitId,
+                                      "contaContabilId",
+                                      val,
+                                      t.description
+                                    )
+                                  }
+                                  onOpenCreateModal={() => openNewCategoryModal(t.type)}
+                                />
+                              )}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-right font-semibold text-xs whitespace-nowrap",
+                            t.type === "CREDIT"
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-600 dark:text-rose-400"
+                          )}
                         >
-                          {t.status === "new" ? "Novo" : "Já existe"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                          {t.type === "CREDIT" ? "+ " : "- "}
+                          {formatCurrency(Math.abs(t.amount))}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant={t.status === "new" ? "default" : "secondary"}
+                            className="text-[10px] px-1.5 py-0"
+                          >
+                            {t.status === "new" ? "Novo" : "Já existe"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
-          <div className="flex justify-end gap-2 pt-4 mt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => setPreviewData([])}
-              disabled={isUploading}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleFinalImport} disabled={isUploading}>
-              {isUploading
-                ? "Importando..."
-                : `Importar (${selectedItemsCount}) Selecionados`}
-            </Button>
+
+          {/* Rodapé e Botão de Importação */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t">
+            <div className="text-xs text-muted-foreground">
+              Mostrando <span className="font-semibold text-foreground">{filteredPreviewData.length}</span> de{" "}
+              <span className="font-semibold text-foreground">{previewData.length}</span> transações
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setPreviewData([])}
+                disabled={isUploading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleFinalImport}
+                disabled={isUploading || selectedStats.count === 0}
+                className="gap-2"
+              >
+                {isUploading
+                  ? "Importando..."
+                  : `Importar (${selectedStats.count}) Selecionadas`}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

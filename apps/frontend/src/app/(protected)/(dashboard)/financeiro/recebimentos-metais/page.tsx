@@ -24,8 +24,7 @@ interface MetalReceivable {
   status: 'PENDENTE' | 'PAGO' | 'CANCELADO';
 }
 
-const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+import { formatDate } from '@/lib/date-utils';
 
 const statusConfig: { [key in MetalReceivable['status']]: { label: string; className: string } } = {
   PENDENTE: { label: 'Pendente', className: 'text-yellow-600 bg-yellow-100' },

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { ColumnDef } from '@tanstack/react-table';
+import { formatDate } from "@/lib/date-utils";
 
 import { DataTable } from '@/components/ui/data-table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,7 +24,6 @@ interface ContaCorrente {
 }
 
 const formatCurrency = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
-const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString("pt-BR", { timeZone: 'UTC' });
 
 export default function ReconcileTransactionsPage() {
   const [transactions, setTransactions] = useState<UnlinkedTransaction[]>([]);
