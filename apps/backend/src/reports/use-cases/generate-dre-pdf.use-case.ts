@@ -27,6 +27,15 @@ export class GenerateDrePdfUseCase {
       });
     });
 
+    Handlebars.registerHelper('formatarGramas', (valor) => {
+      if (valor === null || valor === undefined || isNaN(Number(valor)))
+        return '0,0000';
+      return Number(valor).toLocaleString('pt-BR', {
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 4,
+      });
+    });
+
     Handlebars.registerHelper('formatarMoeda', (valor) => {
       if (valor === null || valor === undefined || isNaN(Number(valor)))
         return '0,00';
@@ -91,6 +100,7 @@ export class GenerateDrePdfUseCase {
 
     const templateData = {
       ...reportData,
+      isGoldMode: dto.mode === 'GOLD',
       startDate: format(new Date(dto.startDate), 'dd/MM/yyyy'),
       endDate: format(new Date(dto.endDate), 'dd/MM/yyyy'),
       dataEmissao: format(new Date(), 'dd/MM/yyyy HH:mm:ss'),

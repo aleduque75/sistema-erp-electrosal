@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Table,
   TableBody,
@@ -55,6 +56,7 @@ const formatGold = (val: number) =>
   })} g`;
 
 export default function ExpensesReportPage() {
+  const [currencyView, setCurrencyView] = useState<"BRL" | "GOLD">("BRL");
   const [startDate, setStartDate] = useState<string>(
     format(startOfMonth(new Date()), "yyyy-MM-dd")
   );
@@ -134,12 +136,13 @@ export default function ExpensesReportPage() {
         fornecedorId: selectedFornecedorId !== "all" ? selectedFornecedorId : undefined,
         contaCorrenteId: selectedContaCorrenteId !== "all" ? selectedContaCorrenteId : undefined,
         status: statusFilter,
+        mode: currencyView,
       });
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `relatorio_despesas_${startDate}_a_${endDate}.pdf`;
+      link.download = `relatorio_despesas_${currencyView}_${startDate}_a_${endDate}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -196,6 +199,21 @@ export default function ExpensesReportPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
+          {/* Switch R$ / Au */}
+          <ToggleGroup
+            type="single"
+            value={currencyView}
+            onValueChange={(val: "BRL" | "GOLD") => val && setCurrencyView(val)}
+            className="bg-muted p-0.5 rounded-lg border h-9"
+          >
+            <ToggleGroupItem value="BRL" className="px-3 h-8 text-xs font-semibold">
+              R$
+            </ToggleGroupItem>
+            <ToggleGroupItem value="GOLD" className="px-3 h-8 text-xs font-semibold">
+              Au
+            </ToggleGroupItem>
+          </ToggleGroup>
+
           <Button
             variant="outline"
             onClick={handleFetchReport}
@@ -321,31 +339,23 @@ export default function ExpensesReportPage() {
               <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
                 Total de Despesas
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-600" />
+              {currencyView === "GOLD" ? (
+                <Scale className="h-4 w-4 text-amber-500" />
+              ) : (
+                <DollarSign className="h-4 w-4 text-blue-600" />
+              )}
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-black text-foreground">
-                {formatCurrency(reportData.summary.totalAmount)}
+              <div className={`text-2xl font-black ${currencyView === "GOLD" ? "text-amber-500" : "text-foreground"}`}>
+                {currencyView === "GOLD"
+                  ? formatGold(reportData.summary.totalGold)
+                  : formatCurrency(reportData.summary.totalAmount)}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {reportData.summary.count} lançamentos no período
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-amber-500">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
-                Equivalente em Ouro
-              </CardTitle>
-              <Scale className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
-                {formatGold(reportData.summary.totalGold)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Calculado nas cotações diárias
+                {currencyView === "GOLD"
+                  ? `Eq: ${formatCurrency(reportData.summary.totalAmount)}`
+                  : `Eq: ${formatGold(reportData.summary.totalGold)}`}
+                {" "}&bull; {reportData.summary.count} lançamentos
               </p>
             </CardContent>
           </Card>
@@ -359,10 +369,15 @@ export default function ExpensesReportPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(reportData.summary.totalPaid)}
+                {currencyView === "GOLD"
+                  ? formatGold(reportData.summary.totalPaidGold || 0)
+                  : formatCurrency(reportData.summary.totalPaid)}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Efetivadas em conta corrente / caixa
+                {currencyView === "GOLD"
+                  ? `Eq: ${formatCurrency(reportData.summary.totalPaid)}`
+                  : `Eq: ${formatGold(reportData.summary.totalPaidGold || 0)}`}
+                {" "}&bull; Efetivadas em conta / caixa
               </p>
             </CardContent>
           </Card>
@@ -376,10 +391,38 @@ export default function ExpensesReportPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-black text-amber-600">
-                {formatCurrency(reportData.summary.totalPending)}
+                {currencyView === "GOLD"
+                  ? formatGold(reportData.summary.totalPendingGold || 0)
+                  : formatCurrency(reportData.summary.totalPending)}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Títulos com vencimento no período
+                {currencyView === "GOLD"
+                  ? `Eq: ${formatCurrency(reportData.summary.totalPending)}`
+                  : `Eq: ${formatGold(reportData.summary.totalPendingGold || 0)}`}
+                {" "}&bull; Títulos em aberto
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-purple-600">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
+                {currencyView === "GOLD" ? "Equivalente em Real" : "Equivalente em Ouro"}
+              </CardTitle>
+              {currencyView === "GOLD" ? (
+                <DollarSign className="h-4 w-4 text-purple-600" />
+              ) : (
+                <Scale className="h-4 w-4 text-amber-500" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-black text-purple-600 dark:text-purple-400">
+                {currencyView === "GOLD"
+                  ? formatCurrency(reportData.summary.totalAmount)
+                  : formatGold(reportData.summary.totalGold)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Calculado nas cotações diárias
               </p>
             </CardContent>
           </Card>
@@ -391,7 +434,7 @@ export default function ExpensesReportPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <PieChart className="h-4 w-4 text-primary" /> Distribuição por Categoria Contábil
+              <PieChart className="h-4 w-4 text-primary" /> Distribuição por Categoria Contábil ({currencyView === "GOLD" ? "em Au" : "em R$"})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -411,7 +454,7 @@ export default function ExpensesReportPage() {
                   </div>
                   <div className="flex justify-between items-baseline text-xs text-muted-foreground">
                     <span className="font-mono text-foreground font-semibold">
-                      {formatCurrency(cat.totalAmount)}
+                      {currencyView === "GOLD" ? formatGold(cat.totalGold) : formatCurrency(cat.totalAmount)}
                     </span>
                     <span className="text-[10px]">{cat.count} lanç.</span>
                   </div>
@@ -455,8 +498,12 @@ export default function ExpensesReportPage() {
                   <TableHead>Categoria Contábil</TableHead>
                   <TableHead>Conta / Origem</TableHead>
                   <TableHead className="w-[90px]">Status</TableHead>
-                  <TableHead className="text-right">Valor (R$)</TableHead>
-                  <TableHead className="text-right">Ouro (Au)</TableHead>
+                  <TableHead className={`text-right ${currencyView === "BRL" ? "font-bold text-foreground" : ""}`}>
+                    Valor (R$)
+                  </TableHead>
+                  <TableHead className={`text-right ${currencyView === "GOLD" ? "font-bold text-amber-500" : ""}`}>
+                    Ouro (Au)
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -501,10 +548,10 @@ export default function ExpensesReportPage() {
                           {item.status === "PAGO" ? "Pago" : "Pendente"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-mono font-bold text-xs">
+                      <TableCell className={`text-right font-mono text-xs ${currencyView === "BRL" ? "font-bold text-foreground" : "text-muted-foreground"}`}>
                         {formatCurrency(item.valor)}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-amber-600 dark:text-amber-400">
+                      <TableCell className={`text-right font-mono text-xs ${currencyView === "GOLD" ? "font-bold text-amber-500" : "text-amber-600 dark:text-amber-400"}`}>
                         {item.goldAmount ? formatGold(item.goldAmount) : "-"}
                       </TableCell>
                     </TableRow>

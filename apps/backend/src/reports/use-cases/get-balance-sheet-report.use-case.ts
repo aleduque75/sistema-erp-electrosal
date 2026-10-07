@@ -6,11 +6,13 @@ export interface BalanceSheetItem {
   descricao: string;
   detalhe?: string;
   valor: number;
+  valorAu: number;
 }
 
 export interface BalanceSheetSection {
   title: string;
   total: number;
+  totalAu: number;
   items: BalanceSheetItem[];
 }
 
@@ -22,17 +24,21 @@ export interface BalanceSheetReportResult {
     circulante: BalanceSheetSection;
     naoCirculante: BalanceSheetSection;
     total: number;
+    totalAu: number;
   };
   passivo: {
     circulante: BalanceSheetSection;
     naoCirculante: BalanceSheetSection;
     total: number;
+    totalAu: number;
   };
   patrimonioLiquido: BalanceSheetSection;
   totalPassivoPatrimonioLiquido: number;
+  totalPassivoPatrimonioLiquidoAu: number;
   indicadores: {
     liquidezCorrente: number;
     capitalDeGiro: number;
+    capitalDeGiroAu: number;
   };
 }
 
@@ -110,6 +116,7 @@ export class GetBalanceSheetReportUseCase {
         descricao: `${c.nome} (${c.type})`,
         detalhe: c.numeroConta ? `Conta: ${c.numeroConta}` : undefined,
         valor: saldo,
+        valorAu: quotationAu > 0 ? Number((saldo / quotationAu).toFixed(4)) : 0,
       });
       totalDisponibilidades += saldo;
     }
@@ -164,16 +171,19 @@ export class GetBalanceSheetReportUseCase {
         descricao: 'Clientes / Contas a Receber',
         detalhe: `${contasReceber.length} título(s) pendente(s)`,
         valor: totalContasReceber,
+        valorAu: quotationAu > 0 ? Number((totalContasReceber / quotationAu).toFixed(4)) : 0,
       },
       {
         descricao: 'Estoque de Ouro (Au)',
         detalhe: `${totalEstoqueOuroG.toFixed(4)}g @ R$ ${quotationAu.toFixed(2)}`,
         valor: valorEstoqueOuro,
+        valorAu: totalEstoqueOuroG,
       },
       {
         descricao: 'Estoque de Prata (Ag)',
         detalhe: `${totalEstoquePrataG.toFixed(4)}g @ R$ ${quotationAg.toFixed(2)}`,
         valor: valorEstoquePrata,
+        valorAu: quotationAu > 0 ? Number((valorEstoquePrata / quotationAu).toFixed(4)) : 0,
       },
     ];
 
@@ -196,6 +206,7 @@ export class GetBalanceSheetReportUseCase {
         descricao: ci.nome,
         detalhe: `Conta Contábil: ${ci.codigo}`,
         valor: 0,
+        valorAu: 0,
       });
     }
 
@@ -249,16 +260,19 @@ export class GetBalanceSheetReportUseCase {
         descricao: 'Fornecedores / Contas a Pagar',
         detalhe: `${contasPagar.length} título(s) em aberto`,
         valor: totalContasPagar,
+        valorAu: quotationAu > 0 ? Number((totalContasPagar / quotationAu).toFixed(4)) : 0,
       },
       {
         descricao: 'Créditos de Clientes em Ouro (Au)',
         detalhe: `${totalOuroDevidoG.toFixed(4)}g devidos a clientes`,
         valor: valorOuroDevido,
+        valorAu: totalOuroDevidoG,
       },
       {
         descricao: 'Créditos de Clientes em Prata (Ag)',
         detalhe: `${totalPrataDevidaG.toFixed(4)}g devidos a clientes`,
         valor: valorPrataDevida,
+        valorAu: quotationAu > 0 ? Number((valorPrataDevida / quotationAu).toFixed(4)) : 0,
       },
     ];
 
@@ -275,6 +289,7 @@ export class GetBalanceSheetReportUseCase {
         descricao: 'Patrimônio Líquido Acumulado',
         detalhe: 'Capital Próprio e Resultados Acumulados',
         valor: valorPatrimonioLiquido,
+        valorAu: quotationAu > 0 ? Number((valorPatrimonioLiquido / quotationAu).toFixed(4)) : 0,
       },
     ];
 
@@ -287,6 +302,8 @@ export class GetBalanceSheetReportUseCase {
         : 1.0;
     const capitalDeGiro = totalAtivoCirculante - totalPassivoCirculante;
 
+    const toAu = (val: number) => (quotationAu > 0 ? Number((val / quotationAu).toFixed(4)) : 0);
+
     return {
       asOfDate: asOfDateStr,
       quotationAu,
@@ -295,37 +312,46 @@ export class GetBalanceSheetReportUseCase {
         circulante: {
           title: 'Ativo Circulante (Disponibilidades, Recebíveis e Estoques)',
           total: totalAtivoCirculante,
+          totalAu: toAu(totalAtivoCirculante),
           items: itensAtivoCirculante,
         },
         naoCirculante: {
           title: 'Ativo Não Circulante (Imobilizado e Bens)',
           total: totalAtivoNaoCirculante,
+          totalAu: toAu(totalAtivoNaoCirculante),
           items: itensAtivoNaoCirculante,
         },
         total: totalAtivo,
+        totalAu: toAu(totalAtivo),
       },
       passivo: {
         circulante: {
           title: 'Passivo Circulante (Contas a Pagar e Obrigações em Metal)',
           total: totalPassivoCirculante,
+          totalAu: toAu(totalPassivoCirculante),
           items: itensPassivoCirculante,
         },
         naoCirculante: {
           title: 'Passivo Não Circulante (Obrigações de Longo Prazo)',
           total: totalPassivoNaoCirculante,
+          totalAu: toAu(totalPassivoNaoCirculante),
           items: [],
         },
         total: totalPassivo,
+        totalAu: toAu(totalPassivo),
       },
       patrimonioLiquido: {
         title: 'Patrimônio Líquido',
         total: valorPatrimonioLiquido,
+        totalAu: toAu(valorPatrimonioLiquido),
         items: itensPatrimonioLiquido,
       },
       totalPassivoPatrimonioLiquido,
+      totalPassivoPatrimonioLiquidoAu: toAu(totalPassivoPatrimonioLiquido),
       indicadores: {
         liquidezCorrente,
         capitalDeGiro,
+        capitalDeGiroAu: toAu(capitalDeGiro),
       },
     };
   }

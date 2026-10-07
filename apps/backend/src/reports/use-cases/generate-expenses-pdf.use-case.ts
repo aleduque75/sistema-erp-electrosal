@@ -117,6 +117,7 @@ export class GenerateExpensesPdfUseCase {
 
     const templateData = {
       ...reportData,
+      isGoldMode: dto.mode === 'GOLD',
       startDate: format(new Date(dto.startDate), 'dd/MM/yyyy'),
       endDate: format(new Date(dto.endDate), 'dd/MM/yyyy'),
       dataEmissao: format(new Date(), 'dd/MM/yyyy HH:mm:ss'),

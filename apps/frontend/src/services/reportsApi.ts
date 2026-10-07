@@ -121,7 +121,9 @@ export interface ExpensesReport {
   summary: {
     totalAmount: number;
     totalPaid: number;
+    totalPaidGold?: number;
     totalPending: number;
+    totalPendingGold?: number;
     totalGold: number;
     count: number;
     byCategory: CategorySummary[];
@@ -138,6 +140,7 @@ export interface GetExpensesReportParams {
   fornecedorId?: string;
   contaCorrenteId?: string;
   status?: 'ALL' | 'PAID' | 'PENDING';
+  mode?: 'BRL' | 'GOLD';
 }
 
 export const getExpensesReport = async (
@@ -167,28 +170,32 @@ export interface DreSubItem {
   codigo: string;
   nome: string;
   valor: number;
+  valorAu?: number;
 }
 
 export interface DreSection {
   title: string;
   total: number;
+  totalAu?: number;
   items: DreSubItem[];
 }
 
 export interface DreReport {
   period: { startDate: string; endDate: string; regime: string };
+  quotationAu: number;
   receitaBruta: DreSection;
   custosOperacionais: DreSection;
-  lucroBruto: { valor: number; margem: number };
+  lucroBruto: { valor: number; valorAu?: number; margem: number };
   despesasOperacionais: DreSection;
   resultadoFinanceiro: DreSection;
-  resultadoLiquido: { valor: number; margem: number; status: 'LUCRO' | 'PREJUIZO' };
+  resultadoLiquido: { valor: number; valorAu?: number; margem: number; status: 'LUCRO' | 'PREJUIZO' };
 }
 
 export interface GetDreReportParams {
   startDate: string;
   endDate: string;
   regime?: 'CAIXA' | 'COMPETENCIA';
+  mode?: 'BRL' | 'GOLD';
 }
 
 export const getDreReport = async (
@@ -217,11 +224,13 @@ export interface BalanceSheetItem {
   descricao: string;
   detalhe?: string;
   valor: number;
+  valorAu?: number;
 }
 
 export interface BalanceSheetSection {
   title: string;
   total: number;
+  totalAu?: number;
   items: BalanceSheetItem[];
 }
 
@@ -233,22 +242,27 @@ export interface BalanceSheetReport {
     circulante: BalanceSheetSection;
     naoCirculante: BalanceSheetSection;
     total: number;
+    totalAu?: number;
   };
   passivo: {
     circulante: BalanceSheetSection;
     naoCirculante: BalanceSheetSection;
     total: number;
+    totalAu?: number;
   };
   patrimonioLiquido: BalanceSheetSection;
   totalPassivoPatrimonioLiquido: number;
+  totalPassivoPatrimonioLiquidoAu?: number;
   indicadores: {
     liquidezCorrente: number;
     capitalDeGiro: number;
+    capitalDeGiroAu?: number;
   };
 }
 
 export interface GetBalanceSheetReportParams {
   asOfDate?: string;
+  mode?: 'BRL' | 'GOLD';
 }
 
 export const getBalanceSheetReport = async (

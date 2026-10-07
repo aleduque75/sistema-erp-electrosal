@@ -34,7 +34,9 @@ export interface ExpensesReportResult {
   summary: {
     totalAmount: number;
     totalPaid: number;
+    totalPaidGold: number;
     totalPending: number;
+    totalPendingGold: number;
     totalGold: number;
     count: number;
     byCategory: CategorySummary[];
@@ -68,6 +70,19 @@ export class GetExpensesReportUseCase {
       endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`,
     );
 
+    // 0. Cotação de referência em ouro no período
+    const quoteAu = await this.prisma.quotation.findFirst({
+      where: {
+        organizationId,
+        metal: 'AU',
+        date: { lte: parsedEndDate },
+      },
+      orderBy: { date: 'desc' },
+    });
+    const defaultGoldPrice = quoteAu
+      ? Number(quoteAu.buyPrice || quoteAu.sellPrice)
+      : 715;
+
     const entries: ExpenseItem[] = [];
 
     // 1. Buscar transações de Débito (Despesas Pagas/Efetivadas)
@@ -79,7 +94,7 @@ export class GetExpensesReportUseCase {
           gte: parsedStartDate,
           lte: parsedEndDate,
         },
-        // Excluir transferências internas
+        // Excluir transferências internas e movimentações de estoque/ativo
         linkedTransactionId: null,
         NOT: {
           OR: [
@@ -91,6 +106,23 @@ export class GetExpensesReportUseCase {
             {
               contaContabil: {
                 codigo: { in: ['5.1.11', '1.1.7'] },
+              },
+            },
+            {
+              contaContabil: {
+                tipo: 'ATIVO',
+              },
+            },
+            {
+              descricao: {
+                contains: 'Valorização de estoque',
+                mode: 'insensitive',
+              },
+            },
+            {
+              descricao: {
+                contains: 'Contrapartida da valorização',
+                mode: 'insensitive',
               },
             },
           ],
@@ -114,13 +146,21 @@ export class GetExpensesReportUseCase {
       });
 
       for (const t of transacoes) {
+        const val = Number(t.valor);
+        const gPrice = t.goldPrice ? Number(t.goldPrice) : defaultGoldPrice;
+        const gAmount = t.goldAmount
+          ? Number(t.goldAmount)
+          : gPrice > 0
+          ? Number((val / gPrice).toFixed(4))
+          : 0;
+
         entries.push({
           id: t.id,
           dataHora: t.dataHora.toISOString(),
           descricao: t.descricao || 'Despesa',
-          valor: Number(t.valor),
-          goldPrice: t.goldPrice ? Number(t.goldPrice) : null,
-          goldAmount: t.goldAmount ? Number(t.goldAmount) : null,
+          valor: val,
+          goldPrice: gPrice,
+          goldAmount: gAmount,
           fornecedorNome: t.fornecedor?.pessoa?.name || null,
           contaContabilCodigo: t.contaContabil?.codigo || null,
           contaContabilNome: t.contaContabil?.nome || 'Sem Categoria',
@@ -156,13 +196,21 @@ export class GetExpensesReportUseCase {
       });
 
       for (const ap of contasPendentes) {
+        const val = Number(ap.amount);
+        const gPrice = ap.goldPrice ? Number(ap.goldPrice) : defaultGoldPrice;
+        const gAmount = ap.goldAmount
+          ? Number(ap.goldAmount)
+          : gPrice > 0
+          ? Number((val / gPrice).toFixed(4))
+          : 0;
+
         entries.push({
           id: `ap-${ap.id}`,
           dataHora: ap.dueDate.toISOString(),
           descricao: ap.description || 'Conta a Pagar Pendente',
-          valor: Number(ap.amount),
-          goldPrice: ap.goldPrice ? Number(ap.goldPrice) : null,
-          goldAmount: ap.goldAmount ? Number(ap.goldAmount) : null,
+          valor: val,
+          goldPrice: gPrice,
+          goldAmount: gAmount,
           fornecedorNome: ap.fornecedor?.pessoa?.name || null,
           contaContabilCodigo: ap.contaContabil?.codigo || null,
           contaContabilNome: ap.contaContabil?.nome || 'A Classificar',
@@ -179,7 +227,9 @@ export class GetExpensesReportUseCase {
 
     // 3. Cálculos de Totais e Agrupamentos
     let totalPaid = 0;
+    let totalPaidGold = 0;
     let totalPending = 0;
+    let totalPendingGold = 0;
     let totalGold = 0;
 
     const categoryMap = new Map<
@@ -200,8 +250,10 @@ export class GetExpensesReportUseCase {
     for (const item of entries) {
       if (item.status === 'PAGO') {
         totalPaid += item.valor;
+        totalPaidGold += item.goldAmount || 0;
       } else {
         totalPending += item.valor;
+        totalPendingGold += item.goldAmount || 0;
       }
       totalGold += item.goldAmount || 0;
 
@@ -261,7 +313,9 @@ export class GetExpensesReportUseCase {
       summary: {
         totalAmount,
         totalPaid,
+        totalPaidGold,
         totalPending,
+        totalPendingGold,
         totalGold,
         count: entries.length,
         byCategory,

@@ -13,6 +13,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Table,
   TableBody,
@@ -31,15 +32,23 @@ import {
   Filter,
   CheckCircle2,
   AlertTriangle,
+  Scale,
 } from "lucide-react";
 
 const formatCurrency = (val: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
 
+const formatGold = (val: number) =>
+  `${(Number(val) || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  })} g`;
+
 const formatPercent = (val: number) =>
   `${(Number(val) || 0).toFixed(2).replace(".", ",")}%`;
 
 export default function DreReportPage() {
+  const [currencyView, setCurrencyView] = useState<"BRL" | "GOLD">("BRL");
   const [startDate, setStartDate] = useState<string>(
     format(startOfMonth(new Date()), "yyyy-MM-dd")
   );
@@ -83,12 +92,13 @@ export default function DreReportPage() {
         startDate,
         endDate,
         regime: "CAIXA",
+        mode: currencyView,
       });
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `dre_${startDate}_a_${endDate}.pdf`;
+      link.download = `dre_${currencyView}_${startDate}_a_${endDate}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -132,6 +142,21 @@ export default function DreReportPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
+          {/* Switch R$ / Au */}
+          <ToggleGroup
+            type="single"
+            value={currencyView}
+            onValueChange={(val: "BRL" | "GOLD") => val && setCurrencyView(val)}
+            className="bg-muted p-0.5 rounded-lg border h-9"
+          >
+            <ToggleGroupItem value="BRL" className="px-3 h-8 text-xs font-semibold">
+              R$
+            </ToggleGroupItem>
+            <ToggleGroupItem value="GOLD" className="px-3 h-8 text-xs font-semibold">
+              Au
+            </ToggleGroupItem>
+          </ToggleGroup>
+
           <Button
             variant="outline"
             onClick={handleFetchReport}
@@ -155,8 +180,15 @@ export default function DreReportPage() {
       {/* Card de Filtros */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Filter className="h-4 w-4 text-primary" /> Período da Demonstração
+          <CardTitle className="text-sm font-semibold flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-primary" /> Período da Demonstração
+            </span>
+            {reportData && (
+              <span className="text-xs font-normal text-muted-foreground">
+                Cotação de Referência Au: <strong>{formatCurrency(reportData.quotationAu)}/g</strong>
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -207,14 +239,23 @@ export default function DreReportPage() {
               <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
                 Receita Operacional
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-blue-600" />
+              {currencyView === "GOLD" ? (
+                <Scale className="h-4 w-4 text-amber-500" />
+              ) : (
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+              )}
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                {formatCurrency(reportData.receitaBruta.total)}
+              <div className={`text-2xl font-black ${currencyView === "GOLD" ? "text-amber-500" : "text-blue-600 dark:text-blue-400"}`}>
+                {currencyView === "GOLD"
+                  ? formatGold(reportData.receitaBruta.totalAu || 0)
+                  : formatCurrency(reportData.receitaBruta.total)}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {reportData.receitaBruta.items.length} grupos de receita
+                {currencyView === "GOLD"
+                  ? `Eq: ${formatCurrency(reportData.receitaBruta.total)}`
+                  : `Eq: ${formatGold(reportData.receitaBruta.totalAu || 0)}`}
+                {" "}&bull; {reportData.receitaBruta.items.length} grupos
               </p>
             </CardContent>
           </Card>
@@ -228,10 +269,15 @@ export default function DreReportPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-black text-rose-600 dark:text-rose-400">
-                {formatCurrency(reportData.custosOperacionais.total)}
+                {currencyView === "GOLD"
+                  ? formatGold(reportData.custosOperacionais.totalAu || 0)
+                  : formatCurrency(reportData.custosOperacionais.total)}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Custos diretos e matéria prima
+                {currencyView === "GOLD"
+                  ? `Eq: ${formatCurrency(reportData.custosOperacionais.total)}`
+                  : `Eq: ${formatGold(reportData.custosOperacionais.totalAu || 0)}`}
+                {" "}&bull; Custos diretos
               </p>
             </CardContent>
           </Card>
@@ -245,10 +291,13 @@ export default function DreReportPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-black text-foreground">
-                {formatCurrency(reportData.lucroBruto.valor)}
+                {currencyView === "GOLD"
+                  ? formatGold(reportData.lucroBruto.valorAu || 0)
+                  : formatCurrency(reportData.lucroBruto.valor)}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Margem Bruta: <strong className="text-foreground">{formatPercent(reportData.lucroBruto.margem)}</strong>
+                {" "}&bull; {currencyView === "GOLD" ? formatCurrency(reportData.lucroBruto.valor) : formatGold(reportData.lucroBruto.valorAu || 0)}
               </p>
             </CardContent>
           </Card>
@@ -270,11 +319,14 @@ export default function DreReportPage() {
                   isLucro ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                 }`}
               >
-                {formatCurrency(reportData.resultadoLiquido.valor)}
+                {currencyView === "GOLD"
+                  ? formatGold(reportData.resultadoLiquido.valorAu || 0)
+                  : formatCurrency(reportData.resultadoLiquido.valor)}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Margem Líquida:{" "}
                 <strong className="text-foreground">{formatPercent(reportData.resultadoLiquido.margem)}</strong>
+                {" "}&bull; {currencyView === "GOLD" ? formatCurrency(reportData.resultadoLiquido.valor) : formatGold(reportData.resultadoLiquido.valorAu || 0)}
               </p>
             </CardContent>
           </Card>
@@ -286,7 +338,7 @@ export default function DreReportPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">
-              Demonstração Detalhada das Contas de Resultado
+              Demonstração Detalhada das Contas de Resultado ({currencyView === "GOLD" ? "Valores em Ouro - Au" : "Valores em Moeda - R$"})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -295,7 +347,9 @@ export default function DreReportPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[70%]">Conta Contábil / Descrição</TableHead>
-                    <TableHead className="text-right w-[30%]">Valor do Período (R$)</TableHead>
+                    <TableHead className="text-right w-[30%]">
+                      Valor do Período ({currencyView === "GOLD" ? "Au" : "R$"})
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -304,8 +358,10 @@ export default function DreReportPage() {
                     <TableCell className="text-sm text-foreground">
                       (+) 1. RECEITA OPERACIONAL BRUTA
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm text-blue-600 dark:text-blue-400">
-                      {formatCurrency(reportData.receitaBruta.total)}
+                    <TableCell className={`text-right font-mono text-sm ${currencyView === "GOLD" ? "text-amber-500 font-bold" : "text-blue-600 dark:text-blue-400"}`}>
+                      {currencyView === "GOLD"
+                        ? formatGold(reportData.receitaBruta.totalAu || 0)
+                        : formatCurrency(reportData.receitaBruta.total)}
                     </TableCell>
                   </TableRow>
                   {reportData.receitaBruta.items.map((item) => (
@@ -315,7 +371,7 @@ export default function DreReportPage() {
                         {item.nome}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        {formatCurrency(item.valor)}
+                        {currencyView === "GOLD" ? formatGold(item.valorAu || 0) : formatCurrency(item.valor)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -326,7 +382,7 @@ export default function DreReportPage() {
                       (-) 2. CUSTOS OPERACIONAIS (CPV / CMV)
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm text-rose-600 dark:text-rose-400">
-                      - {formatCurrency(reportData.custosOperacionais.total)}
+                      - {currencyView === "GOLD" ? formatGold(reportData.custosOperacionais.totalAu || 0) : formatCurrency(reportData.custosOperacionais.total)}
                     </TableCell>
                   </TableRow>
                   {reportData.custosOperacionais.items.map((item) => (
@@ -336,7 +392,7 @@ export default function DreReportPage() {
                         {item.nome}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs text-rose-600 dark:text-rose-400">
-                        - {formatCurrency(item.valor)}
+                        - {currencyView === "GOLD" ? formatGold(item.valorAu || 0) : formatCurrency(item.valor)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -350,7 +406,7 @@ export default function DreReportPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm font-bold text-foreground">
-                      {formatCurrency(reportData.lucroBruto.valor)}
+                      {currencyView === "GOLD" ? formatGold(reportData.lucroBruto.valorAu || 0) : formatCurrency(reportData.lucroBruto.valor)}
                     </TableCell>
                   </TableRow>
 
@@ -360,7 +416,7 @@ export default function DreReportPage() {
                       (-) 4. DESPESAS OPERACIONAIS (Administrativas e Comerciais)
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm text-rose-600 dark:text-rose-400">
-                      - {formatCurrency(reportData.despesasOperacionais.total)}
+                      - {currencyView === "GOLD" ? formatGold(reportData.despesasOperacionais.totalAu || 0) : formatCurrency(reportData.despesasOperacionais.total)}
                     </TableCell>
                   </TableRow>
                   {reportData.despesasOperacionais.items.map((item) => (
@@ -370,7 +426,7 @@ export default function DreReportPage() {
                         {item.nome}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs text-rose-600 dark:text-rose-400">
-                        - {formatCurrency(item.valor)}
+                        - {currencyView === "GOLD" ? formatGold(item.valorAu || 0) : formatCurrency(item.valor)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -381,7 +437,7 @@ export default function DreReportPage() {
                       (+/-) 5. RESULTADO FINANCEIRO LÍQUIDO
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm">
-                      {formatCurrency(reportData.resultadoFinanceiro.total)}
+                      {currencyView === "GOLD" ? formatGold(reportData.resultadoFinanceiro.totalAu || 0) : formatCurrency(reportData.resultadoFinanceiro.total)}
                     </TableCell>
                   </TableRow>
                   {reportData.resultadoFinanceiro.items.map((item) => (
@@ -391,7 +447,7 @@ export default function DreReportPage() {
                         {item.nome}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        {formatCurrency(item.valor)}
+                        {currencyView === "GOLD" ? formatGold(item.valorAu || 0) : formatCurrency(item.valor)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -411,7 +467,7 @@ export default function DreReportPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-mono text-lg py-3">
-                      {formatCurrency(reportData.resultadoLiquido.valor)}
+                      {currencyView === "GOLD" ? formatGold(reportData.resultadoLiquido.valorAu || 0) : formatCurrency(reportData.resultadoLiquido.valor)}
                     </TableCell>
                   </TableRow>
                 </TableBody>

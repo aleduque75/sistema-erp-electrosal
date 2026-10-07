@@ -10,4 +10,8 @@ export class GetDreReportDto {
   @IsOptional()
   @IsEnum(['CAIXA', 'COMPETENCIA'])
   regime?: 'CAIXA' | 'COMPETENCIA' = 'CAIXA';
+
+  @IsOptional()
+  @IsEnum(['BRL', 'GOLD'])
+  mode?: 'BRL' | 'GOLD' = 'BRL';
 }

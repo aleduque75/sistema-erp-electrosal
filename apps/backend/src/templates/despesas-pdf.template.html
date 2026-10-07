@@ -166,7 +166,7 @@
                 <img src="%%LOGO_PLACEHOLDER%%" alt="Electrosal" class="logo" />
             </div>
             <div class="title-block">
-                <h1>Relatório Analítico de Despesas</h1>
+                <h1>Relatório Analítico de Despesas{{#if isGoldMode}} (Ouro - Au){{/if}}</h1>
                 <p>Período: <strong>{{startDate}}</strong> até <strong>{{endDate}}</strong></p>
                 <p>Emissão: {{dataEmissao}}</p>
             </div>
@@ -174,6 +174,28 @@
 
         <!-- KPI Cards -->
         <div class="kpi-grid">
+            {{#if isGoldMode}}
+            <div class="kpi-card">
+                <div class="kpi-label">Total de Despesas (Au)</div>
+                <div class="kpi-value" style="color: #d97706;">{{formatarGramas summary.totalGold}} g</div>
+                <div class="kpi-sub">Equiv. R$ {{formatarMoeda summary.totalAmount}}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Despesas Pagas (Au)</div>
+                <div class="kpi-value" style="color: #16a34a;">{{formatarGramas summary.totalPaidGold}} g</div>
+                <div class="kpi-sub">Equiv. R$ {{formatarMoeda summary.totalPaid}}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Pendentes / A Pagar (Au)</div>
+                <div class="kpi-value" style="color: #ea580c;">{{formatarGramas summary.totalPendingGold}} g</div>
+                <div class="kpi-sub">Equiv. R$ {{formatarMoeda summary.totalPending}}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Total Lançamentos</div>
+                <div class="kpi-value">{{summary.count}}</div>
+                <div class="kpi-sub">Lançamentos no período</div>
+            </div>
+            {{else}}
             <div class="kpi-card">
                 <div class="kpi-label">Total de Despesas</div>
                 <div class="kpi-value">R$ {{formatarMoeda summary.totalAmount}}</div>
@@ -181,7 +203,7 @@
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Equivalente em Ouro (Au)</div>
-                <div class="kpi-value">{{formatarGramas summary.totalGold}} g</div>
+                <div class="kpi-value" style="color: #d97706;">{{formatarGramas summary.totalGold}} g</div>
                 <div class="kpi-sub">Calculado na cotação do dia</div>
             </div>
             <div class="kpi-card">
@@ -191,9 +213,10 @@
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Pendentes (A Pagar)</div>
-                <div class="kpi-value" style="color: #d97706;">R$ {{formatarMoeda summary.totalPending}}</div>
+                <div class="kpi-value" style="color: #ea580c;">R$ {{formatarMoeda summary.totalPending}}</div>
                 <div class="kpi-sub">Contas a Vencer no Período</div>
             </div>
+            {{/if}}
         </div>
 
         <!-- Resumo por Categoria Contábil -->
@@ -215,7 +238,7 @@
                     <td class="font-mono text-muted">{{this.codigo}}</td>
                     <td class="font-bold">{{this.nome}}</td>
                     <td class="text-center">{{this.count}}</td>
-                    <td class="text-right font-mono">{{formatarGramas this.totalGold}} g</td>
+                    <td class="text-right font-mono" style="color: #b45309;">{{formatarGramas this.totalGold}} g</td>
                     <td class="text-right font-bold font-mono">R$ {{formatarMoeda this.totalAmount}}</td>
                     <td class="text-right font-mono">{{formatarPercentual this.percentage}}</td>
                 </tr>
@@ -223,7 +246,7 @@
                 <tr class="total-row">
                     <td colspan="2">TOTAL CONSOLIDADO</td>
                     <td class="text-center">{{summary.count}}</td>
-                    <td class="text-right font-mono">{{formatarGramas summary.totalGold}} g</td>
+                    <td class="text-right font-mono" style="color: #b45309;">{{formatarGramas summary.totalGold}} g</td>
                     <td class="text-right font-mono">R$ {{formatarMoeda summary.totalAmount}}</td>
                     <td class="text-right font-mono">100,00%</td>
                 </tr>
@@ -240,7 +263,7 @@
                     <th style="width: 18%;">Fornecedor / Favorecido</th>
                     <th style="width: 18%;">Categoria Contábil</th>
                     <th style="width: 10%;">Status</th>
-                    <th class="text-right" style="width: 16%;">Valor (R$)</th>
+                    <th class="text-right" style="width: 16%;">Valor ({{#if isGoldMode}}g Au{{else}}R${{/if}})</th>
                 </tr>
             </thead>
             <tbody>
@@ -249,8 +272,12 @@
                     <td class="font-mono">{{formatarData this.dataHora}}</td>
                     <td>
                         <span class="font-bold">{{this.descricao}}</span>
+                        {{#if ../isGoldMode}}
+                        <br /><span style="font-size: 7.5px; color: #64748b;">R$ {{formatarMoeda this.valor}}</span>
+                        {{else}}
                         {{#if this.goldAmount}}
                         <br /><span style="font-size: 7.5px; color: #64748b;">Equiv: {{formatarGramas this.goldAmount}} g Au</span>
+                        {{/if}}
                         {{/if}}
                     </td>
                     <td>{{#if this.fornecedorNome}}{{this.fornecedorNome}}{{else}}<span style="color: #94a3b8;">-</span>{{/if}}</td>
@@ -262,12 +289,24 @@
                         <span class="badge badge-pending">Pendente</span>
                         {{/ifCond}}
                     </td>
-                    <td class="text-right font-bold font-mono">R$ {{formatarMoeda this.valor}}</td>
+                    <td class="text-right font-bold font-mono">
+                        {{#if ../isGoldMode}}
+                        <span style="color: #b45309;">{{formatarGramas this.goldAmount}} g</span>
+                        {{else}}
+                        R$ {{formatarMoeda this.valor}}
+                        {{/if}}
+                    </td>
                 </tr>
                 {{/each}}
                 <tr class="total-row">
                     <td colspan="5">TOTAL GERAL DE DESPESAS</td>
-                    <td class="text-right font-mono">R$ {{formatarMoeda summary.totalAmount}}</td>
+                    <td class="text-right font-mono">
+                        {{#if isGoldMode}}
+                        <span style="color: #b45309;">{{formatarGramas summary.totalGold}} g Au</span>
+                        {{else}}
+                        R$ {{formatarMoeda summary.totalAmount}}
+                        {{/if}}
+                    </td>
                 </tr>
             </tbody>
         </table>

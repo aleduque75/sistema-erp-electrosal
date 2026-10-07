@@ -7,11 +7,13 @@ export interface DreSubItem {
   codigo: string;
   nome: string;
   valor: number;
+  valorAu: number;
 }
 
 export interface DreSection {
   title: string;
   total: number;
+  totalAu: number;
   items: DreSubItem[];
 }
 
@@ -21,16 +23,19 @@ export interface DreReportResult {
     endDate: string;
     regime: string;
   };
+  quotationAu: number;
   receitaBruta: DreSection;
   custosOperacionais: DreSection;
   lucroBruto: {
     valor: number;
+    valorAu: number;
     margem: number; // %
   };
   despesasOperacionais: DreSection;
   resultadoFinanceiro: DreSection;
   resultadoLiquido: {
     valor: number;
+    valorAu: number;
     margem: number; // %
     status: 'LUCRO' | 'PREJUIZO';
   };
@@ -53,13 +58,26 @@ export class GetDreReportUseCase {
       endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`,
     );
 
+    // 0. Cotação do Ouro de referência
+    const quoteAu = await this.prisma.quotation.findFirst({
+      where: {
+        organizationId,
+        metal: 'AU',
+        date: { lte: parsedEndDate },
+      },
+      orderBy: { date: 'desc' },
+    });
+    const quotationAu = quoteAu
+      ? Number(quoteAu.buyPrice || quoteAu.sellPrice)
+      : 715;
+
     // 1. Buscar todas as contas contábeis da organização
     const contasContabeis = await this.prisma.contaContabil.findMany({
       where: { organizationId },
       orderBy: { codigo: 'asc' },
     });
 
-    // 2. Buscar todas as transações financeiras no período (excluindo transferências internas entre contas)
+    // 2. Buscar todas as transações financeiras no período (excluindo transferências internas entre contas e valorizações)
     const transacoes = await this.prisma.transacao.findMany({
       where: {
         organizationId,
@@ -68,6 +86,22 @@ export class GetDreReportUseCase {
           lte: parsedEndDate,
         },
         linkedTransactionId: null, // Exclui transferências entre contas
+        NOT: {
+          OR: [
+            {
+              descricao: {
+                contains: 'Valorização de estoque',
+                mode: 'insensitive',
+              },
+            },
+            {
+              descricao: {
+                contains: 'Contrapartida da valorização',
+                mode: 'insensitive',
+              },
+            },
+          ],
+        },
       },
       include: {
         contaContabil: true,
@@ -125,11 +159,14 @@ export class GetDreReportUseCase {
       const valor = mapValoresPorConta.get(cc.id) || 0;
       if (Math.abs(valor) < 0.001) continue;
 
+      const valorAu = quotationAu > 0 ? Number((valor / quotationAu).toFixed(4)) : 0;
+
       const item: DreSubItem = {
         id: cc.id,
         codigo: cc.codigo,
         nome: cc.nome,
         valor,
+        valorAu,
       };
 
       if (cc.tipo === 'RECEITA' || cc.codigo.startsWith('4')) {
@@ -169,38 +206,52 @@ export class GetDreReportUseCase {
     const margemLiquida =
       totalReceitas > 0 ? (resultadoLiquidoValor / totalReceitas) * 100 : 0;
 
+    const totalReceitasAu = quotationAu > 0 ? Number((totalReceitas / quotationAu).toFixed(4)) : 0;
+    const totalCustosAu = quotationAu > 0 ? Number((totalCustos / quotationAu).toFixed(4)) : 0;
+    const lucroBrutoAu = quotationAu > 0 ? Number((lucroBrutoValor / quotationAu).toFixed(4)) : 0;
+    const totalDespesasAu = quotationAu > 0 ? Number((totalDespesas / quotationAu).toFixed(4)) : 0;
+    const totalFinanceiroAu = quotationAu > 0 ? Number((totalFinanceiro / quotationAu).toFixed(4)) : 0;
+    const resultadoLiquidoAu = quotationAu > 0 ? Number((resultadoLiquidoValor / quotationAu).toFixed(4)) : 0;
+
     return {
       period: {
         startDate,
         endDate,
         regime,
       },
+      quotationAu,
       receitaBruta: {
         title: 'Receita Operacional Bruta',
         total: totalReceitas,
+        totalAu: totalReceitasAu,
         items: receitasItems,
       },
       custosOperacionais: {
         title: 'Custos dos Produtos e Serviços (CPV / CMV)',
         total: totalCustos,
+        totalAu: totalCustosAu,
         items: custosItems,
       },
       lucroBruto: {
         valor: lucroBrutoValor,
+        valorAu: lucroBrutoAu,
         margem: Number(margemBruta.toFixed(2)),
       },
       despesasOperacionais: {
         title: 'Despesas Operacionais (Administrativas e Comerciais)',
         total: totalDespesas,
+        totalAu: totalDespesasAu,
         items: despesasItems,
       },
       resultadoFinanceiro: {
         title: 'Resultado Financeiro Líquido',
         total: totalFinanceiro,
+        totalAu: totalFinanceiroAu,
         items: financeiroItems,
       },
       resultadoLiquido: {
         valor: resultadoLiquidoValor,
+        valorAu: resultadoLiquidoAu,
         margem: Number(margemLiquida.toFixed(2)),
         status: resultadoLiquidoValor >= 0 ? 'LUCRO' : 'PREJUIZO',
       },

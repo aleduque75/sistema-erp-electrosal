@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Table,
   TableBody,
@@ -33,12 +34,20 @@ import {
   CheckCircle2,
   Coins,
   ShieldCheck,
+  DollarSign,
 } from "lucide-react";
 
 const formatCurrency = (val: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
 
+const formatGold = (val: number) =>
+  `${(Number(val) || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  })} g`;
+
 export default function BalancoPatrimonialPage() {
+  const [currencyView, setCurrencyView] = useState<"BRL" | "GOLD">("BRL");
   const [asOfDate, setAsOfDate] = useState<string>(
     format(new Date(), "yyyy-MM-dd")
   );
@@ -66,11 +75,11 @@ export default function BalancoPatrimonialPage() {
   const handleDownloadPdf = async () => {
     setIsDownloadingPdf(true);
     try {
-      const blob = await getBalanceSheetReportPdf({ asOfDate });
+      const blob = await getBalanceSheetReportPdf({ asOfDate, mode: currencyView });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `balanco_patrimonial_${asOfDate}.pdf`;
+      link.download = `balanco_patrimonial_${currencyView}_${asOfDate}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -107,6 +116,21 @@ export default function BalancoPatrimonialPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
+          {/* Switch R$ / Au */}
+          <ToggleGroup
+            type="single"
+            value={currencyView}
+            onValueChange={(val: "BRL" | "GOLD") => val && setCurrencyView(val)}
+            className="bg-muted p-0.5 rounded-lg border h-9"
+          >
+            <ToggleGroupItem value="BRL" className="px-3 h-8 text-xs font-semibold">
+              R$
+            </ToggleGroupItem>
+            <ToggleGroupItem value="GOLD" className="px-3 h-8 text-xs font-semibold">
+              Au
+            </ToggleGroupItem>
+          </ToggleGroup>
+
           <Button
             variant="outline"
             onClick={handleFetchReport}
@@ -197,14 +221,23 @@ export default function BalancoPatrimonialPage() {
               <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
                 Total do Ativo
               </CardTitle>
-              <Building className="h-4 w-4 text-blue-600" />
+              {currencyView === "GOLD" ? (
+                <Scale className="h-4 w-4 text-amber-500" />
+              ) : (
+                <Building className="h-4 w-4 text-blue-600" />
+              )}
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                {formatCurrency(reportData.ativo.total)}
+              <div className={`text-2xl font-black ${currencyView === "GOLD" ? "text-amber-500" : "text-blue-600 dark:text-blue-400"}`}>
+                {currencyView === "GOLD"
+                  ? formatGold(reportData.ativo.totalAu || 0)
+                  : formatCurrency(reportData.ativo.total)}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Circulante: {formatCurrency(reportData.ativo.circulante.total)}
+                {currencyView === "GOLD"
+                  ? `Eq: ${formatCurrency(reportData.ativo.total)}`
+                  : `Eq: ${formatGold(reportData.ativo.totalAu || 0)}`}
+                {" "}&bull; Circ: {currencyView === "GOLD" ? formatGold(reportData.ativo.circulante.totalAu || 0) : formatCurrency(reportData.ativo.circulante.total)}
               </p>
             </CardContent>
           </Card>
@@ -218,10 +251,15 @@ export default function BalancoPatrimonialPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-black text-rose-600 dark:text-rose-400">
-                {formatCurrency(reportData.passivo.total)}
+                {currencyView === "GOLD"
+                  ? formatGold(reportData.passivo.totalAu || 0)
+                  : formatCurrency(reportData.passivo.total)}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Obrigações e créditos devidos
+                {currencyView === "GOLD"
+                  ? `Eq: ${formatCurrency(reportData.passivo.total)}`
+                  : `Eq: ${formatGold(reportData.passivo.totalAu || 0)}`}
+                {" "}&bull; Obrigações e créditos devidos
               </p>
             </CardContent>
           </Card>
@@ -235,10 +273,15 @@ export default function BalancoPatrimonialPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(reportData.patrimonioLiquido.total)}
+                {currencyView === "GOLD"
+                  ? formatGold(reportData.patrimonioLiquido.totalAu || 0)
+                  : formatCurrency(reportData.patrimonioLiquido.total)}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Capital próprio e reservas
+                {currencyView === "GOLD"
+                  ? `Eq: ${formatCurrency(reportData.patrimonioLiquido.total)}`
+                  : `Eq: ${formatGold(reportData.patrimonioLiquido.totalAu || 0)}`}
+                {" "}&bull; Capital próprio e reservas
               </p>
             </CardContent>
           </Card>
@@ -257,7 +300,9 @@ export default function BalancoPatrimonialPage() {
               <p className="text-xs text-muted-foreground mt-0.5">
                 Capital de Giro:{" "}
                 <strong className={reportData.indicadores.capitalDeGiro >= 0 ? "text-emerald-600" : "text-rose-600"}>
-                  {formatCurrency(reportData.indicadores.capitalDeGiro)}
+                  {currencyView === "GOLD"
+                    ? formatGold(reportData.indicadores.capitalDeGiroAu || 0)
+                    : formatCurrency(reportData.indicadores.capitalDeGiro)}
                 </strong>
               </p>
             </CardContent>
@@ -274,10 +319,10 @@ export default function BalancoPatrimonialPage() {
               <div className="flex justify-between items-center">
                 <CardTitle className="text-base font-bold text-blue-950 dark:text-blue-100 flex items-center gap-2">
                   <Building className="h-4 w-4 text-blue-600" />
-                  1. ATIVO TOTAL
+                  1. ATIVO TOTAL ({currencyView === "GOLD" ? "Au" : "R$"})
                 </CardTitle>
-                <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-lg">
-                  {formatCurrency(reportData.ativo.total)}
+                <span className={`font-mono font-bold text-lg ${currencyView === "GOLD" ? "text-amber-500" : "text-blue-600 dark:text-blue-400"}`}>
+                  {currencyView === "GOLD" ? formatGold(reportData.ativo.totalAu || 0) : formatCurrency(reportData.ativo.total)}
                 </span>
               </div>
             </CardHeader>
@@ -286,7 +331,9 @@ export default function BalancoPatrimonialPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[65%]">Conta / Grupo Patrimonial</TableHead>
-                    <TableHead className="text-right w-[35%]">Saldo (R$)</TableHead>
+                    <TableHead className="text-right w-[35%]">
+                      Saldo ({currencyView === "GOLD" ? "Au" : "R$"})
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -295,8 +342,8 @@ export default function BalancoPatrimonialPage() {
                     <TableCell className="text-xs text-foreground font-bold">
                       1.1 ATIVO CIRCULANTE (Curto Prazo)
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs font-bold text-foreground">
-                      {formatCurrency(reportData.ativo.circulante.total)}
+                    <TableCell className={`text-right font-mono text-xs font-bold ${currencyView === "GOLD" ? "text-amber-500" : "text-foreground"}`}>
+                      {currencyView === "GOLD" ? formatGold(reportData.ativo.circulante.totalAu || 0) : formatCurrency(reportData.ativo.circulante.total)}
                     </TableCell>
                   </TableRow>
                   {reportData.ativo.circulante.items.map((item, idx) => (
@@ -308,7 +355,7 @@ export default function BalancoPatrimonialPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        {formatCurrency(item.valor)}
+                        {currencyView === "GOLD" ? formatGold(item.valorAu || 0) : formatCurrency(item.valor)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -319,7 +366,7 @@ export default function BalancoPatrimonialPage() {
                       1.2 ATIVO NÃO CIRCULANTE (Longo Prazo / Imobilizado)
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs font-bold text-foreground">
-                      {formatCurrency(reportData.ativo.naoCirculante.total)}
+                      {currencyView === "GOLD" ? formatGold(reportData.ativo.naoCirculante.totalAu || 0) : formatCurrency(reportData.ativo.naoCirculante.total)}
                     </TableCell>
                   </TableRow>
                   {reportData.ativo.naoCirculante.items.map((item, idx) => (
@@ -331,7 +378,7 @@ export default function BalancoPatrimonialPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        {formatCurrency(item.valor)}
+                        {currencyView === "GOLD" ? formatGold(item.valorAu || 0) : formatCurrency(item.valor)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -341,8 +388,8 @@ export default function BalancoPatrimonialPage() {
                     <TableCell className="text-sm text-foreground py-3">
                       TOTAL DO ATIVO (1.1 + 1.2)
                     </TableCell>
-                    <TableCell className="text-right font-mono text-base font-bold text-blue-600 dark:text-blue-400 py-3">
-                      {formatCurrency(reportData.ativo.total)}
+                    <TableCell className={`text-right font-mono text-base font-bold py-3 ${currencyView === "GOLD" ? "text-amber-500" : "text-blue-600 dark:text-blue-400"}`}>
+                      {currencyView === "GOLD" ? formatGold(reportData.ativo.totalAu || 0) : formatCurrency(reportData.ativo.total)}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -356,10 +403,10 @@ export default function BalancoPatrimonialPage() {
               <div className="flex justify-between items-center">
                 <CardTitle className="text-base font-bold text-rose-950 dark:text-rose-100 flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-rose-600" />
-                  2. PASSIVO E PATRIMÔNIO LÍQUIDO
+                  2. PASSIVO E PATRIMÔNIO LÍQUIDO ({currencyView === "GOLD" ? "Au" : "R$"})
                 </CardTitle>
                 <span className="font-mono font-bold text-rose-600 dark:text-rose-400 text-lg">
-                  {formatCurrency(reportData.totalPassivoPatrimonioLiquido)}
+                  {currencyView === "GOLD" ? formatGold(reportData.totalPassivoPatrimonioLiquidoAu || 0) : formatCurrency(reportData.totalPassivoPatrimonioLiquido)}
                 </span>
               </div>
             </CardHeader>
@@ -368,7 +415,9 @@ export default function BalancoPatrimonialPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[65%]">Conta / Grupo Patrimonial</TableHead>
-                    <TableHead className="text-right w-[35%]">Saldo (R$)</TableHead>
+                    <TableHead className="text-right w-[35%]">
+                      Saldo ({currencyView === "GOLD" ? "Au" : "R$"})
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -378,7 +427,7 @@ export default function BalancoPatrimonialPage() {
                       2.1 PASSIVO CIRCULANTE (Exigível a Curto Prazo)
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs font-bold text-foreground">
-                      {formatCurrency(reportData.passivo.circulante.total)}
+                      {currencyView === "GOLD" ? formatGold(reportData.passivo.circulante.totalAu || 0) : formatCurrency(reportData.passivo.circulante.total)}
                     </TableCell>
                   </TableRow>
                   {reportData.passivo.circulante.items.map((item, idx) => (
@@ -390,7 +439,7 @@ export default function BalancoPatrimonialPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs text-rose-600 dark:text-rose-400">
-                        {formatCurrency(item.valor)}
+                        {currencyView === "GOLD" ? formatGold(item.valorAu || 0) : formatCurrency(item.valor)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -401,7 +450,7 @@ export default function BalancoPatrimonialPage() {
                       2.2 PASSIVO NÃO CIRCULANTE (Longo Prazo)
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs font-bold text-foreground">
-                      {formatCurrency(reportData.passivo.naoCirculante.total)}
+                      {currencyView === "GOLD" ? formatGold(reportData.passivo.naoCirculante.totalAu || 0) : formatCurrency(reportData.passivo.naoCirculante.total)}
                     </TableCell>
                   </TableRow>
                   {reportData.passivo.naoCirculante.items.map((item, idx) => (
@@ -413,7 +462,7 @@ export default function BalancoPatrimonialPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs text-rose-600 dark:text-rose-400">
-                        {formatCurrency(item.valor)}
+                        {currencyView === "GOLD" ? formatGold(item.valorAu || 0) : formatCurrency(item.valor)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -424,7 +473,7 @@ export default function BalancoPatrimonialPage() {
                       2.3 PATRIMÔNIO LÍQUIDO
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                      {formatCurrency(reportData.patrimonioLiquido.total)}
+                      {currencyView === "GOLD" ? formatGold(reportData.patrimonioLiquido.totalAu || 0) : formatCurrency(reportData.patrimonioLiquido.total)}
                     </TableCell>
                   </TableRow>
                   {reportData.patrimonioLiquido.items.map((item, idx) => (
@@ -436,7 +485,7 @@ export default function BalancoPatrimonialPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                        {formatCurrency(item.valor)}
+                        {currencyView === "GOLD" ? formatGold(item.valorAu || 0) : formatCurrency(item.valor)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -447,7 +496,7 @@ export default function BalancoPatrimonialPage() {
                       TOTAL DO PASSIVO + PL (2.1 + 2.2 + 2.3)
                     </TableCell>
                     <TableCell className="text-right font-mono text-base font-bold text-rose-600 dark:text-rose-400 py-3">
-                      {formatCurrency(reportData.totalPassivoPatrimonioLiquido)}
+                      {currencyView === "GOLD" ? formatGold(reportData.totalPassivoPatrimonioLiquidoAu || 0) : formatCurrency(reportData.totalPassivoPatrimonioLiquido)}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -464,8 +513,8 @@ export default function BalancoPatrimonialPage() {
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-600" />
               <span>
-                <strong>Equação Fundamental da Contabilidade:</strong> Ativo ({formatCurrency(reportData.ativo.total)}) =
-                Passivo ({formatCurrency(reportData.passivo.total)}) + Patrimônio Líquido ({formatCurrency(reportData.patrimonioLiquido.total)}).
+                <strong>Equação Fundamental da Contabilidade:</strong> Ativo ({currencyView === "GOLD" ? formatGold(reportData.ativo.totalAu || 0) : formatCurrency(reportData.ativo.total)}) =
+                Passivo ({currencyView === "GOLD" ? formatGold(reportData.passivo.totalAu || 0) : formatCurrency(reportData.passivo.total)}) + Patrimônio Líquido ({currencyView === "GOLD" ? formatGold(reportData.patrimonioLiquido.totalAu || 0) : formatCurrency(reportData.patrimonioLiquido.total)}).
               </span>
             </div>
             <Badge variant="outline" className="text-xs bg-background">

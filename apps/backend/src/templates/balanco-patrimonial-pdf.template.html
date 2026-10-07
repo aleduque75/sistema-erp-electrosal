@@ -142,7 +142,7 @@
                 <img src="%%LOGO_PLACEHOLDER%%" alt="Electrosal" class="logo" />
             </div>
             <div class="title-block">
-                <h1>Balanço Patrimonial</h1>
+                <h1>Balanço Patrimonial{{#if isGoldMode}} (Ouro - Au){{/if}}</h1>
                 <p>Posição em: <strong>{{asOfDate}}</strong></p>
                 <p>Cotação Ref.: Au R$ {{formatarMoeda quotationAu}} | Ag R$ {{formatarMoeda quotationAg}}</p>
                 <p>Emissão: {{dataEmissao}}</p>
@@ -153,23 +153,29 @@
         <div class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-label">Total do Ativo</div>
-                <div class="kpi-value" style="color: #0284c7;">R$ {{formatarMoeda ativo.total}}</div>
+                <div class="kpi-value" style="color: #0284c7;">
+                    {{#if isGoldMode}}{{formatarGramas ativo.totalAu}} g Au{{else}}R$ {{formatarMoeda ativo.total}}{{/if}}
+                </div>
                 <div class="kpi-sub">Bens, direitos e disponibilidades</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Total do Passivo Exigível</div>
-                <div class="kpi-value" style="color: #dc2626;">R$ {{formatarMoeda passivo.total}}</div>
+                <div class="kpi-value" style="color: #dc2626;">
+                    {{#if isGoldMode}}{{formatarGramas passivo.totalAu}} g Au{{else}}R$ {{formatarMoeda passivo.total}}{{/if}}
+                </div>
                 <div class="kpi-sub">Contas a pagar e obrigações</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Patrimônio Líquido</div>
-                <div class="kpi-value" style="color: #16a34a;">R$ {{formatarMoeda patrimonioLiquido.total}}</div>
+                <div class="kpi-value" style="color: #16a34a;">
+                    {{#if isGoldMode}}{{formatarGramas patrimonioLiquido.totalAu}} g Au{{else}}R$ {{formatarMoeda patrimonioLiquido.total}}{{/if}}
+                </div>
                 <div class="kpi-sub">Capital próprio e lucros acumulados</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Índice Liquidez Corrente</div>
                 <div class="kpi-value">{{indicadores.liquidezCorrente}}</div>
-                <div class="kpi-sub">Capital de Giro: R$ {{formatarMoeda indicadores.capitalDeGiro}}</div>
+                <div class="kpi-sub">Capital de Giro: {{#if isGoldMode}}{{formatarGramas indicadores.capitalDeGiroAu}} g Au{{else}}R$ {{formatarMoeda indicadores.capitalDeGiro}}{{/if}}</div>
             </div>
         </div>
 
@@ -186,7 +192,9 @@
                     <tbody>
                         <tr class="group-header">
                             <td>1. ATIVO CIRCULANTE</td>
-                            <td class="text-right font-mono font-bold">R$ {{formatarMoeda ativo.circulante.total}}</td>
+                            <td class="text-right font-mono font-bold">
+                                {{#if isGoldMode}}{{formatarGramas ativo.circulante.totalAu}} g Au{{else}}R$ {{formatarMoeda ativo.circulante.total}}{{/if}}
+                            </td>
                         </tr>
                         {{#each ativo.circulante.items}}
                         <tr class="item-row">
@@ -194,26 +202,34 @@
                                 <strong>{{this.descricao}}</strong>
                                 {{#if this.detalhe}}<br /><span style="font-size: 7.5px; color: #64748b;">{{this.detalhe}}</span>{{/if}}
                             </td>
-                            <td class="text-right font-mono">R$ {{formatarMoeda this.valor}}</td>
+                            <td class="text-right font-mono">
+                                {{#if ../isGoldMode}}{{formatarGramas this.valorAu}} g{{else}}R$ {{formatarMoeda this.valor}}{{/if}}
+                            </td>
                         </tr>
                         {{/each}}
 
                         {{#if ativo.naoCirculante.items.length}}
                         <tr class="group-header">
                             <td>2. ATIVO NÃO CIRCULANTE (Imobilizado)</td>
-                            <td class="text-right font-mono font-bold">R$ {{formatarMoeda ativo.naoCirculante.total}}</td>
+                            <td class="text-right font-mono font-bold">
+                                {{#if isGoldMode}}{{formatarGramas ativo.naoCirculante.totalAu}} g Au{{else}}R$ {{formatarMoeda ativo.naoCirculante.total}}{{/if}}
+                            </td>
                         </tr>
                         {{#each ativo.naoCirculante.items}}
                         <tr class="item-row">
                             <td><strong>{{this.descricao}}</strong></td>
-                            <td class="text-right font-mono">R$ {{formatarMoeda this.valor}}</td>
+                            <td class="text-right font-mono">
+                                {{#if ../isGoldMode}}{{formatarGramas this.valorAu}} g{{else}}R$ {{formatarMoeda this.valor}}{{/if}}
+                            </td>
                         </tr>
                         {{/each}}
                         {{/if}}
 
                         <tr class="total-row">
                             <td>TOTAL DO ATIVO</td>
-                            <td class="text-right font-mono">R$ {{formatarMoeda ativo.total}}</td>
+                            <td class="text-right font-mono">
+                                {{#if isGoldMode}}{{formatarGramas ativo.totalAu}} g Au{{else}}R$ {{formatarMoeda ativo.total}}{{/if}}
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -230,7 +246,9 @@
                     <tbody>
                         <tr class="group-header">
                             <td>1. PASSIVO CIRCULANTE (Obrigações)</td>
-                            <td class="text-right font-mono font-bold">R$ {{formatarMoeda passivo.circulante.total}}</td>
+                            <td class="text-right font-mono font-bold">
+                                {{#if isGoldMode}}{{formatarGramas passivo.circulante.totalAu}} g Au{{else}}R$ {{formatarMoeda passivo.circulante.total}}{{/if}}
+                            </td>
                         </tr>
                         {{#each passivo.circulante.items}}
                         <tr class="item-row">
@@ -238,13 +256,17 @@
                                 <strong>{{this.descricao}}</strong>
                                 {{#if this.detalhe}}<br /><span style="font-size: 7.5px; color: #64748b;">{{this.detalhe}}</span>{{/if}}
                             </td>
-                            <td class="text-right font-mono">R$ {{formatarMoeda this.valor}}</td>
+                            <td class="text-right font-mono">
+                                {{#if ../isGoldMode}}{{formatarGramas this.valorAu}} g{{else}}R$ {{formatarMoeda this.valor}}{{/if}}
+                            </td>
                         </tr>
                         {{/each}}
 
                         <tr class="group-header">
                             <td>2. PATRIMÔNIO LÍQUIDO</td>
-                            <td class="text-right font-mono font-bold">R$ {{formatarMoeda patrimonioLiquido.total}}</td>
+                            <td class="text-right font-mono font-bold">
+                                {{#if isGoldMode}}{{formatarGramas patrimonioLiquido.totalAu}} g Au{{else}}R$ {{formatarMoeda patrimonioLiquido.total}}{{/if}}
+                            </td>
                         </tr>
                         {{#each patrimonioLiquido.items}}
                         <tr class="item-row">
@@ -252,13 +274,17 @@
                                 <strong>{{this.descricao}}</strong>
                                 {{#if this.detalhe}}<br /><span style="font-size: 7.5px; color: #64748b;">{{this.detalhe}}</span>{{/if}}
                             </td>
-                            <td class="text-right font-mono">R$ {{formatarMoeda this.valor}}</td>
+                            <td class="text-right font-mono">
+                                {{#if ../isGoldMode}}{{formatarGramas this.valorAu}} g{{else}}R$ {{formatarMoeda this.valor}}{{/if}}
+                            </td>
                         </tr>
                         {{/each}}
 
                         <tr class="total-row">
                             <td>TOTAL DO PASSIVO + PL</td>
-                            <td class="text-right font-mono">R$ {{formatarMoeda totalPassivoPatrimonioLiquido}}</td>
+                            <td class="text-right font-mono">
+                                {{#if isGoldMode}}{{formatarGramas totalPassivoPatrimonioLiquidoAu}} g Au{{else}}R$ {{formatarMoeda totalPassivoPatrimonioLiquido}}{{/if}}
+                            </td>
                         </tr>
                     </tbody>
                 </table>

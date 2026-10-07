@@ -134,9 +134,9 @@
                 <img src="%%LOGO_PLACEHOLDER%%" alt="Electrosal" class="logo" />
             </div>
             <div class="title-block">
-                <h1>Demonstrativo do Resultado do Exercício (DRE)</h1>
+                <h1>Demonstrativo do Resultado do Exercício (DRE){{#if isGoldMode}} (Ouro - Au){{/if}}</h1>
                 <p>Período: <strong>{{startDate}}</strong> até <strong>{{endDate}}</strong> (Regime de Caixa)</p>
-                <p>Emissão: {{dataEmissao}}</p>
+                <p>Cotação Média Ref.: Au R$ {{formatarMoeda quotationAu}} &bull; Emissão: {{dataEmissao}}</p>
             </div>
         </div>
 
@@ -144,23 +144,29 @@
         <div class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-label">Receita Bruta</div>
-                <div class="kpi-value" style="color: #0284c7;">R$ {{formatarMoeda receitaBruta.total}}</div>
+                <div class="kpi-value" style="color: #0284c7;">
+                    {{#if isGoldMode}}{{formatarGramas receitaBruta.totalAu}} g Au{{else}}R$ {{formatarMoeda receitaBruta.total}}{{/if}}
+                </div>
                 <div class="kpi-sub">Faturamento operacional</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Custos Operacionais</div>
-                <div class="kpi-value" style="color: #dc2626;">R$ {{formatarMoeda custosOperacionais.total}}</div>
+                <div class="kpi-value" style="color: #dc2626;">
+                    {{#if isGoldMode}}{{formatarGramas custosOperacionais.totalAu}} g Au{{else}}R$ {{formatarMoeda custosOperacionais.total}}{{/if}}
+                </div>
                 <div class="kpi-sub">CPV / Custos diretos</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Lucro Bruto</div>
-                <div class="kpi-value">R$ {{formatarMoeda lucroBruto.valor}}</div>
+                <div class="kpi-value">
+                    {{#if isGoldMode}}{{formatarGramas lucroBruto.valorAu}} g Au{{else}}R$ {{formatarMoeda lucroBruto.valor}}{{/if}}
+                </div>
                 <div class="kpi-sub">Margem Bruta: {{formatarPercentual lucroBruto.margem}}</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Resultado Líquido</div>
                 <div class="kpi-value" style="color: {{#ifCond resultadoLiquido.status '===' 'LUCRO'}}#16a34a{{else}}#dc2626{{/ifCond}};">
-                    R$ {{formatarMoeda resultadoLiquido.valor}}
+                    {{#if isGoldMode}}{{formatarGramas resultadoLiquido.valorAu}} g Au{{else}}R$ {{formatarMoeda resultadoLiquido.valor}}{{/if}}
                 </div>
                 <div class="kpi-sub">Margem Líquida: {{formatarPercentual resultadoLiquido.margem}}</div>
             </div>
@@ -171,68 +177,88 @@
             <thead>
                 <tr>
                     <th style="width: 70%; text-align: left;">Descrição da Conta / Agrupamento</th>
-                    <th style="width: 30%; text-align: right;">Valor (R$)</th>
+                    <th style="width: 30%; text-align: right;">Valor ({{#if isGoldMode}}g Au{{else}}R${{/if}})</th>
                 </tr>
             </thead>
             <tbody>
                 <!-- 1. RECEITAS -->
                 <tr class="section-header">
                     <td>(+) 1. RECEITA OPERACIONAL BRUTA</td>
-                    <td class="text-right font-mono">R$ {{formatarMoeda receitaBruta.total}}</td>
+                    <td class="text-right font-mono">
+                        {{#if isGoldMode}}{{formatarGramas receitaBruta.totalAu}} g Au{{else}}R$ {{formatarMoeda receitaBruta.total}}{{/if}}
+                    </td>
                 </tr>
                 {{#each receitaBruta.items}}
                 <tr class="item-row">
                     <td><span class="font-mono" style="color: #64748b;">{{this.codigo}}</span> {{this.nome}}</td>
-                    <td class="text-right font-mono">R$ {{formatarMoeda this.valor}}</td>
+                    <td class="text-right font-mono">
+                        {{#if ../isGoldMode}}{{formatarGramas this.valorAu}} g{{else}}R$ {{formatarMoeda this.valor}}{{/if}}
+                    </td>
                 </tr>
                 {{/each}}
 
                 <!-- 2. CUSTOS -->
                 <tr class="section-header">
                     <td>(-) 2. CUSTOS OPERACIONAIS (CPV / CMV)</td>
-                    <td class="text-right font-mono" style="color: #dc2626;">- R$ {{formatarMoeda custosOperacionais.total}}</td>
+                    <td class="text-right font-mono" style="color: #dc2626;">
+                        {{#if isGoldMode}}- {{formatarGramas custosOperacionais.totalAu}} g Au{{else}}- R$ {{formatarMoeda custosOperacionais.total}}{{/if}}
+                    </td>
                 </tr>
                 {{#each custosOperacionais.items}}
                 <tr class="item-row">
                     <td><span class="font-mono" style="color: #64748b;">{{this.codigo}}</span> {{this.nome}}</td>
-                    <td class="text-right font-mono">- R$ {{formatarMoeda this.valor}}</td>
+                    <td class="text-right font-mono" style="color: #dc2626;">
+                        {{#if ../isGoldMode}}- {{formatarGramas this.valorAu}} g{{else}}- R$ {{formatarMoeda this.valor}}{{/if}}
+                    </td>
                 </tr>
                 {{/each}}
 
                 <!-- 3. LUCRO BRUTO -->
                 <tr class="subtotal-row">
                     <td>(=) 3. LUCRO BRUTO OPERACIONAL (Margem: {{formatarPercentual lucroBruto.margem}})</td>
-                    <td class="text-right font-bold font-mono">R$ {{formatarMoeda lucroBruto.valor}}</td>
+                    <td class="text-right font-bold font-mono">
+                        {{#if isGoldMode}}{{formatarGramas lucroBruto.valorAu}} g Au{{else}}R$ {{formatarMoeda lucroBruto.valor}}{{/if}}
+                    </td>
                 </tr>
 
                 <!-- 4. DESPESAS OPERACIONAIS -->
                 <tr class="section-header">
                     <td>(-) 4. DESPESAS OPERACIONAIS (Administrativas e Comerciais)</td>
-                    <td class="text-right font-mono" style="color: #dc2626;">- R$ {{formatarMoeda despesasOperacionais.total}}</td>
+                    <td class="text-right font-mono" style="color: #dc2626;">
+                        {{#if isGoldMode}}- {{formatarGramas despesasOperacionais.totalAu}} g Au{{else}}- R$ {{formatarMoeda despesasOperacionais.total}}{{/if}}
+                    </td>
                 </tr>
                 {{#each despesasOperacionais.items}}
                 <tr class="item-row">
                     <td><span class="font-mono" style="color: #64748b;">{{this.codigo}}</span> {{this.nome}}</td>
-                    <td class="text-right font-mono">- R$ {{formatarMoeda this.valor}}</td>
+                    <td class="text-right font-mono" style="color: #dc2626;">
+                        {{#if ../isGoldMode}}- {{formatarGramas this.valorAu}} g{{else}}- R$ {{formatarMoeda this.valor}}{{/if}}
+                    </td>
                 </tr>
                 {{/each}}
 
                 <!-- 5. RESULTADO FINANCEIRO -->
                 <tr class="section-header">
                     <td>(+/-) 5. RESULTADO FINANCEIRO LÍQUIDO</td>
-                    <td class="text-right font-mono">R$ {{formatarMoeda resultadoFinanceiro.total}}</td>
+                    <td class="text-right font-mono">
+                        {{#if isGoldMode}}{{formatarGramas resultadoFinanceiro.totalAu}} g Au{{else}}R$ {{formatarMoeda resultadoFinanceiro.total}}{{/if}}
+                    </td>
                 </tr>
                 {{#each resultadoFinanceiro.items}}
                 <tr class="item-row">
                     <td><span class="font-mono" style="color: #64748b;">{{this.codigo}}</span> {{this.nome}}</td>
-                    <td class="text-right font-mono">R$ {{formatarMoeda this.valor}}</td>
+                    <td class="text-right font-mono">
+                        {{#if ../isGoldMode}}{{formatarGramas this.valorAu}} g{{else}}R$ {{formatarMoeda this.valor}}{{/if}}
+                    </td>
                 </tr>
                 {{/each}}
 
                 <!-- 6. RESULTADO LÍQUIDO -->
                 <tr class="result-row">
                     <td>(=) RESULTADO LÍQUIDO DO EXERCÍCIO ({{resultadoLiquido.status}} &bull; Margem Líquida: {{formatarPercentual resultadoLiquido.margem}})</td>
-                    <td class="text-right font-mono">R$ {{formatarMoeda resultadoLiquido.valor}}</td>
+                    <td class="text-right font-mono">
+                        {{#if isGoldMode}}{{formatarGramas resultadoLiquido.valorAu}} g Au{{else}}R$ {{formatarMoeda resultadoLiquido.valor}}{{/if}}
+                    </td>
                 </tr>
             </tbody>
         </table>

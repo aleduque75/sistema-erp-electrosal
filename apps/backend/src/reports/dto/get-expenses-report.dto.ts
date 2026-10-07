@@ -22,4 +22,8 @@ export class GetExpensesReportDto {
   @IsOptional()
   @IsEnum(['ALL', 'PAID', 'PENDING'])
   status?: 'ALL' | 'PAID' | 'PENDING' = 'ALL';
+
+  @IsOptional()
+  @IsEnum(['BRL', 'GOLD'])
+  mode?: 'BRL' | 'GOLD' = 'BRL';
 }
