@@ -38,9 +38,21 @@ interface EditAccountRecFormProps {
 
 const formSchema = z.object({
   description: z.string().min(1, 'A descrição é obrigatória.'),
-  amount: z.number().min(0.01, 'O valor deve ser no mínimo R$ 0,01.'),
+  amount: z.coerce
+    .number({ invalid_type_error: 'Informe um valor numérico válido.' })
+    .min(0.01, 'O valor deve ser no mínimo R$ 0,01.'),
   dueDate: z.string().min(1, 'A data de vencimento é obrigatória.'),
 });
+
+const getFormattedDate = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  if (dateStr.includes('T')) return dateStr.split('T')[0];
+  try {
+    return new Date(dateStr).toISOString().split('T')[0];
+  } catch {
+    return dateStr;
+  }
+};
 
 export function EditAccountRecForm({ accountRec, onSave, onOpenSplit }: EditAccountRecFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
@@ -48,14 +60,23 @@ export function EditAccountRecForm({ accountRec, onSave, onOpenSplit }: EditAcco
     defaultValues: {
       description: accountRec.description,
       amount: accountRec.amount,
-      dueDate: accountRec.dueDate ? new Date(accountRec.dueDate).toISOString().split('T')[0] : '',
+      dueDate: getFormattedDate(accountRec.dueDate),
     },
   });
+
+  useEffect(() => {
+    form.reset({
+      description: accountRec.description,
+      amount: accountRec.amount,
+      dueDate: getFormattedDate(accountRec.dueDate),
+    });
+  }, [accountRec, form]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       await api.patch(`/accounts-rec/${accountRec.id}`, {
         ...data,
+        amount: Number(data.amount),
       });
       toast.success('Conta a receber atualizada com sucesso!');
       onSave();
@@ -87,9 +108,19 @@ export function EditAccountRecForm({ accountRec, onSave, onOpenSplit }: EditAcco
           name="amount"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Valor</FormLabel>
+              <FormLabel>Valor (R$)</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" {...field} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0,00"
+                  {...field}
+                  value={field.value !== undefined && field.value !== null ? field.value : ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    field.onChange(val === '' ? '' : Number(val));
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
