@@ -452,7 +452,15 @@ export function OfxImport() {
     originalDescription: string
   ) => {
     const newSelections = { ...selections };
-    newSelections[fitId] = { ...newSelections[fitId], [key]: value };
+    if (key === "isTransfer" && value === true) {
+      newSelections[fitId] = {
+        ...newSelections[fitId],
+        isTransfer: true,
+        contaContabilId: undefined,
+      };
+    } else {
+      newSelections[fitId] = { ...newSelections[fitId], [key]: value };
+    }
 
     // Propaga automaticamente para transações idênticas
     if (
@@ -463,10 +471,18 @@ export function OfxImport() {
     ) {
       previewData.forEach((t) => {
         if (t.description === originalDescription && t.fitId !== fitId) {
-          newSelections[t.fitId] = {
-            ...newSelections[t.fitId],
-            [key]: value,
-          };
+          if (key === "isTransfer" && value === true) {
+            newSelections[t.fitId] = {
+              ...newSelections[t.fitId],
+              isTransfer: true,
+              contaContabilId: undefined,
+            };
+          } else {
+            newSelections[t.fitId] = {
+              ...newSelections[t.fitId],
+              [key]: value,
+            };
+          }
         }
       });
     }
@@ -644,7 +660,7 @@ export function OfxImport() {
         postedAt: new Date(t.postedAt),
         tipo: t.type === "CREDIT" ? "CREDITO" : "DEBITO",
         contaContabilId: sel?.isTransfer
-          ? sel.contaContabilId || undefined
+          ? undefined
           : sel?.contaContabilId,
         isTransfer: !!sel?.isTransfer,
         destinationContaCorrenteId: sel?.isTransfer

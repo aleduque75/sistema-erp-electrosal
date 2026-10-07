@@ -846,6 +846,14 @@ export default function ExtratoPage() {
                                     </Button>
                                   )}
                                 </div>
+                                {t.contrapartida && (
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                      <ArrowRightLeft className="w-2.5 h-2.5" />
+                                      Transf. {t.tipo === 'DEBITO' ? 'para' : 'de'} {t.contrapartida.contaCorrente.nome}
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="text-[10px] text-muted-foreground flex flex-wrap gap-x-1.5 items-center opacity-70">
                                   <span className="font-mono bg-muted/30 px-1 rounded">{formatCurrency(t.valor)}</span>
                                   {t.goldAmount !== undefined && t.goldAmount !== 0 && (
@@ -1028,6 +1036,12 @@ export default function ExtratoPage() {
                             )}
                           </div>
                           <div className="flex flex-col gap-0.5">
+                            {t.contrapartida && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                                <ArrowRightLeft className="w-2.5 h-2.5" />
+                                Transf. {t.tipo === 'DEBITO' ? 'para' : 'de'} {t.contrapartida.contaCorrente.nome}
+                              </span>
+                            )}
                             {t.fornecedorNome && (
                               <span className="text-[10px] text-muted-foreground font-medium">Fornecedor: {t.fornecedorNome}</span>
                             )}

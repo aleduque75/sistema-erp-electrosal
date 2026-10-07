@@ -185,7 +185,16 @@ export class ContasCorrentesService {
           },
         },
         medias: true,
-        linkedTransaction: { // Incluir a transação vinculada
+        linkedTransaction: { // Incluir a transação vinculada (quando este é o registro que aponta)
+          include: {
+            contaCorrente: {
+              select: {
+                nome: true,
+              },
+            },
+          },
+        },
+        transfer: { // Incluir a transação vinculada reversa (quando este é o registro apontado)
           include: {
             contaCorrente: {
               select: {
@@ -249,16 +258,18 @@ export class ContasCorrentesService {
         const goldPrice =
           t.goldPrice != null ? Number(t.goldPrice) : (dailyQuotation ?? null);
 
+        const counterpart = t.linkedTransaction || (t as any).transfer;
+
         return {
           ...t,
           contaContabilNome: t.contaContabil?.nome,
           fornecedorNome: t.fornecedor?.pessoa?.name,
           sale: t.accountRec?.sale,
-          contrapartida: t.linkedTransaction
+          contrapartida: counterpart
             ? {
               contaCorrente: {
                 nome:
-                  t.linkedTransaction.contaCorrente?.nome ||
+                  counterpart.contaCorrente?.nome ||
                   'Conta Desconhecida',
               },
             }

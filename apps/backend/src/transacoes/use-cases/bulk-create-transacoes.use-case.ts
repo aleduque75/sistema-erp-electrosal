@@ -32,6 +32,8 @@ export class BulkCreateTransacoesUseCase {
           OR: [
             { nome: { contains: 'Transferências Internas', mode: 'insensitive' } },
             { nome: { contains: 'Transferência', mode: 'insensitive' } },
+            { codigo: '5.1.11' },
+            { codigo: '1.1.7' },
           ],
         },
       });
@@ -104,10 +106,11 @@ export class BulkCreateTransacoesUseCase {
       }
 
       // 2. Processar transferências vinculadas
+      const defaultTransferContaId = await getDefaultTransferContaId();
       for (const t of transferItems) {
         const destinationAccountId = t.destinationContaCorrenteId!;
         const contaContabilId =
-          t.contaContabilId || (await getDefaultTransferContaId());
+          defaultTransferContaId || t.contaContabilId;
 
         if (!contaContabilId) {
           throw new BadRequestException(
