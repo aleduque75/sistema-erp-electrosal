@@ -354,8 +354,24 @@ export class PrismaSaleRepository implements SalesRepository {
               netDiscrepancyGrams: true,
             },
           },
+          pureMetalLots: {
+            select: {
+              id: true,
+              metalType: true,
+            },
+            take: 1,
+          },
+          metalReceivable: {
+            select: {
+              id: true,
+              metalType: true,
+            },
+          },
           accountsRec: {
             include: {
+              contaCorrente: {
+                select: { nome: true },
+              },
               transacoes: {
                 include: {
                   contaCorrente: {
@@ -365,10 +381,10 @@ export class PrismaSaleRepository implements SalesRepository {
                     select: { nome: true },
                   },
                 },
-                take: 1,
+                take: 5,
               },
             },
-            take: 1,
+            take: 5,
           },
         },
         orderBy: {
@@ -380,7 +396,37 @@ export class PrismaSaleRepository implements SalesRepository {
     ]);
 
     const data = prismaSales.map((sale) => {
-      const paymentAccountName = sale.accountsRec[0]?.transacoes[0]?.contaCorrente?.nome || null;
+      let paymentAccountName: string | null = null;
+
+      // 1. Check direct contaCorrente in accountsRec or its transactions
+      for (const acc of sale.accountsRec || []) {
+        if ((acc as any).contaCorrente?.nome) {
+          paymentAccountName = (acc as any).contaCorrente.nome;
+          break;
+        }
+        for (const tx of acc.transacoes || []) {
+          if (tx.contaCorrente?.nome) {
+            paymentAccountName = tx.contaCorrente.nome;
+            break;
+          }
+        }
+        if (paymentAccountName) break;
+      }
+
+      // 2. If no bank account found, check if it was received in metal
+      if (!paymentAccountName) {
+        const hasPureMetalLot = (sale as any).pureMetalLots?.length > 0;
+        const hasMetalReceivable = !!(sale as any).metalReceivable;
+        const hasMetalInDesc = sale.accountsRec?.some((a) =>
+          a.description?.toUpperCase().includes('METAL') ||
+          a.transacoes?.some((t) => t.descricao?.toUpperCase().includes('METAL') || (t.goldAmount && !t.contaCorrenteId))
+        );
+
+        if (sale.paymentMethod === 'METAL' || hasPureMetalLot || hasMetalReceivable || hasMetalInDesc) {
+          const metalType = (sale as any).pureMetalLots?.[0]?.metalType || (sale as any).metalReceivable?.metalType;
+          paymentAccountName = metalType ? `METAL (${metalType})` : 'METAL';
+        }
+      }
 
       return {
         ...sale,

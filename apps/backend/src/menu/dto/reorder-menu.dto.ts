@@ -1,4 +1,4 @@
-import { IsArray, IsString, IsInt, ValidateNested } from 'class-validator';
+import { IsArray, IsString, IsInt, ValidateNested, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class ReorderItemDto {
@@ -7,6 +7,10 @@ class ReorderItemDto {
 
   @IsInt()
   order: number;
+
+  @IsOptional()
+  @IsString()
+  parentId?: string | null;
 }
 
 export class ReorderMenuDto {

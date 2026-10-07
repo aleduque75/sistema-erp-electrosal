@@ -124,7 +124,7 @@ export class MenuService {
     });
   }
 
-  async reorder(organizationId: string, items: { id: string, order: number }[]): Promise<{ count: number }> {
+  async reorder(organizationId: string, items: { id: string, order: number, parentId?: string | null }[]): Promise<{ count: number }> {
     return this.prisma.$transaction(async (tx) => {
       let updatedCount = 0;
       for (const item of items) {
@@ -137,7 +137,10 @@ export class MenuService {
         
         await tx.menuItem.update({
           where: { id: item.id },
-          data: { order: item.order },
+          data: {
+            order: item.order,
+            ...(item.parentId !== undefined ? { parentId: item.parentId } : {}),
+          },
         });
         updatedCount++;
       }

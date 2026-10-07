@@ -444,9 +444,25 @@ export class HybridReceiveUseCase {
           });
 
           if (pendingAccounts === 0 && !accountRec.doNotUpdateSaleStatus) {
+            const hasMetalReceived = (dto.metalPayments && dto.metalPayments.length > 0) || (dto.metalCreditPayments && dto.metalCreditPayments.length > 0);
+            const currentSale = await tx.sale.findUnique({
+              where: { id: accountRec.saleId },
+              select: { paymentMethod: true },
+            });
+
+            let newPaymentMethod: string | undefined = undefined;
+            if (hasMetalReceived) {
+              newPaymentMethod = 'METAL';
+            } else if (currentSale?.paymentMethod === 'A_COMBINAR' && dto.financialPayments && dto.financialPayments.length > 0) {
+              newPaymentMethod = 'A_VISTA';
+            }
+
             await tx.sale.update({
               where: { id: accountRec.saleId },
-              data: { status: 'FINALIZADO' },
+              data: {
+                status: 'FINALIZADO',
+                ...(newPaymentMethod ? { paymentMethod: newPaymentMethod } : {}),
+              },
             });
           }
         }
