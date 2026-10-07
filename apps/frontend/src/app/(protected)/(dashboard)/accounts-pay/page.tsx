@@ -80,10 +80,7 @@ const formatCurrency = (value?: number) =>
 const formatGrams = (value?: number | null) =>
   value ? `${Number(value).toFixed(4)}g` : "N/A";
 
-const INITIAL_DATE_RANGE = {
-  from: addDays(new Date(), -30),
-  to: new Date(),
-};
+const INITIAL_DATE_RANGE: DateRange | undefined = undefined;
 
 export default function AccountsPayPage() {
   const { user } = useAuth();
@@ -128,13 +125,15 @@ export default function AccountsPayPage() {
   }, [user]);
 
   const fetchAccounts = useCallback(async () => {
-    if (!date?.from || !date?.to) return;
     setIsFetching(true);
     try {
-      const params = new URLSearchParams({
-        startDate: date.from.toISOString().split("T")[0],
-        endDate: date.to.toISOString().split("T")[0],
-      });
+      const params = new URLSearchParams();
+      if (date?.from) {
+        params.append("startDate", date.from.toISOString().split("T")[0]);
+      }
+      if (date?.to) {
+        params.append("endDate", date.to.toISOString().split("T")[0]);
+      }
       if (statusFilter && statusFilter !== 'all') {
         params.append('status', statusFilter);
       }
@@ -146,8 +145,14 @@ export default function AccountsPayPage() {
       }
 
       const response = await api.get(`/accounts-pay?${params.toString()}`);
-      setAccounts(response.data.accounts || []);
-      setTotal(response.data.total || 0);
+      const list = Array.isArray(response.data)
+        ? response.data
+        : (response.data?.accounts || []);
+      setAccounts(list);
+      const pendingTotal = list
+        .filter((a: AccountPay) => !a.paid)
+        .reduce((sum: number, a: AccountPay) => sum + (Number(a.amount) || 0), 0);
+      setTotal(typeof response.data?.total === 'number' ? response.data.total : pendingTotal);
     } catch (err) {
       toast.error("Falha ao carregar contas a pagar.");
     } finally {
@@ -162,7 +167,7 @@ export default function AccountsPayPage() {
   }, [user, fetchAccounts]);
 
   const handleClearFilters = () => {
-    setDate(INITIAL_DATE_RANGE);
+    setDate(undefined);
     setDescriptionFilter("");
     setStatusFilter("pending");
     setFornecedorFilter("all");
@@ -319,8 +324,6 @@ export default function AccountsPayPage() {
       },
     },
   ];
-
-  if (isFetching) return <p className="text-center p-10">Carregando...</p>;
 
   return (
     <>

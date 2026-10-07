@@ -88,6 +88,8 @@ interface PreviewTransaction {
   postedAt: string;
   status: "new" | "duplicate";
   suggestedContaContabilId?: string;
+  goldPrice?: number | null;
+  goldAmount?: number | null;
 }
 interface SelectionState {
   selected: boolean;
@@ -95,6 +97,8 @@ interface SelectionState {
   description?: string;
   isTransfer?: boolean;
   destinationContaCorrenteId?: string;
+  goldPrice?: number | null;
+  goldAmount?: number | null;
 }
 
 interface UserSettings {
@@ -423,6 +427,8 @@ export function OfxImport() {
             description: t.description,
             isTransfer: autoIsTransfer,
             destinationContaCorrenteId: matchedOtherAccount?.id || undefined,
+            goldPrice: t.goldPrice,
+            goldAmount: t.goldAmount,
           };
           return acc;
         },
@@ -492,14 +498,22 @@ export function OfxImport() {
     let count = 0;
     let totalDebits = 0;
     let totalCredits = 0;
+    let totalDebitsGold = 0;
+    let totalCreditsGold = 0;
 
     previewData.forEach((t) => {
       if (selections[t.fitId]?.selected) {
         count++;
+        const gAmount =
+          t.goldAmount ||
+          (t.goldPrice && t.goldPrice > 0 ? t.amount / t.goldPrice : 0);
+
         if (t.type === "DEBIT") {
           totalDebits += t.amount;
+          totalDebitsGold += gAmount;
         } else {
           totalCredits += t.amount;
+          totalCreditsGold += gAmount;
         }
       }
     });
@@ -508,7 +522,10 @@ export function OfxImport() {
       count,
       totalDebits,
       totalCredits,
+      totalDebitsGold,
+      totalCreditsGold,
       net: totalCredits - totalDebits,
+      netGold: totalCreditsGold - totalDebitsGold,
     };
   }, [previewData, selections]);
 
@@ -633,6 +650,8 @@ export function OfxImport() {
         destinationContaCorrenteId: sel?.isTransfer
           ? sel.destinationContaCorrenteId
           : undefined,
+        goldPrice: sel?.goldPrice ?? t.goldPrice ?? undefined,
+        goldAmount: sel?.goldAmount ?? t.goldAmount ?? undefined,
       };
     });
 
@@ -743,13 +762,23 @@ export function OfxImport() {
                 {selectedStats.count} itens
               </Badge>
               {selectedStats.totalDebits > 0 && (
-                <Badge variant="outline" className="text-rose-600 border-rose-200 bg-rose-50/50">
-                  Saídas: - {formatCurrency(selectedStats.totalDebits)}
+                <Badge variant="outline" className="text-rose-600 border-rose-200 bg-rose-50/50 flex items-center gap-1.5">
+                  <span>Saídas: - {formatCurrency(selectedStats.totalDebits)}</span>
+                  {selectedStats.totalDebitsGold > 0 && (
+                    <span className="font-mono text-amber-600 dark:text-amber-400 font-bold border-l pl-1.5 border-rose-300">
+                      - {selectedStats.totalDebitsGold.toFixed(4)} g Au
+                    </span>
+                  )}
                 </Badge>
               )}
               {selectedStats.totalCredits > 0 && (
-                <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50/50">
-                  Entradas: + {formatCurrency(selectedStats.totalCredits)}
+                <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50/50 flex items-center gap-1.5">
+                  <span>Entradas: + {formatCurrency(selectedStats.totalCredits)}</span>
+                  {selectedStats.totalCreditsGold > 0 && (
+                    <span className="font-mono text-amber-600 dark:text-amber-400 font-bold border-l pl-1.5 border-emerald-300">
+                      + {selectedStats.totalCreditsGold.toFixed(4)} g Au
+                    </span>
+                  )}
                 </Badge>
               )}
             </div>
@@ -857,7 +886,7 @@ export function OfxImport() {
                   <TableHead className="w-[100px]">Data</TableHead>
                   <TableHead className="min-w-[200px]">Descrição (Editável)</TableHead>
                   <TableHead className="w-[340px]">Classificação / Destino</TableHead>
-                  <TableHead className="w-[120px] text-right">Valor</TableHead>
+                  <TableHead className="w-[160px] text-right">Valor (R$) / Au (g)</TableHead>
                   <TableHead className="w-[90px] text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -995,16 +1024,40 @@ export function OfxImport() {
                             </div>
                           )}
                         </TableCell>
-                        <TableCell
-                          className={cn(
-                            "text-right font-semibold text-xs whitespace-nowrap",
-                            t.type === "CREDIT"
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-rose-600 dark:text-rose-400"
+                        <TableCell className="text-right whitespace-nowrap">
+                          <div
+                            className={cn(
+                              "font-bold text-xs",
+                              t.type === "CREDIT"
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-rose-600 dark:text-rose-400"
+                            )}
+                          >
+                            {t.type === "CREDIT" ? "+ " : "- "}
+                            {formatCurrency(Math.abs(t.amount))}
+                          </div>
+                          {t.goldPrice ? (
+                            <div
+                              className="text-[11px] font-mono text-amber-600 dark:text-amber-400 flex items-center justify-end gap-1 mt-0.5"
+                              title={`Cotação Au: ${formatCurrency(t.goldPrice)}/g`}
+                            >
+                              <span className="font-semibold">
+                                {t.type === "CREDIT" ? "+ " : "- "}
+                                {Number(
+                                  t.goldAmount ||
+                                    (t.goldPrice > 0 ? t.amount / t.goldPrice : 0)
+                                ).toFixed(4)}{" "}
+                                g
+                              </span>
+                              <span className="text-[10px] text-muted-foreground font-normal">
+                                (@{formatCurrency(t.goldPrice)})
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                              Sem cotação ref.
+                            </div>
                           )}
-                        >
-                          {t.type === "CREDIT" ? "+ " : "- "}
-                          {formatCurrency(Math.abs(t.amount))}
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge

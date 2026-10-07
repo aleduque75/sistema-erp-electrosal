@@ -35,4 +35,12 @@ export class TransacaoLoteDto {
   @IsString()
   @IsOptional()
   destinationContaCorrenteId?: string;
+
+  @IsNumber()
+  @IsOptional()
+  goldPrice?: number;
+
+  @IsNumber()
+  @IsOptional()
+  goldAmount?: number;
 }

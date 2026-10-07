@@ -73,8 +73,12 @@ export class AccountsPayController {
     @Query('description') description?: string,
     @Query('fornecedorId') fornecedorId?: string,
   ) {
-    const parsedStartDate = startDate ? new Date(startDate) : undefined;
-    const parsedEndDate = endDate ? new Date(endDate) : undefined;
+    const parsedStartDate = startDate
+      ? new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00.000Z`)
+      : undefined;
+    const parsedEndDate = endDate
+      ? new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`)
+      : undefined;
     return this.listAccountsPayUseCase.execute({
       organizationId,
       startDate: parsedStartDate,

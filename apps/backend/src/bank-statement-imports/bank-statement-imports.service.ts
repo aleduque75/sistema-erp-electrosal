@@ -12,6 +12,8 @@ export interface PreviewTransaction {
   postedAt: Date;
   status: 'new' | 'duplicate';
   suggestedContaContabilId?: string;
+  goldPrice?: number | null;
+  goldAmount?: number | null;
 }
 
 interface OfxTransaction {
@@ -90,6 +92,11 @@ try {
       
       const existingFitIds = new Set(existingTransactions.filter(t => t.fitId).map(t => t.fitId));
 
+      // Busca cotações de Ouro (AU) para calcular cotação do dia e peso em metal
+      const quotations = await this.prisma.quotation.findMany({
+        where: { organizationId, metal: 'AU' },
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      });
 
       const previewList: PreviewTransaction[] = filteredTransactions.map(
         (t) => {
@@ -113,6 +120,20 @@ try {
           if (hasPrimaryKey || existingFitIds.has(t.FITID)) {
             status = 'duplicate';
           }
+
+          // Localiza a cotação correspondente à data da transação ou a mais recente anterior
+          const matchQuote = quotations.find((q) => {
+            const qDate = new Date(q.date).toISOString().split('T')[0];
+            return qDate <= transactionDate;
+          });
+          const effectiveQuote = matchQuote || (quotations.length > 0 ? quotations[0] : null);
+          const goldPrice = effectiveQuote
+            ? Number(effectiveQuote.buyPrice || effectiveQuote.sellPrice)
+            : null;
+          const goldAmount =
+            goldPrice && goldPrice > 0
+              ? Number((Math.abs(amount) / goldPrice).toFixed(4))
+              : null;
           
           return {
             fitId: t.FITID,
@@ -121,7 +142,9 @@ try {
             description: t.MEMO,
             postedAt,
             status,
-            suggestedContaContabilId: undefined, // Lógica de sugestão removida por enquanto para focar na duplicidade
+            suggestedContaContabilId: undefined,
+            goldPrice,
+            goldAmount,
           };
         },
       );

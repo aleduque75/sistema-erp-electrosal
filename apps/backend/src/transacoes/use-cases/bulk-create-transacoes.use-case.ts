@@ -46,6 +46,22 @@ export class BulkCreateTransacoesUseCase {
       return defaultTransferContaContabilId;
     };
 
+    // Busca cotações de Ouro (AU) para garantir cotação e peso em metal em todos os lançamentos
+    const quotations = await this.prisma.quotation.findMany({
+      where: { organizationId, metal: 'AU' },
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    const getQuoteForDate = (postedAt: Date | string) => {
+      const d = new Date(postedAt).toISOString().split('T')[0];
+      const match = quotations.find((q) => {
+        const qDate = new Date(q.date).toISOString().split('T')[0];
+        return qDate <= d;
+      });
+      const effective = match || (quotations.length > 0 ? quotations[0] : null);
+      return effective ? Number(effective.buyPrice || effective.sellPrice) : null;
+    };
+
     const regularItems = transactions.filter((t) => !t.isTransfer);
     const transferItems = transactions.filter(
       (t) => t.isTransfer && t.destinationContaCorrenteId,
@@ -62,12 +78,21 @@ export class BulkCreateTransacoesUseCase {
               `A transação "${t.description}" precisa de uma categoria (conta contábil).`,
             );
           }
+          const goldPrice = t.goldPrice || getQuoteForDate(t.postedAt);
+          const goldAmount =
+            t.goldAmount ||
+            (goldPrice && goldPrice > 0
+              ? Number((t.amount / goldPrice).toFixed(4))
+              : null);
+
           const entity = TransacaoEntity.create({
             fitId: t.fitId,
             tipo: t.tipo,
             descricao: t.description,
             contaContabilId: t.contaContabilId,
             valor: t.amount,
+            goldPrice,
+            goldAmount,
             dataHora: t.postedAt,
             organizationId: organizationId,
             contaCorrenteId: contaCorrenteId,
@@ -103,12 +128,21 @@ export class BulkCreateTransacoesUseCase {
         const destName = destAcc?.nome || 'Conta Destino';
         const dataHoraDate = t.postedAt ? new Date(t.postedAt) : new Date();
 
+        const goldPrice = t.goldPrice || getQuoteForDate(t.postedAt);
+        const goldAmount =
+          t.goldAmount ||
+          (goldPrice && goldPrice > 0
+            ? Number((t.amount / goldPrice).toFixed(4))
+            : null);
+
         if (t.tipo === TipoTransacaoPrisma.DEBITO) {
           // Débito na conta corrente importada (origem), Crédito na conta destino
           const debitEntity = TransacaoEntity.create({
             organizationId,
             tipo: TipoTransacaoPrisma.DEBITO,
             valor: t.amount,
+            goldPrice,
+            goldAmount,
             moeda: 'BRL',
             descricao: t.description || `Transferência para ${destName}`,
             dataHora: dataHoraDate,
@@ -122,6 +156,8 @@ export class BulkCreateTransacoesUseCase {
             organizationId,
             tipo: TipoTransacaoPrisma.CREDITO,
             valor: t.amount,
+            goldPrice,
+            goldAmount,
             moeda: 'BRL',
             descricao: t.description
               ? `Transf. de ${sourceName}: ${t.description}`
@@ -143,6 +179,8 @@ export class BulkCreateTransacoesUseCase {
             organizationId,
             tipo: TipoTransacaoPrisma.CREDITO,
             valor: t.amount,
+            goldPrice,
+            goldAmount,
             moeda: 'BRL',
             descricao: t.description || `Transferência de ${destName}`,
             dataHora: dataHoraDate,
@@ -156,6 +194,8 @@ export class BulkCreateTransacoesUseCase {
             organizationId,
             tipo: TipoTransacaoPrisma.DEBITO,
             valor: t.amount,
+            goldPrice,
+            goldAmount,
             moeda: 'BRL',
             descricao: t.description
               ? `Transf. para ${sourceName}: ${t.description}`
