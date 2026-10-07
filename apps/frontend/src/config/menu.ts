@@ -114,6 +114,19 @@ export const menuConfig: NavItem[] = [
         description: "Controle e lance resultados de análises químicas.",
       },
       {
+        title: "Lançar Compra no Cartão",
+        href: "/credit-card-transactions",
+        icon: ArrowRightLeft,
+        description: "Registre uma nova compra ou despesa no cartão.",
+      },
+    ],
+  },
+  {
+    title: "Produção / Laboratório",
+    href: "#",
+    icon: FlaskConical,
+    subItems: [
+      {
         title: "Recuperações",
         href: "/recovery-orders",
         icon: FlaskConical,
@@ -124,12 +137,6 @@ export const menuConfig: NavItem[] = [
         href: "/producao/reacoes-quimicas",
         icon: FlaskConical,
         description: "Inicie e finalize reações para produção de lotes.",
-      },
-      {
-        title: "Lançar Compra no Cartão",
-        href: "/credit-card-transactions",
-        icon: ArrowRightLeft,
-        description: "Registre uma nova compra ou despesa no cartão.",
       },
     ],
   },

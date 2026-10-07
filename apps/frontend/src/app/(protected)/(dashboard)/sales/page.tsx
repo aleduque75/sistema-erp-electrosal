@@ -954,6 +954,7 @@ ${itemsText}`;
               <DataTable
                 columns={columns}
                 data={sales}
+                hidePagination
                 rowSelection={rowSelection}
                 onRowSelectionChange={setRowSelection}
               />

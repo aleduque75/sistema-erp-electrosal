@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
@@ -15,8 +15,79 @@ export interface FullMenuResponse {
 }
 
 @Injectable()
-export class MenuService {
+export class MenuService implements OnApplicationBootstrap {
   constructor(private prisma: PrismaService) {}
+
+  async onApplicationBootstrap() {
+    await this.ensureMenuStructure();
+  }
+
+  async ensureMenuStructure() {
+    try {
+      const orgs = await this.prisma.organization.findMany({ select: { id: true } });
+      for (const org of orgs) {
+        // Encontra ou cria a categoria pai "Produção / Laboratório"
+        let producaoParent = await this.prisma.menuItem.findFirst({
+          where: {
+            organizationId: org.id,
+            parentId: null,
+            OR: [
+              { title: { contains: 'Produção', mode: 'insensitive' } },
+              { title: { contains: 'Laboratório', mode: 'insensitive' } },
+            ],
+          },
+        });
+
+        if (!producaoParent) {
+          const maxOrder = await this.prisma.menuItem.aggregate({
+            where: { organizationId: org.id, parentId: null },
+            _max: { order: true },
+          });
+          const nextOrder = (maxOrder._max.order ?? 0) + 1;
+
+          producaoParent = await this.prisma.menuItem.create({
+            data: {
+              organizationId: org.id,
+              title: 'Produção / Laboratório',
+              href: '#',
+              icon: 'FlaskConical',
+              order: nextOrder,
+              disabled: false,
+            },
+          });
+          console.log(`[MenuService] Categoria 'Produção / Laboratório' criada com sucesso para organização ${org.id}`);
+        }
+
+        // Encontrar item de "Recuperações" (por href ou title)
+        const recuperacaoItem = await this.prisma.menuItem.findFirst({
+          where: {
+            organizationId: org.id,
+            OR: [
+              { href: '/recovery-orders' },
+              { title: { contains: 'Recuperaç', mode: 'insensitive' } },
+            ],
+          },
+        });
+
+        if (recuperacaoItem && recuperacaoItem.parentId !== producaoParent.id) {
+          const currentCount = await this.prisma.menuItem.count({
+            where: { organizationId: org.id, parentId: producaoParent.id },
+          });
+
+          await this.prisma.menuItem.update({
+            where: { id: recuperacaoItem.id },
+            data: {
+              parentId: producaoParent.id,
+              order: currentCount,
+            },
+          });
+          console.log(`[MenuService] Item '${recuperacaoItem.title}' movido para '${producaoParent.title}' (Org: ${org.id})`);
+        }
+      }
+    } catch (err) {
+      console.warn('[MenuService] Aviso ao verificar/atualizar estrutura de menu:', err);
+    }
+  }
 
   async create(organizationId: string, createMenuDto: CreateMenuDto): Promise<PrismaMenuItem> {
     return this.prisma.menuItem.create({

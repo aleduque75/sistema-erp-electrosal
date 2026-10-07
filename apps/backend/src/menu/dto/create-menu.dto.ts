@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, IsArray } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, IsArray, ValidateIf } from 'class-validator';
 
 export class CreateMenuDto {
   @IsString()
@@ -21,9 +21,10 @@ export class CreateMenuDto {
   @IsOptional()
   disabled?: boolean;
 
+  @ValidateIf((o) => o.parentId !== null && o.parentId !== undefined)
   @IsString()
   @IsOptional()
-  parentId?: string;
+  parentId?: string | null;
 
   @IsArray()
   @IsString({ each: true })

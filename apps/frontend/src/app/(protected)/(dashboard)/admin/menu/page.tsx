@@ -23,7 +23,8 @@ import {
   ChevronDown,
   LayoutTemplate,
   Info,
-  Move
+  Move,
+  CornerDownRight
 } from 'lucide-react';
 import { MenuItemForm } from './components/menu-item-form';
 import { Badge } from '@/components/ui/badge';
@@ -61,8 +62,12 @@ export default function MenuManagementPage() {
       const res = await api.get('/menu');
       const menuData = res.data.menuItems || [];
       setItems(menuData);
-      // Auto-expand all parents initially for easier reordering and visualization
-      const allParentIds = new Set<string>(menuData.filter((i: MenuItem) => i.subItems && i.subItems.length > 0).map((i: MenuItem) => i.id));
+      // Auto-expand all parents (including empty parent categories like 'Produção / Laboratório')
+      const allParentIds = new Set<string>(
+        menuData
+          .filter((i: MenuItem) => i.href === '#' || (i.subItems && i.subItems.length > 0))
+          .map((i: MenuItem) => i.id)
+      );
       setExpandedItems(allParentIds);
     } catch (error) {
       toast.error('Erro ao carregar menu');
@@ -307,7 +312,8 @@ export default function MenuManagementPage() {
                         className="divide-y divide-border/60"
                       >
                         {items.map((item, index) => {
-                          const hasSubItems = item.subItems && item.subItems.length > 0;
+                          const hasSubItems = Boolean(item.subItems && item.subItems.length > 0);
+                          const isParentCategory = item.href === '#' || hasSubItems;
                           const isExpanded = expandedItems.has(item.id);
 
                           return (
@@ -340,7 +346,7 @@ export default function MenuManagementPage() {
                                     {/* Item Title + Icon + Expander */}
                                     <TableCell>
                                       <div className="flex items-center gap-2">
-                                        {hasSubItems ? (
+                                        {isParentCategory ? (
                                           <button
                                             type="button"
                                             onClick={() => toggleExpand(item.id)}
@@ -359,9 +365,9 @@ export default function MenuManagementPage() {
                                             Inativo
                                           </Badge>
                                         )}
-                                        {hasSubItems && (
-                                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 rounded-full font-mono">
-                                            {item.subItems?.length}
+                                        {isParentCategory && (
+                                          <Badge variant={hasSubItems ? "secondary" : "outline"} className="text-[10px] h-4 px-1.5 rounded-full font-mono">
+                                            {item.subItems?.length || 0}
                                           </Badge>
                                         )}
                                       </div>
@@ -407,87 +413,101 @@ export default function MenuManagementPage() {
                                 )}
                               </Draggable>
 
-                              {/* Nested Subitems (when parent is expanded) */}
-                              {hasSubItems && isExpanded && (
+                              {/* Nested Subitems (when parent is expanded, even if currently empty) */}
+                              {isParentCategory && isExpanded && (
                                 <Droppable droppableId={`subitems-${item.id}`} type="SUBITEM">
-                                  {(subDroppableProvided) => (
+                                  {(subDroppableProvided, subDroppableSnapshot) => (
                                     <tr className="bg-muted/10">
                                       <td colSpan={5} className="p-0 border-b border-border/40">
                                         <div
                                           ref={subDroppableProvided.innerRef}
                                           {...subDroppableProvided.droppableProps}
-                                          className="divide-y divide-border/40 pl-6 sm:pl-10"
+                                          className={`divide-y divide-border/40 pl-6 sm:pl-10 min-h-[48px] py-1 transition-all ${
+                                            subDroppableSnapshot.isDraggingOver
+                                              ? 'bg-primary/10 ring-2 ring-primary/40 ring-inset rounded-lg'
+                                              : ''
+                                          }`}
                                         >
-                                          {item.subItems!.map((subItem, subIndex) => (
-                                            <Draggable key={subItem.id} draggableId={subItem.id} index={subIndex}>
-                                              {(subDragProvided, subSnapshot) => (
-                                                <div
-                                                  ref={subDragProvided.innerRef}
-                                                  {...subDragProvided.draggableProps}
-                                                  className={`flex items-center justify-between py-2.5 px-3 transition-colors ${
-                                                    subSnapshot.isDragging
-                                                      ? 'bg-primary/20 shadow-lg rounded-xl ring-2 ring-primary/40 z-50'
-                                                      : 'hover:bg-muted/40'
-                                                  }`}
-                                                >
-                                                  {/* Subitem Drag Handle & Title */}
-                                                  <div className="flex items-center gap-2.5 min-w-0">
-                                                    <div
-                                                      {...subDragProvided.dragHandleProps}
-                                                      className="p-1 rounded hover:bg-muted cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0"
-                                                      title="Arraste para reposicionar subitem"
-                                                    >
-                                                      <GripVertical size={14} />
+                                          {hasSubItems ? (
+                                            item.subItems!.map((subItem, subIndex) => (
+                                              <Draggable key={subItem.id} draggableId={subItem.id} index={subIndex}>
+                                                {(subDragProvided, subSnapshot) => (
+                                                  <div
+                                                    ref={subDragProvided.innerRef}
+                                                    {...subDragProvided.draggableProps}
+                                                    className={`flex items-center justify-between py-2.5 px-3 transition-colors ${
+                                                      subSnapshot.isDragging
+                                                        ? 'bg-primary/20 shadow-lg rounded-xl ring-2 ring-primary/40 z-50'
+                                                        : 'hover:bg-muted/40'
+                                                    }`}
+                                                  >
+                                                    {/* Subitem Drag Handle & Title */}
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                      <div
+                                                        {...subDragProvided.dragHandleProps}
+                                                        className="p-1 rounded hover:bg-muted cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0"
+                                                        title="Arraste para reposicionar subitem"
+                                                      >
+                                                        <GripVertical size={14} />
+                                                      </div>
+                                                      <CornerDownRight size={14} className="text-muted-foreground/50 shrink-0" />
+                                                      <div className="flex items-center gap-2 min-w-0">
+                                                        {renderIcon(subItem.icon)}
+                                                        <span className="text-xs sm:text-sm font-medium text-foreground truncate">
+                                                          {subItem.title}
+                                                        </span>
+                                                        {subItem.disabled && (
+                                                          <Badge variant="outline" className="text-[9px] h-3.5 border-muted">
+                                                            Inativo
+                                                          </Badge>
+                                                        )}
+                                                      </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                      {renderIcon(subItem.icon)}
-                                                      <span className="text-xs sm:text-sm font-medium text-foreground truncate">
-                                                        {subItem.title}
-                                                      </span>
-                                                      {subItem.disabled && (
-                                                        <Badge variant="outline" className="text-[9px] h-3.5 border-muted">
-                                                          Inativo
-                                                        </Badge>
-                                                      )}
-                                                    </div>
-                                                  </div>
 
-                                                  {/* Subitem Link, Order & Actions */}
-                                                  <div className="flex items-center gap-4 shrink-0 pr-1">
-                                                    <code className="text-[11px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-mono hidden md:inline-block">
-                                                      {subItem.href}
-                                                    </code>
-                                                    <span className="text-xs font-mono font-bold text-muted-foreground w-8 text-center">
-                                                      #{subItem.order}
-                                                    </span>
-                                                    <div className="flex items-center space-x-1">
-                                                      <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 text-primary hover:bg-primary/10 rounded-lg"
-                                                        onClick={() => {
-                                                          setEditingItem(subItem);
-                                                          setFormOpen(true);
-                                                        }}
-                                                        title="Editar subitem"
-                                                      >
-                                                        <Edit2 size={13} />
-                                                      </Button>
-                                                      <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 text-destructive hover:bg-destructive/10 rounded-lg"
-                                                        onClick={() => handleDelete(subItem.id)}
-                                                        title="Excluir subitem"
-                                                      >
-                                                        <Trash2 size={13} />
-                                                      </Button>
+                                                    {/* Subitem Link, Order & Actions */}
+                                                    <div className="flex items-center gap-4 shrink-0 pr-1">
+                                                      <code className="text-[11px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-mono hidden md:inline-block">
+                                                        {subItem.href}
+                                                      </code>
+                                                      <span className="text-xs font-mono font-bold text-muted-foreground w-8 text-center">
+                                                        #{subItem.order}
+                                                      </span>
+                                                      <div className="flex items-center space-x-1">
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="icon"
+                                                          className="h-7 w-7 text-primary hover:bg-primary/10 rounded-lg"
+                                                          onClick={() => {
+                                                            setEditingItem(subItem);
+                                                            setFormOpen(true);
+                                                          }}
+                                                          title="Editar subitem"
+                                                        >
+                                                          <Edit2 size={13} />
+                                                        </Button>
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="icon"
+                                                          className="h-7 w-7 text-destructive hover:bg-destructive/10 rounded-lg"
+                                                          onClick={() => handleDelete(subItem.id)}
+                                                          title="Excluir subitem"
+                                                        >
+                                                          <Trash2 size={13} />
+                                                        </Button>
+                                                      </div>
                                                     </div>
                                                   </div>
-                                                </div>
-                                              )}
-                                            </Draggable>
-                                          ))}
+                                                )}
+                                              </Draggable>
+                                            ))
+                                          ) : (
+                                            <div className="py-3 px-4 mr-4 my-1 rounded-xl border border-dashed border-primary/30 bg-primary/5 text-muted-foreground text-xs flex items-center justify-center gap-2">
+                                              <Move size={14} className="text-primary/70 animate-pulse" />
+                                              <span>
+                                                Nenhum submenu ainda. <strong>Arraste e solte um submenu aqui</strong> para movê-lo para <strong>{item.title}</strong>.
+                                              </span>
+                                            </div>
+                                          )}
                                           {subDroppableProvided.placeholder}
                                         </div>
                                       </td>
