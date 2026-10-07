@@ -294,6 +294,24 @@ export const menuConfig: NavItem[] = [
     icon: BarChart2,
     subItems: [
       {
+        title: "Relatório de Despesas",
+        href: "/relatorios/despesas",
+        icon: FileText,
+        description: "Despesas analíticas com filtros por fornecedor, categoria e caixa.",
+      },
+      {
+        title: "DRE - Resultado",
+        href: "/relatorios/dre",
+        icon: TrendingUp,
+        description: "Demonstração do Resultado do Exercício e lucratividade.",
+      },
+      {
+        title: "Balanço Patrimonial",
+        href: "/relatorios/balanco-patrimonial",
+        icon: Scale,
+        description: "Posição patrimonial, ativo, passivo e solvência.",
+      },
+      {
         title: "Extrato de Contas a Pagar",
         href: "/relatorios/contas-a-pagar",
         icon: ArrowDownToLine,

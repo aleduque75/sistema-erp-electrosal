@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Balanço Patrimonial - Electrosal</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 9px;
+            line-height: 1.35;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .logo {
+            max-width: 140px;
+            max-height: 60px;
+            object-fit: contain;
+        }
+        .title-block {
+            text-align: right;
+        }
+        .title-block h1 {
+            margin: 0;
+            font-size: 16px;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .title-block p {
+            margin: 2px 0 0;
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        /* Indicadores */
+        .kpi-grid {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .kpi-card {
+            flex: 1;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+        .kpi-label {
+            font-size: 8px;
+            text-transform: uppercase;
+            color: #64748b;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .kpi-value {
+            font-size: 13px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .kpi-sub {
+            font-size: 8px;
+            color: #94a3b8;
+        }
+
+        /* Two columns balance layout */
+        .balance-columns {
+            display: flex;
+            gap: 16px;
+        }
+        .column {
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 14px;
+        }
+        th, td {
+            padding: 5px 6px;
+            font-size: 8.5px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .section-header td {
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+            font-weight: 800;
+            font-size: 10px;
+            text-transform: uppercase;
+            padding: 6px 8px;
+        }
+        .group-header td {
+            background-color: #f1f5f9;
+            font-weight: 700;
+            font-size: 9px;
+            color: #334155;
+            text-transform: uppercase;
+        }
+        .item-row td {
+            padding-left: 12px;
+        }
+        .total-row td {
+            background-color: #e2e8f0 !important;
+            font-weight: 800;
+            font-size: 9.5px;
+            border-top: 1px solid #94a3b8;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .font-mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .footer {
+            margin-top: 24px;
+            padding-top: 8px;
+            border-top: 1px solid #cbd5e1;
+            text-align: right;
+            font-size: 8px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <img src="%%LOGO_PLACEHOLDER%%" alt="Electrosal" class="logo" />
+            </div>
+            <div class="title-block">
+                <h1>Balanço Patrimonial</h1>
+                <p>Posição em: <strong>{{asOfDate}}</strong></p>
+                <p>Cotação Ref.: Au R$ {{formatarMoeda quotationAu}} | Ag R$ {{formatarMoeda quotationAg}}</p>
+                <p>Emissão: {{dataEmissao}}</p>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">Total do Ativo</div>
+                <div class="kpi-value" style="color: #0284c7;">R$ {{formatarMoeda ativo.total}}</div>
+                <div class="kpi-sub">Bens, direitos e disponibilidades</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Total do Passivo Exigível</div>
+                <div class="kpi-value" style="color: #dc2626;">R$ {{formatarMoeda passivo.total}}</div>
+                <div class="kpi-sub">Contas a pagar e obrigações</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Patrimônio Líquido</div>
+                <div class="kpi-value" style="color: #16a34a;">R$ {{formatarMoeda patrimonioLiquido.total}}</div>
+                <div class="kpi-sub">Capital próprio e lucros acumulados</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Índice Liquidez Corrente</div>
+                <div class="kpi-value">{{indicadores.liquidezCorrente}}</div>
+                <div class="kpi-sub">Capital de Giro: R$ {{formatarMoeda indicadores.capitalDeGiro}}</div>
+            </div>
+        </div>
+
+        <!-- Balance Columns: Ativo x Passivo/PL -->
+        <div class="balance-columns">
+            <!-- ATIVO -->
+            <div class="column">
+                <table>
+                    <thead>
+                        <tr class="section-header">
+                            <td colspan="2">ATIVO (Bens e Direitos)</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="group-header">
+                            <td>1. ATIVO CIRCULANTE</td>
+                            <td class="text-right font-mono font-bold">R$ {{formatarMoeda ativo.circulante.total}}</td>
+                        </tr>
+                        {{#each ativo.circulante.items}}
+                        <tr class="item-row">
+                            <td>
+                                <strong>{{this.descricao}}</strong>
+                                {{#if this.detalhe}}<br /><span style="font-size: 7.5px; color: #64748b;">{{this.detalhe}}</span>{{/if}}
+                            </td>
+                            <td class="text-right font-mono">R$ {{formatarMoeda this.valor}}</td>
+                        </tr>
+                        {{/each}}
+
+                        {{#if ativo.naoCirculante.items.length}}
+                        <tr class="group-header">
+                            <td>2. ATIVO NÃO CIRCULANTE (Imobilizado)</td>
+                            <td class="text-right font-mono font-bold">R$ {{formatarMoeda ativo.naoCirculante.total}}</td>
+                        </tr>
+                        {{#each ativo.naoCirculante.items}}
+                        <tr class="item-row">
+                            <td><strong>{{this.descricao}}</strong></td>
+                            <td class="text-right font-mono">R$ {{formatarMoeda this.valor}}</td>
+                        </tr>
+                        {{/each}}
+                        {{/if}}
+
+                        <tr class="total-row">
+                            <td>TOTAL DO ATIVO</td>
+                            <td class="text-right font-mono">R$ {{formatarMoeda ativo.total}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- PASSIVO E PL -->
+            <div class="column">
+                <table>
+                    <thead>
+                        <tr class="section-header">
+                            <td colspan="2">PASSIVO E PATRIMÔNIO LÍQUIDO</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="group-header">
+                            <td>1. PASSIVO CIRCULANTE (Obrigações)</td>
+                            <td class="text-right font-mono font-bold">R$ {{formatarMoeda passivo.circulante.total}}</td>
+                        </tr>
+                        {{#each passivo.circulante.items}}
+                        <tr class="item-row">
+                            <td>
+                                <strong>{{this.descricao}}</strong>
+                                {{#if this.detalhe}}<br /><span style="font-size: 7.5px; color: #64748b;">{{this.detalhe}}</span>{{/if}}
+                            </td>
+                            <td class="text-right font-mono">R$ {{formatarMoeda this.valor}}</td>
+                        </tr>
+                        {{/each}}
+
+                        <tr class="group-header">
+                            <td>2. PATRIMÔNIO LÍQUIDO</td>
+                            <td class="text-right font-mono font-bold">R$ {{formatarMoeda patrimonioLiquido.total}}</td>
+                        </tr>
+                        {{#each patrimonioLiquido.items}}
+                        <tr class="item-row">
+                            <td>
+                                <strong>{{this.descricao}}</strong>
+                                {{#if this.detalhe}}<br /><span style="font-size: 7.5px; color: #64748b;">{{this.detalhe}}</span>{{/if}}
+                            </td>
+                            <td class="text-right font-mono">R$ {{formatarMoeda this.valor}}</td>
+                        </tr>
+                        {{/each}}
+
+                        <tr class="total-row">
+                            <td>TOTAL DO PASSIVO + PL</td>
+                            <td class="text-right font-mono">R$ {{formatarMoeda totalPassivoPatrimonioLiquido}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Sistema ERP Electrosal &bull; Balanço Patrimonial emitido em {{dataEmissao}} &bull; Documento Contábil
+        </div>
+    </div>
+</body>
+</html>
