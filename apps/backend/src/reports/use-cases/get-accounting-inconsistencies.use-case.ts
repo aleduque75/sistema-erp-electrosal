@@ -83,13 +83,16 @@ export class GetAccountingInconsistenciesUseCase {
       include: {
         contaContabil: true,
         contaCorrente: {
-          select: { id: true, nome: true },
+          select: { id: true, nome: true, type: true },
         },
         accountRec: {
           select: { id: true, description: true, saleId: true },
         },
         AccountPay: {
           select: { id: true, description: true },
+        },
+        transfer: {
+          select: { id: true },
         },
       },
       orderBy: { dataHora: 'desc' },
@@ -112,7 +115,7 @@ export class GetAccountingInconsistenciesUseCase {
           valor: valorNum,
           tipoTransacao: t.tipo,
           moeda: t.moeda,
-          contaCorrente: t.contaCorrente,
+          contaCorrente: t.contaCorrente ? { id: t.contaCorrente.id, nome: t.contaCorrente.nome } : null,
           contaContabilAtual: null,
           tipoInconsistencia: 'SEM_CONTA_CONTABIL',
           tituloInconsistencia: 'Sem Conta Contábil',
@@ -132,7 +135,7 @@ export class GetAccountingInconsistenciesUseCase {
           valor: valorNum,
           tipoTransacao: t.tipo,
           moeda: t.moeda,
-          contaCorrente: t.contaCorrente,
+          contaCorrente: t.contaCorrente ? { id: t.contaCorrente.id, nome: t.contaCorrente.nome } : null,
           contaContabilAtual: {
             id: cc.id,
             codigo: cc.codigo,
@@ -148,12 +151,22 @@ export class GetAccountingInconsistenciesUseCase {
         });
       }
 
+      const isTransfer =
+        Boolean(t.linkedTransactionId) ||
+        Boolean(t.transfer) ||
+        /transf\.|transfer[eê]ncia/i.test(desc);
+
+      const isClienteAccountOrMovement =
+        t.contaCorrente?.type === 'CLIENTE' ||
+        /cliente/i.test(t.contaCorrente?.nome || '') ||
+        /dep[oó]sito\s*cliente/i.test(desc);
+
       // 3. Recebimento de Venda/Pedido classificado em Fornecedores ou Despesa
       const isSaleReceipt =
         t.accountRecId != null ||
-        /recebimento.*pedido|pedido\s*#|dep[oó]sito\s*cliente/i.test(desc);
+        /recebimento.*pedido|pedido\s*#/i.test(desc);
 
-      if (isSaleReceipt && (cc.codigo === '2.1.1' || cc.tipo === 'PASSIVO' || cc.tipo === 'DESPESA')) {
+      if (isSaleReceipt && !isTransfer && (cc.codigo === '2.1.1' || cc.tipo === 'PASSIVO' || cc.tipo === 'DESPESA')) {
         items.push({
           transacaoId: t.id,
           dataHora: t.dataHora,
@@ -161,7 +174,7 @@ export class GetAccountingInconsistenciesUseCase {
           valor: valorNum,
           tipoTransacao: t.tipo,
           moeda: t.moeda,
-          contaCorrente: t.contaCorrente,
+          contaCorrente: t.contaCorrente ? { id: t.contaCorrente.id, nome: t.contaCorrente.nome } : null,
           contaContabilAtual: {
             id: cc.id,
             codigo: cc.codigo,
@@ -179,7 +192,7 @@ export class GetAccountingInconsistenciesUseCase {
       }
 
       // 4. Pagamento a fornecedor (AccountPay) classificado como Receita ou Clientes
-      if (t.AccountPay != null && (cc.tipo === 'RECEITA' || cc.codigo === '1.1.3')) {
+      if (t.AccountPay != null && !isTransfer && (cc.tipo === 'RECEITA' || cc.codigo === '1.1.3')) {
         items.push({
           transacaoId: t.id,
           dataHora: t.dataHora,
@@ -187,7 +200,7 @@ export class GetAccountingInconsistenciesUseCase {
           valor: valorNum,
           tipoTransacao: t.tipo,
           moeda: t.moeda,
-          contaCorrente: t.contaCorrente,
+          contaCorrente: t.contaCorrente ? { id: t.contaCorrente.id, nome: t.contaCorrente.nome } : null,
           contaContabilAtual: {
             id: cc.id,
             codigo: cc.codigo,
@@ -206,9 +219,9 @@ export class GetAccountingInconsistenciesUseCase {
 
       // 5. Crédito geral lançado em Passivo ou Despesa (não é venda explicitada, mas é crédito)
       if (t.tipo === 'CREDITO' && (cc.tipo === 'PASSIVO' || cc.tipo === 'DESPESA')) {
-        // Ignora se for estorno ou recuperação expressa
+        // Ignora se for estorno, transferência entre contas ou movimentação em conta de fornecedor
         const isEstorno = /estorno|revers[aã]o|anula[çc][aã]o/i.test(desc);
-        if (!isEstorno) {
+        if (!isEstorno && !isTransfer && t.contaCorrente?.type !== 'FORNECEDOR_METAL') {
           items.push({
             transacaoId: t.id,
             dataHora: t.dataHora,
@@ -216,7 +229,7 @@ export class GetAccountingInconsistenciesUseCase {
             valor: valorNum,
             tipoTransacao: t.tipo,
             moeda: t.moeda,
-            contaCorrente: t.contaCorrente,
+            contaCorrente: t.contaCorrente ? { id: t.contaCorrente.id, nome: t.contaCorrente.nome } : null,
             contaContabilAtual: {
               id: cc.id,
               codigo: cc.codigo,
@@ -237,30 +250,39 @@ export class GetAccountingInconsistenciesUseCase {
       // 6. Débito geral lançado em Receita ou Clientes
       if (t.tipo === 'DEBITO' && (cc.tipo === 'RECEITA' || cc.codigo === '1.1.3')) {
         const isEstorno = /estorno|devolu[çc][aã]o|cancelamento/i.test(desc);
-        if (!isEstorno) {
-          items.push({
-            transacaoId: t.id,
-            dataHora: t.dataHora,
-            descricao: desc,
-            valor: valorNum,
-            tipoTransacao: t.tipo,
-            moeda: t.moeda,
-            contaCorrente: t.contaCorrente,
-            contaContabilAtual: {
-              id: cc.id,
-              codigo: cc.codigo,
-              nome: cc.nome,
-              tipo: cc.tipo,
-              aceitaLancamento: cc.aceitaLancamento,
-            },
-            tipoInconsistencia: 'DEBITO_EM_RECEITA_OU_CLIENTES',
-            tituloInconsistencia: 'Débito (Saída) em Receita/Clientes',
-            severidade: 'ALTA',
-            descricaoProblema: `Saída de dinheiro (Débito) classificada como "${cc.nome}".`,
-            sugestaoCorrecao: 'Saídas devem ser classificadas como Despesa (grupo 5) ou pagamento de Passivo/Fornecedor (grupo 2).',
-          });
+
+        // Se for conta de clientes (1.1.3): transferências e baixas/débitos em contas correntes de clientes são operações normais (redução de saldo / repasse)
+        if (cc.codigo === '1.1.3' && (isTransfer || isClienteAccountOrMovement || isEstorno)) {
           continue;
         }
+
+        // Se for conta de receita: estornos ou transferências internas são permitidos
+        if (cc.tipo === 'RECEITA' && (isEstorno || isTransfer)) {
+          continue;
+        }
+
+        items.push({
+          transacaoId: t.id,
+          dataHora: t.dataHora,
+          descricao: desc,
+          valor: valorNum,
+          tipoTransacao: t.tipo,
+          moeda: t.moeda,
+          contaCorrente: t.contaCorrente ? { id: t.contaCorrente.id, nome: t.contaCorrente.nome } : null,
+          contaContabilAtual: {
+            id: cc.id,
+            codigo: cc.codigo,
+            nome: cc.nome,
+            tipo: cc.tipo,
+            aceitaLancamento: cc.aceitaLancamento,
+          },
+          tipoInconsistencia: 'DEBITO_EM_RECEITA_OU_CLIENTES',
+          tituloInconsistencia: 'Débito (Saída) em Receita/Clientes',
+          severidade: 'ALTA',
+          descricaoProblema: `Saída de dinheiro (Débito) classificada como "${cc.nome}".`,
+          sugestaoCorrecao: 'Saídas devem ser classificadas como Despesa (grupo 5) ou pagamento de Passivo/Fornecedor (grupo 2).',
+        });
+        continue;
       }
     }
 
