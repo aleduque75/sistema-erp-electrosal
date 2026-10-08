@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Printer, User, Calendar, Scale, Coins, History, Info, MapPin, FileText, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { Printer, User, Calendar, Scale, Coins, History, Info, MapPin, FileText, CheckCircle2, AlertTriangle, Loader2, Wallet, ExternalLink } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
@@ -24,6 +24,7 @@ interface MetalCreditDetailsModalProps {
   onClose: () => void;
   credit: MetalCreditWithUsageDto | null;
   onSuccess?: () => void;
+  onViewAnalysis?: (analysis: any) => void;
 }
 
 import { formatDate } from "@/lib/date-utils";
@@ -40,7 +41,7 @@ const formatCurrency = (value?: number) =>
     value || 0
   );
 
-export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess }: MetalCreditDetailsModalProps) {
+export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess, onViewAnalysis }: MetalCreditDetailsModalProps) {
   const [chemicalAnalysisDetails, setChemicalAnalysisDetails] = useState<AnaliseQuimicaWithClientNameDto | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -227,9 +228,23 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess }: 
                   <p className="text-xs text-center py-4">Carregando origem...</p>
                 ) : chemicalAnalysisDetails ? (
                   <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Análise:</span>
-                      <span className="font-medium">#{chemicalAnalysisDetails.numeroAnalise}</span>
+                      {onViewAnalysis ? (
+                        <button
+                          type="button"
+                          onClick={() => onViewAnalysis(chemicalAnalysisDetails || credit.chemicalAnalysis)}
+                          className="font-mono font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                          title="Clique para ver os detalhes da análise de origem"
+                        >
+                          #{String(chemicalAnalysisDetails.numeroAnalise).replace(/^[#\s]*crr-?/i, "CRR-")}
+                          <ExternalLink className="w-3 h-3 opacity-70" />
+                        </button>
+                      ) : (
+                        <span className="font-mono font-bold text-primary">
+                          #{String(chemicalAnalysisDetails.numeroAnalise).replace(/^[#\s]*crr-?/i, "CRR-")}
+                        </span>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <span className="text-xs text-muted-foreground">Material:</span>
@@ -277,27 +292,42 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess }: 
                         </div>
                       </div>
 
-                      {(entry.paymentDate || entry.sale) && (
-                        <div className="mt-3 pt-3 border-t border-red-100 dark:border-red-900/30 grid grid-cols-2 gap-4 text-xs">
-                          {entry.sale && (
-                            <div className="flex flex-col">
-                              <span className="text-muted-foreground uppercase text-[9px] font-bold">Valor da Venda</span>
-                              <span>{formatCurrency(entry.sale.totalAmount)}</span>
+                      {/* Informações financeiras / Destino do pagamento */}
+                      {(entry.paymentDate || entry.sale || entry.paymentSourceAccountName || (entry.paymentValueBRL !== undefined && entry.paymentValueBRL > 0)) && (
+                        <div className="mt-3 pt-3 border-t border-red-100 dark:border-red-900/30 space-y-2 text-xs">
+                          {entry.paymentSourceAccountName && (
+                            <div className="bg-background/80 p-2.5 rounded-md border border-border/50 flex flex-col gap-0.5">
+                              <span className="text-[10px] uppercase font-bold text-primary flex items-center gap-1.5 tracking-wider">
+                                <Wallet className="w-3 h-3" /> Destino / Conta do Pagamento
+                              </span>
+                              <span className="font-semibold text-sm text-foreground">
+                                {entry.paymentSourceAccountName}
+                              </span>
                             </div>
                           )}
-                          {entry.paymentDate && (
-                            <div className="flex flex-col text-right">
-                              <span className="text-muted-foreground uppercase text-[9px] font-bold">Valor do Abatimento</span>
-                              <span className="font-bold text-emerald-600">{formatCurrency(entry.paymentValueBRL || 0)}</span>
-                            </div>
-                          )}
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            {entry.sale && (
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground uppercase text-[9px] font-bold">Valor da Venda</span>
+                                <span className="font-medium text-foreground">{formatCurrency(entry.sale.totalAmount)}</span>
+                              </div>
+                            )}
+                            {entry.paymentValueBRL !== undefined && entry.paymentValueBRL > 0 && (
+                              <div className={`flex flex-col ${entry.sale ? 'text-right' : 'text-left'}`}>
+                                <span className="text-muted-foreground uppercase text-[9px] font-bold">Valor Abatido (R$)</span>
+                                <span className="font-bold text-emerald-600 text-sm">{formatCurrency(entry.paymentValueBRL)}</span>
+                              </div>
+                            )}
+                          </div>
+
                           {entry.paymentQuotation && (
-                            <div className="flex flex-col col-span-2 mt-1 border-t border-dashed border-red-100 dark:border-red-900/30 pt-1">
-                              <span className="text-muted-foreground uppercase text-[9px] font-bold">Cotação do Pagamento</span>
-                              <p className="flex justify-between">
-                                <span>{formatCurrency(entry.paymentQuotation)} / g</span>
+                            <div className="flex items-center justify-between border-t border-dashed border-red-100 dark:border-red-900/30 pt-2 text-[11px]">
+                              <span className="text-muted-foreground font-semibold">Cotação do Metal:</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-foreground">{formatCurrency(entry.paymentQuotation)} / g</span>
                                 {entry.isPaid && <Badge className="bg-emerald-500 hover:bg-emerald-600 h-4 text-[9px]">PAGO</Badge>}
-                              </p>
+                              </div>
                             </div>
                           )}
                         </div>

@@ -116,7 +116,7 @@
 
         {{#if chemicalAnalysis}}
         <div class="details-section">
-            <div class="section-title">Origem: Análise Química Nº {{chemicalAnalysis.numeroAnalise}}</div>
+            <div class="section-title">Origem: Análise Química {{formatarNumeroAnalise chemicalAnalysis.numeroAnalise}}</div>
             <table>
                 <tr>
                     <th>Material</th>
@@ -142,7 +142,9 @@
                     <tr>
                         <th>Data</th>
                         <th>Descrição</th>
+                        <th>Destino / Conta</th>
                         <th class="text-right">Quantidade</th>
+                        <th class="text-right">Valor (R$)</th>
                         <th>Tipo</th>
                     </tr>
                 </thead>
@@ -151,7 +153,9 @@
                     <tr>
                         <td>{{formatarData date}}</td>
                         <td>{{description}}</td>
+                        <td>{{#if paymentSourceAccountName}}{{paymentSourceAccountName}}{{else}}-{{/if}}</td>
                         <td class="text-right">{{formatarNumero grams 4}} g</td>
+                        <td class="text-right">{{#if paymentValueBRL}}R$ {{formatarNumero paymentValueBRL 2}}{{else}}-{{/if}}</td>
                         <td>{{type}}</td>
                     </tr>
                     {{/each}}

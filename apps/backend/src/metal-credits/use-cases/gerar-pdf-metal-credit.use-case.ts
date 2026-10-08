@@ -17,7 +17,7 @@ import * as Handlebars from 'handlebars';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MetalAccountEntry } from '@prisma/client';
 
-import { filterEntriesForCredit } from '../utils/metal-credit-usage.helper';
+import { filterEntriesForCredit, enrichUsageEntry } from '../utils/metal-credit-usage.helper';
 
 export interface GerarPdfMetalCreditCommand {
   metalCreditId: string;
@@ -58,6 +58,14 @@ export class GerarPdfMetalCreditUseCase {
         } catch (e) {
           return '';
         }
+      });
+    }
+
+    if (!Handlebars.helpers.formatarNumeroAnalise) {
+      Handlebars.registerHelper('formatarNumeroAnalise', (numero) => {
+        if (!numero) return '';
+        const clean = String(numero).replace(/^[#\s]*crr-?/i, '').trim();
+        return `#CRR-${clean || numero}`;
       });
     }
   }
@@ -165,6 +173,22 @@ export class GerarPdfMetalCreditUseCase {
       logoBase64 || '',
     );
 
+    const enrichedUsageEntries: any[] = [];
+    for (const entry of usageEntries) {
+      try {
+        const enriched = await enrichUsageEntry(this.prisma, entry);
+        enrichedUsageEntries.push({
+          ...enriched,
+          grams: Math.abs(Number(enriched.grams)),
+        });
+      } catch (err) {
+        enrichedUsageEntries.push({
+          ...entry,
+          grams: Math.abs(Number(entry.grams)),
+        });
+      }
+    }
+
     const templateData = {
       clientName: dbMetalCredit.client.name,
       metalType: dbMetalCredit.metalType,
@@ -173,10 +197,7 @@ export class GerarPdfMetalCreditUseCase {
       date: dbMetalCredit.date,
       status: dbMetalCredit.status,
       chemicalAnalysis: dbMetalCredit.chemicalAnalysis,
-      usageEntries: usageEntries.map(e => ({
-        ...e,
-        grams: Math.abs(Number(e.grams)),
-      })),
+      usageEntries: enrichedUsageEntries,
       dataEmissaoPdf: new Date(),
     };
 

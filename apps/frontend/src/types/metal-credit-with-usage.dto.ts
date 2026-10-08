@@ -34,6 +34,14 @@ export interface MetalCreditWithUsageDto extends MetalCreditWithClientNameDto {
     volumeOuPesoEntrada?: number;
     unidadeEntrada?: string;
     resultadoAnaliseValor?: number;
+    unidadeResultado?: string;
+    auLiquidoParaClienteGramas?: number;
+    teorRecuperavel?: number;
+    status?: string;
+    observacoes?: string;
+    metalType?: string;
+    clienteId?: string;
+    createdAt?: string | Date;
   } | null;
   usageEntries: MetalAccountEntryDto[];
 }

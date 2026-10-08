@@ -34,6 +34,7 @@ import {
   AlertTriangle,
   Loader2,
   RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -42,6 +43,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { MetalCreditWithUsageDto } from "@/types/metal-credit-with-usage.dto";
 import { Button } from "@/components/ui/button";
 import { MetalCreditDetailsModal } from "@/components/metal-credits/MetalCreditDetailsModal";
+import { ChemicalAnalysisDetailsModal } from "@/components/metal-credits/ChemicalAnalysisDetailsModal";
 import { PayWithCashModal } from "@/components/metal-credits/PayWithCashModal";
 import { EditMetalCreditModal } from "@/components/metal-credits/EditMetalCreditModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -89,6 +91,9 @@ export default function CreditosClientesPage() {
   const [isPayWithCashModalOpen, setPayWithCashModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedCredit, setSelectedCredit] = useState<MetalCreditWithUsageDto | null>(null);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<any | null>(null);
+  const [selectedAnalysisClientName, setSelectedAnalysisClientName] = useState<string>("");
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
 
   // Quick liquidate state from page
   const [creditToLiquidate, setCreditToLiquidate] = useState<MetalCreditWithUsageDto | null>(null);
@@ -234,10 +239,30 @@ export default function CreditosClientesPage() {
       cell: ({ row }) => {
         const analysis = row.original.chemicalAnalysis;
         if (analysis?.numeroAnalise) {
+          const rawNum = String(analysis.numeroAnalise);
+          const cleanNum = rawNum.replace(/^[#\s]*crr-?/i, "").trim();
+          const displayLabel = `#CRR-${cleanNum || rawNum}`;
+
           return (
-            <Badge variant="outline" className="font-mono text-xs bg-muted/40 hover:bg-muted" title={analysis.descricaoMaterial || undefined}>
-              #CRR-{analysis.numeroAnalise}
-            </Badge>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedAnalysis(analysis);
+                setSelectedAnalysisClientName(row.original.clientName || "");
+                setIsAnalysisModalOpen(true);
+              }}
+              className="inline-flex items-center group cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 rounded"
+              title="Clique para ver os detalhes da análise de origem"
+            >
+              <Badge
+                variant="outline"
+                className="font-mono text-xs bg-primary/5 hover:bg-primary/15 text-primary border-primary/20 hover:border-primary/40 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span>{displayLabel}</span>
+                <ExternalLink className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100" />
+              </Badge>
+            </button>
           );
         }
         return <span className="text-xs text-muted-foreground">Manual</span>;
@@ -547,6 +572,22 @@ export default function CreditosClientesPage() {
         onClose={() => setDetailsModalOpen(false)}
         credit={selectedCredit}
         onSuccess={fetchData}
+        onViewAnalysis={(analysis) => {
+          setSelectedAnalysis(analysis);
+          setSelectedAnalysisClientName(selectedCredit?.clientName || "");
+          setIsAnalysisModalOpen(true);
+        }}
+      />
+
+      <ChemicalAnalysisDetailsModal
+        isOpen={isAnalysisModalOpen}
+        onClose={() => {
+          setIsAnalysisModalOpen(false);
+          setSelectedAnalysis(null);
+        }}
+        initialAnalysis={selectedAnalysis}
+        analysisId={selectedAnalysis?.id}
+        clientName={selectedAnalysisClientName}
       />
 
       <PayWithCashModal
