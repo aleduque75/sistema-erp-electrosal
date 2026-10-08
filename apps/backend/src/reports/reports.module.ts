@@ -16,6 +16,7 @@ import { GenerateDrePdfUseCase } from './use-cases/generate-dre-pdf.use-case';
 import { GetBalanceSheetReportUseCase } from './use-cases/get-balance-sheet-report.use-case';
 import { GenerateBalanceSheetPdfUseCase } from './use-cases/generate-balance-sheet-pdf.use-case';
 import { GetAccountingInconsistenciesUseCase } from './use-cases/get-accounting-inconsistencies.use-case';
+import { GetShippingReconciliationUseCase } from './use-cases/get-shipping-reconciliation.use-case';
 
 @Module({
   controllers: [ReportsController],
@@ -34,6 +35,7 @@ import { GetAccountingInconsistenciesUseCase } from './use-cases/get-accounting-
     GetBalanceSheetReportUseCase,
     GenerateBalanceSheetPdfUseCase,
     GetAccountingInconsistenciesUseCase,
+    GetShippingReconciliationUseCase,
   ],
 })
 export class ReportsModule {}

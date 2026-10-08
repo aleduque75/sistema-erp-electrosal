@@ -25,6 +25,7 @@ import {
   TrendingUp,
   HelpCircle, // Ícone para a nova seção de Ajuda
   AlertTriangle,
+  Truck,
 } from "lucide-react";
 import React from "react";
 
@@ -336,6 +337,12 @@ export const menuConfig: NavItem[] = [
         href: "/relatorios/inconsistencias-contabeis",
         icon: AlertTriangle,
         description: "Auditoria automática de lançamentos suspeitos ou classificados incorretamente.",
+      },
+      {
+        title: "Confronto de Fretes",
+        href: "/relatorios/confronto-fretes",
+        icon: Truck,
+        description: "Confronto entre frete cobrado nos pedidos e despesas pagas aos Correios / Melhor Envio.",
       },
     ],
   },

@@ -27,6 +27,9 @@ import { GetBalanceSheetReportDto } from './dto/get-balance-sheet-report.dto';
 import { GetAccountingInconsistenciesUseCase } from './use-cases/get-accounting-inconsistencies.use-case';
 import { GetAccountingInconsistenciesDto } from './dto/get-accounting-inconsistencies.dto';
 
+import { GetShippingReconciliationUseCase } from './use-cases/get-shipping-reconciliation.use-case';
+import { GetShippingReconciliationDto } from './dto/get-shipping-reconciliation.dto';
+
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
 export class ReportsController {
@@ -43,6 +46,7 @@ export class ReportsController {
     private readonly getBalanceSheetReportUseCase: GetBalanceSheetReportUseCase,
     private readonly generateBalanceSheetPdfUseCase: GenerateBalanceSheetPdfUseCase,
     private readonly getAccountingInconsistenciesUseCase: GetAccountingInconsistenciesUseCase,
+    private readonly getShippingReconciliationUseCase: GetShippingReconciliationUseCase,
   ) {}
 
   @Get('financial-balance')
@@ -176,5 +180,14 @@ export class ReportsController {
     @Query() query: GetAccountingInconsistenciesDto,
   ) {
     return this.getAccountingInconsistenciesUseCase.execute(organizationId, query);
+  }
+
+  // --- 5. RELATÓRIO DE CONFRONTO DE FRETES (COBRADO VS PAGO) ---
+  @Get('shipping-reconciliation')
+  async getShippingReconciliationReport(
+    @CurrentUser('orgId') organizationId: string,
+    @Query() query: GetShippingReconciliationDto,
+  ) {
+    return this.getShippingReconciliationUseCase.execute(organizationId, query);
   }
 }

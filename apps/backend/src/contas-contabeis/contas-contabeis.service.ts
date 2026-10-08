@@ -213,6 +213,7 @@ export class ContasContabeisService {
       { codigo: '5.1.5.4', nome: 'Combustível', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pTransporte?.id },
       { codigo: '5.1.5.5', nome: 'Estacionamento e Pedágios', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pTransporte?.id },
       { codigo: '5.1.5.6', nome: 'Manutenção de Veículos', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pTransporte?.id },
+      { codigo: '5.1.5.7', nome: 'Correios e Encomendas (Melhor Envio, Sedex, PAC)', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pTransporte?.id },
       // Recuperação (5.2.1)
       { codigo: '5.2.1.4', nome: 'Fundição, Crisóis, Maçaricos e Gases', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoRecup?.id },
       { codigo: '5.2.1.5', nome: 'Insumos Químicos e Ácidos (Nítrico, etc)', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoRecup?.id },
