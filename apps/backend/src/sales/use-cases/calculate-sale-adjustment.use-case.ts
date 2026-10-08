@@ -120,7 +120,7 @@ export class CalculateSaleAdjustmentUseCase {
       new Decimal(0),
     );
 
-    // --- SILVER DETECTION LOGIC ---
+    // --- SILVER & GOLD PRICE QUOTATIONS ---
     const silverKeywords = ['prata', 'silver', 'ag '];
     const includesSilverLot = (sale as any).pureMetalLots?.some(l => l.metalType === 'AG');
     const isSilverSale = (sale.saleItems.length > 0 && sale.saleItems.every(item => {
@@ -134,16 +134,13 @@ export class CalculateSaleAdjustmentUseCase {
     // Fetch quotations (Always use latest for replacement cost/projected profit)
     const now = new Date();
     goldPrice = await this.getGoldPrice(prismaClient, organizationId, now);
-    if (isSilverSale) {
-      silverPrice = await this.getSilverPrice(prismaClient, organizationId, now);
-
-      if (silverPrice) {
-        this.logger.log(`[SALE_ADJUSTMENT] Detected Silver Sale. Silver Price: ${silverPrice.toFixed(4)} BRL/g`);
-      }
-    }
+    silverPrice = await this.getSilverPrice(prismaClient, organizationId, now);
     
     if (goldPrice) {
       this.logger.log(`[SALE_ADJUSTMENT] Gold Price Reference: ${goldPrice.toFixed(4)} BRL/g`);
+    }
+    if (silverPrice) {
+      this.logger.log(`[SALE_ADJUSTMENT] Silver Price Reference: ${silverPrice.toFixed(4)} BRL/g`);
     }
     // -----------------------------
 
@@ -192,11 +189,17 @@ export class CalculateSaleAdjustmentUseCase {
           }
           break;
       }
-      if (isSilverSale && silverPrice && goldPrice) {
+
+      // Check if THIS specific item is silver (e.g. Ag CN 54%)
+      const name = (item.product.name + ' ' + (item.product.productGroup?.name || '')).toLowerCase();
+      const isItemSilver = silverKeywords.some(kw => name.includes(kw));
+
+      if (isItemSilver && silverPrice && goldPrice && !goldPrice.isZero()) {
         const valueBRL = itemExpectedGrams.times(silverPrice);
         const itemExpectedGramsAu = valueBRL.dividedBy(goldPrice);
         itemExpectedGrams = itemExpectedGramsAu;
       }
+
       saleExpectedGrams = saleExpectedGrams.plus(itemExpectedGrams);
       if (item.laborPercentage) {
         const itemLabor = itemExpectedGrams.times(new Decimal(item.laborPercentage).dividedBy(100));
@@ -238,35 +241,41 @@ export class CalculateSaleAdjustmentUseCase {
       // For QUANTITY_BASED, the 'cost' in BRL is the value of the pure metal content at the sale's quotation.
       totalCostBRL = saleExpectedGrams.times(paymentQuotation);
       
-      // Calculate totalCostGrams based on metal type
-      if (isSilverSale) {
-        // For Silver, we want to use the historical lot cost in AU (the user's 'conversion' logic)
-        for (const item of sale.saleItems) {
-          const saleItemLots = (item as any).saleItemLots;
-          if (saleItemLots && saleItemLots.length > 0) {
-            for (const lot of saleItemLots) {
-              let lotUnitCostAu = new Decimal(lot.inventoryLot.unitCostAu || 0);
+      // Calculate totalCostGrams based on metal type per item
+      for (const item of sale.saleItems) {
+        const name = (item.product.name + ' ' + (item.product.productGroup?.name || '')).toLowerCase();
+        const isItemSilver = silverKeywords.some(kw => name.includes(kw));
 
-              if (lotUnitCostAu.isZero()) {
-                const lotCostPrice = new Decimal(lot.inventoryLot.costPrice || item.costPriceAtSale || 0);
-                const refGoldPrice = lot.inventoryLot.goldQuotationAtAcquisition
-                  ? new Decimal(lot.inventoryLot.goldQuotationAtAcquisition)
-                  : (goldPrice || paymentQuotation);
-                if (refGoldPrice && refGoldPrice.gt(0) && lotCostPrice.gt(0)) {
-                  lotUnitCostAu = lotCostPrice.dividedBy(refGoldPrice);
-                }
+        const saleItemLots = (item as any).saleItemLots;
+        if (isItemSilver && saleItemLots && saleItemLots.length > 0) {
+          for (const lot of saleItemLots) {
+            let lotUnitCostAu = new Decimal(lot.inventoryLot.unitCostAu || 0);
+
+            if (lotUnitCostAu.isZero()) {
+              const lotCostPrice = new Decimal(lot.inventoryLot.costPrice || item.costPriceAtSale || 0);
+              const refGoldPrice = lot.inventoryLot.goldQuotationAtAcquisition
+                ? new Decimal(lot.inventoryLot.goldQuotationAtAcquisition)
+                : (goldPrice || paymentQuotation);
+              if (refGoldPrice && refGoldPrice.gt(0) && lotCostPrice.gt(0)) {
+                lotUnitCostAu = lotCostPrice.dividedBy(refGoldPrice);
               }
-
-              const lotCostAu = lotUnitCostAu.times(new Decimal(lot.quantity));
-              totalCostGrams = totalCostGrams.plus(lotCostAu);
             }
-          } else {
-            totalCostGrams = totalCostGrams.plus(saleExpectedGrams);
+
+            const lotCostAu = lotUnitCostAu.times(new Decimal(lot.quantity));
+            totalCostGrams = totalCostGrams.plus(lotCostAu);
           }
+        } else {
+          let itemExpectedGrams = new Decimal(0);
+          const goldValue = new Decimal(item.product.goldValue || 0);
+          if (!goldValue.isZero()) {
+            itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
+          }
+          if (isItemSilver && silverPrice && goldPrice && !goldPrice.isZero()) {
+            const valueBRL = itemExpectedGrams.times(silverPrice);
+            itemExpectedGrams = valueBRL.dividedBy(goldPrice);
+          }
+          totalCostGrams = totalCostGrams.plus(itemExpectedGrams);
         }
-      } else {
-        // For Gold (Sal 68%, etc), the metal cost is simply the metal content itself.
-        totalCostGrams = saleExpectedGrams;
       }
     } else {
       // For COST_BASED (or if quotation is zero), sum up the historical inventory lot costs.
@@ -484,6 +493,18 @@ export class CalculateSaleAdjustmentUseCase {
   }
 
   private async getSilverPrice(client: Prisma.TransactionClient | PrismaService, organizationId: string, date: Date): Promise<Decimal | null> {
+    const quotation = await client.quotation.findFirst({
+      where: {
+        organizationId,
+        metal: 'AG',
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    if (quotation && quotation.buyPrice && !new Decimal(quotation.buyPrice.toString()).isZero()) {
+      return new Decimal(quotation.buyPrice.toString());
+    }
+
     const marketData = await client.marketData.findFirst({
       where: {
         organizationId,
@@ -498,7 +519,7 @@ export class CalculateSaleAdjustmentUseCase {
         .times(marketData.usdPrice)
         .dividedBy(31.1034768);
     }
-    return null;
+    return new Decimal(9.02);
   }
 
   private async getGoldPrice(client: Prisma.TransactionClient | PrismaService, organizationId: string, date: Date): Promise<Decimal | null> {
