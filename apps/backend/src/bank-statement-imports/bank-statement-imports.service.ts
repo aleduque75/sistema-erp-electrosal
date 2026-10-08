@@ -14,6 +14,8 @@ export interface PreviewTransaction {
   suggestedContaContabilId?: string;
   goldPrice?: number | null;
   goldAmount?: number | null;
+  matchedDate?: string | null;
+  matchedDescription?: string | null;
 }
 
 interface OfxTransaction {
@@ -41,11 +43,11 @@ export class BankStatementImportsService {
       throw new BadRequestException('Conta corrente não encontrada.');
     }
 
-try {
+    try {
       const parsedData = await ofx.parse(fileBuffer.toString('latin1'));
       const transactionsFromFile =
         parsedData.OFX.BANKMSGSRSV1.STMTTRNRS.STMTRS.BANKTRANLIST.STMTTRN as OfxTransaction[];
-      
+
       if (!transactionsFromFile || transactionsFromFile.length === 0) {
         return [];
       }
@@ -67,30 +69,47 @@ try {
         (t) => !isBalanceEntry(t.MEMO),
       );
 
-      // Busca TODAS as transações da conta corrente para uma verificação mais robusta
+      // Busca TODAS as transações da conta corrente para conciliação robusta
       const existingTransactions = await this.prisma.transacao.findMany({
         where: {
           contaCorrenteId: contaCorrenteId,
         },
         select: {
+          id: true,
           dataHora: true,
           valor: true,
+          tipo: true,
           descricao: true,
-          fitId: true, // Ainda pode ser útil para referência
+          fitId: true,
         },
       });
 
-      // Cria um "hash" para cada transação existente para facilitar a busca
-      const existingTransactionsSet = new Set(
-        existingTransactions.map((t) => {
-          const date = t.dataHora.toISOString().split('T')[0];
-          const value = t.valor.toFixed(2);
-          const key = `${date}|${value}`;
-          return key;
-        }),
-      );
-      
-      const existingFitIds = new Set(existingTransactions.filter(t => t.fitId).map(t => t.fitId));
+      // Cria um pool de transações existentes para matching 1-para-1 com tolerância de datas
+      interface ExistingPoolItem {
+        id: string;
+        dateStr: string; // YYYY-MM-DD
+        dateMs: number;
+        valor: number;
+        tipo: string; // 'CREDITO' | 'DEBITO'
+        descricao: string | null;
+        fitId: string | null;
+        used: boolean;
+      }
+
+      const existingPool: ExistingPoolItem[] = existingTransactions.map((tx) => {
+        const dateStr = tx.dataHora.toISOString().split('T')[0];
+        const dateMs = new Date(`${dateStr}T12:00:00.000Z`).getTime();
+        return {
+          id: tx.id,
+          dateStr,
+          dateMs,
+          valor: Math.round(Math.abs(Number(tx.valor)) * 100) / 100,
+          tipo: String(tx.tipo).toUpperCase(),
+          descricao: tx.descricao,
+          fitId: tx.fitId || null,
+          used: false,
+        };
+      });
 
       // Busca cotações de Ouro (AU) para calcular cotação do dia e peso em metal
       const quotations = await this.prisma.quotation.findMany({
@@ -98,59 +117,129 @@ try {
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
       });
 
-      const previewList: PreviewTransaction[] = filteredTransactions.map(
-        (t) => {
-          const amount = parseFloat(t.TRNAMT);
-          const dateString = t.DTPOSTED.substring(0, 8);
-          const postedAt = new Date(
-            `${dateString.substring(0, 4)}-${dateString.substring(
-              4,
-              6,
-            )}-${dateString.substring(6, 8)}T12:00:00.000Z`, // Adiciona um tempo para evitar problemas de fuso
+      // Processa itens do OFX com dados padronizados
+      const parsedOfxItems = filteredTransactions.map((t) => {
+        const amount = parseFloat(t.TRNAMT);
+        const dateString = t.DTPOSTED.substring(0, 8);
+        const postedAt = new Date(
+          `${dateString.substring(0, 4)}-${dateString.substring(
+            4,
+            6,
+          )}-${dateString.substring(6, 8)}T12:00:00.000Z`,
+        );
+        const transactionDate = postedAt.toISOString().split('T')[0];
+        const ofxDateMs = new Date(`${transactionDate}T12:00:00.000Z`).getTime();
+        const ofxAmount = Math.round(Math.abs(amount) * 100) / 100;
+        const ofxType = amount >= 0 ? 'CREDITO' : 'DEBITO';
+
+        return {
+          raw: t,
+          amount,
+          ofxAmount,
+          ofxType,
+          postedAt,
+          transactionDate,
+          ofxDateMs,
+          status: 'new' as 'new' | 'duplicate',
+          matchedDate: null as string | null,
+          matchedDescription: null as string | null,
+        };
+      });
+
+      // Passo 1: Match prioritário por FITID idêntico (transação já importada anteriormente)
+      for (const item of parsedOfxItems) {
+        if (item.raw.FITID) {
+          const match = existingPool.find(
+            (p) => !p.used && p.fitId === item.raw.FITID,
           );
-
-          const transactionDate = postedAt.toISOString().split('T')[0];
-          
-          // Chave primária de verificação
-          const primaryKey = `${transactionDate}|${Math.abs(amount).toFixed(2)}`;
-          
-          let status: 'new' | 'duplicate' = 'new';
-          const hasPrimaryKey = existingTransactionsSet.has(primaryKey);
-
-          if (hasPrimaryKey || existingFitIds.has(t.FITID)) {
-            status = 'duplicate';
+          if (match) {
+            match.used = true;
+            item.status = 'duplicate';
+            item.matchedDate = match.dateStr;
+            item.matchedDescription = match.descricao;
           }
+        }
+      }
 
-          // Localiza a cotação correspondente à data da transação ou a mais recente anterior
-          const matchQuote = quotations.find((q) => {
-            const qDate = new Date(q.date).toISOString().split('T')[0];
-            return qDate <= transactionDate;
-          });
-          const effectiveQuote = matchQuote || (quotations.length > 0 ? quotations[0] : null);
-          const goldPrice = effectiveQuote
-            ? Number(effectiveQuote.buyPrice || effectiveQuote.sellPrice)
+      // Passo 2: Match exato por Data e Valor e Tipo (lançado no mesmo dia)
+      for (const item of parsedOfxItems) {
+        if (item.status === 'new') {
+          const match = existingPool.find(
+            (p) =>
+              !p.used &&
+              p.valor === item.ofxAmount &&
+              p.tipo === item.ofxType &&
+              p.dateStr === item.transactionDate,
+          );
+          if (match) {
+            match.used = true;
+            item.status = 'duplicate';
+            item.matchedDate = match.dateStr;
+            item.matchedDescription = match.descricao;
+          }
+        }
+      }
+
+      // Passo 3: Match inteligente por aproximação de datas (janela de tolerância de até ±3 dias)
+      // Ex: OFX dia 11/01 e lançamento no sistema dia 12/01, ou fim de semana (sexta a segunda)
+      for (const item of parsedOfxItems) {
+        if (item.status === 'new') {
+          const candidates = existingPool
+            .filter(
+              (p) =>
+                !p.used &&
+                p.valor === item.ofxAmount &&
+                p.tipo === item.ofxType,
+            )
+            .map((p) => {
+              const diffDays = Math.abs(
+                Math.round((p.dateMs - item.ofxDateMs) / (1000 * 60 * 60 * 24)),
+              );
+              return { poolItem: p, diffDays };
+            })
+            .filter((c) => c.diffDays <= 3)
+            .sort((a, b) => a.diffDays - b.diffDays);
+
+          if (candidates.length > 0) {
+            const bestMatch = candidates[0].poolItem;
+            bestMatch.used = true;
+            item.status = 'duplicate';
+            item.matchedDate = bestMatch.dateStr;
+            item.matchedDescription = bestMatch.descricao;
+          }
+        }
+      }
+
+      // Monta lista final com cotações e metadados de conciliação
+      const previewList: PreviewTransaction[] = parsedOfxItems.map((item) => {
+        const matchQuote = quotations.find((q) => {
+          const qDate = new Date(q.date).toISOString().split('T')[0];
+          return qDate <= item.transactionDate;
+        });
+        const effectiveQuote =
+          matchQuote || (quotations.length > 0 ? quotations[0] : null);
+        const goldPrice = effectiveQuote
+          ? Number(effectiveQuote.buyPrice || effectiveQuote.sellPrice)
+          : null;
+        const goldAmount =
+          goldPrice && goldPrice > 0
+            ? Number((item.ofxAmount / goldPrice).toFixed(4))
             : null;
-          const goldAmount =
-            goldPrice && goldPrice > 0
-              ? Number((Math.abs(amount) / goldPrice).toFixed(4))
-              : null;
-          
-          return {
-            fitId: t.FITID,
-            type: amount >= 0 ? 'CREDIT' : 'DEBIT',
-            amount: Math.abs(amount),
-            description: t.MEMO,
-            postedAt,
-            status,
-            suggestedContaContabilId: undefined,
-            goldPrice,
-            goldAmount,
-          };
-        },
-      );
 
-      // A lógica de sugestão pode ser re-adicionada aqui se necessário,
-      // operando sobre a `previewList` filtrada.
+        return {
+          fitId: item.raw.FITID,
+          type: item.amount >= 0 ? 'CREDIT' : 'DEBIT',
+          amount: item.ofxAmount,
+          description: item.raw.MEMO,
+          postedAt: item.postedAt,
+          status: item.status,
+          suggestedContaContabilId: undefined,
+          goldPrice,
+          goldAmount,
+          matchedDate: item.matchedDate,
+          matchedDescription: item.matchedDescription,
+        };
+      });
 
       return previewList;
     } catch (error) {

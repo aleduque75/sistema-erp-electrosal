@@ -29,7 +29,15 @@ import {
   Paperclip, // Adicionar Paperclip
   Scale,
   FileText,
+  ArrowUpDown,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
@@ -208,6 +216,8 @@ export default function ExtratoPage() {
     TransacaoExtrato[]
   >([]);
   const [descriptionFilter, setDescriptionFilter] = useState("");
+  const [tipoFilter, setTipoFilter] = useState<"ALL" | "CREDITO" | "DEBITO">("ALL");
+  const [sortOrder, setSortOrder] = useState<"DESC" | "ASC">("DESC");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newContaContabilId, setNewContaContabilId] = useState<string>("");
   const [newFornecedorId, setNewFornecedorId] = useState<string>("");
@@ -487,13 +497,33 @@ export default function ExtratoPage() {
   };
 
   const filteredTransacoes = useMemo(() => {
-    if (!descriptionFilter) {
-      return displayTransacoes;
+    let result = [...displayTransacoes];
+
+    // 1. Filtrar por tipo (Todos / Créditos / Débitos)
+    if (tipoFilter !== "ALL") {
+      result = result.filter((t) => t.tipo === tipoFilter);
     }
-    return displayTransacoes.filter((t) =>
-      t.descricao.toLowerCase().includes(descriptionFilter.toLowerCase())
-    );
-  }, [displayTransacoes, descriptionFilter]);
+
+    // 2. Filtrar por texto da descrição, fornecedor ou conta contábil
+    if (descriptionFilter.trim()) {
+      const search = descriptionFilter.toLowerCase().trim();
+      result = result.filter(
+        (t) =>
+          t.descricao?.toLowerCase().includes(search) ||
+          t.fornecedorNome?.toLowerCase().includes(search) ||
+          t.contaContabilNome?.toLowerCase().includes(search)
+      );
+    }
+
+    // 3. Ordenação por data (Mais recente primeiro vs Mais antigo primeiro)
+    result.sort((a, b) => {
+      const timeA = new Date(a.dataHora).getTime();
+      const timeB = new Date(b.dataHora).getTime();
+      return sortOrder === "DESC" ? timeB - timeA : timeA - timeB;
+    });
+
+    return result;
+  }, [displayTransacoes, tipoFilter, descriptionFilter, sortOrder]);
 
   const handleGeneratePdf = async () => {
     try {
@@ -638,7 +668,7 @@ export default function ExtratoPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4 p-3 border rounded-xl bg-muted/20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 my-4 p-3 border rounded-xl bg-muted/20">
             <div className="space-y-1">
               <Label htmlFor="startDate" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Data Inicial</Label>
               <Input
@@ -660,6 +690,37 @@ export default function ExtratoPage() {
               />
             </div>
             <div className="space-y-1">
+              <Label htmlFor="tipoFilter" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo de Lançamento</Label>
+              <Select
+                value={tipoFilter}
+                onValueChange={(val: "ALL" | "CREDITO" | "DEBITO") => setTipoFilter(val)}
+              >
+                <SelectTrigger id="tipoFilter" className="h-9 bg-background focus:ring-primary">
+                  <SelectValue placeholder="Todos os tipos..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos os Tipos</SelectItem>
+                  <SelectItem value="CREDITO" className="text-emerald-600 font-semibold">Créditos (+ Entradas)</SelectItem>
+                  <SelectItem value="DEBITO" className="text-rose-600 font-semibold">Débitos (- Saídas)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="sortOrder" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ordem de Exibição</Label>
+              <Select
+                value={sortOrder}
+                onValueChange={(val: "DESC" | "ASC") => setSortOrder(val)}
+              >
+                <SelectTrigger id="sortOrder" className="h-9 bg-background focus:ring-primary">
+                  <SelectValue placeholder="Ordem..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DESC">Mais Recente Primeiro</SelectItem>
+                  <SelectItem value="ASC">Mais Antigo Primeiro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1 sm:col-span-2 md:col-span-3 lg:col-span-1">
               <Label htmlFor="descriptionFilter" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Filtrar por Descrição</Label>
               <Input
                 id="descriptionFilter"
@@ -993,8 +1054,8 @@ export default function ExtratoPage() {
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center h-24">
-                          Nenhuma transação no período selecionado.
+                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
+                          Nenhuma transação encontrada com os filtros selecionados.
                         </TableCell>
                       </TableRow>
                     )}

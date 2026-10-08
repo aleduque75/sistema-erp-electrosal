@@ -90,6 +90,8 @@ interface PreviewTransaction {
   suggestedContaContabilId?: string;
   goldPrice?: number | null;
   goldAmount?: number | null;
+  matchedDate?: string | null;
+  matchedDescription?: string | null;
 }
 interface SelectionState {
   selected: boolean;
@@ -1076,12 +1078,42 @@ export function OfxImport() {
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge
-                            variant={t.status === "new" ? "default" : "secondary"}
-                            className="text-[10px] px-1.5 py-0"
-                          >
-                            {t.status === "new" ? "Novo" : "Já existe"}
-                          </Badge>
+                          {(() => {
+                            const isDuplicate = t.status === "duplicate";
+                            const ofxDateStr = new Date(t.postedAt).toISOString().split("T")[0];
+                            const isDifferentDate = isDuplicate && !!t.matchedDate && t.matchedDate !== ofxDateStr;
+                            const formattedMatchedDate = t.matchedDate
+                              ? t.matchedDate.split("-").reverse().join("/")
+                              : null;
+                            const formattedMatchedDayMonth = t.matchedDate
+                              ? t.matchedDate.split("-").reverse().slice(0, 2).join("/")
+                              : null;
+
+                            return (
+                              <Badge
+                                variant={t.status === "new" ? "default" : "secondary"}
+                                className={cn(
+                                  "text-[10px] px-1.5 py-0 whitespace-nowrap",
+                                  isDifferentDate
+                                    ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30"
+                                    : ""
+                                )}
+                                title={
+                                  isDifferentDate
+                                    ? `Transação correspondente no sistema em ${formattedMatchedDate}${t.matchedDescription ? ` (${t.matchedDescription})` : ""}`
+                                    : t.status === "duplicate"
+                                    ? "Transação já lançada na mesma data"
+                                    : "Nova transação"
+                                }
+                              >
+                                {t.status === "new"
+                                  ? "Novo"
+                                  : isDifferentDate
+                                  ? `Já existe (${formattedMatchedDayMonth})`
+                                  : "Já existe"}
+                              </Badge>
+                            );
+                          })()}
                         </TableCell>
                       </TableRow>
                     );
