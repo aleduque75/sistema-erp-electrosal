@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { MoreHorizontal, Upload, History, CheckCircle2, AlertTriangle, FileText, Trash2, Edit } from "lucide-react";
+import { MoreHorizontal, Upload, History, CheckCircle2, AlertTriangle, FileText, Trash2, Edit, CreditCard, PlusCircle, ArrowRight } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,6 +71,11 @@ interface PessoaHistoryResponse {
   recentRecords: RecentRecordItem[];
 }
 
+const formatCurrency = (value?: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    value || 0
+  );
+
 export default function PessoasPage() {
   const { user, isLoading } = useAuth();
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
@@ -86,6 +91,17 @@ export default function PessoasPage() {
   const [historyData, setHistoryData] = useState<PessoaHistoryResponse | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
+  // Contas Correntes de Clientes
+  const [clientContas, setClientContas] = useState<any[]>([]);
+  const fetchClientContas = useCallback(async () => {
+    try {
+      const res = await api.get("/contas-correntes?types=CLIENTE");
+      setClientContas(res.data || []);
+    } catch {
+      // Ignora erro silenciosamente
+    }
+  }, []);
+
   const fetchPessoas = useCallback(async () => {
     if (!user) return;
     try {
@@ -100,7 +116,26 @@ export default function PessoasPage() {
 
   useEffect(() => {
     fetchPessoas();
-  }, [fetchPessoas]);
+    fetchClientContas();
+  }, [fetchPessoas, fetchClientContas]);
+
+  const handleCreateContaCorrente = async (pessoa: Pessoa) => {
+    try {
+      await api.post("/contas-correntes", {
+        nome: pessoa.name,
+        numeroConta: pessoa.name,
+        type: "CLIENTE",
+        moeda: "BRL",
+        initialBalanceBRL: 0,
+        initialBalanceGold: 0,
+        isActive: true,
+      });
+      toast.success(`Conta Corrente criada com sucesso para ${pessoa.name}!`);
+      fetchClientContas();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao criar conta corrente para o cliente.");
+    }
+  };
 
   const handleOpenNewModal = () => {
     setPessoaToEdit(null);
@@ -146,7 +181,38 @@ export default function PessoasPage() {
   };
 
   const columns: ColumnDef<Pessoa>[] = [
-    { accessorKey: "name", header: "Nome" },
+    {
+      accessorKey: "name",
+      header: "Nome",
+      cell: ({ row }) => {
+        const pessoa = row.original;
+        const matchingConta = clientContas.find(
+          (c) =>
+            c.nome?.trim().toLowerCase() === pessoa.name?.trim().toLowerCase() ||
+            c.numeroConta?.trim().toLowerCase() === pessoa.name?.trim().toLowerCase()
+        );
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold text-foreground">{pessoa.name}</span>
+            {matchingConta && (
+              <Link
+                href={`/contas-correntes/${matchingConta.id}/extrato?mode=BRL`}
+                className="inline-flex items-center gap-1 w-fit"
+                title="Clique para abrir o extrato da conta corrente"
+              >
+                <Badge
+                  variant="outline"
+                  className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0 hover:bg-emerald-500/20 transition-colors"
+                >
+                  <CreditCard className="h-3 w-3 mr-1" />
+                  CC: {formatCurrency(matchingConta.saldoAtualBRL)}
+                </Badge>
+              </Link>
+            )}
+          </div>
+        );
+      },
+    },
     { 
       accessorKey: "email", 
       header: "Email",
@@ -181,6 +247,11 @@ export default function PessoasPage() {
       id: "actions",
       cell: ({ row }) => {
         const pessoa = row.original;
+        const matchingConta = clientContas.find(
+          (c) =>
+            c.nome?.trim().toLowerCase() === pessoa.name?.trim().toLowerCase() ||
+            c.numeroConta?.trim().toLowerCase() === pessoa.name?.trim().toLowerCase()
+        );
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -191,6 +262,22 @@ export default function PessoasPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
+              {matchingConta ? (
+                <Link
+                  href={`/contas-correntes/${matchingConta.id}/extrato?mode=BRL`}
+                  passHref
+                >
+                  <DropdownMenuItem>
+                    <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
+                    Ver Conta Corrente ({formatCurrency(matchingConta.saldoAtualBRL)})
+                  </DropdownMenuItem>
+                </Link>
+              ) : (
+                <DropdownMenuItem onClick={() => handleCreateContaCorrente(pessoa)}>
+                  <PlusCircle className="mr-2 h-4 w-4 text-emerald-500" />
+                  Habilitar Conta Corrente (1 Clique)
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => handleOpenHistoryModal(pessoa)}>
                 <History className="mr-2 h-4 w-4 text-blue-500" />
                 Ver Lançamentos / Vínculos
@@ -299,6 +386,65 @@ export default function PessoasPage() {
             </div>
           ) : historyData ? (
             <div className="space-y-4 py-2">
+              {/* Card de Conta Corrente do Cliente */}
+              {(() => {
+                const historyConta = clientContas.find(
+                  (c) =>
+                    c.nome?.trim().toLowerCase() === historyPessoa?.name?.trim().toLowerCase() ||
+                    c.numeroConta?.trim().toLowerCase() === historyPessoa?.name?.trim().toLowerCase()
+                );
+                return (
+                  <div className="p-3.5 bg-muted/40 border border-border/70 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
+                        <CreditCard className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-bold text-foreground">Conta Corrente do Cliente</p>
+                          {historyConta ? (
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px]">
+                              Ativa
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                              Não Habilitada
+                            </Badge>
+                          )}
+                        </div>
+                        {historyConta ? (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Saldo atual em haver:{" "}
+                            <span className={historyConta.saldoAtualBRL < 0 ? "text-red-500 font-bold" : "text-emerald-500 font-bold"}>
+                              {formatCurrency(historyConta.saldoAtualBRL)}
+                            </span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Este cliente ainda não possui uma conta corrente para créditos e adiantamentos.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {historyConta ? (
+                      <Link href={`/contas-correntes/${historyConta.id}/extrato?mode=BRL`} target="_blank">
+                        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 font-medium">
+                          Abrir Extrato <ArrowRight className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 font-medium bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => handleCreateContaCorrente(historyPessoa!)}
+                      >
+                        <PlusCircle className="h-3.5 w-3.5" /> Habilitar com 1 Clique
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
               {/* Box de Status de Exclusão */}
               {historyData.totalRecords === 0 ? (
                 <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-start gap-3">
