@@ -219,9 +219,10 @@ export class GetAccountingInconsistenciesUseCase {
 
       // 5. Crédito geral lançado em Passivo ou Despesa (não é venda explicitada, mas é crédito)
       if (t.tipo === 'CREDITO' && (cc.tipo === 'PASSIVO' || cc.tipo === 'DESPESA')) {
-        // Ignora se for estorno, transferência entre contas ou movimentação em conta de fornecedor
+        // Ignora se for estorno, transferência, valorização de estoque/produção ou movimentação em conta de fornecedor
         const isEstorno = /estorno|revers[aã]o|anula[çc][aã]o/i.test(desc);
-        if (!isEstorno && !isTransfer && t.contaCorrente?.type !== 'FORNECEDOR_METAL') {
+        const isEstoqueValorizacao = /contrapartida.*valoriza[çc][aã]o|valoriza[çc][aã]o.*estoque/i.test(desc);
+        if (!isEstorno && !isTransfer && !isEstoqueValorizacao && t.contaCorrente?.type !== 'FORNECEDOR_METAL') {
           items.push({
             transacaoId: t.id,
             dataHora: t.dataHora,
