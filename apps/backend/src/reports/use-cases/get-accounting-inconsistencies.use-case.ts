@@ -161,12 +161,15 @@ export class GetAccountingInconsistenciesUseCase {
         /cliente/i.test(t.contaCorrente?.nome || '') ||
         /dep[oó]sito\s*cliente/i.test(desc);
 
+      const isAjusteCotacao = /ajuste.*cota[çc][aã]o|perda.*cota[çc][aã]o|varia[çc][aã]o.*cota[çc][aã]o/i.test(desc);
+      const isAjustePerdaRecuperacao = /ajuste.*perda|perda.*recupera[çc][aã]o|cr[ée]dito.*ajuste/i.test(desc);
+
       // 3. Recebimento de Venda/Pedido classificado em Fornecedores ou Despesa
       const isSaleReceipt =
-        t.accountRecId != null ||
+        (t.accountRecId != null && !isAjusteCotacao) ||
         /recebimento.*pedido|pedido\s*#/i.test(desc);
 
-      if (isSaleReceipt && !isTransfer && (cc.codigo === '2.1.1' || cc.tipo === 'PASSIVO' || cc.tipo === 'DESPESA')) {
+      if (isSaleReceipt && !isTransfer && !isAjusteCotacao && (cc.codigo === '2.1.1' || cc.tipo === 'PASSIVO' || cc.tipo === 'DESPESA')) {
         items.push({
           transacaoId: t.id,
           dataHora: t.dataHora,
@@ -219,10 +222,10 @@ export class GetAccountingInconsistenciesUseCase {
 
       // 5. Crédito geral lançado em Passivo ou Despesa (não é venda explicitada, mas é crédito)
       if (t.tipo === 'CREDITO' && (cc.tipo === 'PASSIVO' || cc.tipo === 'DESPESA')) {
-        // Ignora se for estorno, transferência, valorização de estoque/produção ou movimentação em conta de fornecedor
+        // Ignora se for estorno, transferência, valorização de estoque/produção, ajuste de perda ou movimentação em conta de fornecedor
         const isEstorno = /estorno|revers[aã]o|anula[çc][aã]o/i.test(desc);
         const isEstoqueValorizacao = /contrapartida.*valoriza[çc][aã]o|valoriza[çc][aã]o.*estoque/i.test(desc);
-        if (!isEstorno && !isTransfer && !isEstoqueValorizacao && t.contaCorrente?.type !== 'FORNECEDOR_METAL') {
+        if (!isEstorno && !isTransfer && !isEstoqueValorizacao && !isAjustePerdaRecuperacao && t.contaCorrente?.type !== 'FORNECEDOR_METAL') {
           items.push({
             transacaoId: t.id,
             dataHora: t.dataHora,
@@ -250,15 +253,15 @@ export class GetAccountingInconsistenciesUseCase {
 
       // 6. Débito geral lançado em Receita ou Clientes
       if (t.tipo === 'DEBITO' && (cc.tipo === 'RECEITA' || cc.codigo === '1.1.3')) {
-        const isEstorno = /estorno|devolu[çc][aã]o|cancelamento|revers[aã]o|ajuste/i.test(desc);
+        const isEstorno = /estorno|devolu[çc][aã]o|cancelamento|revers[aã]o|ajuste|venda\s*para/i.test(desc);
 
         // Se for conta de clientes (1.1.3): transferências e baixas/débitos em contas correntes de clientes são operações normais (redução de saldo / repasse)
         if (cc.codigo === '1.1.3' && (isTransfer || isClienteAccountOrMovement || isEstorno)) {
           continue;
         }
 
-        // Se for conta de receita: estornos ou transferências internas são permitidos
-        if (cc.tipo === 'RECEITA' && (isEstorno || isTransfer)) {
+        // Se for conta de receita: estornos, transferências internas ou ajustes são permitidos
+        if (cc.tipo === 'RECEITA' && (isEstorno || isTransfer || isAjusteCotacao)) {
           continue;
         }
 
