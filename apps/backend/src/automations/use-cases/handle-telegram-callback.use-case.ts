@@ -289,7 +289,11 @@ export class HandleTelegramCallbackUseCase {
             { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
             { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
           ],
-          [{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }],
+          [
+            { text: '🧾 Cheques', callback_data: 'bx_cheques' },
+            { text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' },
+          ],
+          [{ text: '🔍 Outra Conta Corrente', callback_data: 'bx_buscar_conta' }],
           [{ text: '⬅️ Voltar aos Vencidos', callback_data: 'cobranca_vencidos' }],
         ];
 
@@ -469,7 +473,11 @@ export class HandleTelegramCallbackUseCase {
             { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
             { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
           ],
-          [{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }],
+          [
+            { text: '🧾 Cheques', callback_data: 'bx_cheques' },
+            { text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' },
+          ],
+          [{ text: '🔍 Outra Conta Corrente', callback_data: 'bx_buscar_conta' }],
           [{ text: '⬅️ Voltar aos a Vencer', callback_data: 'cobranca_avencer' }],
         ];
 
@@ -930,7 +938,11 @@ export class HandleTelegramCallbackUseCase {
           { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
           { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
         ],
-        [{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }],
+        [
+          { text: '🧾 Cheques', callback_data: 'bx_cheques' },
+          { text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' },
+        ],
+        [{ text: '🔍 Outra Conta Corrente', callback_data: 'bx_buscar_conta' }],
         [{ text: '⬅️ Voltar aos Pedidos', callback_data: 'sub_rec_pedidos' }],
       ];
 
@@ -1006,14 +1018,42 @@ export class HandleTelegramCallbackUseCase {
       }
     }
 
-    if (data.startsWith('bx_') && !data.startsWith('bx_venc_') && !data.startsWith('bx_avenc_') && !data.startsWith('bx_link_')) {
-      const contaKey = data.replace('bx_', '');
+    if (data === 'bx_buscar_conta') {
+      sessionData.waitingFor = 'bx_busca_conta';
+      await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+      const backCb = sessionData.selectedSaleId ? `sel_ped_sale_${sessionData.selectedSaleId}` : 'sub_rec_pedidos';
+      const text =
+        '🔍 *BUSCAR CONTA DE DESTINO*\n\n👉 Digite o nome da conta onde o valor entrou (ex: *techgalvano, cheques, inter, cennabras, bsa, prata...*):';
+      await this.telegramBotService.callTelegramApi('sendMessage', {
+        chat_id: chatId,
+        text,
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '⬅️ Voltar ao Pedido', callback_data: backCb }],
+          ],
+        },
+      });
+      return { ok: true };
+    }
+
+    if (data.startsWith('bx_') && !data.startsWith('bx_venc_') && !data.startsWith('bx_avenc_') && !data.startsWith('bx_link_') && data !== 'bx_buscar_conta') {
       const contasMap: Record<string, string> = {
         itau: '7e94781a-6db9-4da6-bd45-e2ec32e363c3',
         dinheiro: '0f52f287-a3fe-45a9-a357-11296320f232',
         bsa: 'ad06430a-88c2-41c7-9236-6dea0598bd7d',
+        cheques: '924c1307-723f-4a23-95db-5b85fa01360c',
+        bancos: 'b78bd0d6-758a-4468-992c-e821347f02bc',
+        techgalvano: '248aab70-2968-45a6-9c0f-dc46eb76c73d',
       };
-      const contaCorrenteId = contasMap[contaKey] || contasMap.itau;
+      let contaCorrenteId = '';
+      if (data.startsWith('bx_id_')) {
+        contaCorrenteId = data.replace('bx_id_', '');
+      } else {
+        const contaKey = data.replace('bx_', '');
+        contaCorrenteId = contasMap[contaKey] || contasMap.itau;
+      }
 
       try {
         const res = await this.settleSaleAutomationUseCase.execute({

@@ -397,6 +397,50 @@ export class HandleTelegramMessageUseCase {
       return { ok: true };
     }
 
+    // D.1) Usuário digitou termo para buscar conta corrente de entrada (baixa de pedido)
+    if (
+      sessionData.waitingFor === 'bx_busca_conta' ||
+      (sessionData.selectedSaleId &&
+        !sessionData.waitingFor &&
+        isNaN(parseInt(text, 10)) &&
+        text.length >= 3 &&
+        !text.startsWith('/') &&
+        text.toLowerCase() !== 'menu' &&
+        text.toLowerCase() !== 'cancelar')
+    ) {
+      const search = await this.searchLookupUseCase.execute({ type: 'conta', q: text });
+      const results = search.results || [];
+      if (sessionData.waitingFor === 'bx_busca_conta' || results.length > 0) {
+        sessionData.waitingFor = null;
+        sessionData.cachedSearchAccounts = results;
+        await this.telegramBotService.saveTelegramSession(chatId, session.fileId, sessionData);
+
+        const inline_keyboard: any[] = [];
+        let replyText = '';
+        if (results.length > 0) {
+          replyText = '🔍 *CONTAS ENCONTRADAS PARA BAIXA:*\n\nSelecione em qual conta o valor entrou:';
+          results.forEach((r: any) => {
+            inline_keyboard.push([{ text: `🏦 ${r.nome}`, callback_data: `bx_id_${r.id}` }]);
+          });
+        } else {
+          replyText = `⚠️ Nenhuma conta encontrada para "*${text}*".`;
+        }
+        const backCb = sessionData.selectedSaleId ? `sel_ped_sale_${sessionData.selectedSaleId}` : 'sub_rec_pedidos';
+        inline_keyboard.push([
+          { text: '🔍 Buscar Outra Conta', callback_data: 'bx_buscar_conta' },
+          { text: '⬅️ Voltar ao Pedido', callback_data: backCb },
+        ]);
+
+        await this.telegramBotService.callTelegramApi('sendMessage', {
+          chat_id: chatId,
+          text: replyText,
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard },
+        });
+        return { ok: true };
+      }
+    }
+
     // D.2) Usuário digitou termo para buscar cliente
     if (sessionData.waitingFor === 'busca_cliente') {
       sessionData.waitingFor = null;

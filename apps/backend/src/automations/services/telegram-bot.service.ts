@@ -371,7 +371,13 @@ export class TelegramBotService {
       { text: '🏦 Caixa Itaú', callback_data: 'bx_itau' },
       { text: '💵 Caixa Dinheiro', callback_data: 'bx_dinheiro' },
     ]);
-    inline_keyboard.push([{ text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' }]);
+    inline_keyboard.push([
+      { text: '🧾 Cheques', callback_data: 'bx_cheques' },
+      { text: '🏭 Fornecedor BSA', callback_data: 'bx_bsa' },
+    ]);
+    inline_keyboard.push([
+      { text: '🔍 Outra Conta Corrente', callback_data: 'bx_buscar_conta' },
+    ]);
     inline_keyboard.push([
       { text: '💵 Alterar Valor', callback_data: 'mudar_valor_baixa' },
       { text: '📅 Alterar Data', callback_data: 'mudar_data_baixa' },
