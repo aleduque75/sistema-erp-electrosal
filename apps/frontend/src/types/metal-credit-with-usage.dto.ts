@@ -26,5 +26,14 @@ export interface MetalAccountEntryDto {
 export interface MetalCreditWithUsageDto extends MetalCreditWithClientNameDto {
   status: string;
   settledGrams?: number;
+  chemicalAnalysis?: {
+    id: string;
+    numeroAnalise: string | number;
+    descricaoMaterial?: string;
+    dataEntrada?: string | Date;
+    volumeOuPesoEntrada?: number;
+    unidadeEntrada?: string;
+    resultadoAnaliseValor?: number;
+  } | null;
   usageEntries: MetalAccountEntryDto[];
 }

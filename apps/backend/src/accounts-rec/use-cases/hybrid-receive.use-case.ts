@@ -130,7 +130,7 @@ export class HybridReceiveUseCase {
             data: {
               metalAccountId: targetMetalAccount.id,
               date: new Date(dto.receivedAt),
-              description: `Pagamento de crédito de metal via transferência de recebimento de venda #${accountRec.sale?.orderNumber || accountRec.description}`,
+              description: `Pagamento de crédito de metal via transferência [Ref:${targetMetalCredit.id}] - Venda #${accountRec.sale?.orderNumber || accountRec.description}`,
               grams: transferGrams.negated().toDecimalPlaces(4).toNumber(), // Débito na conta de metal do cliente
               type: 'TRANSFER_IN', // Tipo alterado para indicar entrada de recursos
               sourceId: accountRec.id, // O AccountRec principal como origem da transferência

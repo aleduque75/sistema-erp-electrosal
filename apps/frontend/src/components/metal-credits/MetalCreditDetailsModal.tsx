@@ -48,7 +48,10 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess }: 
   const [isLiquidating, setIsLiquidating] = useState(false);
 
   useEffect(() => {
-    if (isOpen && credit?.chemicalAnalysisId) {
+    if (isOpen && credit?.chemicalAnalysis) {
+      setChemicalAnalysisDetails(credit.chemicalAnalysis as any);
+      setIsLoadingAnalysis(false);
+    } else if (isOpen && credit?.chemicalAnalysisId) {
       setIsLoadingAnalysis(true);
       api.get<AnaliseQuimicaWithClientNameDto>(`/analises-quimicas/${credit.chemicalAnalysisId}`)
         .then(response => {
@@ -64,7 +67,7 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess }: 
     } else if (!isOpen) {
       setChemicalAnalysisDetails(null);
     }
-  }, [isOpen, credit?.chemicalAnalysisId]);
+  }, [isOpen, credit?.chemicalAnalysisId, credit?.chemicalAnalysis]);
 
   const handlePrintPdf = async () => {
     if (!credit) return;
@@ -114,7 +117,14 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess }: 
 
   const originalGrams = useMemo(() => {
     if (!credit) return 0;
-    return Number(credit.grams) + (credit.usageEntries?.reduce((acc, curr) => acc + Math.abs(curr.grams), 0) || 0);
+    const settled = Number(credit.settledGrams || 0);
+    const current = Number(credit.grams || 0);
+    return current + settled;
+  }, [credit]);
+
+  const settledGrams = useMemo(() => {
+    if (!credit) return 0;
+    return Number(credit.settledGrams || 0);
   }, [credit]);
 
   if (!credit) return null;
@@ -178,11 +188,11 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess }: 
               <CardContent className="px-4 pb-4 space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Peso Original:</span>
-                  <span className="font-medium">{formatGrams(originalGrams)}</span>
+                  <span className="font-semibold">{formatGrams(originalGrams)}</span>
                 </div>
                 <div className="flex justify-between text-sm border-t pt-2">
                   <span className="text-muted-foreground">Já Utilizado:</span>
-                  <span className="font-medium text-red-500">-{formatGrams(originalGrams - Number(credit.grams))}</span>
+                  <span className="font-medium text-red-500">-{formatGrams(settledGrams)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm border-t pt-2 font-bold">
                   <span className="text-primary">Saldo Final:</span>

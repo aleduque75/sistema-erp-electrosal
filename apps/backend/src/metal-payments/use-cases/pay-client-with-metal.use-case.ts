@@ -185,7 +185,7 @@ export class PayClientWithMetalUseCase {
         {
           metalAccountId: metalAccount.id,
           date: paymentDate,
-          description: `Pagamento em metal ao cliente (Lote: ${pureMetalLot.lotNumber || 'N/A'})`,
+          description: `Pagamento em metal ao cliente (Lote: ${pureMetalLot.lotNumber || 'N/A'})${dto.metalCreditId ? ` [Ref:${dto.metalCreditId}]` : ''}`,
           grams: paymentEntity.getStockDeductionGrams(),
           type: 'DEBIT',
           sourceId: movement.id,

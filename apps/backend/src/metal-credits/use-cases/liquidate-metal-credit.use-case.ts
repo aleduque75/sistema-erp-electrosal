@@ -60,7 +60,7 @@ export class LiquidateMetalCreditUseCase {
             data: {
               metalAccountId: metalAccount.id,
               date: new Date(),
-              description: dto?.notes || `Liquidação de saldo residual de crédito de metal (${remainingGrams.toNumber()}g)`,
+              description: dto?.notes || `Liquidação de saldo residual de crédito de metal (${remainingGrams.toNumber()}g) [Ref:${credit.id}]`,
               grams: remainingGrams.negated().toNumber(),
               type: 'ADJUSTMENT',
               sourceId: credit.id,

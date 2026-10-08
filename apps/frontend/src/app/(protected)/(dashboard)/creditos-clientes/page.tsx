@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -16,7 +16,25 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, X, User, Calendar, Scale, Eye, Edit, CreditCard, Wallet, Coins } from "lucide-react";
+import {
+  MoreHorizontal,
+  X,
+  User,
+  Calendar,
+  Scale,
+  Eye,
+  Edit,
+  CreditCard,
+  Wallet,
+  Coins,
+  Printer,
+  CheckCircle2,
+  Users,
+  FileText,
+  AlertTriangle,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 import Link from "next/link";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -33,22 +51,34 @@ import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { formatDate } from "@/lib/date-utils";
 
 const formatGrams = (value?: number) => {
-  return new Intl.NumberFormat("pt-BR", {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4,
-  }).format(value || 0) + " g";
+  return (
+    new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    }).format(value || 0) + " g"
+  );
 };
 
 // Status Configuration
 const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
-  PENDING: { label: 'Disponível', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' },
-  PARTIALLY_PAID: { label: 'Parcialmente Usado', color: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-500' },
-  PAID: { label: 'Esgotado / Pago', color: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
-  CANCELED: { label: 'Cancelado', color: 'bg-red-100 text-red-800 border-red-200', dot: 'bg-red-500' },
+  PENDING: { label: "Disponível", color: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800", dot: "bg-emerald-500" },
+  PARTIALLY_PAID: { label: "Parcialmente Usado", color: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800", dot: "bg-amber-500" },
+  PAID: { label: "Esgotado / Pago", color: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700", dot: "bg-slate-400" },
+  CANCELED: { label: "Cancelado", color: "bg-red-100 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800", dot: "bg-red-500" },
 };
 
 export default function CreditosClientesPage() {
@@ -59,6 +89,10 @@ export default function CreditosClientesPage() {
   const [isPayWithCashModalOpen, setPayWithCashModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedCredit, setSelectedCredit] = useState<MetalCreditWithUsageDto | null>(null);
+
+  // Quick liquidate state from page
+  const [creditToLiquidate, setCreditToLiquidate] = useState<MetalCreditWithUsageDto | null>(null);
+  const [isLiquidating, setIsLiquidating] = useState(false);
 
   // Filtros
   const [metalTypeFilter, setMetalTypeFilter] = useState<string>("ALL");
@@ -98,21 +132,85 @@ export default function CreditosClientesPage() {
     setEditModalOpen(true);
   };
 
-  const filteredCredits = credits.filter((credit) => {
-    const matchesMetalType = metalTypeFilter === "ALL" || credit.metalType === metalTypeFilter;
-    const matchesStatus = statusFilter === "ALL" || credit.status === statusFilter;
-    const isNotZeroed = !hideZeroed || Number(credit.grams) > 0.0001;
-
-    let matchesDate = true;
-    if (dateRange?.from) {
-      const creditDate = new Date(credit.date);
-      const start = startOfDay(dateRange.from);
-      const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-      matchesDate = isWithinInterval(creditDate, { start, end });
+  const handlePrintPdf = async (credit: MetalCreditWithUsageDto) => {
+    const toastId = toast.loading("Gerando extrato PDF...");
+    try {
+      const response = await api.get(`/metal-credits/${credit.id}/pdf`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `extrato-credito-${credit.id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("PDF baixado com sucesso!", { id: toastId });
+    } catch (error) {
+      toast.error("Falha ao gerar o PDF.", { id: toastId });
     }
+  };
 
-    return matchesMetalType && matchesStatus && matchesDate && isNotZeroed;
-  });
+  const handleLiquidateConfirm = async () => {
+    if (!creditToLiquidate) return;
+    try {
+      setIsLiquidating(true);
+      await api.post(`/metal-credits/${creditToLiquidate.id}/liquidate`, {
+        notes: "Liquidação de saldo residual via painel de créditos",
+      });
+      toast.success("Saldo residual liquidado com sucesso!");
+      setCreditToLiquidate(null);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Erro ao liquidar saldo do crédito.");
+    } finally {
+      setIsLiquidating(false);
+    }
+  };
+
+  // Métricas de Resumo
+  const metrics = useMemo(() => {
+    let totalAuAvailable = 0;
+    let totalAgAvailable = 0;
+    let activeCreditsCount = 0;
+    const clientsWithActiveBalance = new Set<string>();
+
+    credits.forEach((c) => {
+      const g = Number(c.grams || 0);
+      if (g > 0.0001 && c.status !== "PAID" && c.status !== "CANCELED") {
+        if (c.metalType === "AU") totalAuAvailable += g;
+        if (c.metalType === "AG") totalAgAvailable += g;
+        activeCreditsCount++;
+        if (c.clientId) clientsWithActiveBalance.add(c.clientId);
+      }
+    });
+
+    return {
+      totalAuAvailable,
+      totalAgAvailable,
+      activeClientsCount: clientsWithActiveBalance.size,
+      activeCreditsCount,
+      totalCreditsCount: credits.length,
+    };
+  }, [credits]);
+
+  const filteredCredits = useMemo(() => {
+    return credits.filter((credit) => {
+      const matchesMetalType = metalTypeFilter === "ALL" || credit.metalType === metalTypeFilter;
+      const matchesStatus = statusFilter === "ALL" || credit.status === statusFilter;
+      const isNotZeroed = !hideZeroed || Number(credit.grams) > 0.0001;
+
+      let matchesDate = true;
+      if (dateRange?.from) {
+        const creditDate = new Date(credit.date);
+        const start = startOfDay(dateRange.from);
+        const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+        matchesDate = isWithinInterval(creditDate, { start, end });
+      }
+
+      return matchesMetalType && matchesStatus && matchesDate && isNotZeroed;
+    });
+  }, [credits, metalTypeFilter, statusFilter, dateRange, hideZeroed]);
 
   const clearFilters = () => {
     setMetalTypeFilter("ALL");
@@ -125,33 +223,82 @@ export default function CreditosClientesPage() {
       accessorKey: "clientName",
       header: "Cliente",
       cell: ({ row }) => (
-        <div className="font-medium">{row.original.clientName || "Cliente não encontrado"}</div>
+        <div className="font-semibold text-foreground">
+          {row.original.clientName || "Cliente não encontrado"}
+        </div>
       ),
+    },
+    {
+      accessorKey: "origem",
+      header: "Origem",
+      cell: ({ row }) => {
+        const analysis = row.original.chemicalAnalysis;
+        if (analysis?.numeroAnalise) {
+          return (
+            <Badge variant="outline" className="font-mono text-xs bg-muted/40 hover:bg-muted" title={analysis.descricaoMaterial || undefined}>
+              #CRR-{analysis.numeroAnalise}
+            </Badge>
+          );
+        }
+        return <span className="text-xs text-muted-foreground">Manual</span>;
+      },
     },
     {
       accessorKey: "metalType",
       header: "Metal",
       cell: ({ row }) => (
-        <Badge variant="outline">{row.original.metalType}</Badge>
+        <Badge
+          variant="outline"
+          className={
+            row.original.metalType === "AU"
+              ? "border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/10 font-bold"
+              : "border-slate-500/40 text-slate-700 dark:text-slate-300 bg-slate-500/10 font-bold"
+          }
+        >
+          {row.original.metalType}
+        </Badge>
       ),
     },
     {
       accessorKey: "grams",
-      header: "Saldo (g)",
-      cell: ({ row }) => (
-        <span className="font-bold">{formatGrams(Number(row.original.grams))}</span>
-      ),
+      header: "Saldo Atual (g)",
+      cell: ({ row }) => {
+        const current = Number(row.original.grams || 0);
+        return (
+          <span className={`font-bold ${current > 0.0001 ? "text-primary text-base" : "text-muted-foreground"}`}>
+            {formatGrams(current)}
+          </span>
+        );
+      },
+    },
+    {
+      id: "originalGrams",
+      header: "Peso Original (g)",
+      cell: ({ row }) => {
+        const current = Number(row.original.grams || 0);
+        const settled = Number(row.original.settledGrams || 0);
+        const original = current + settled;
+        return (
+          <span className="text-xs text-muted-foreground font-mono">
+            {formatGrams(original)}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "date",
-      header: "Data",
+      header: "Data Origem",
       cell: ({ row }) => formatDate(row.original.date as unknown as string),
     },
     {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const statusInfo = statusConfig[row.original.status] || { label: row.original.status, color: 'bg-gray-100', dot: 'bg-gray-400' };
+        const statusInfo = statusConfig[row.original.status] || {
+          label: row.original.status,
+          color: "bg-gray-100 text-gray-800 border-gray-200",
+          dot: "bg-gray-400",
+        };
         return (
           <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color} border`}>
             <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${statusInfo.dot}`} />
@@ -164,6 +311,8 @@ export default function CreditosClientesPage() {
       id: "actions",
       cell: ({ row }) => {
         const credit = row.original;
+        const hasRemainingBalance = Number(credit.grams) > 0.0001 && credit.status !== "PAID";
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -172,27 +321,40 @@ export default function CreditosClientesPage() {
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel>Ações do Crédito</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => handleViewDetails(credit)}>
-                <Eye className="mr-2 h-4 w-4" /> Visualizar
+                <Eye className="mr-2 h-4 w-4 text-primary" /> Visualizar Detalhes
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handlePrintPdf(credit)}>
+                <Printer className="mr-2 h-4 w-4 text-muted-foreground" /> Imprimir Extrato PDF
+              </DropdownMenuItem>
+              {hasRemainingBalance && (
+                <DropdownMenuItem
+                  onClick={() => setCreditToLiquidate(credit)}
+                  className="text-amber-700 dark:text-amber-400 focus:text-amber-800"
+                >
+                  <CheckCircle2 className="mr-2 h-4 w-4 text-amber-600" /> Liquidar Saldo Residual
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => handleEdit(credit)}>
-                <Edit className="mr-2 h-4 w-4" /> Editar
+                <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Editar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                  <Wallet className="mr-2 h-4 w-4" /> Pagar
+                  <Wallet className="mr-2 h-4 w-4 text-emerald-600" /> Pagar Cliente
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuItem asChild>
-                    <Link href={`/metal-payments/pay-client?clientId=${credit.clientId}&metalType=${credit.metalType}&grams=${credit.grams}&creditId=${credit.id}`}>
-                      <CreditCard className="mr-2 h-4 w-4" /> Pagar com Metal
+                    <Link
+                      href={`/metal-payments/pay-client?clientId=${credit.clientId}&metalType=${credit.metalType}&grams=${credit.grams}&creditId=${credit.id}`}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" /> Pagar com Metal Físico
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handlePayWithCash(credit)}>
-                    <Coins className="mr-2 h-4 w-4" /> Pagar com Dinheiro
+                    <Coins className="mr-2 h-4 w-4" /> Pagar em Dinheiro (BRL)
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
@@ -204,31 +366,125 @@ export default function CreditosClientesPage() {
   ];
 
   if (isLoading) return <p className="text-center p-10">Carregando...</p>;
-  if (!user)
-    return <p className="text-center p-10">Faça login para continuar.</p>;
+  if (!user) return <p className="text-center p-10">Faça login para continuar.</p>;
 
   return (
     <div className="max-w-7xl mx-auto py-8 space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Créditos de Metal</h1>
-          <p className="text-muted-foreground">Gerencie o saldo de metal dos clientes.</p>
+          <p className="text-muted-foreground">
+            Gerencie o saldo e extrato individual de metal devido aos clientes.
+          </p>
         </div>
 
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchData}
+            disabled={isFetching}
+            className="flex items-center gap-1.5"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
+      </div>
+
+      {/* KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-amber-500/20 bg-amber-500/5">
+          <CardContent className="p-4 space-y-1">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                Ouro (AU) em Aberto
+              </span>
+              <Coins className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="text-2xl font-black text-amber-700 dark:text-amber-300">
+              {formatGrams(metrics.totalAuAvailable)}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Saldo total devido em ouro aos clientes
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-500/20 bg-slate-500/5">
+          <CardContent className="p-4 space-y-1">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Prata (AG) em Aberto
+              </span>
+              <Scale className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+            </div>
+            <div className="text-2xl font-black text-slate-800 dark:text-slate-200">
+              {formatGrams(metrics.totalAgAvailable)}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Saldo total devido em prata aos clientes
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4 space-y-1">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                Clientes com Saldo
+              </span>
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <div className="text-2xl font-black text-primary">
+              {metrics.activeClientsCount}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Clientes com créditos ativos para resgate
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardContent className="p-4 space-y-1">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Créditos em Aberto
+              </span>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="text-2xl font-black text-foreground">
+              {metrics.activeCreditsCount}
+              <span className="text-xs text-muted-foreground font-normal ml-1">
+                / {metrics.totalCreditsCount} total
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Lotes com saldo pendente de quitação
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-card p-3 rounded-lg border">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center space-x-2 bg-muted/50 p-2 rounded-lg mr-2">
+          <div className="flex items-center space-x-2 bg-muted/50 px-3 py-1.5 rounded-md">
             <Checkbox
               id="hide-zeroed"
               checked={hideZeroed}
               onCheckedChange={(checked) => setHideZeroed(checked as boolean)}
             />
-            <Label htmlFor="hide-zeroed" className="text-sm whitespace-nowrap cursor-pointer">Ocultar zerados</Label>
+            <Label htmlFor="hide-zeroed" className="text-xs font-medium whitespace-nowrap cursor-pointer">
+              Ocultar zerados
+            </Label>
           </div>
 
           <DateRangePicker date={dateRange} onDateChange={setDateRange} />
 
           <Select value={metalTypeFilter} onValueChange={setMetalTypeFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[140px] h-9 text-xs">
               <SelectValue placeholder="Metal" />
             </SelectTrigger>
             <SelectContent>
@@ -240,7 +496,7 @@ export default function CreditosClientesPage() {
           </Select>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[160px] h-9 text-xs">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -252,19 +508,27 @@ export default function CreditosClientesPage() {
             </SelectContent>
           </Select>
 
-          {(metalTypeFilter !== "ALL" || statusFilter !== "ALL" || dateRange) && (
-            <Button variant="ghost" size="icon" onClick={clearFilters} title="Limpar Filtros">
-              <X className="h-4 w-4" />
+          {(metalTypeFilter !== "ALL" || statusFilter !== "ALL" || dateRange || !hideZeroed) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-9 px-2.5 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
+              <X className="h-3.5 w-3.5" />
+              Limpar Filtros
             </Button>
           )}
         </div>
       </div>
 
+      {/* Main Table */}
       <Card>
         <CardContent className="pt-6">
           {isFetching ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>Carregando créditos...</p>
+            <div className="flex flex-col items-center justify-center py-16 space-y-3">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Carregando créditos de metal...</p>
             </div>
           ) : (
             <DataTable
@@ -277,6 +541,7 @@ export default function CreditosClientesPage() {
         </CardContent>
       </Card>
 
+      {/* Modais */}
       <MetalCreditDetailsModal
         isOpen={isDetailsModalOpen}
         onClose={() => setDetailsModalOpen(false)}
@@ -295,6 +560,55 @@ export default function CreditosClientesPage() {
         onClose={() => setEditModalOpen(false)}
         credit={selectedCredit}
       />
+
+      {/* Confirm Liquidation Modal from Page */}
+      <AlertDialog
+        open={!!creditToLiquidate}
+        onOpenChange={(open) => !open && setCreditToLiquidate(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Liquidar Saldo Residual do Crédito?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 pt-2 text-left">
+              <p>
+                Deseja liquidar definitivamente o saldo residual de{" "}
+                <strong className="text-foreground">
+                  {formatGrams(Number(creditToLiquidate?.grams))}
+                </strong>{" "}
+                ({creditToLiquidate?.metalType}) do cliente{" "}
+                <strong className="text-foreground">
+                  {creditToLiquidate?.clientName}
+                </strong>
+                ?
+              </p>
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-xs text-amber-900 dark:text-amber-200">
+                Esta ação dará baixa no saldo, mudará o status do crédito para{" "}
+                <strong>Esgotado / Pago</strong> e registrará o ajuste contábil de metal.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLiquidating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLiquidateConfirm}
+              disabled={isLiquidating}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {isLiquidating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Liquidando...
+                </>
+              ) : (
+                "Confirmar Liquidação"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

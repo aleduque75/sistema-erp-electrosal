@@ -34,7 +34,10 @@ export class MetalCreditMapper {
     };
   }
 
-  static toResponseDto(entity: MetalCreditEntity, extra?: { clientName?: string; usageEntries?: any[] }): any {
+  static toResponseDto(
+    entity: MetalCreditEntity,
+    extra?: { clientName?: string; usageEntries?: any[]; chemicalAnalysis?: any },
+  ): any {
     return {
       id: entity.id,
       organizationId: entity.organizationId,
@@ -47,6 +50,7 @@ export class MetalCreditMapper {
       date: entity.date,
       pureMetalLotId: entity.pureMetalLotId,
       clientName: extra?.clientName || 'Unknown Client',
+      chemicalAnalysis: extra?.chemicalAnalysis || null,
       usageEntries: extra?.usageEntries || [],
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReceiveInstallmentPaymentDto } from '../dtos/sales.dto';
-import { TipoTransacaoPrisma, TipoMetal, SaleInstallmentStatus } from '@prisma/client';
+import { TipoTransacaoPrisma, TipoMetal, SaleInstallmentStatus, MetalCreditStatus } from '@prisma/client';
 import { SettingsService } from '../../settings/settings.service';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { CalculateSaleAdjustmentUseCase } from './calculate-sale-adjustment.use-case';
@@ -139,9 +139,15 @@ export class ReceiveInstallmentPaymentUseCase {
         finalQuotation = goldQuotation;
         finalAmountReceivedBRL = finalAmountReceivedGold.times(finalQuotation);
 
+        const remainingCreditGrams = new Decimal(metalCredit.grams).minus(amountInGrams);
+        const isPaid = remainingCreditGrams.lessThanOrEqualTo(0.0001);
         await tx.metalCredit.update({
           where: { id: metalCreditId },
-          data: { grams: new Decimal(metalCredit.grams).minus(amountInGrams).toNumber() },
+          data: {
+            grams: isPaid ? 0 : remainingCreditGrams.toNumber(),
+            settledGrams: new Decimal(metalCredit.settledGrams || 0).plus(amountInGrams).toNumber(),
+            status: isPaid ? MetalCreditStatus.PAID : MetalCreditStatus.PARTIALLY_PAID,
+          },
         });
 
         // 1. Deduct from Pure Metal Lot if linked
@@ -190,7 +196,7 @@ export class ReceiveInstallmentPaymentUseCase {
           data: {
             metalAccountId: clientMetalAccount.id, // FIX: Use fetched metalAccountId
             date: paymentDate,
-            description: `Uso de crédito de metal para pagamento da parcela #${installment.installmentNumber} da venda #${installment.sale.orderNumber}`,
+            description: `Uso de crédito de metal [Ref:${metalCreditId}] para pagamento da parcela #${installment.installmentNumber} da venda #${installment.sale.orderNumber}`,
             grams: new Decimal(amountInGrams).negated().toNumber(),
             type: 'SALE_PAYMENT',
             sourceId: installment.id,

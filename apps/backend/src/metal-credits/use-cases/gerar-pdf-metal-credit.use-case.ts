@@ -17,6 +17,8 @@ import * as Handlebars from 'handlebars';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MetalAccountEntry } from '@prisma/client';
 
+import { filterEntriesForCredit } from '../utils/metal-credit-usage.helper';
+
 export interface GerarPdfMetalCreditCommand {
   metalCreditId: string;
   organizationId: string;
@@ -104,13 +106,43 @@ export class GerarPdfMetalCreditUseCase {
 
     let usageEntries: MetalAccountEntry[] = [];
     if (metalAccount) {
-      usageEntries = await this.prisma.metalAccountEntry.findMany({
+      const allNegativeEntries = await this.prisma.metalAccountEntry.findMany({
         where: {
           metalAccountId: metalAccount.id,
           grams: { lt: 0 },
         },
         orderBy: { date: 'desc' },
       });
+
+      const txIds = allNegativeEntries
+        .filter((e) => e.type === 'CASH_PAYMENT' || e.type === 'CLIENT_CREDIT_PAYMENT')
+        .map((e) => e.sourceId)
+        .filter((id): id is string => !!id);
+
+      const txMap = new Map<string, string>();
+      if (txIds.length > 0) {
+        const transactions = await this.prisma.transacao.findMany({
+          where: { id: { in: txIds } },
+          select: { id: true, descricao: true },
+        });
+        transactions.forEach((t) => txMap.set(t.id, t.descricao || ''));
+      }
+
+      usageEntries = filterEntriesForCredit(
+        {
+          id: dbMetalCredit.id,
+          clientId: dbMetalCredit.clientId,
+          metalType: dbMetalCredit.metalType,
+          grams: dbMetalCredit.grams,
+          settledGrams: dbMetalCredit.settledGrams,
+          date: dbMetalCredit.date,
+          createdAt: dbMetalCredit.createdAt,
+          chemicalAnalysisId: dbMetalCredit.chemicalAnalysisId,
+          chemicalAnalysis: dbMetalCredit.chemicalAnalysis,
+        },
+        allNegativeEntries,
+        txMap,
+      );
     }
 
     // Prepare template data

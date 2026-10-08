@@ -73,7 +73,7 @@ export class PayWithClientCreditUseCase {
         throw new BadRequestException('Conta contábil para pagamento de crédito de metal não configurada.');
       }
 
-      const description = `Pagamento do crédito de metal para o cliente ${metalCredit.clientId} com crédito de cliente.`;
+      const description = `Pagamento do crédito de metal para o cliente ${metalCredit.clientId} com crédito de cliente [Ref:${metalCreditId}]`;
 
       // 5. Create financial transactions
       // Debit to metal credit payable account
@@ -156,7 +156,7 @@ export class PayWithClientCreditUseCase {
         dto: {
           metalAccountId: metalAccountId,
           date: transactionDate.toISOString(),
-          description: `Pagamento com crédito de cliente do crédito de metal`,
+          description: `Pagamento com crédito de cliente do crédito de metal [Ref:${metalCreditId}]`,
           grams: gramsToSettle.negated().toNumber(),
           type: 'CLIENT_CREDIT_PAYMENT',
           sourceId: debitTransaction.id,
