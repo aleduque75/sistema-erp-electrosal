@@ -169,4 +169,38 @@ describe('BankStatementImportsService', () => {
     expect(result[0].status).toBe('new');
     expect(result[0].matchedDate).toBeNull();
   });
+
+  it('should handle single STMTTRN object (not array) and sanitize ampersand', async () => {
+    (ofx.parse as jest.Mock).mockImplementation(async (content: string) => {
+      // Confirma que o & foi sanitizado para &amp;
+      expect(content).toContain('R &amp; K COMERCIO');
+      return {
+        OFX: {
+          BANKMSGSRSV1: {
+            STMTTRNRS: {
+              STMTRS: {
+                BANKTRANLIST: {
+                  STMTTRN: {
+                    TRNTYPE: 'PAYMENT',
+                    DTPOSTED: '20240522',
+                    TRNAMT: '-49.80',
+                    FITID: '202405220771',
+                    MEMO: 'R & K COMERCIO',
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+    });
+
+    const fileBuffer = Buffer.from('<MEMO>R & K COMERCIO</MEMO>', 'utf-8');
+    const result = await service.previewOfx('org-1', fileBuffer, 'cc-1');
+
+    expect(result).toHaveLength(1);
+    expect(result[0].description).toBe('R & K COMERCIO');
+    expect(result[0].amount).toBe(49.8);
+    expect(result[0].type).toBe('DEBIT');
+  });
 });

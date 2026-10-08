@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as ofx from 'ofx-js';
 import * as iconv from 'iconv-lite';
@@ -19,23 +19,76 @@ export interface PreviewTransaction {
 }
 
 interface OfxTransaction {
-  TRNTYPE: 'CREDIT' | 'DEBIT';
+  TRNTYPE: 'CREDIT' | 'DEBIT' | string;
   DTPOSTED: string;
   TRNAMT: string;
   FITID: string;
-  MEMO: string;
+  MEMO?: string;
+  NAME?: string;
 }
 
 @Injectable()
 export class BankStatementImportsService {
+  private readonly logger = new Logger(BankStatementImportsService.name);
+
   constructor(private prisma: PrismaService) {}
+
+  private decodeOfxBuffer(fileBuffer: Buffer): string {
+    const utf8 = fileBuffer.toString('utf-8');
+    if (!utf8.includes('\uFFFD')) {
+      return utf8;
+    }
+    return iconv.decode(fileBuffer, 'windows-1252');
+  }
+
+  private sanitizeOfxString(content: string): string {
+    // 1. Substitui '&' que não seja entidade XML válida por '&amp;'
+    let sanitized = content.replace(
+      /&(?!(amp|lt|gt|quot|apos|#\d+|#x[a-fA-F0-9]+);)/g,
+      '&amp;',
+    );
+
+    // 2. Remove caracteres de controle estranhos (exceto \r, \n, \t)
+    sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+
+    return sanitized;
+  }
+
+  private extractTransactions(parsedData: any): OfxTransaction[] {
+    const bankMsgs = parsedData?.OFX?.BANKMSGSRSV1;
+    const ccMsgs = parsedData?.OFX?.CREDITCARDMSGSRSV1;
+
+    let stmtTrnRs = bankMsgs?.STMTTRNRS || ccMsgs?.CCSTMTTRNRS;
+    if (!stmtTrnRs) return [];
+
+    if (!Array.isArray(stmtTrnRs)) {
+      stmtTrnRs = [stmtTrnRs];
+    }
+
+    const allTransactions: OfxTransaction[] = [];
+
+    for (const trnRs of stmtTrnRs) {
+      const stmtRs = trnRs?.STMTRS || trnRs?.CCSTMTRS;
+      const bankTranList = stmtRs?.BANKTRANLIST;
+      const stmtTrn = bankTranList?.STMTTRN;
+      if (!stmtTrn) continue;
+
+      if (Array.isArray(stmtTrn)) {
+        allTransactions.push(...stmtTrn);
+      } else {
+        allTransactions.push(stmtTrn);
+      }
+    }
+
+    return allTransactions;
+  }
 
   async previewOfx(
     organizationId: string,
     fileBuffer: Buffer,
     contaCorrenteId: string,
   ): Promise<PreviewTransaction[]> {
-    // Validação da conta corrente (continua igual)
+    // Validação da conta corrente
     const contaCorrente = await this.prisma.contaCorrente.findFirst({
       where: { id: contaCorrenteId, organizationId },
     });
@@ -44,15 +97,16 @@ export class BankStatementImportsService {
     }
 
     try {
-      const parsedData = await ofx.parse(fileBuffer.toString('latin1'));
-      const transactionsFromFile =
-        parsedData.OFX.BANKMSGSRSV1.STMTTRNRS.STMTRS.BANKTRANLIST.STMTTRN as OfxTransaction[];
+      const decodedString = this.decodeOfxBuffer(fileBuffer);
+      const sanitizedString = this.sanitizeOfxString(decodedString);
+      const parsedData = await ofx.parse(sanitizedString);
+      const transactionsFromFile = this.extractTransactions(parsedData);
 
       if (!transactionsFromFile || transactionsFromFile.length === 0) {
         return [];
       }
 
-      const isBalanceEntry = (memo: string) => {
+      const isBalanceEntry = (memo?: string) => {
         if (!memo) return false;
         const lowerMemo = memo.toLowerCase();
         return (
@@ -66,7 +120,7 @@ export class BankStatementImportsService {
       };
 
       const filteredTransactions = transactionsFromFile.filter(
-        (t) => !isBalanceEntry(t.MEMO),
+        (t) => !isBalanceEntry(t.MEMO || t.NAME),
       );
 
       // Busca TODAS as transações da conta corrente para conciliação robusta
@@ -118,25 +172,33 @@ export class BankStatementImportsService {
       });
 
       // Processa itens do OFX com dados padronizados
-      const parsedOfxItems = filteredTransactions.map((t) => {
-        const amount = parseFloat(t.TRNAMT);
-        const dateString = t.DTPOSTED.substring(0, 8);
-        const postedAt = new Date(
-          `${dateString.substring(0, 4)}-${dateString.substring(
-            4,
-            6,
-          )}-${dateString.substring(6, 8)}T12:00:00.000Z`,
-        );
+      const parsedOfxItems = filteredTransactions.map((t, index) => {
+        const rawAmt = String(t.TRNAMT || '0').replace(',', '.');
+        const amount = parseFloat(rawAmt);
+        const rawDate = String(t.DTPOSTED || '').trim();
+        const dateString = rawDate.length >= 8 ? rawDate.substring(0, 8) : '';
+        const postedAt =
+          dateString.length === 8
+            ? new Date(
+                `${dateString.substring(0, 4)}-${dateString.substring(
+                  4,
+                  6,
+                )}-${dateString.substring(6, 8)}T12:00:00.000Z`,
+              )
+            : new Date();
         const transactionDate = postedAt.toISOString().split('T')[0];
         const ofxDateMs = new Date(`${transactionDate}T12:00:00.000Z`).getTime();
         const ofxAmount = Math.round(Math.abs(amount) * 100) / 100;
         const ofxType = amount >= 0 ? 'CREDITO' : 'DEBITO';
+        const description = (t.MEMO || t.NAME || 'Transação sem descrição').trim();
 
         return {
           raw: t,
+          index,
           amount,
           ofxAmount,
           ofxType,
+          description,
           postedAt,
           transactionDate,
           ofxDateMs,
@@ -227,10 +289,10 @@ export class BankStatementImportsService {
             : null;
 
         return {
-          fitId: item.raw.FITID,
+          fitId: item.raw.FITID || `${item.transactionDate}-${item.ofxAmount}-${item.index}`,
           type: item.amount >= 0 ? 'CREDIT' : 'DEBIT',
           amount: item.ofxAmount,
-          description: item.raw.MEMO,
+          description: item.description,
           postedAt: item.postedAt,
           status: item.status,
           suggestedContaContabilId: undefined,
@@ -242,9 +304,11 @@ export class BankStatementImportsService {
       });
 
       return previewList;
-    } catch (error) {
-      console.error('Erro ao processar arquivo OFX:', error);
-      throw new BadRequestException('Arquivo OFX inválido ou mal formatado.');
+    } catch (error: any) {
+      this.logger.error('Erro ao processar arquivo OFX:', error?.stack || error);
+      throw new BadRequestException(
+        `Arquivo OFX inválido ou mal formatado: ${error?.message || 'Erro desconhecido'}`,
+      );
     }
   }
 }
