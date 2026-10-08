@@ -134,8 +134,35 @@ export class SettleSaleAutomationUseCase {
 
     const goldAmount = quotation > 0 ? payAmount / quotation : 0;
 
-    // Determinar conta contábil para o crédito
-    let contaContabilId: string | undefined = contaCorrente.contaContabilId ?? undefined;
+    // Determinar conta contábil para o crédito do recebimento do pedido (Cliente)
+    // Nunca deve ser Fornecedores (Passivo). Prioriza "Contas a Receber de Clientes" (1.1.3) ou Receita Padrão.
+    let contaContabilId: string | undefined;
+
+    // 1. Tentar conta "Contas a Receber de Clientes" (código 1.1.3 ou por nome)
+    const contaClientes = await this.prisma.contaContabil.findFirst({
+      where: {
+        organizationId,
+        OR: [
+          { codigo: '1.1.3' },
+          { nome: { contains: 'Contas a Receber', mode: 'insensitive' } },
+        ],
+        aceitaLancamento: true,
+      },
+    });
+
+    if (contaClientes) {
+      contaContabilId = contaClientes.id;
+    } else {
+      // 2. Tentar UserSettings defaultReceitaContaId
+      const userSettings = await this.prisma.userSettings.findFirst({
+        where: { user: { organizationId } },
+      });
+      if (userSettings?.defaultReceitaContaId) {
+        contaContabilId = userSettings.defaultReceitaContaId;
+      }
+    }
+
+    // 3. Fallback para primeira conta de RECEITA ativa
     if (!contaContabilId) {
       const receitaConta = await this.prisma.contaContabil.findFirst({
         where: {
@@ -147,6 +174,7 @@ export class SettleSaleAutomationUseCase {
       });
       contaContabilId = receitaConta?.id;
     }
+
     if (!contaContabilId) {
       const ativoConta = await this.prisma.contaContabil.findFirst({
         where: { organizationId, aceitaLancamento: true },
