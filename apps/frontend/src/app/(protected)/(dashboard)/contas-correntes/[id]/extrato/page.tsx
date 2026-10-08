@@ -211,6 +211,7 @@ export default function ExtratoPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newContaContabilId, setNewContaContabilId] = useState<string>("");
   const [newFornecedorId, setNewFornecedorId] = useState<string>("");
+  const [newGoldPrice, setNewGoldPrice] = useState<string>("");
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [selectedMedias, setSelectedMedias] = useState<{ id: string; path: string }[]>([]);
@@ -399,8 +400,19 @@ export default function ExtratoPage() {
       toast.error("Selecione as transações a serem alteradas.");
       return;
     }
-    if (!newContaContabilId && !newFornecedorId) {
-      toast.error("Selecione uma nova conta contábil ou um novo fornecedor.");
+
+    const cleanGoldPrice = newGoldPrice.trim().replace(",", ".");
+    let parsedGoldPrice: number | undefined = undefined;
+    if (cleanGoldPrice !== "") {
+      parsedGoldPrice = parseFloat(cleanGoldPrice);
+      if (isNaN(parsedGoldPrice) || parsedGoldPrice <= 0) {
+        toast.error("Informe um valor válido para a cotação.");
+        return;
+      }
+    }
+
+    if (!newContaContabilId && !newFornecedorId && parsedGoldPrice === undefined) {
+      toast.error("Selecione uma conta contábil, fornecedor ou informe a cotação.");
       return;
     }
 
@@ -409,11 +421,13 @@ export default function ExtratoPage() {
         transactionIds: selectedIds,
         contaContabilId: newContaContabilId || undefined,
         fornecedorId: newFornecedorId || undefined,
+        goldPrice: parsedGoldPrice,
       });
       toast.success("Transações atualizadas com sucesso!");
       setSelectedIds([]);
       setNewContaContabilId("");
       setNewFornecedorId("");
+      setNewGoldPrice("");
       fetchExtrato();
     } catch (err) {
       toast.error("Falha ao atualizar transações.");
@@ -533,8 +547,8 @@ export default function ExtratoPage() {
 
   return (
     <>
-      <Card className="my-8">
-        <CardHeader>
+      <Card className="my-8 overflow-visible">
+        <CardHeader className="sticky top-16 z-30 bg-card/95 backdrop-blur-md border-b border-border/80 shadow-sm rounded-t-xl transition-all">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="w-full">
               <CardTitle className="text-xl md:text-2xl">Extrato da Conta</CardTitle>
@@ -659,11 +673,11 @@ export default function ExtratoPage() {
           </div>
 
           {selectedIds.length > 0 && (
-            <div className="flex items-center gap-4 my-4 p-4 border rounded-lg bg-muted/50">
-              <p className="text-sm font-medium">
+            <div className="flex flex-wrap items-center gap-3 my-4 p-4 border rounded-lg bg-muted/50">
+              <p className="text-sm font-medium whitespace-nowrap">
                 {selectedIds.length} transações selecionadas
               </p>
-              <div className="w-[300px]">
+              <div className="w-[260px]">
                 <Combobox
                   options={contasContabeis.map((cc) => ({
                     value: cc.id,
@@ -674,7 +688,7 @@ export default function ExtratoPage() {
                   value={newContaContabilId}
                 />
               </div>
-              <div className="w-[300px]">
+              <div className="w-[260px]">
                 <Combobox
                   options={fornecedores.map((f) => ({
                     value: f.id,
@@ -683,6 +697,16 @@ export default function ExtratoPage() {
                   placeholder="Alterar Fornecedor..."
                   onChange={(val) => setNewFornecedorId(val || "")}
                   value={newFornecedorId}
+                />
+              </div>
+              <div className="w-[160px]">
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="Cotação (R$/g)..."
+                  value={newGoldPrice}
+                  onChange={(e) => setNewGoldPrice(e.target.value)}
+                  className="bg-background h-10"
                 />
               </div>
               <Button onClick={handleBulkUpdate}>Alterar em Lote</Button>

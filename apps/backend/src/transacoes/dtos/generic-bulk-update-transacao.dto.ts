@@ -1,4 +1,5 @@
-import { IsArray, IsString, IsOptional, IsUUID } from 'class-validator';
+import { IsArray, IsOptional, IsUUID, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class GenericBulkUpdateTransacaoDto {
   @IsArray()
@@ -12,4 +13,9 @@ export class GenericBulkUpdateTransacaoDto {
   @IsOptional()
   @IsUUID()
   fornecedorId?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  goldPrice?: number;
 }

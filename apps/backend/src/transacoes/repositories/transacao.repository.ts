@@ -13,6 +13,12 @@ export abstract class TransacaoRepository {
     tx?: any,
   ): Promise<TransacaoEntity | null>;
 
+  abstract findByIds(
+    ids: string[],
+    organizationId: string,
+    tx?: any,
+  ): Promise<TransacaoEntity[]>;
+
   abstract findAll(params: FindAllTransacoesParams): Promise<TransacaoEntity[]>;
 
   abstract findUnlinked(organizationId: string): Promise<TransacaoEntity[]>;

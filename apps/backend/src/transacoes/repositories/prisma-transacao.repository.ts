@@ -36,6 +36,22 @@ export class PrismaTransacaoRepository extends TransacaoRepository {
     return TransacaoMapper.toDomain(raw);
   }
 
+  async findByIds(
+    ids: string[],
+    organizationId: string,
+    tx?: any,
+  ): Promise<TransacaoEntity[]> {
+    const client = tx || this.prisma;
+    const records = await client.transacao.findMany({
+      where: {
+        id: { in: ids },
+        organizationId,
+      },
+      include: this.defaultIncludes,
+    });
+    return records.map(TransacaoMapper.toDomain);
+  }
+
   async findAll(params: FindAllTransacoesParams): Promise<TransacaoEntity[]> {
     const { organizationId, startDate, endDate } = params;
     const where: Prisma.TransacaoWhereInput = {

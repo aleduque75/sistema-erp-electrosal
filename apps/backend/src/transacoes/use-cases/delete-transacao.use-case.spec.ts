@@ -11,6 +11,7 @@ describe('DeleteTransacaoUseCase', () => {
   beforeEach(() => {
     mockRepository = {
       findById: jest.fn(),
+      findByIds: jest.fn(),
       findAll: jest.fn(),
       findUnlinked: jest.fn(),
       create: jest.fn(),
