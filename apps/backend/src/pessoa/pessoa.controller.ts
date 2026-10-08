@@ -21,6 +21,7 @@ import { UpdatePessoaUseCase } from './use-cases/update-pessoa.use-case';
 import { ListPessoasUseCase } from './use-cases/list-pessoas.use-case';
 import { GetPessoaUseCase } from './use-cases/get-pessoa.use-case';
 import { DeletePessoaUseCase } from './use-cases/delete-pessoa.use-case';
+import { GetPessoaHistoryUseCase } from './use-cases/get-pessoa-history.use-case';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('pessoas')
@@ -31,6 +32,7 @@ export class PessoaController {
     private readonly listPessoasUseCase: ListPessoasUseCase,
     private readonly getPessoaUseCase: GetPessoaUseCase,
     private readonly deletePessoaUseCase: DeletePessoaUseCase,
+    private readonly getPessoaHistoryUseCase: GetPessoaHistoryUseCase,
   ) {}
 
   @Post()
@@ -47,6 +49,14 @@ export class PessoaController {
     @Query() query: ListPessoasQueryDto,
   ) {
     return this.listPessoasUseCase.execute(organizationId, query);
+  }
+
+  @Get(':id/history')
+  getHistory(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.getPessoaHistoryUseCase.execute(organizationId, id);
   }
 
   @Get(':id')

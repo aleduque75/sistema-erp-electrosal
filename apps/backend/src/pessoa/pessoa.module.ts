@@ -8,6 +8,7 @@ import { UpdatePessoaUseCase } from './use-cases/update-pessoa.use-case';
 import { ListPessoasUseCase } from './use-cases/list-pessoas.use-case';
 import { GetPessoaUseCase } from './use-cases/get-pessoa.use-case';
 import { DeletePessoaUseCase } from './use-cases/delete-pessoa.use-case';
+import { GetPessoaHistoryUseCase } from './use-cases/get-pessoa-history.use-case';
 
 @Module({
   imports: [PrismaModule],
@@ -26,6 +27,7 @@ import { DeletePessoaUseCase } from './use-cases/delete-pessoa.use-case';
     ListPessoasUseCase,
     GetPessoaUseCase,
     DeletePessoaUseCase,
+    GetPessoaHistoryUseCase,
   ],
   exports: [
     PessoaRepository,
@@ -35,6 +37,7 @@ import { DeletePessoaUseCase } from './use-cases/delete-pessoa.use-case';
     ListPessoasUseCase,
     GetPessoaUseCase,
     DeletePessoaUseCase,
+    GetPessoaHistoryUseCase,
   ],
 })
 export class PessoaModule {}
