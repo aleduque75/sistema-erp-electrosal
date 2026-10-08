@@ -77,6 +77,7 @@ export default function ExpensesReportPage() {
   const [reportData, setReportData] = useState<ExpensesReport | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
   // Carregar filtros auxiliares
   useEffect(() => {
@@ -432,31 +433,54 @@ export default function ExpensesReportPage() {
       {/* Resumo por Categoria Contábil */}
       {reportData && reportData.summary.byCategory.length > 0 && (
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <PieChart className="h-4 w-4 text-primary" /> Distribuição por Categoria Contábil ({currencyView === "GOLD" ? "em Au" : "em R$"})
+              <PieChart className="h-4 w-4 text-primary" /> Distribuição por Categoria Contábil
             </CardTitle>
+            {reportData.summary.byCategory.length > 9 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setShowAllCategories((prev) => !prev)}
+              >
+                {showAllCategories
+                  ? "Ver menos"
+                  : `Ver todas (${reportData.summary.byCategory.length})`}
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {reportData.summary.byCategory.slice(0, 9).map((cat) => (
+              {(showAllCategories
+                ? reportData.summary.byCategory
+                : reportData.summary.byCategory.slice(0, 9)
+              ).map((cat) => (
                 <div
                   key={cat.contaContabilId}
-                  className="p-3 rounded-lg border border-border bg-card/60 space-y-1.5"
+                  className="p-3 rounded-lg border border-border bg-card/60 space-y-1.5 hover:border-primary/40 transition-colors"
                 >
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start gap-2">
                     <span className="text-xs font-bold text-foreground line-clamp-1" title={cat.nome}>
                       {cat.nome}
                     </span>
-                    <span className="text-[11px] font-mono font-bold text-primary">
+                    <span className="text-[11px] font-mono font-bold text-primary shrink-0">
                       {cat.percentage.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="flex justify-between items-baseline text-xs text-muted-foreground">
-                    <span className="font-mono text-foreground font-semibold">
-                      {currencyView === "GOLD" ? formatGold(cat.totalGold) : formatCurrency(cat.totalAmount)}
-                    </span>
-                    <span className="text-[10px]">{cat.count} lanç.</span>
+                  <div className="flex justify-between items-baseline text-xs">
+                    <div className="flex flex-col gap-0.5">
+                      <span className={`font-mono font-bold text-sm ${currencyView === "GOLD" ? "text-amber-500" : "text-foreground"}`}>
+                        {currencyView === "GOLD" ? formatGold(cat.totalGold) : formatCurrency(cat.totalAmount)}
+                      </span>
+                      <span className="text-[11px] font-mono flex items-center gap-1">
+                        <span className="text-muted-foreground text-[10px]">Eq:</span>
+                        <span className={`font-semibold ${currencyView === "GOLD" ? "text-foreground" : "text-amber-500 dark:text-amber-400"}`}>
+                          {currencyView === "GOLD" ? formatCurrency(cat.totalAmount) : formatGold(cat.totalGold)}
+                        </span>
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground self-start shrink-0">{cat.count} lanç.</span>
                   </div>
                   {/* Barra de Progresso visual */}
                   <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
