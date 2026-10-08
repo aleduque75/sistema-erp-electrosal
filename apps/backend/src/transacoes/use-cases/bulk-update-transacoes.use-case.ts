@@ -11,7 +11,7 @@ export class BulkUpdateTransacoesUseCase {
     dto: GenericBulkUpdateTransacaoDto,
     organizationId: string,
   ): Promise<{ count: number }> {
-    const { transactionIds, contaContabilId, fornecedorId, goldPrice } = dto;
+    const { transactionIds, contaContabilId, fornecedorId, goldPrice, contaCorrenteId } = dto;
 
     if (!transactionIds || transactionIds.length === 0) {
       return { count: 0 };
@@ -20,8 +20,9 @@ export class BulkUpdateTransacoesUseCase {
     const hasGoldPrice = goldPrice !== undefined && goldPrice !== null;
     const hasContaContabil = Boolean(contaContabilId);
     const hasFornecedor = fornecedorId !== undefined;
+    const hasContaCorrente = Boolean(contaCorrenteId);
 
-    if (!hasGoldPrice && !hasContaContabil && !hasFornecedor) {
+    if (!hasGoldPrice && !hasContaContabil && !hasFornecedor && !hasContaCorrente) {
       return { count: 0 };
     }
 
@@ -48,7 +49,7 @@ export class BulkUpdateTransacoesUseCase {
             descricao: t.descricao,
             dataHora: t.dataHora,
             contaContabilId: hasContaContabil ? contaContabilId! : t.contaContabilId,
-            contaCorrenteId: t.contaCorrenteId,
+            contaCorrenteId: hasContaCorrente ? contaCorrenteId! : t.contaCorrenteId,
             organizationId: t.organizationId,
             goldAmount: newGoldAmount,
             goldPrice: goldPrice > 0 ? goldPrice : null,
@@ -97,7 +98,11 @@ export class BulkUpdateTransacoesUseCase {
     }
 
     // Se NÃO houver goldPrice, executa o updateMany rápido existente
-    const dataToUpdate: { contaContabilId?: string; fornecedorId?: string | null } = {};
+    const dataToUpdate: {
+      contaContabilId?: string;
+      fornecedorId?: string | null;
+      contaCorrenteId?: string;
+    } = {};
 
     if (hasContaContabil) {
       dataToUpdate.contaContabilId = contaContabilId;
@@ -106,6 +111,9 @@ export class BulkUpdateTransacoesUseCase {
       dataToUpdate.fornecedorId = fornecedorId;
     } else if (fornecedorId === null) {
       dataToUpdate.fornecedorId = null;
+    }
+    if (hasContaCorrente) {
+      dataToUpdate.contaCorrenteId = contaCorrenteId;
     }
 
     return this.transacaoRepository.updateMany(

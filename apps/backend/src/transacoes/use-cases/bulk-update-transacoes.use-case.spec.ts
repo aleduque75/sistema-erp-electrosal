@@ -55,6 +55,27 @@ describe('BulkUpdateTransacoesUseCase', () => {
     expect(result).toEqual({ count: 2 });
   });
 
+  it('should update contaCorrenteId via updateMany', async () => {
+    mockRepository.updateMany.mockResolvedValue({ count: 3 });
+
+    const result = await useCase.execute(
+      {
+        transactionIds: ['tx-1', 'tx-2', 'tx-3'],
+        contaCorrenteId: 'cc-dest-id',
+      },
+      'org-1',
+    );
+
+    expect(mockRepository.updateMany).toHaveBeenCalledWith(
+      ['tx-1', 'tx-2', 'tx-3'],
+      'org-1',
+      {
+        contaCorrenteId: 'cc-dest-id',
+      },
+    );
+    expect(result).toEqual({ count: 3 });
+  });
+
   it('should recalculate goldAmount and update each transaction when goldPrice is provided', async () => {
     const tx1 = TransacaoEntity.create({
       id: 'tx-1',

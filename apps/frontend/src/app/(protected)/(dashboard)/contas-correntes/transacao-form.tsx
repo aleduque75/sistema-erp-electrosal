@@ -58,6 +58,7 @@ interface TransacaoExtrato {
   goldAmount?: number;
   tipo: 'CREDITO' | 'DEBITO';
   contaContabilId: string;
+  contaCorrenteId?: string;
   fornecedorId?: string | null;
   medias?: { id: string; path: string }[];
   goldPrice?: number;
@@ -102,7 +103,7 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
       contaContabilId: "",
       fornecedorId: null,
       mediaIds: [],
-      contaCorrenteId: contaCorrenteId,
+      contaCorrenteId: initialData?.contaCorrenteId || contaCorrenteId,
     },
   });
 
@@ -115,7 +116,7 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
         ...initialData,
         dataHora: initialData.dataHora.split('T')[0],
         mediaIds: initialData.medias?.map(media => media.id) || [],
-        contaCorrenteId: contaCorrenteId,
+        contaCorrenteId: initialData.contaCorrenteId || contaCorrenteId,
       });
       setTipoLancamento(initialData.tipo);
       setUploadedMedia(initialData.medias || []);
@@ -291,7 +292,14 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Conta Corrente</FormLabel>
+              <FormLabel className="flex items-center justify-between">
+                <span>Conta Corrente</span>
+                {initialData && (
+                  <span className="text-[11px] text-muted-foreground font-normal">
+                    (Altere para mover para outra conta)
+                  </span>
+                )}
+              </FormLabel>
               <Combobox
                 options={contasCorrentes.map((c) => ({
                   value: c.id,

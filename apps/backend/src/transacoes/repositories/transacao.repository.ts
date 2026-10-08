@@ -40,7 +40,11 @@ export abstract class TransacaoRepository {
   abstract updateMany(
     ids: string[],
     organizationId: string,
-    data: { contaContabilId?: string; fornecedorId?: string | null },
+    data: {
+      contaContabilId?: string;
+      fornecedorId?: string | null;
+      contaCorrenteId?: string;
+    },
   ): Promise<{ count: number }>;
 
   abstract delete(id: string, tx?: any): Promise<void>;

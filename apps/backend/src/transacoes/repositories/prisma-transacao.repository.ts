@@ -143,7 +143,11 @@ export class PrismaTransacaoRepository extends TransacaoRepository {
   async updateMany(
     ids: string[],
     organizationId: string,
-    data: { contaContabilId?: string; fornecedorId?: string | null },
+    data: {
+      contaContabilId?: string;
+      fornecedorId?: string | null;
+      contaCorrenteId?: string;
+    },
   ): Promise<{ count: number }> {
     return this.prisma.transacao.updateMany({
       where: {

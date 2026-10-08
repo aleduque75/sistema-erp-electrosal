@@ -15,7 +15,12 @@ export class GenericBulkUpdateTransacaoDto {
   fornecedorId?: string;
 
   @IsOptional()
+  @IsUUID()
+  contaCorrenteId?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   goldPrice?: number;
 }
+

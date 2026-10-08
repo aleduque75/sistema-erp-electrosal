@@ -158,6 +158,7 @@ interface TransacaoExtrato {
   tipo: "CREDITO" | "DEBITO";
   contaContabilId: string; // Adicionado
   contaContabilNome: string; // Adicionado
+  contaCorrenteId?: string; // Adicionado
   fornecedorNome?: string;
   sale?: {
     id: string;
@@ -202,6 +203,8 @@ export default function ExtratoPage() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Novo estado para o modal de transferência
   const [isGenericTransferModalOpen, setIsGenericTransferModalOpen] = useState(false); // Novo estado para o modal de transferência genérico
   const [contasContabeis, setContasContabeis] = useState<any[]>([]);
+  const [contasCorrentes, setContasCorrentes] = useState<any[]>([]);
+  const [newContaCorrenteId, setNewContaCorrenteId] = useState<string>("");
   const [editingTransacaoId, setEditingTransacaoId] = useState<string | null>(
     null
   );
@@ -279,6 +282,17 @@ export default function ExtratoPage() {
     }
   };
 
+  const fetchContasCorrentes = async () => {
+    try {
+      const response = await api.get("/contas-correntes", {
+        params: { activeOnly: true },
+      });
+      setContasCorrentes(response.data);
+    } catch (err) {
+      toast.error("Falha ao carregar contas correntes.");
+    }
+  };
+
   const fetchExtrato = async () => {
     setIsFetching(true);
     try {
@@ -288,6 +302,7 @@ export default function ExtratoPage() {
       );
       const formattedTransacoes = response.data.transacoes.map((t: any) => ({
         ...t,
+        contaCorrenteId: t.contaCorrenteId || id,
         valor: parseFloat(t.valor),
         goldAmount: t.goldAmount ? parseFloat(t.goldAmount) : undefined,
       }));
@@ -321,6 +336,7 @@ export default function ExtratoPage() {
       fetchExtrato();
       fetchContasContabeis();
       fetchFornecedores();
+      fetchContasCorrentes();
     }
   }, [id, startDate, endDate]);
 
@@ -421,20 +437,33 @@ export default function ExtratoPage() {
       }
     }
 
-    if (!newContaContabilId && !newFornecedorId && parsedGoldPrice === undefined) {
-      toast.error("Selecione uma conta contábil, fornecedor ou informe a cotação.");
+    if (
+      !newContaCorrenteId &&
+      !newContaContabilId &&
+      !newFornecedorId &&
+      parsedGoldPrice === undefined
+    ) {
+      toast.error(
+        "Selecione uma conta corrente, conta contábil, fornecedor ou informe a cotação."
+      );
       return;
     }
 
     try {
       await api.post("/transacoes/bulk-update", {
         transactionIds: selectedIds,
+        contaCorrenteId: newContaCorrenteId || undefined,
         contaContabilId: newContaContabilId || undefined,
         fornecedorId: newFornecedorId || undefined,
         goldPrice: parsedGoldPrice,
       });
-      toast.success("Transações atualizadas com sucesso!");
+      toast.success(
+        newContaCorrenteId
+          ? "Transações movidas e atualizadas com sucesso!"
+          : "Transações atualizadas com sucesso!"
+      );
       setSelectedIds([]);
+      setNewContaCorrenteId("");
       setNewContaContabilId("");
       setNewFornecedorId("");
       setNewGoldPrice("");
@@ -738,6 +767,17 @@ export default function ExtratoPage() {
               <p className="text-sm font-medium whitespace-nowrap">
                 {selectedIds.length} transações selecionadas
               </p>
+              <div className="w-[260px]">
+                <Combobox
+                  options={contasCorrentes.map((c) => ({
+                    value: c.id,
+                    label: `${c.nome} (${c.moeda || 'BRL'})`,
+                  }))}
+                  placeholder="Mover para Conta Corrente..."
+                  onChange={(val) => setNewContaCorrenteId(val || "")}
+                  value={newContaCorrenteId}
+                />
+              </div>
               <div className="w-[260px]">
                 <Combobox
                   options={contasContabeis.map((cc) => ({
