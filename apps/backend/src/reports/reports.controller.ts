@@ -24,6 +24,9 @@ import { GetBalanceSheetReportUseCase } from './use-cases/get-balance-sheet-repo
 import { GenerateBalanceSheetPdfUseCase } from './use-cases/generate-balance-sheet-pdf.use-case';
 import { GetBalanceSheetReportDto } from './dto/get-balance-sheet-report.dto';
 
+import { GetAccountingInconsistenciesUseCase } from './use-cases/get-accounting-inconsistencies.use-case';
+import { GetAccountingInconsistenciesDto } from './dto/get-accounting-inconsistencies.dto';
+
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
 export class ReportsController {
@@ -39,6 +42,7 @@ export class ReportsController {
     private readonly generateDrePdfUseCase: GenerateDrePdfUseCase,
     private readonly getBalanceSheetReportUseCase: GetBalanceSheetReportUseCase,
     private readonly generateBalanceSheetPdfUseCase: GenerateBalanceSheetPdfUseCase,
+    private readonly getAccountingInconsistenciesUseCase: GetAccountingInconsistenciesUseCase,
   ) {}
 
   @Get('financial-balance')
@@ -163,5 +167,14 @@ export class ReportsController {
       'Content-Disposition': `attachment; filename=balanco_patrimonial_${query.asOfDate || 'posicao'}.pdf`,
     });
     res.send(pdfBuffer);
+  }
+
+  // --- 4. RELATÓRIO DE AUDITORIA DE INCONSISTÊNCIAS CONTÁBEIS ---
+  @Get('accounting-inconsistencies')
+  async getAccountingInconsistenciesReport(
+    @CurrentUser('orgId') organizationId: string,
+    @Query() query: GetAccountingInconsistenciesDto,
+  ) {
+    return this.getAccountingInconsistenciesUseCase.execute(organizationId, query);
   }
 }

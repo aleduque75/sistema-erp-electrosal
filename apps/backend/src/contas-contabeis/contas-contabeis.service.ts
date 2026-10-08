@@ -174,4 +174,156 @@ export class ContasContabeisService {
 
     return { proximoCodigo };
   }
+
+  async onApplicationBootstrap() {
+    try {
+      const orgs = await this.prisma.organization.findMany({ select: { id: true } });
+      for (const org of orgs) {
+        await this.syncStandardAccounts(org.id);
+      }
+    } catch (err) {
+      console.error('Erro ao sincronizar contas contábeis padrão na inicialização:', err);
+    }
+  }
+
+  async syncStandardAccounts(organizationId: string) {
+    const findParent = async (codigo: string) => {
+      return this.prisma.contaContabil.findFirst({ where: { organizationId, codigo } });
+    };
+
+    const pAtivoCirc = await findParent('1.1');
+    const pPassivoCirc = await findParent('2.1');
+    const pReceitaOper = await findParent('4.1');
+    const pReceitaFin = await findParent('4.1.3');
+    const pDespesasOper = await findParent('5.1');
+    const pSalarios = await findParent('5.1.1');
+    const pTransporte = await findParent('5.1.5');
+    const pCustoRecup = await findParent('5.2.1');
+    const pCustoReacao = await findParent('5.2.2');
+
+    const singleAccounts = [
+      { codigo: '1.1.8', nome: 'Adiantamentos a Fornecedores', tipo: TipoContaContabilPrisma.ATIVO, aceitaLancamento: true, parentId: pAtivoCirc?.id },
+      { codigo: '2.1.7', nome: 'Adiantamentos de Clientes', tipo: TipoContaContabilPrisma.PASSIVO, aceitaLancamento: true, parentId: pPassivoCirc?.id },
+      { codigo: '4.1.3.1', nome: 'Rendimentos de Aplicações Financeiras', tipo: TipoContaContabilPrisma.RECEITA, aceitaLancamento: true, parentId: pReceitaFin?.id },
+      { codigo: '4.1.3.2', nome: 'Juros e Descontos Obtidos', tipo: TipoContaContabilPrisma.RECEITA, aceitaLancamento: true, parentId: pReceitaFin?.id },
+      { codigo: '4.1.4', nome: 'Venda de Sucata e Resíduos', tipo: TipoContaContabilPrisma.RECEITA, aceitaLancamento: true, parentId: pReceitaOper?.id },
+      { codigo: '5.1.1.6', nome: 'Salario Matheus', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pSalarios?.id },
+      { codigo: '5.1.1.7', nome: 'Férias e Rescisões', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pSalarios?.id },
+      { codigo: '5.1.1.8', nome: 'FGTS, INSS e Encargos Trabalhistas', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pSalarios?.id },
+      { codigo: '5.1.5.4', nome: 'Combustível', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pTransporte?.id },
+      { codigo: '5.1.5.5', nome: 'Estacionamento e Pedágios', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pTransporte?.id },
+      { codigo: '5.1.5.6', nome: 'Manutenção de Veículos', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pTransporte?.id },
+      // Recuperação (5.2.1)
+      { codigo: '5.2.1.4', nome: 'Fundição, Crisóis, Maçaricos e Gases', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoRecup?.id },
+      { codigo: '5.2.1.5', nome: 'Insumos Químicos e Ácidos (Nítrico, etc)', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoRecup?.id },
+      { codigo: '5.2.1.8', nome: 'Laudos, Análises Químicas e Titulações', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoRecup?.id },
+      { codigo: '5.2.1.9', nome: 'Bombas, Filtros e Elementos Filtrantes', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoRecup?.id },
+      // Reação (5.2.2)
+      { codigo: '5.2.2.3', nome: 'Insumos Químicos de Reação (Cianetos, Hidróxidos, etc)', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoReacao?.id },
+      { codigo: '5.2.2.4', nome: 'Embalagens e Potes para Sais', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoReacao?.id },
+      { codigo: '5.2.2.5', nome: 'Manutenção de Reatores, Exaustão e Vidrarias', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoReacao?.id },
+      { codigo: '5.2.2.6', nome: 'Perdas / Falhas de Processo de Reação (Sal 68, etc)', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoReacao?.id },
+      { codigo: '5.2.2.7', nome: 'EPIs e Segurança para Reação Química', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoReacao?.id },
+      { codigo: '5.2.2.8', nome: 'Custos Indiretos de Reação', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true, parentId: pCustoReacao?.id },
+    ];
+
+    for (const acc of singleAccounts) {
+      const existing = await this.prisma.contaContabil.findFirst({
+        where: { organizationId, codigo: acc.codigo },
+      });
+      if (!existing) {
+        await this.prisma.contaContabil.create({
+          data: {
+            codigo: acc.codigo,
+            nome: acc.nome,
+            tipo: acc.tipo,
+            aceitaLancamento: acc.aceitaLancamento,
+            contaPaiId: acc.parentId,
+            organizationId,
+          },
+        });
+      } else if (existing.nome !== acc.nome || !existing.aceitaLancamento) {
+        await this.prisma.contaContabil.update({
+          where: { id: existing.id },
+          data: { nome: acc.nome, aceitaLancamento: acc.aceitaLancamento },
+        });
+      }
+    }
+
+    const groups = [
+      {
+        codigo: '5.1.15',
+        nome: 'Alimentação e Refeições',
+        tipo: TipoContaContabilPrisma.DESPESA,
+        aceitaLancamento: false,
+        parentId: pDespesasOper?.id,
+        subs: [
+          { codigo: '5.1.15.1', nome: 'Almoço e Refeições da Equipe', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true },
+          { codigo: '5.1.15.2', nome: 'Café, Água e Copa', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true },
+        ],
+      },
+      {
+        codigo: '5.1.16',
+        nome: 'Manutenção Predial e Ferramentas',
+        tipo: TipoContaContabilPrisma.DESPESA,
+        aceitaLancamento: false,
+        parentId: pDespesasOper?.id,
+        subs: [
+          { codigo: '5.1.16.1', nome: 'Manutenção Predial e Reformas', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true },
+          { codigo: '5.1.16.2', nome: 'Ferramentas, Balanças e Utensílios de Laboratório', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true },
+          { codigo: '5.1.16.3', nome: 'Manutenção de Máquinas e Equipamentos', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true },
+        ],
+      },
+      {
+        codigo: '5.1.17',
+        nome: 'Licenças, Cartório e Taxas Legais',
+        tipo: TipoContaContabilPrisma.DESPESA,
+        aceitaLancamento: false,
+        parentId: pDespesasOper?.id,
+        subs: [
+          { codigo: '5.1.17.1', nome: 'Licenças Ambientais, Laudos e CETESB', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true },
+          { codigo: '5.1.17.2', nome: 'Cartório e Reconhecimento de Firma', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true },
+          { codigo: '5.1.17.3', nome: 'Alvarás e Taxas Municipais', tipo: TipoContaContabilPrisma.DESPESA, aceitaLancamento: true },
+        ],
+      },
+    ];
+
+    for (const grp of groups) {
+      let parent = await this.prisma.contaContabil.findFirst({
+        where: { organizationId, codigo: grp.codigo },
+      });
+      if (!parent) {
+        parent = await this.prisma.contaContabil.create({
+          data: {
+            codigo: grp.codigo,
+            nome: grp.nome,
+            tipo: grp.tipo,
+            aceitaLancamento: grp.aceitaLancamento,
+            contaPaiId: grp.parentId,
+            organizationId,
+          },
+        });
+      }
+
+      for (const sub of grp.subs) {
+        const existingSub = await this.prisma.contaContabil.findFirst({
+          where: { organizationId, codigo: sub.codigo },
+        });
+        if (!existingSub) {
+          await this.prisma.contaContabil.create({
+            data: {
+              codigo: sub.codigo,
+              nome: sub.nome,
+              tipo: sub.tipo,
+              aceitaLancamento: sub.aceitaLancamento,
+              contaPaiId: parent.id,
+              organizationId,
+            },
+          });
+        }
+      }
+    }
+
+    return { success: true, message: 'Plano de contas atualizado com sucesso.' };
+  }
 }

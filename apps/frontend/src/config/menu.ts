@@ -24,6 +24,7 @@ import {
   BarChart2, // Adicionado para Créditos de Clientes
   TrendingUp,
   HelpCircle, // Ícone para a nova seção de Ajuda
+  AlertTriangle,
 } from "lucide-react";
 import React from "react";
 
@@ -329,6 +330,12 @@ export const menuConfig: NavItem[] = [
         href: "/relatorios/resultado-financeiro",
         icon: TrendingUp,
         description: "Visão consolidada de receitas, pagamentos e custos.",
+      },
+      {
+        title: "Inconsistências Contábeis",
+        href: "/relatorios/inconsistencias-contabeis",
+        icon: AlertTriangle,
+        description: "Auditoria automática de lançamentos suspeitos ou classificados incorretamente.",
       },
     ],
   },

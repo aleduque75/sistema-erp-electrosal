@@ -34,6 +34,13 @@ export class ContasContabeisController {
     return this.contasContabeisService.create(organizationId, createDto);
   }
 
+  @Post('sync-standard')
+  syncStandard(
+    @CurrentUser('orgId') organizationId: string,
+  ) {
+    return this.contasContabeisService.syncStandardAccounts(organizationId);
+  }
+
   @Get()
   findAll(
     @CurrentUser('orgId') organizationId: string,
