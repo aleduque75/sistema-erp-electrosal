@@ -250,7 +250,7 @@ export class GetAccountingInconsistenciesUseCase {
 
       // 6. Débito geral lançado em Receita ou Clientes
       if (t.tipo === 'DEBITO' && (cc.tipo === 'RECEITA' || cc.codigo === '1.1.3')) {
-        const isEstorno = /estorno|devolu[çc][aã]o|cancelamento/i.test(desc);
+        const isEstorno = /estorno|devolu[çc][aã]o|cancelamento|revers[aã]o|ajuste/i.test(desc);
 
         // Se for conta de clientes (1.1.3): transferências e baixas/débitos em contas correntes de clientes são operações normais (redução de saldo / repasse)
         if (cc.codigo === '1.1.3' && (isTransfer || isClienteAccountOrMovement || isEstorno)) {
