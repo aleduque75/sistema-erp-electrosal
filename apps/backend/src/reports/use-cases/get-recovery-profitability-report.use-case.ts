@@ -96,6 +96,7 @@ export class GetRecoveryProfitabilityReportUseCase {
           let nodeGainBRL = 0;
           let settledRateBRL = metalPriceRef;
           let settledValueBRL = creditGramsTotal * settledRateBRL;
+          let isMetalPayment = false;
 
           if (a.metalCredit?.id) {
             const paymentTx = await this.prisma.transacao.findFirst({
@@ -120,10 +121,13 @@ export class GetRecoveryProfitabilityReportUseCase {
                 quotationGainBRL += nodeGainBRL;
               }
             } else if (settledGrams > 0) {
-              settledValueBRL = settledGrams * settledRateBRL;
+              // Settled in physical metal
+              isMetalPayment = true;
+              settledValueBRL = 0;
             }
           } else if (settledGrams > 0) {
-            settledValueBRL = settledGrams * settledRateBRL;
+            isMetalPayment = true;
+            settledValueBRL = 0;
           }
 
           treeNodes.push({
@@ -138,6 +142,7 @@ export class GetRecoveryProfitabilityReportUseCase {
             refPriceBRL: metalPriceRef,
             settledValueBRL,
             gainBRL: nodeGainBRL,
+            isMetalPayment,
             status: a.status,
           });
         }

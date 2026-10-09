@@ -35,6 +35,7 @@ interface TreeNode {
   refPriceBRL: number;
   settledValueBRL: number;
   gainBRL: number;
+  isMetalPayment?: boolean;
   status: string;
 }
 
@@ -430,10 +431,22 @@ export default function ResultadoRecuperacaoPage() {
                                                 {formatGrams(node.creditedGrams)}
                                               </td>
                                               <td className="px-3 py-2 font-mono">
-                                                {formatCurrency(node.settledRateBRL)} /g
+                                                {node.isMetalPayment ? (
+                                                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 text-[10px]">
+                                                    Metal Físico
+                                                  </Badge>
+                                                ) : (
+                                                  `${formatCurrency(node.settledRateBRL)} /g`
+                                                )}
                                               </td>
                                               <td className="px-3 py-2 font-mono">
-                                                {formatCurrency(node.settledValueBRL)}
+                                                {node.isMetalPayment ? (
+                                                  <span className="text-muted-foreground italic text-[11px]">
+                                                    Devolvido em Metal
+                                                  </span>
+                                                ) : (
+                                                  formatCurrency(node.settledValueBRL)
+                                                )}
                                               </td>
                                               <td className="px-3 py-2 text-right font-semibold text-green-600">
                                                 {formatCurrency(node.gainBRL)}
