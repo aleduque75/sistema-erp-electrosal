@@ -26,6 +26,7 @@ import {
   HelpCircle, // Ícone para a nova seção de Ajuda
   AlertTriangle,
   Truck,
+  Flame,
 } from "lucide-react";
 import React from "react";
 
@@ -343,6 +344,12 @@ export const menuConfig: NavItem[] = [
         href: "/relatorios/confronto-fretes",
         icon: Truck,
         description: "Confronto entre frete cobrado nos pedidos e despesas pagas aos Correios / Melhor Envio.",
+      },
+      {
+        title: "Resultado de Recuperações",
+        href: "/relatorios/resultado-recuperacao",
+        icon: Flame,
+        description: "Rastreabilidade e margem de lucro por ordem de recuperação e ajuste de cotação.",
       },
     ],
   },

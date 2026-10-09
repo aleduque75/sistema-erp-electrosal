@@ -29,6 +29,7 @@ import { GetAccountingInconsistenciesDto } from './dto/get-accounting-inconsiste
 
 import { GetShippingReconciliationUseCase } from './use-cases/get-shipping-reconciliation.use-case';
 import { GetShippingReconciliationDto } from './dto/get-shipping-reconciliation.dto';
+import { GetRecoveryProfitabilityReportUseCase, GetRecoveryProfitabilityReportDto } from './use-cases/get-recovery-profitability-report.use-case';
 
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
@@ -47,6 +48,7 @@ export class ReportsController {
     private readonly generateBalanceSheetPdfUseCase: GenerateBalanceSheetPdfUseCase,
     private readonly getAccountingInconsistenciesUseCase: GetAccountingInconsistenciesUseCase,
     private readonly getShippingReconciliationUseCase: GetShippingReconciliationUseCase,
+    private readonly getRecoveryProfitabilityReportUseCase: GetRecoveryProfitabilityReportUseCase,
   ) {}
 
   @Get('financial-balance')
@@ -189,5 +191,14 @@ export class ReportsController {
     @Query() query: GetShippingReconciliationDto,
   ) {
     return this.getShippingReconciliationUseCase.execute(organizationId, query);
+  }
+
+  // --- 6. RELATÓRIO DE RESULTADO E MARGEM DAS ORDENS DE RECUPERAÇÃO ---
+  @Get('recovery-profitability')
+  async getRecoveryProfitabilityReport(
+    @CurrentUser('orgId') organizationId: string,
+    @Query() query: GetRecoveryProfitabilityReportDto,
+  ) {
+    return this.getRecoveryProfitabilityReportUseCase.execute(organizationId, query);
   }
 }
