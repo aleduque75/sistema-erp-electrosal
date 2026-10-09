@@ -76,7 +76,7 @@ export function ProductLotsModal({
 
   const formatGrams = (val: number | undefined | null) => {
     if (val === undefined || val === null || isNaN(val) || Math.abs(val) < 1e-6) return "0,00";
-    return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(val);
+    return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
   };
 
   const fetchLots = async () => {

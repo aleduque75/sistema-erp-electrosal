@@ -26,14 +26,18 @@ export class UpdateInventoryLotUseCase {
       throw new NotFoundException('Lote de estoque não encontrado');
     }
 
+    const remainingQty = data.remainingQuantity !== undefined
+      ? Math.round(Number(data.remainingQuantity) * 100) / 100
+      : undefined;
+
     const updatedLot = await this.prisma.inventoryLot.update({
       where: { id },
       data: {
         batchNumber: data.batchNumber !== undefined ? data.batchNumber : undefined,
         costPrice: data.costPrice !== undefined ? data.costPrice : undefined,
         unitCostAu: data.unitCostAu !== undefined ? data.unitCostAu : undefined,
-        quantity: data.quantity !== undefined ? Number(data.quantity) : undefined,
-        remainingQuantity: data.remainingQuantity !== undefined ? Number(data.remainingQuantity) : undefined,
+        quantity: data.quantity !== undefined ? Math.round(Number(data.quantity) * 100) / 100 : undefined,
+        remainingQuantity: remainingQty,
         notes: data.notes !== undefined ? data.notes : undefined,
       },
     });
@@ -43,7 +47,8 @@ export class UpdateInventoryLotUseCase {
       where: { productId: lot.productId, organizationId },
     });
 
-    const newTotalStock = productLots.reduce((acc, l) => acc + (l.remainingQuantity > 0 ? l.remainingQuantity : 0), 0);
+    const sumStock = productLots.reduce((acc, l) => acc + (l.remainingQuantity > 0 ? l.remainingQuantity : 0), 0);
+    const newTotalStock = Math.round(sumStock * 100) / 100;
 
     await this.prisma.product.update({
       where: { id: lot.productId },

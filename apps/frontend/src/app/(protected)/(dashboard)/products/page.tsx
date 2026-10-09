@@ -114,10 +114,15 @@ export default function ProductsPage() {
       header: "Estoque",
       cell: ({ row }) => {
         const product = row.original;
+        const formattedStock = new Intl.NumberFormat("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(product.stock || 0);
+
         return (
           <div className="flex items-center gap-1.5 font-medium">
-            <span>{product.stock}</span>
-            <span className="text-xs text-muted-foreground">{product.stockUnit || "g"}</span>
+            <span>{formattedStock}</span>
+            <span className="text-xs text-muted-foreground">{product.stockUnit === "KILOGRAMS" ? "kg" : "g"}</span>
           </div>
         );
       },
