@@ -30,6 +30,7 @@ import { GetAccountingInconsistenciesDto } from './dto/get-accounting-inconsiste
 import { GetShippingReconciliationUseCase } from './use-cases/get-shipping-reconciliation.use-case';
 import { GetShippingReconciliationDto } from './dto/get-shipping-reconciliation.dto';
 import { GetRecoveryProfitabilityReportUseCase, GetRecoveryProfitabilityReportDto } from './use-cases/get-recovery-profitability-report.use-case';
+import { GetRecoveryMaterialsReportUseCase, GetRecoveryMaterialsReportDto } from './use-cases/get-recovery-materials-report.use-case';
 
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
@@ -49,6 +50,7 @@ export class ReportsController {
     private readonly getAccountingInconsistenciesUseCase: GetAccountingInconsistenciesUseCase,
     private readonly getShippingReconciliationUseCase: GetShippingReconciliationUseCase,
     private readonly getRecoveryProfitabilityReportUseCase: GetRecoveryProfitabilityReportUseCase,
+    private readonly getRecoveryMaterialsReportUseCase: GetRecoveryMaterialsReportUseCase,
   ) {}
 
   @Get('financial-balance')
@@ -200,5 +202,14 @@ export class ReportsController {
     @Query() query: GetRecoveryProfitabilityReportDto,
   ) {
     return this.getRecoveryProfitabilityReportUseCase.execute(organizationId, query);
+  }
+
+  // --- 7. RELATÓRIO DE SALDO DE MATERIAIS DE RECUPERAÇÃO ---
+  @Get('recovery-materials')
+  async getRecoveryMaterialsReport(
+    @CurrentUser('orgId') organizationId: string,
+    @Query() query: GetRecoveryMaterialsReportDto,
+  ) {
+    return this.getRecoveryMaterialsReportUseCase.execute(organizationId, query);
   }
 }

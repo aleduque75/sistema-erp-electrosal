@@ -59,27 +59,62 @@ export class GetRecoveryProfitabilityReportUseCase {
       recoveryOrders.map(async (order) => {
         const metalPriceRef = order.metalType === 'AG' ? defaultSilverPrice : defaultGoldPrice;
 
-        // Fetch associated Chemical Analyses
-        const analyses = order.chemicalAnalysisIds.length > 0
-          ? await this.prisma.analiseQuimica.findMany({
-              where: { id: { in: order.chemicalAnalysisIds }, organizationId },
-              include: {
-                cliente: { select: { id: true, name: true } },
-                metalCredit: true,
-              },
-            })
-          : [];
+        // Fetch associated Chemical Analyses (by array IDs OR direct relation)
+        const analyses = await this.prisma.analiseQuimica.findMany({
+          where: {
+            organizationId,
+            OR: [
+              { id: { in: order.chemicalAnalysisIds } },
+              { ordemDeRecuperacaoId: order.id },
+            ],
+          },
+          include: {
+            cliente: { select: { id: true, name: true } },
+            metalCredit: true,
+          },
+        });
 
         const clientsSet = new Set<string>();
         let totalCreditedGrams = 0;
+        let quotationGainBRL = 0;
 
-        analyses.forEach((a) => {
+        const treeNodes: any[] = [];
+
+        for (const a of analyses) {
+          const clientName = a.cliente?.name || 'Cliente Indefinido';
           if (a.cliente?.name) clientsSet.add(a.cliente.name);
-          const creditedGrams = a.metalCredit?.grams
-            ? Number(a.metalCredit.grams)
+
+          // Original credited grams = remaining grams + settled grams (if paid)
+          const remainingGrams = Number(a.metalCredit?.grams || 0);
+          const settledGrams = Number(a.metalCredit?.settledGrams || 0);
+          const creditGramsTotal = (remainingGrams + settledGrams) > 0
+            ? (remainingGrams + settledGrams)
             : (a.auLiquidoParaClienteGramas || a.auEstimadoRecuperavelGramas || a.auEstimadoBrutoGramas || 0);
-          totalCreditedGrams += creditedGrams;
-        });
+
+          totalCreditedGrams += creditGramsTotal;
+
+          let nodeGainBRL = 0;
+          let settledRateBRL = metalPriceRef;
+          let settledValueBRL = creditGramsTotal * settledRateBRL;
+          if (settledGrams > 0) {
+            settledValueBRL = settledGrams * settledRateBRL;
+          }
+
+          treeNodes.push({
+            id: a.id,
+            numeroAnalise: a.numeroAnalise,
+            clienteName: clientName,
+            descricaoMaterial: a.descricaoMaterial,
+            creditedGrams: creditGramsTotal,
+            settledGrams,
+            remainingGrams,
+            settledRateBRL,
+            refPriceBRL: metalPriceRef,
+            settledValueBRL,
+            gainBRL: nodeGainBRL,
+            status: a.status,
+          });
+        }
 
         const recoveredGrams = order.auPuroRecuperadoGramas || 0;
         const metalMarginGrams = recoveredGrams - totalCreditedGrams;
@@ -94,28 +129,6 @@ export class GetRecoveryProfitabilityReportUseCase {
         // Commission
         const commissionBRL = Number(order.commissionAmount || 0);
 
-        // Fetch settled metal credits for these clients to calculate quotation gain
-        let quotationGainBRL = 0;
-        const clientIds = analyses.map((a) => a.clienteId).filter(Boolean) as string[];
-
-        if (clientIds.length > 0 && totalCreditedGrams > 0) {
-          const credits = await this.prisma.metalCredit.findMany({
-            where: {
-              organizationId,
-              clientId: { in: clientIds },
-              status: { in: ['PAID', 'PARTIALLY_PAID'] },
-            },
-            take: 10,
-          });
-
-          // If credits were settled, check if there was a quotation spread gain
-          if (credits.length > 0) {
-            // Calculated estimated spread gain based on market ref price vs settlement average
-            const sampleGain = totalCreditedGrams * (metalPriceRef > 650 ? 35 : 0);
-            quotationGainBRL = sampleGain > 0 ? sampleGain : 0;
-          }
-        }
-
         const netProfitBRL = metalMarginBRL + quotationGainBRL - rawMaterialCostBRL - commissionBRL;
 
         return {
@@ -125,7 +138,7 @@ export class GetRecoveryProfitabilityReportUseCase {
           status: order.status,
           metalType: order.metalType,
           clients: Array.from(clientsSet).join(', ') || 'N/A',
-          analysesCount: order.chemicalAnalysisIds.length,
+          analysesCount: analyses.length,
           recoveredGrams,
           creditedGrams: totalCreditedGrams,
           metalMarginGrams,
@@ -135,6 +148,7 @@ export class GetRecoveryProfitabilityReportUseCase {
           rawMaterialCostBRL,
           commissionBRL,
           netProfitBRL,
+          treeNodes, // Árvore de Lançamentos detalhada
         };
       }),
     );
