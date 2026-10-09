@@ -345,7 +345,7 @@ export default function ResultadoRecuperacaoPage() {
                         const hasNodes = item.treeNodes && item.treeNodes.length > 0;
 
                         return (
-                          <tbody key={item.id} className="divide-y">
+                          <React.Fragment key={item.id}>
                             <tr
                               className="hover:bg-muted/10 transition-colors cursor-pointer"
                               onClick={() => toggleExpandOrder(item.id)}
@@ -460,7 +460,7 @@ export default function ResultadoRecuperacaoPage() {
                                 </td>
                               </tr>
                             )}
-                          </tbody>
+                          </React.Fragment>
                         );
                       })}
                     </tbody>
@@ -581,7 +581,7 @@ export default function ResultadoRecuperacaoPage() {
                         const hasItems = mat.items && mat.items.length > 0;
 
                         return (
-                          <tbody key={mat.materialName} className="divide-y">
+                          <React.Fragment key={mat.materialName}>
                             <tr
                               className="hover:bg-muted/10 transition-colors cursor-pointer"
                               onClick={() => toggleExpandMaterial(mat.materialName)}
@@ -695,7 +695,7 @@ export default function ResultadoRecuperacaoPage() {
                                 </td>
                               </tr>
                             )}
-                          </tbody>
+                          </React.Fragment>
                         );
                       })}
                     </tbody>
