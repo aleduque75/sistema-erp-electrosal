@@ -31,8 +31,8 @@ import { formatDate } from "@/lib/date-utils";
 
 const formatGrams = (value?: number) => {
   return new Intl.NumberFormat("pt-BR", {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value || 0) + " g";
 };
 

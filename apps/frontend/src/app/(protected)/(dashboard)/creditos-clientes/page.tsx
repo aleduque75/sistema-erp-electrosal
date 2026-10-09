@@ -35,6 +35,9 @@ import {
   Loader2,
   RefreshCw,
   ExternalLink,
+  ArrowUpDown,
+  ArrowUpAZ,
+  ArrowDownZA,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -69,8 +72,8 @@ import { formatDate } from "@/lib/date-utils";
 const formatGrams = (value?: number) => {
   return (
     new Intl.NumberFormat("pt-BR", {
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 4,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value || 0) + " g"
   );
 };
@@ -104,6 +107,7 @@ export default function CreditosClientesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [hideZeroed, setHideZeroed] = useState(true);
+  const [sortBy, setSortBy] = useState<"date-asc" | "date-desc" | "client-asc" | "client-desc" | "grams-desc">("date-asc");
 
   const fetchData = async () => {
     setIsFetching(true);
@@ -200,7 +204,7 @@ export default function CreditosClientesPage() {
   }, [credits]);
 
   const filteredCredits = useMemo(() => {
-    return credits.filter((credit) => {
+    const list = credits.filter((credit) => {
       const matchesMetalType = metalTypeFilter === "ALL" || credit.metalType === metalTypeFilter;
       const matchesStatus = statusFilter === "ALL" || credit.status === statusFilter;
       const isNotZeroed = !hideZeroed || Number(credit.grams) > 0.0001;
@@ -215,18 +219,52 @@ export default function CreditosClientesPage() {
 
       return matchesMetalType && matchesStatus && matchesDate && isNotZeroed;
     });
-  }, [credits, metalTypeFilter, statusFilter, dateRange, hideZeroed]);
+
+    return list.sort((a, b) => {
+      if (sortBy === "date-asc") {
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      }
+      if (sortBy === "date-desc") {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      }
+      if (sortBy === "client-asc") {
+        return (a.clientName || "").localeCompare(b.clientName || "");
+      }
+      if (sortBy === "client-desc") {
+        return (b.clientName || "").localeCompare(a.clientName || "");
+      }
+      if (sortBy === "grams-desc") {
+        return Number(b.grams || 0) - Number(a.grams || 0);
+      }
+      return 0;
+    });
+  }, [credits, metalTypeFilter, statusFilter, dateRange, hideZeroed, sortBy]);
 
   const clearFilters = () => {
     setMetalTypeFilter("ALL");
     setStatusFilter("ALL");
     setDateRange(undefined);
+    setSortBy("date-asc");
   };
 
   const columns: ColumnDef<MetalCreditWithUsageDto>[] = [
     {
       accessorKey: "clientName",
-      header: "Cliente",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const nextSort = sortBy === "client-asc" ? "client-desc" : "client-asc";
+            setSortBy(nextSort);
+            column.toggleSorting(nextSort === "client-asc");
+          }}
+          className="-ml-3 h-8 text-xs font-semibold flex items-center gap-1 hover:text-primary"
+        >
+          Cliente
+          <ArrowUpDown className="h-3.5 w-3.5 ml-1 text-muted-foreground" />
+        </Button>
+      ),
       cell: ({ row }) => (
         <div className="font-semibold text-foreground">
           {row.original.clientName || "Cliente não encontrado"}
@@ -286,7 +324,20 @@ export default function CreditosClientesPage() {
     },
     {
       accessorKey: "grams",
-      header: "Saldo Atual (g)",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setSortBy("grams-desc");
+            column.toggleSorting(true);
+          }}
+          className="-ml-3 h-8 text-xs font-semibold flex items-center gap-1 hover:text-primary"
+        >
+          Saldo Atual (g)
+          <ArrowUpDown className="h-3.5 w-3.5 ml-1 text-muted-foreground" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const current = Number(row.original.grams || 0);
         return (
@@ -312,7 +363,27 @@ export default function CreditosClientesPage() {
     },
     {
       accessorKey: "date",
-      header: "Data Origem",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const nextSort = sortBy === "date-asc" ? "date-desc" : "date-asc";
+            setSortBy(nextSort);
+            column.toggleSorting(nextSort === "date-asc");
+          }}
+          className="-ml-3 h-8 text-xs font-semibold flex items-center gap-1 hover:text-primary"
+        >
+          Data Origem
+          {sortBy === "date-asc" ? (
+            <ArrowUpAZ className="h-3.5 w-3.5 ml-1 text-primary" />
+          ) : sortBy === "date-desc" ? (
+            <ArrowDownZA className="h-3.5 w-3.5 ml-1 text-primary" />
+          ) : (
+            <ArrowUpDown className="h-3.5 w-3.5 ml-1 text-muted-foreground" />
+          )}
+        </Button>
+      ),
       cell: ({ row }) => formatDate(row.original.date as unknown as string),
     },
     {
@@ -533,7 +604,20 @@ export default function CreditosClientesPage() {
             </SelectContent>
           </Select>
 
-          {(metalTypeFilter !== "ALL" || statusFilter !== "ALL" || dateRange || !hideZeroed) && (
+          <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+            <SelectTrigger className="w-[190px] h-9 text-xs font-medium">
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-asc">Data Origem: A / Z (Mais Antiga)</SelectItem>
+              <SelectItem value="date-desc">Data Origem: Z / A (Mais Recente)</SelectItem>
+              <SelectItem value="client-asc">Cliente: A - Z</SelectItem>
+              <SelectItem value="client-desc">Cliente: Z - A</SelectItem>
+              <SelectItem value="grams-desc">Saldo: Maior p/ Menor</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {(metalTypeFilter !== "ALL" || statusFilter !== "ALL" || dateRange || !hideZeroed || sortBy !== "date-asc") && (
             <Button
               variant="ghost"
               size="sm"

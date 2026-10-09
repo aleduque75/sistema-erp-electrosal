@@ -96,7 +96,33 @@ export class GetRecoveryProfitabilityReportUseCase {
           let nodeGainBRL = 0;
           let settledRateBRL = metalPriceRef;
           let settledValueBRL = creditGramsTotal * settledRateBRL;
-          if (settledGrams > 0) {
+
+          if (a.metalCredit?.id) {
+            const paymentTx = await this.prisma.transacao.findFirst({
+              where: {
+                organizationId,
+                OR: [
+                  { descricao: { contains: a.metalCredit.id } },
+                  { descricao: { contains: a.id } },
+                  ...(a.numeroAnalise ? [{ descricao: { contains: a.numeroAnalise } }] : []),
+                ],
+                goldPrice: { not: null },
+              },
+              orderBy: { dataHora: 'desc' },
+            });
+
+            if (paymentTx && paymentTx.goldPrice) {
+              settledRateBRL = Number(paymentTx.goldPrice);
+              settledValueBRL = Number(paymentTx.valor);
+
+              if (metalPriceRef > settledRateBRL) {
+                nodeGainBRL = creditGramsTotal * (metalPriceRef - settledRateBRL);
+                quotationGainBRL += nodeGainBRL;
+              }
+            } else if (settledGrams > 0) {
+              settledValueBRL = settledGrams * settledRateBRL;
+            }
+          } else if (settledGrams > 0) {
             settledValueBRL = settledGrams * settledRateBRL;
           }
 
