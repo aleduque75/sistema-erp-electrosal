@@ -98,36 +98,91 @@ export class GetRecoveryProfitabilityReportUseCase {
           let settledValueBRL = creditGramsTotal * settledRateBRL;
           let isMetalPayment = false;
 
-          if (a.metalCredit?.id) {
-            const paymentTx = await this.prisma.transacao.findFirst({
+          if (a.metalCredit?.id && a.clienteId) {
+            const metalAccount = await this.prisma.metalAccount.findUnique({
               where: {
-                organizationId,
-                OR: [
-                  { descricao: { contains: a.metalCredit.id } },
-                  { descricao: { contains: a.id } },
-                  ...(a.numeroAnalise ? [{ descricao: { contains: a.numeroAnalise } }] : []),
-                ],
-                goldPrice: { not: null },
+                organizationId_personId_type: {
+                  organizationId,
+                  personId: a.clienteId,
+                  type: order.metalType,
+                },
               },
-              orderBy: { dataHora: 'desc' },
             });
 
-            if (paymentTx && paymentTx.goldPrice) {
-              settledRateBRL = Number(paymentTx.goldPrice);
-              settledValueBRL = Number(paymentTx.valor);
+            if (metalAccount && settledGrams > 0) {
+              const entries = await this.prisma.metalAccountEntry.findMany({
+                where: {
+                  metalAccountId: metalAccount.id,
+                  grams: { lt: 0 },
+                },
+                orderBy: { date: 'desc' },
+              });
 
-              if (metalPriceRef > settledRateBRL) {
-                nodeGainBRL = creditGramsTotal * (metalPriceRef - settledRateBRL);
-                quotationGainBRL += nodeGainBRL;
+              const creditIdLower = a.metalCredit.id.toLowerCase();
+              const numAnaliseLower = (a.numeroAnalise || '').toLowerCase();
+
+              const matchedEntry =
+                entries.find((e) => {
+                  const desc = (e.description || '').toLowerCase();
+                  const srcId = (e.sourceId || '').toLowerCase();
+                  return (
+                    srcId === creditIdLower ||
+                    desc.includes(creditIdLower) ||
+                    (numAnaliseLower && desc.includes(numAnaliseLower))
+                  );
+                }) ||
+                entries.find(
+                  (e) => e.type === 'CASH_PAYMENT' || e.type === 'CLIENT_CREDIT_PAYMENT' || e.type === 'DEBIT' || e.type === 'METAL_PAYMENT',
+                );
+
+              if (matchedEntry?.sourceId) {
+                if (matchedEntry.type === 'CASH_PAYMENT' || matchedEntry.type === 'CLIENT_CREDIT_PAYMENT') {
+                  const tx = await this.prisma.transacao.findUnique({
+                    where: { id: matchedEntry.sourceId },
+                  });
+
+                  if (tx && tx.goldPrice) {
+                    settledRateBRL = Number(tx.goldPrice);
+                    settledValueBRL = Number(tx.valor);
+                    isMetalPayment = false;
+
+                    if (metalPriceRef > settledRateBRL) {
+                      nodeGainBRL = creditGramsTotal * (metalPriceRef - settledRateBRL);
+                      quotationGainBRL += nodeGainBRL;
+                    }
+                  }
+                } else if (matchedEntry.type === 'DEBIT' || matchedEntry.type === 'METAL_PAYMENT') {
+                  isMetalPayment = true;
+                  settledValueBRL = 0;
+                }
+              } else if (settledGrams > 0) {
+                // Check direct Transacao fallback
+                const paymentTx = await this.prisma.transacao.findFirst({
+                  where: {
+                    organizationId,
+                    OR: [
+                      { descricao: { contains: a.metalCredit.id } },
+                      { descricao: { contains: a.id } },
+                      ...(a.numeroAnalise ? [{ descricao: { contains: a.numeroAnalise } }] : []),
+                    ],
+                    goldPrice: { not: null },
+                  },
+                  orderBy: { dataHora: 'desc' },
+                });
+
+                if (paymentTx && paymentTx.goldPrice) {
+                  settledRateBRL = Number(paymentTx.goldPrice);
+                  settledValueBRL = Number(paymentTx.valor);
+
+                  if (metalPriceRef > settledRateBRL) {
+                    nodeGainBRL = creditGramsTotal * (metalPriceRef - settledRateBRL);
+                    quotationGainBRL += nodeGainBRL;
+                  }
+                }
               }
-            } else if (settledGrams > 0) {
-              // Settled in physical metal
-              isMetalPayment = true;
-              settledValueBRL = 0;
             }
           } else if (settledGrams > 0) {
-            isMetalPayment = true;
-            settledValueBRL = 0;
+            settledValueBRL = settledGrams * settledRateBRL;
           }
 
           treeNodes.push({
