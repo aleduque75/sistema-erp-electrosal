@@ -5,12 +5,18 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class ListInventoryLotsUseCase {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(organizationId: string): Promise<any> {
+  async execute(organizationId: string, productId?: string): Promise<any> {
+    const where: any = { organizationId };
+    if (productId) {
+      where.productId = productId;
+    }
+
     return this.prisma.inventoryLot.findMany({
-      where: { organizationId },
+      where,
       include: {
         product: {
           select: {
+            id: true,
             name: true,
             stockUnit: true,
           },

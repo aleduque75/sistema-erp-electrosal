@@ -121,7 +121,7 @@ export class CalculateSaleAdjustmentUseCase {
     );
 
     // --- SILVER & GOLD PRICE QUOTATIONS ---
-    const silverKeywords = ['prata', 'silver', 'ag '];
+    const silverKeywords = ['prata', 'silver', 'ag ', 'ag-', 'ag cn', 'agcn'];
     const includesSilverLot = (sale as any).pureMetalLots?.some(l => l.metalType === 'AG');
     const isSilverSale = (sale.saleItems.length > 0 && sale.saleItems.every(item => {
       const name = (item.product.name + ' ' + (item.product.productGroup?.name || '')).toLowerCase();
@@ -175,6 +175,10 @@ export class CalculateSaleAdjustmentUseCase {
       let itemExpectedGrams = new Decimal(0);
       const calcMethod = item.product.productGroup?.adjustmentCalcMethod;
 
+      const itemQtyGrams = (item.product.stockUnit === 'KILOGRAMS')
+        ? new Decimal(item.quantity).times(1000)
+        : new Decimal(item.quantity);
+
       switch (calcMethod) {
         case 'COST_BASED':
           if (paymentQuotation && !paymentQuotation.isZero()) {
@@ -183,9 +187,20 @@ export class CalculateSaleAdjustmentUseCase {
           }
           break;
         default: // QUANTITY_BASED
-          const goldValue = new Decimal(item.product.goldValue || 0);
+          let goldValue = new Decimal(item.product.goldValue || 0);
+          if (goldValue.isZero()) {
+            const match = item.product.name.match(/(\d+(?:[.,]\d+)?)\s*%/);
+            if (match) {
+              const perc = parseFloat(match[1].replace(',', '.'));
+              if (!isNaN(perc) && perc > 0) {
+                goldValue = new Decimal(perc).dividedBy(100);
+              }
+            }
+          }
           if (!goldValue.isZero()) {
-            itemExpectedGrams = new Decimal(item.quantity).times(goldValue);
+            itemExpectedGrams = itemQtyGrams.times(goldValue);
+          } else {
+            itemExpectedGrams = itemQtyGrams;
           }
           break;
       }

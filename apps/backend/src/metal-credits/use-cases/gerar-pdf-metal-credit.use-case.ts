@@ -154,19 +154,49 @@ export class GerarPdfMetalCreditUseCase {
     }
 
     // Prepare template data
-    const baseDir = process.env.NODE_ENV === 'production'
-      ? path.join(process.cwd(), 'dist')
-      : path.join(process.cwd(), 'src');
+    let htmlTemplateString = '';
+    const possibleTemplatePaths = [
+      path.join(process.cwd(), 'apps', 'backend', 'dist', 'templates', 'metal-credit-pdf.template.html'),
+      path.join(process.cwd(), 'apps', 'backend', 'src', 'templates', 'metal-credit-pdf.template.html'),
+      path.join(process.cwd(), 'dist', 'templates', 'metal-credit-pdf.template.html'),
+      path.join(process.cwd(), 'src', 'templates', 'metal-credit-pdf.template.html'),
+      path.join(__dirname, '..', '..', 'templates', 'metal-credit-pdf.template.html'),
+      path.join(__dirname, '..', '..', '..', 'src', 'templates', 'metal-credit-pdf.template.html'),
+      path.join(__dirname, '..', '..', '..', 'dist', 'templates', 'metal-credit-pdf.template.html'),
+    ];
 
-    const templatePath = path.join(
-      baseDir,
-      'templates',
-      'metal-credit-pdf.template.html',
-    );
-    const htmlTemplateString = await fs.readFile(templatePath, 'utf-8');
+    for (const p of possibleTemplatePaths) {
+      try {
+        htmlTemplateString = await fs.readFile(p, 'utf-8');
+        if (htmlTemplateString) break;
+      } catch (e) {
+        // try next path
+      }
+    }
 
-    const logoPath = path.join(baseDir, 'assets', 'images', 'logoAtual.png');
-    const logoBase64 = await this.getImageAsBase64(logoPath);
+    if (!htmlTemplateString) {
+      this.logger.error(`Template metal-credit-pdf.template.html não encontrado em nenhum dos caminhos: ${possibleTemplatePaths.join(', ')}`);
+      throw new InternalServerErrorException('Template do extrato de crédito não encontrado.');
+    }
+
+    let logoBase64: string | null = null;
+    const possibleLogoPaths = [
+      path.join(process.cwd(), 'apps', 'backend', 'src', 'assets', 'images', 'logoAtual.png'),
+      path.join(process.cwd(), 'apps', 'backend', 'dist', 'assets', 'images', 'logoAtual.png'),
+      path.join(process.cwd(), 'src', 'assets', 'images', 'logoAtual.png'),
+      path.join(process.cwd(), 'dist', 'assets', 'images', 'logoAtual.png'),
+      path.join(__dirname, '..', '..', 'assets', 'images', 'logoAtual.png'),
+      path.join(__dirname, '..', '..', '..', 'src', 'assets', 'images', 'logoAtual.png'),
+    ];
+
+    for (const lp of possibleLogoPaths) {
+      try {
+        logoBase64 = await this.getImageAsBase64(lp);
+        if (logoBase64) break;
+      } catch (e) {
+        // try next logo
+      }
+    }
 
     const htmlComLogo = htmlTemplateString.replace(
       '%%LOGO_PLACEHOLDER%%',
@@ -209,21 +239,36 @@ export class GerarPdfMetalCreditUseCase {
       browser = await puppeteer.launch({
         headless: true,
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-first-run',
+          '--no-zygote',
+        ],
       });
       const page = await browser.newPage();
       await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
-      return await page.pdf({
+      const pdfUint8 = await page.pdf({
         format: 'A4',
         printBackground: true,
-        margin: { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' },
+        margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' },
       });
+
+      return Buffer.from(pdfUint8);
     } catch (error) {
-      this.logger.error('Erro ao gerar PDF:', error);
+      this.logger.error('Erro ao gerar PDF do crédito de metal:', error);
       throw new InternalServerErrorException('Falha ao gerar o PDF do crédito.');
     } finally {
-      if (browser) await browser.close();
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (closeErr) {
+          this.logger.warn('Erro ao fechar o browser do puppeteer:', closeErr);
+        }
+      }
     }
   }
 }

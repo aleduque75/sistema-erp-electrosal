@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { MoreHorizontal, DollarSign } from "lucide-react";
+import { MoreHorizontal, DollarSign, Layers } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { ProductForm } from "./product-form";
+import { ProductLotsModal } from "./components/ProductLotsModal";
 
 interface Product {
   id: string;
@@ -36,6 +38,7 @@ interface Product {
   description?: string | null;
   price: number;
   stock: number;
+  stockUnit?: string;
 }
 
 export default function ProductsPage() {
@@ -44,6 +47,7 @@ export default function ProductsPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [productForLots, setProductForLots] = useState<Product | null>(null);
 
   const totalStockValue = useMemo(() => {
     return products.reduce((acc, product) => {
@@ -81,7 +85,6 @@ export default function ProductsPage() {
     fetchProducts();
   };
 
-  // ✅ Função handleDelete CORRIGIDA
   const handleDelete = async () => {
     if (!productToDelete) return;
     try {
@@ -90,10 +93,9 @@ export default function ProductsPage() {
       setProductToDelete(null);
       fetchProducts();
     } catch (err: any) {
-      // <--- Início do bloco catch
       toast.error(err.response?.data?.message || "Falha ao remover produto.");
       setProductToDelete(null);
-    } // <--- Fim do bloco catch
+    }
   };
 
   const columns: ColumnDef<Product>[] = [
@@ -107,7 +109,19 @@ export default function ProductsPage() {
           currency: "BRL",
         }).format(row.getValue("price")),
     },
-    { accessorKey: "stock", header: "Estoque" },
+    {
+      accessorKey: "stock",
+      header: "Estoque",
+      cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <div className="flex items-center gap-1.5 font-medium">
+            <span>{product.stock}</span>
+            <span className="text-xs text-muted-foreground">{product.stockUnit || "g"}</span>
+          </div>
+        );
+      },
+    },
     {
       id: "actions",
       cell: ({ row }) => {
@@ -121,14 +135,19 @@ export default function ProductsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setProductForLots(product)}>
+                <Layers className="h-4 w-4 mr-2 text-primary" />
+                Ver Lotes / Ajustar Estoque
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleOpenEditModal(product)}>
-                Editar
+                Editar Produto
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setProductToDelete(product)}
                 className="text-red-600 focus:text-red-600"
               >
-                Deletar
+                Deletar Produto
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -193,6 +212,13 @@ export default function ProductsPage() {
         <ProductForm product={productToEdit} onSave={handleSave} />
       </ResponsiveDialog>
 
+      <ProductLotsModal
+        product={productForLots}
+        open={!!productForLots}
+        onOpenChange={(open) => !open && setProductForLots(null)}
+        onStockUpdated={fetchProducts}
+      />
+
       <Dialog
         open={!!productToDelete}
         onOpenChange={() => setProductToDelete(null)}
@@ -201,8 +227,7 @@ export default function ProductsPage() {
           <DialogHeader>
             <DialogTitle>Confirmar Exclusão</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja deletar o produto "{productToDelete?.name}
-              "? Esta ação não pode ser desfeita.
+              Tem certeza que deseja deletar o produto "{productToDelete?.name}"? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

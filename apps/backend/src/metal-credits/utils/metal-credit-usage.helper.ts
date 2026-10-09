@@ -288,10 +288,12 @@ export async function enrichUsageEntry(
         where: { id: dbEntry.sourceId },
         include: { pureMetalLot: true },
       });
-      if (movement?.pureMetalLot) {
-        paymentSourceAccountName = `Lote: ${movement.pureMetalLot.lotNumber || movement.pureMetalLot.id}`;
+      if (movement?.pureMetalLot?.lotNumber) {
+        paymentSourceAccountName = `Lote Físico: ${movement.pureMetalLot.lotNumber}`;
+      } else if (movement?.pureMetalLot) {
+        paymentSourceAccountName = `Lote Físico (${movement.pureMetalLot.metalType || 'AU'})`;
       } else {
-        paymentSourceAccountName = 'Pagamento em Metal Físico';
+        paymentSourceAccountName = 'Entrega de Metal Físico (Estoque)';
       }
     } else if (dbEntry.type === 'ADJUSTMENT') {
       paymentSourceAccountName = 'Liquidação / Ajuste de Saldo Residual';

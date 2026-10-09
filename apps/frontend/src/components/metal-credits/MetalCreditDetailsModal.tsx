@@ -77,15 +77,27 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess, on
       const response = await api.get(`/metal-credits/${credit.id}/pdf`, {
         responseType: 'blob',
       });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `extrato-credito-${credit.id}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (error) {
-      toast.error("Falha ao gerar o PDF.");
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      toast.success("Extrato PDF gerado com sucesso!");
+    } catch (error: any) {
+      let errorMsg = "Falha ao gerar o PDF.";
+      if (error?.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const json = JSON.parse(text);
+          if (json?.message) errorMsg = json.message;
+        } catch (_) {}
+      } else if (error?.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      toast.error(errorMsg);
     } finally {
       setIsPrinting(false);
     }
@@ -279,7 +291,11 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess, on
                       <div className="flex justify-between items-start">
                         <div className="space-y-1">
                           <p className="text-sm font-bold flex items-center gap-2">
-                            {entry.description}
+                            {entry.description
+                              ? entry.description
+                                  .replace(/\(Lote:\s*N\/A\)/gi, "(Metal Físico de Estoque)")
+                                  .replace(/\(Lote:\s*[a-f0-9-]{36}\)/gi, "(Lote de Estoque)")
+                              : "Utilização de crédito"}
                             <Badge variant="outline" className="text-[9px] uppercase h-4 px-1">{entry.type}</Badge>
                           </p>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -298,7 +314,19 @@ export function MetalCreditDetailsModal({ isOpen, onClose, credit, onSuccess, on
                           {entry.paymentSourceAccountName && (
                             <div className="bg-background/80 p-2.5 rounded-md border border-border/50 flex flex-col gap-0.5">
                               <span className="text-[10px] uppercase font-bold text-primary flex items-center gap-1.5 tracking-wider">
-                                <Wallet className="w-3 h-3" /> Destino / Conta do Pagamento
+                                {entry.type === 'DEBIT' || entry.type === 'METAL_PAYMENT' ? (
+                                  <>
+                                    <Scale className="w-3 h-3 text-amber-500" /> Saída do Estoque Físico / Lote
+                                  </>
+                                ) : entry.type === 'ADJUSTMENT' ? (
+                                  <>
+                                    <Info className="w-3 h-3 text-blue-500" /> Tipo de Ajuste Contábil
+                                  </>
+                                ) : (
+                                  <>
+                                    <Wallet className="w-3 h-3" /> Destino / Conta do Pagamento
+                                  </>
+                                )}
                               </span>
                               <span className="font-semibold text-sm text-foreground">
                                 {entry.paymentSourceAccountName}

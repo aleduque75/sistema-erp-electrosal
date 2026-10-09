@@ -39,12 +39,13 @@ export class MetalCreditsController {
   @Get(':id/pdf')
   async generatePdf(
     @Param('id') id: string,
-    @CurrentUser('orgId') organizationId: string,
+    @CurrentUser() user: any,
     @Res() res: Response,
   ) {
+    const orgId = user?.orgId || user?.organizationId;
     const pdfBuffer = await this.gerarPdfMetalCreditUseCase.execute({
       metalCreditId: id,
-      organizationId,
+      organizationId: orgId,
     });
 
     res.set({
@@ -53,7 +54,7 @@ export class MetalCreditsController {
       'Content-Length': pdfBuffer.length,
     });
 
-    res.send(pdfBuffer);
+    res.end(pdfBuffer);
   }
 
   @Patch(':id')
