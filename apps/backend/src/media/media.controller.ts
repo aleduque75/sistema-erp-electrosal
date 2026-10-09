@@ -13,11 +13,16 @@ import {
   UseGuards,
   Request,
   Query,
+  StreamableFile,
+  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MediaService } from './media.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Public } from '../auth/public.decorator';
+import { createReadStream, existsSync } from 'fs';
+import { join } from 'path';
 
 @ApiTags('media')
 @Controller('media')
@@ -25,6 +30,17 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @ApiBearerAuth()
 export class MediaController {
   constructor(private readonly mediaService: MediaService) { }
+
+  @Public()
+  @Get('file/:filename')
+  async serveFile(@Param('filename') filename: string) {
+    const filePath = join(process.cwd(), 'uploads', filename);
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('Arquivo não encontrado');
+    }
+    const fileStream = createReadStream(filePath);
+    return new StreamableFile(fileStream);
+  }
 
   @Get('/')
   async findAll() {
