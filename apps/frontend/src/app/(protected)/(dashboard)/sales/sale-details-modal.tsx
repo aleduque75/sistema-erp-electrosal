@@ -5,7 +5,8 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import Decimal from 'decimal.js';
 import { useForm, Controller } from 'react-hook-form';
-import { RotateCcw, User, MapPin, Calendar, CreditCard, Trash2, AlertTriangle } from 'lucide-react';
+import { RotateCcw, User, MapPin, Calendar, CreditCard, Trash2, AlertTriangle, CheckCircle2, PackageSearch } from 'lucide-react';
+import { SelectLotsModal } from './components/SelectLotsModal';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
@@ -52,9 +53,11 @@ interface SaleDetailsModalProps {
 
 export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave }: SaleDetailsModalProps) {
   const [sale, setSale] = useState<Sale | null>(null);
-  const [loading, setIsPageLoading] = useState(true);
-  const [transactionToDelete, setTransactionToDelete] = useState<any | null>(null);
   const [isDeletingTransaction, setIsDeletingTransaction] = useState(false);
+  const [isSelectLotsModalOpen, setIsSelectLotsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedSaleItem, setSelectedSaleItem] = useState<any | null>(null);
+  const [isSeparating, setIsSeparating] = useState(false);
 
   useEffect(() => {
     if (open && initialSale) {
@@ -137,6 +140,54 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
       toast.error(err.response?.data?.message || "Falha ao excluir lançamento.");
     } finally {
       setIsDeletingTransaction(false);
+    }
+  };
+
+  const openLotSelector = async (item: any) => {
+    try {
+      const productWithLots = await api.get(`/products/${item.product.id}`);
+      setSelectedProduct(productWithLots.data);
+      setSelectedSaleItem(item);
+      setIsSelectLotsModalOpen(true);
+    } catch (error) {
+      toast.error("Falha ao carregar os lotes do produto.");
+    }
+  };
+
+  const handleLinkLots = async (data: { lots: { inventoryLotId: string; batchNumber: string; quantity: number }[] }) => {
+    if (!selectedSaleItem || !sale) return;
+    try {
+      const payload = {
+        lots: data.lots.map(lot => ({
+          inventoryLotId: lot.inventoryLotId,
+          quantity: lot.quantity,
+        })),
+      };
+      await api.post(`/sales/items/${selectedSaleItem.id}/link-lots`, payload);
+      toast.success("Lotes vinculados com sucesso!");
+      setIsSelectLotsModalOpen(false);
+      const res = await api.get(`/sales/${sale.id}`);
+      setSale(res.data);
+      if (onSave) onSave();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Erro ao vincular os lotes.");
+    }
+  };
+
+  const handleSeparateSale = async () => {
+    if (!sale) return;
+    if (!confirm('Deseja confirmar a separação deste pedido e baixar o estoque dos lotes?')) return;
+    setIsSeparating(true);
+    try {
+      await api.patch(`/sales/${sale.id}/separate`);
+      toast.success("Venda separada com sucesso! Pedido pronto.");
+      const res = await api.get(`/sales/${sale.id}`);
+      setSale(res.data);
+      if (onSave) onSave();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Falha ao separar a venda.");
+    } finally {
+      setIsSeparating(false);
     }
   };
 
@@ -682,6 +733,7 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                           <TableHead className="text-xs">Lote</TableHead>
                           <TableHead className="text-center text-xs">Qtd.</TableHead>
                           <TableHead className="text-right text-xs">Valor</TableHead>
+                          <TableHead className="text-center text-xs w-[130px]">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -691,7 +743,9 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                             <TableCell className="text-xs text-muted-foreground">
                               {item.saleItemLots && item.saleItemLots.length > 0
                                 ? item.saleItemLots.map((sl: any) => sl.inventoryLot?.batchNumber).filter(Boolean).join(', ')
-                                : item.inventoryLotId || 'N/A'}
+                                : (
+                                  <span className="text-amber-600 dark:text-amber-400 font-semibold">(A Separar / Sem Lote)</span>
+                                )}
                             </TableCell>
                             <TableCell className="text-center text-xs">
                               <span className="font-semibold text-foreground">{item.quantity}</span>
@@ -703,6 +757,18 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                             </TableCell>
                             <TableCell className="text-right font-bold font-mono text-xs text-foreground">
                               {formatCurrency(item.price * item.quantity)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openLotSelector(item)}
+                                className="h-7 px-2.5 text-xs font-semibold gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+                              >
+                                <PackageSearch className="h-3.5 w-3.5" />
+                                {item.saleItemLots && item.saleItemLots.length > 0 ? "Alterar Lote" : "Vincular Lote"}
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -736,6 +802,18 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                           <span className="font-bold font-mono text-foreground text-sm">
                             {formatCurrency(item.price * item.quantity)}
                           </span>
+                        </div>
+                        <div className="pt-1.5 flex justify-end">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openLotSelector(item)}
+                            className="h-7 px-2.5 text-xs font-semibold gap-1.5 border-primary/40 text-primary hover:bg-primary/10 w-full sm:w-auto justify-center"
+                          >
+                            <PackageSearch className="h-3.5 w-3.5" />
+                            {item.saleItemLots && item.saleItemLots.length > 0 ? "Alterar Lote" : "Vincular Lote"}
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -776,10 +854,33 @@ export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave
                 <span>•</span>
                 <span className="font-mono font-medium text-foreground">Total: {formatCurrency(expectedAmount)}</span>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)} className="h-8 px-4 text-xs font-medium">
-                Fechar
-              </Button>
+              <div className="flex items-center gap-2">
+                {sale.status === 'A_SEPARAR' && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSeparateSale}
+                    disabled={isSeparating}
+                    className="h-8 px-4 text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {isSeparating ? "Separando..." : "Confirmar Separação"}
+                  </Button>
+                )}
+                <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)} className="h-8 px-4 text-xs font-medium">
+                  Fechar
+                </Button>
+              </div>
             </div>
+
+            {/* Modal de Seleção e Vinculação de Lotes */}
+            <SelectLotsModal
+              open={isSelectLotsModalOpen}
+              onOpenChange={setIsSelectLotsModalOpen}
+              product={selectedProduct}
+              totalQuantityNeeded={selectedSaleItem?.quantity || 0}
+              onAddItem={handleLinkLots}
+            />
           </>
         ) : (
           <div className="p-12 text-center text-muted-foreground text-sm">Não foi possível carregar os detalhes da venda.</div>
