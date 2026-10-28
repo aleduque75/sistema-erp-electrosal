@@ -18,9 +18,13 @@ export class ReleaseToPcpUseCase {
       throw new NotFoundException(`Venda com ID ${saleId} não encontrada.`);
     }
 
-    if (sale.status !== SaleStatus.PENDENTE) {
+    if (
+      sale.status !== SaleStatus.PENDENTE &&
+      sale.status !== SaleStatus.CONFIRMADO &&
+      sale.status !== SaleStatus.FINALIZADO
+    ) {
       throw new BadRequestException(
-        'Apenas vendas com status PENDENTE podem ser liberadas para separação.',
+        'Apenas vendas com status PENDENTE, CONFIRMADO ou FINALIZADO podem ser liberadas para separação.',
       );
     }
 

@@ -281,10 +281,11 @@ export class ConfirmSaleUseCase {
       }
       
       // UPDATE SALE STATUS AND FINAL VALUES at the end
+      const shouldKeepStatus = Boolean(confirmSaleDto.keepSaleStatusPending) || sale.status === SaleStatus.A_SEPARAR;
       const updatedSale = await tx.sale.update({
         where: { id: saleId },
         data: {
-          status: confirmSaleDto.keepSaleStatusPending ? sale.status : SaleStatus.FINALIZADO,
+          status: shouldKeepStatus ? sale.status : SaleStatus.FINALIZADO,
           paymentMethod: confirmSaleDto.paymentMethod,
           netAmount: finalNetAmount,
           totalAmount: finalNetAmount.minus(new Decimal(sale.feeAmount || 0)).minus(new Decimal(sale.shippingCost || 0)), // Recalculate total amount based on net amount

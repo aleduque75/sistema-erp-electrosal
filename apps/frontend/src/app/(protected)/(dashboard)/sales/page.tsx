@@ -307,10 +307,10 @@ export default function SalesPage() {
   };
 
   const handleReleaseToPcp = async (saleId: string) => {
-    if (!confirm('Deseja liberar este pedido para separação no PCP sem confirmar o pagamento?')) return;
+    if (!confirm('Deseja mover este pedido para a fila de separação (A Separar) no PCP?')) return;
     try {
       await api.patch(`/sales/${saleId}/release-to-pcp`);
-      toast.success('Venda liberada para separação!');
+      toast.success('Venda movida para A Separar no PCP!');
       fetchSales();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Falha ao liberar para separação.');
@@ -643,6 +643,9 @@ ${itemsText}`;
                 {isRevertible && (
                   <>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleReleaseToPcp(sale.id)}>
+                      Mover para A Separar (PCP)
+                    </DropdownMenuItem>
                     <DropdownMenuItem className="text-red-600 font-semibold" onClick={() => handleRevertSale(sale.id)}>
                       Reverter para Pendente
                     </DropdownMenuItem>
@@ -1063,6 +1066,9 @@ ${itemsText}`;
                                 {isRevertible && (
                                   <>
                                     <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleReleaseToPcp(sale.id)}>
+                                      Mover para A Separar (PCP)
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem className="text-red-600 font-semibold" onClick={() => handleRevertSale(sale.id)}>
                                       Reverter para Pendente
                                     </DropdownMenuItem>

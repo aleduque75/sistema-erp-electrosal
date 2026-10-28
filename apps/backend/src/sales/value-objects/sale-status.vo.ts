@@ -126,8 +126,8 @@ export class SaleStatusVO {
         ] as SaleStatus[]).includes(target);
 
       case SaleStatus.FINALIZADO:
-        // Vendas finalizadas só podem ser revertidas com ações especiais ou canceladas
-        return ([SaleStatus.CANCELADO, SaleStatus.PENDENTE] as SaleStatus[]).includes(target);
+        // Vendas finalizadas só podem ser revertidas com ações especiais, separação pendente ou canceladas
+        return ([SaleStatus.CANCELADO, SaleStatus.PENDENTE, SaleStatus.A_SEPARAR] as SaleStatus[]).includes(target);
 
       case SaleStatus.CANCELADO:
         return false; // Venda cancelada é estado terminal

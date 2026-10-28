@@ -184,7 +184,7 @@ export class CreateSaleUseCase {
     if (paymentMethod === 'A_COMBINAR') {
       const confirmSaleDto: ConfirmSaleDto = {
         paymentMethod: 'A_COMBINAR',
-        keepSaleStatusPending: false, // Finalize immediately
+        keepSaleStatusPending: isSeparationFlow, // Se tem itens a separar, DEVE MANTER status A_SEPARAR!
       };
       await this.confirmSaleUseCase.execute(organizationId, userId, sale.id, confirmSaleDto);
     } else if (paymentTermId) {
@@ -194,7 +194,7 @@ export class CreateSaleUseCase {
         paymentMethod: paymentMethod,
         contaCorrenteId: paymentMethod === 'A_VISTA' ? createSaleDto.contaCorrenteId : undefined,
         paymentMetalType: paymentMethod === 'METAL' ? createSaleDto.paymentMetalType : undefined,
-        keepSaleStatusPending: false, // For A_VISTA and METAL, it's immediately finalized
+        keepSaleStatusPending: isSeparationFlow, // Se tem itens a separar, DEVE MANTER status A_SEPARAR!
         updatedGoldPrice: goldQuoteValue,
         updatedNetAmount: netAmount.toNumber(),
       };
@@ -202,7 +202,16 @@ export class CreateSaleUseCase {
     }
 
     this.logger.log(`Venda com ID: ${sale.id} criada com sucesso.`);
-    return sale;
+    return (await this.prisma.sale.findUnique({
+      where: { id: sale.id },
+      include: {
+        saleItems: {
+          include: {
+            saleItemLots: true,
+          },
+        },
+      },
+    })) || sale;
   }
 
   private async getGoldQuote(goldQuoteValue: number | undefined, organizationId: string, date: Date) {
