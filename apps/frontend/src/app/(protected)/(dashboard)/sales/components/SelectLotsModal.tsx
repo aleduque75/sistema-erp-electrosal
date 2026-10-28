@@ -91,7 +91,7 @@ export function SelectLotsModal({
   };
 
   const handleSubmit = () => {
-    if (Math.abs(totalSelectedQuantity - totalQuantityNeeded) > 0.0001) {
+    if (Math.abs(totalSelectedQuantity - totalQuantityNeeded) > 0.02) {
       toast.error(`A quantidade selecionada (${totalSelectedQuantity.toFixed(4)}) não corresponde à quantidade necessária (${totalQuantityNeeded.toFixed(4)}).`);
       return;
     }
@@ -140,40 +140,48 @@ export function SelectLotsModal({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {product.inventoryLots.map((lot) => (
-                <TableRow key={lot.id}>
-                  <TableCell>{lot.batchNumber}</TableCell>
-                  <TableCell>{lot.remainingQuantity.toFixed(4)}</TableCell>
-                  <TableCell className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      step="0.0001"
-                      min="0"
-                      max={lot.remainingQuantity}
-                      value={selectedLots.find(l => l.inventoryLotId === lot.id)?.quantity || ''}
-                      onChange={(e) =>
-                        handleQuantityChange(
-                          lot.id,
-                          lot.batchNumber,
-                          e.target.value
-                        )
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const quantityToSet = Math.min(remainingQuantity, lot.remainingQuantity);
-                        handleQuantityChange(lot.id, lot.batchNumber, String(quantityToSet));
-                      }}
-                      disabled={remainingQuantity <= 0}
-                    >
-                      Usar
-                    </Button>
+              {product.inventoryLots && product.inventoryLots.length > 0 ? (
+                product.inventoryLots.map((lot) => (
+                  <TableRow key={lot.id}>
+                    <TableCell>{lot.batchNumber}</TableCell>
+                    <TableCell>{lot.remainingQuantity.toFixed(4)}</TableCell>
+                    <TableCell className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        max={lot.remainingQuantity}
+                        value={selectedLots.find(l => l.inventoryLotId === lot.id)?.quantity || ''}
+                        onChange={(e) =>
+                          handleQuantityChange(
+                            lot.id,
+                            lot.batchNumber,
+                            e.target.value
+                          )
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const quantityToSet = Math.min(remainingQuantity, lot.remainingQuantity);
+                          handleQuantityChange(lot.id, lot.batchNumber, String(quantityToSet));
+                        }}
+                        disabled={remainingQuantity <= 0}
+                      >
+                        Usar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-8 text-muted-foreground text-sm">
+                    Nenhum lote com saldo disponível encontrado para este produto no momento.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </ScrollArea>

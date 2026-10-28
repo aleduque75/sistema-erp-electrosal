@@ -22,9 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import api from '@/lib/api';
-import { Product } from '@/types/product';
-import { InventoryLot } from '@/types/inventory-lot';
-import { SaleItemLot } from '@/types/sale';
+import { Product, InventoryLot, SaleItemLot } from '@/types/sale';
 import { format } from 'date-fns';
 import Decimal from 'decimal.js';
 import { Plus } from 'lucide-react';
@@ -113,9 +111,20 @@ export function LotSelectionModal({
     return Array.from(selectedLots.values()).reduce((sum, qty) => new Decimal(sum).plus(qty).toNumber(), 0);
   };
 
+  const handleClearLots = () => {
+    onLotsSelected([]);
+    toast.info('Lotes desvinculados. Este item será marcado para separação posterior (A Separar).');
+    onClose();
+  };
+
   const handleConfirm = () => {
     const totalSelected = getTotalSelectedQuantity();
     const required = new Decimal(quantityRequired);
+
+    if (totalSelected === 0) {
+      handleClearLots();
+      return;
+    }
 
     if (required.minus(totalSelected).abs().greaterThan('0.02')) {
       toast.warning(`A quantidade selecionada (${totalSelected}) não corresponde à quantidade necessária (${quantityRequired}).`);
@@ -125,7 +134,7 @@ export function LotSelectionModal({
     const result: SaleItemLot[] = Array.from(selectedLots.entries()).map(([inventoryLotId, quantity]) => ({
       inventoryLotId,
       quantity,
-    }));
+    } as any));
 
     onLotsSelected(result);
     onClose();
@@ -139,7 +148,7 @@ export function LotSelectionModal({
         <DialogHeader className="shrink-0 pb-2 border-b">
           <DialogTitle className="text-base sm:text-lg">Selecionar Lotes para: {product?.name}</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            Selecione os lotes de inventário para suprir a quantidade necessária do item.
+            Selecione os lotes de inventário para suprir a quantidade do item ou clique em &quot;Deixar sem lote&quot; para vincular depois no PCP.
           </DialogDescription>
         </DialogHeader>
 
@@ -161,7 +170,7 @@ export function LotSelectionModal({
             </div>
           </div>
 
-          {isLoading ? (
+          {loading ? (
             <p className="text-xs text-muted-foreground text-center py-6">Carregando lotes...</p>
           ) : (
             <div className="overflow-x-auto">
@@ -219,9 +228,20 @@ export function LotSelectionModal({
           )}
         </div>
 
-        <DialogFooter className="mt-3 pt-3 border-t flex flex-row justify-end gap-2 shrink-0">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} className="h-9 text-xs">Cancelar</Button>
-          <Button type="button" size="sm" onClick={handleConfirm} className="h-9 text-xs font-semibold">Confirmar Seleção</Button>
+        <DialogFooter className="mt-3 pt-3 border-t flex flex-row justify-between items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleClearLots}
+            className="h-9 text-xs border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+          >
+            Deixar sem lote (A Separar)
+          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onClose} className="h-9 text-xs">Cancelar</Button>
+            <Button type="button" size="sm" onClick={handleConfirm} className="h-9 text-xs font-semibold">Confirmar Seleção</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

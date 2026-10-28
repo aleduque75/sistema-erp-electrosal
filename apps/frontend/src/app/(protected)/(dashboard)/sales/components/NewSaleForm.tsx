@@ -29,6 +29,7 @@ import {
   TrendingUp,
   CheckCircle2,
   RotateCcw,
+  Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Decimal from "decimal.js";
@@ -203,6 +204,19 @@ export function NewSaleForm({ onSave }: any) {
     const itemQuantity = Number(Number(newItemData.quantity).toFixed(2));
     const itemPrice = Number(Number(newItemData.price).toFixed(2));
 
+    // Se o usuário optou por vincular lote depois (ou o produto não tem lotes em estoque)
+    if (newItemData.assignLater) {
+      const newItem = {
+        ...newItemData,
+        quantity: itemQuantity,
+        price: itemPrice,
+        lots: [],
+      };
+      setItems(currentItems => [...currentItems, newItem]);
+      toast.info(`Item "${newItemData.name || product?.name}" adicionado para separação posterior no PCP.`);
+      return;
+    }
+
     if (product && product.inventoryLots && product.inventoryLots.length > 0) {
       let remainingToAssign = new Decimal(itemQuantity);
 
@@ -275,7 +289,9 @@ export function NewSaleForm({ onSave }: any) {
       }
 
       if (remainingToAssign.gt(0.01)) {
-        toast.warning(`Não foi possível alocar toda a quantidade nos lotes existentes. Faltam ${remainingToAssign.toFixed(2)}g`);
+        // Lotes insuficientes para suprir 100%: deixa sem lotes para criar como A_SEPARAR e não falhar validação
+        assignedLots = [];
+        toast.warning(`Estoque em lote insuficiente para suprir 100% da quantidade. O item foi incluído para separação posterior no PCP (sem lotes).`);
       }
     } else if (newItemData.inventoryLotId) {
       assignedLots = [{
@@ -321,14 +337,13 @@ export function NewSaleForm({ onSave }: any) {
     const updatedItems = [...items];
     updatedItems[itemIndex].lots = selectedLots;
 
-    // Auto-update total quantity based on selected lots if product is not service/reaction
-    // But usually we want quantity to match lots sum
-    const totalLotQty = selectedLots.reduce((acc, lot) => acc + lot.quantity, 0);
-    // Use toFixed to avoid 100.000000000001 issues
-    updatedItems[itemIndex].quantity = parseFloat(totalLotQty.toFixed(2));
+    // Se lotes foram selecionados, atualiza a quantidade para a soma dos lotes
+    if (selectedLots && selectedLots.length > 0) {
+      const totalLotQty = selectedLots.reduce((acc, lot) => acc + lot.quantity, 0);
+      updatedItems[itemIndex].quantity = parseFloat(totalLotQty.toFixed(2));
+    }
 
     setItems(updatedItems);
-
     setItemToSelectLots(null);
   };
 
@@ -764,14 +779,18 @@ export function NewSaleForm({ onSave }: any) {
                         <div className="flex items-center justify-between pt-1 border-t border-muted/50">
                           <Button
                             type="button"
-                            variant={item.lots?.length > 0 ? "secondary" : "outline"}
+                            variant={item.lots && item.lots.length > 0 ? "secondary" : "outline"}
                             size="sm"
                             onClick={() => openLotSelector(index)}
-                            className="h-7 px-2.5 text-xs gap-1.5 font-medium"
+                            className={`h-7 px-2.5 text-xs gap-1.5 font-medium ${
+                              !item.lots || item.lots.length === 0
+                                ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+                                : ""
+                            }`}
                             title="Gerenciar lotes"
                           >
                             <PackageSearch className="h-3.5 w-3.5" />
-                            <span>Lotes: {item.lots?.length || 0}</span>
+                            <span>{item.lots && item.lots.length > 0 ? `Lotes: ${item.lots.length}` : "A Separar"}</span>
                           </Button>
 
                           <div className="text-right">
@@ -836,14 +855,18 @@ export function NewSaleForm({ onSave }: any) {
                             <TableCell className="text-center py-2.5">
                               <Button
                                 type="button"
-                                variant={item.lots?.length > 0 ? "secondary" : "outline"}
+                                variant={item.lots && item.lots.length > 0 ? "secondary" : "outline"}
                                 size="sm"
                                 onClick={() => openLotSelector(index)}
-                                className="h-8 px-2.5 text-xs gap-1.5 font-medium"
+                                className={`h-8 px-2.5 text-xs gap-1.5 font-medium ${
+                                  !item.lots || item.lots.length === 0
+                                    ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+                                    : ""
+                                }`}
                                 title="Gerenciar lotes do item"
                               >
                                 <PackageSearch className="h-3.5 w-3.5" />
-                                <span>{item.lots?.length || 0}</span>
+                                <span>{item.lots && item.lots.length > 0 ? `${item.lots.length} lotes` : "A Separar"}</span>
                               </Button>
                             </TableCell>
                             <TableCell className="text-right font-semibold text-sm py-2.5">
@@ -884,22 +907,30 @@ export function NewSaleForm({ onSave }: any) {
 
             {/* Fechamento Financeiro & Botão Salvar Integrado (Desktop) */}
             <div className="hidden lg:flex border-t bg-muted/15 p-3.5 md:p-4 flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-              <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
-                <div>
-                  Subtotal: <span className="font-semibold text-foreground">{formatCurrency(totalAmount)}</span>
-                </div>
-                {feeAmount > 0 && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
                   <div>
-                    Taxa Cartão ({feePercentage.toFixed(2)}%):{" "}
-                    <span className="font-semibold text-foreground">
-                      {formatCurrency(feeAmount)}
-                      {absorbCreditCardFee && " (Absorvida)"}
-                    </span>
+                    Subtotal: <span className="font-semibold text-foreground">{formatCurrency(totalAmount)}</span>
+                  </div>
+                  {feeAmount > 0 && (
+                    <div>
+                      Taxa Cartão ({feePercentage.toFixed(2)}%):{" "}
+                      <span className="font-semibold text-foreground">
+                        {formatCurrency(feeAmount)}
+                        {absorbCreditCardFee && " (Absorvida)"}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    Frete: <span className="font-semibold text-foreground">{formatCurrency(freightAmount)}</span>
+                  </div>
+                </div>
+                {items.some(item => !item.lots || item.lots.length === 0) && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 px-2.5 py-1 rounded-md max-w-fit">
+                    <Info className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>Contém itens sem lote: o pedido será criado como <strong>&quot;A Separar&quot;</strong> para o PCP.</span>
                   </div>
                 )}
-                <div>
-                  Frete: <span className="font-semibold text-foreground">{formatCurrency(freightAmount)}</span>
-                </div>
               </div>
 
               <div className="flex items-center justify-between md:justify-end gap-5 pt-2 md:pt-0 border-t md:border-t-0">

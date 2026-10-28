@@ -108,17 +108,22 @@ export class CreateSaleUseCase {
         }
       }
 
-      totalAmount = totalAmount.plus(itemPrice.times(itemQuantity));
-      totalCost = totalCost.plus(itemTotalCost);
+      const fallbackCost = product.costPrice ? new Decimal(product.costPrice) : new Decimal(0);
+      const effectiveItemCost = itemTotalCost.greaterThan(0)
+        ? itemTotalCost.dividedBy(itemQuantity)
+        : fallbackCost;
 
-      const itemCommission = this.calculateCommission(product, itemPrice, itemQuantity, itemTotalCost, commissionDetails);
+      totalAmount = totalAmount.plus(itemPrice.times(itemQuantity));
+      totalCost = totalCost.plus(effectiveItemCost.times(itemQuantity));
+
+      const itemCommission = this.calculateCommission(product, itemPrice, itemQuantity, effectiveItemCost.times(itemQuantity), commissionDetails);
       totalCommissionAmount = totalCommissionAmount.plus(itemCommission);
 
       saleItemsToCreate.push({
         product: { connect: { id: product.id! } },
         quantity: item.quantity,
         price: itemPrice,
-        costPriceAtSale: itemTotalCost.dividedBy(itemQuantity),
+        costPriceAtSale: effectiveItemCost,
         laborPercentage: item.laborPercentage,
         saleItemLots: {
           createMany: {

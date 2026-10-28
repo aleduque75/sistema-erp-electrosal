@@ -34,7 +34,7 @@ export class LinkLotsToSaleItemUseCase {
       );
 
       const difference = totalLotQuantity.minus(new Decimal(saleItem.quantity)).abs();
-      if (difference.greaterThan(new Decimal('0.0001'))) { // Permitir uma pequena tolerância
+      if (difference.greaterThan(new Decimal('0.02'))) { // Permitir tolerância de até 0.02g para dízimas e arredondamentos
         throw new BadRequestException(
           `A soma das quantidades dos lotes (${totalLotQuantity}) não corresponde à quantidade total do item (${saleItem.quantity}).`,
         );
@@ -56,6 +56,27 @@ export class LinkLotsToSaleItemUseCase {
           isStockDeducted: false, // PCP always links as NOT deducted
         })),
       });
+
+      // Recalcular costPriceAtSale do item com base nos lotes vinculados
+      const inventoryLots = await tx.inventoryLot.findMany({
+        where: { id: { in: dto.lots.map((l) => l.inventoryLotId) } },
+      });
+      const lotsMap = new Map(inventoryLots.map((l) => [l.id, l]));
+      let newTotalCost = new Decimal(0);
+      for (const lot of dto.lots) {
+        const invLot = lotsMap.get(lot.inventoryLotId);
+        if (invLot) {
+          newTotalCost = newTotalCost.plus(new Decimal(invLot.costPrice).times(lot.quantity));
+        }
+      }
+      if (newTotalCost.gt(0)) {
+        await tx.saleItem.update({
+          where: { id: saleItemId },
+          data: {
+            costPriceAtSale: newTotalCost.dividedBy(saleItem.quantity),
+          },
+        });
+      }
 
       return tx.saleItem.findUnique({
         where: { id: saleItemId },

@@ -39,6 +39,7 @@ interface AddItemModalProps {
     laborPercentage?: number;
     entryUnit?: string;
     entryQuantity?: number;
+    assignLater?: boolean;
   }) => void;
   saleGoldQuote: number;
   saleSilverQuote: number;
@@ -143,7 +144,7 @@ export function AddItemModal({
       return;
     }
 
-    const isManufactured = selectedProduct.inventoryLots.length > 0;
+    const isManufactured = selectedProduct.inventoryLots && selectedProduct.inventoryLots.length > 0;
 
     // Calculate total available stock across all lots for this product
     const totalStockAvailable = isManufactured
@@ -155,11 +156,16 @@ export function AddItemModal({
       }, 0)
       : (selectedProduct.stock || 0);
 
-    if (finalQuantity > totalStockAvailable + 0.01) {
-      toast.warning(`Estoque insuficiente. Total disponível: ${totalStockAvailable.toFixed(2)}. O item será marcado para separação posterior.`);
+    const isExplicitlyLater = selectedLot === 'later';
+    let finalAssignLater = isExplicitlyLater || (isManufactured && selectedProduct.inventoryLots.length === 0);
+
+    // Se o usuário selecionou FIFO mas a quantidade solicitada é maior que o disponível em lotes:
+    if (!finalAssignLater && (!selectedLot || selectedLot === 'none') && isManufactured && finalQuantity > totalStockAvailable + 0.01) {
+      toast.info(`Estoque em lote insuficiente (${totalStockAvailable.toFixed(2)} disponíveis para ${finalQuantity.toFixed(2)} pedidos). O item será adicionado para separação posterior no PCP (sem lotes).`);
+      finalAssignLater = true;
     }
 
-    const lotIdToUse = selectedLot === 'none' ? undefined : selectedLot;
+    const lotIdToUse = (finalAssignLater || selectedLot === 'none' || selectedLot === 'later') ? undefined : selectedLot;
     const lot = lotIdToUse ? selectedProduct.inventoryLots.find((l) => l.id === lotIdToUse) : null;
 
     onAddItem({
@@ -172,6 +178,7 @@ export function AddItemModal({
       laborPercentage: specialConfig ? (typeof laborPercentInput === 'string' ? parseFloat(laborPercentInput) : laborPercentInput) : undefined,
       entryUnit: specialConfig ? entryUnit : undefined,
       entryQuantity: specialConfig ? (typeof entryQuantity === 'string' ? parseFloat(entryQuantity) : entryQuantity) : undefined,
+      assignLater: finalAssignLater,
     });
 
     onOpenChange(false); // Close modal on success
@@ -270,15 +277,23 @@ export function AddItemModal({
               </>
             )}
 
-            {selectedProduct && selectedProduct.inventoryLots.length > 0 && (
+            {selectedProduct && selectedProduct.inventoryLots && selectedProduct.inventoryLots.length > 0 ? (
               <div className="sm:col-span-12">
-                <Label className="text-xs font-semibold">Lote de Produção (Opcional)</Label>
-                <Select onValueChange={setSelectedLot} value={selectedLot || ''}>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs font-semibold">Lote de Produção (Opcional)</Label>
+                  <span className="text-[11px] text-muted-foreground font-medium">
+                    Saldo disponível em lotes: {selectedProduct.inventoryLots.reduce((sum, lot) => sum + Number(lot.remainingQuantity || 0), 0).toFixed(2)}
+                  </span>
+                </div>
+                <Select onValueChange={setSelectedLot} value={selectedLot || 'none'}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue placeholder="Automático (FIFO) - Recomendado" />
                   </SelectTrigger>
                   <SelectContent className="z-[100]">
-                    <SelectItem value="none">Automático (FIFO)</SelectItem>
+                    <SelectItem value="none">🔄 Automático (FIFO) - Alocar lote agora</SelectItem>
+                    <SelectItem value="later" className="font-semibold text-amber-600 dark:text-amber-400">
+                      ⏳ Vincular lote depois (A Separar no PCP)
+                    </SelectItem>
                     {selectedProduct.inventoryLots
                       .map((lot) => {
                         const used = items
@@ -296,7 +311,11 @@ export function AddItemModal({
                   </SelectContent>
                 </Select>
               </div>
-            )}
+            ) : selectedProduct ? (
+              <div className="sm:col-span-12 p-2.5 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20 text-xs text-amber-800 dark:text-amber-300">
+                📦 Este produto não possui lotes cadastrados no momento. O pedido será criado com status <strong>&quot;A Separar&quot;</strong> e os lotes poderão ser vinculados depois na tela de PCP.
+              </div>
+            ) : null}
           </div>
         </div>
 
