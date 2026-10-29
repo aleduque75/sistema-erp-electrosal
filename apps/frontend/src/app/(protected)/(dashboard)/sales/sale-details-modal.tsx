@@ -53,6 +53,8 @@ interface SaleDetailsModalProps {
 
 export function SaleDetailsModal({ sale: initialSale, open, onOpenChange, onSave }: SaleDetailsModalProps) {
   const [sale, setSale] = useState<Sale | null>(null);
+  const [loading, setIsPageLoading] = useState(true);
+  const [transactionToDelete, setTransactionToDelete] = useState<any | null>(null);
   const [isDeletingTransaction, setIsDeletingTransaction] = useState(false);
   const [isSelectLotsModalOpen, setIsSelectLotsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
