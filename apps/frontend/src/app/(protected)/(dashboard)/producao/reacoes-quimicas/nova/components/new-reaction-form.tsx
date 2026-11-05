@@ -39,14 +39,22 @@ import {
 } from "@/components/ui/select";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { MetalLotSelectionModal } from "./metal-lot-selection-modal";
 import { TipoMetal } from "@/types/tipo-metal";
+import { PureMetalLot } from "@/types/pure-metal-lot";
 import { FormCombobox } from "@/components/ui/FormCombobox";
+import {
+  getLotSourceTypeInfo,
+  getLotPartner,
+  getLotDescription,
+  getLotIdentifier,
+} from "@/lib/pure-metal-lot-utils";
 
 // ZOD SCHEMA for the creation step
 const formSchema = z.object({
   reactionDate: z.string().min(1, "Data da reação é obrigatória."),
-  metalType: z.nativeEnum(TipoMetal, { required_error: "Selecione um tipo de metal." }),
+  metalType: z.nativeEnum(TipoMetal),
   notes: z.string().optional(),
   sourceLots: z
     .array(
@@ -91,7 +99,7 @@ export function NewReactionForm() {
   const [rawMaterialsList, setRawMaterialsList] = useState<{ id: string; name: string; unit: string }[]>([]);
 
   const form = useForm<NewReactionFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       reactionDate: new Date().toISOString().split("T")[0],
       metalType: TipoMetal.AU,
@@ -142,6 +150,16 @@ export function NewReactionForm() {
 
   const selectedOutputProductId = form.watch("outputProductId");
   const selectedMetalType = form.watch("metalType");
+
+  const { data: metalLots = [] } = useQuery<PureMetalLot[]>({
+    queryKey: ["metalLots", selectedMetalType],
+    queryFn: async () => {
+      const response = await api.get(`/pure-metal-lots?remainingGramsGt=0&metalType=${selectedMetalType}`);
+      return response.data;
+    },
+    enabled: !!selectedMetalType,
+  });
+
   const sourceLots = form.watch("sourceLots");
   const totalGramsToUse = useMemo(() => {
     return sourceLots.reduce((acc, lot) => acc + (lot.gramsToUse || 0), 0);
@@ -236,7 +254,13 @@ export function NewReactionForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo de Metal</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={(val: any) => {
+                      field.onChange(val);
+                      form.setValue("sourceLots", []);
+                    }}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o metal..." />
@@ -255,71 +279,145 @@ export function NewReactionForm() {
 
             {/* Seção de Insumos */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  Insumos (Entrada de Metal) - Total: {totalGramsToUse.toFixed(3)}g
-                </CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div>
+                  <CardTitle className="text-lg">
+                    Insumos (Entrada de Metal)
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Lotes de metal puro que serão consumidos na reação.
+                  </CardDescription>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-muted-foreground block">Total de Metal:</span>
+                  <span className="text-base font-bold font-mono text-foreground">
+                    {totalGramsToUse.toFixed(3)}g
+                  </span>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {sourceLotFields.map((field, index) => (
-                  <div key={field.id} className="flex items-end gap-2">
-                    <FormField
-                      control={form.control}
-                      name={`sourceLots.${index}.pureMetalLotId`}
-                      render={({ field: lotField }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Lote de Metal</FormLabel>
-                          <Select
-                            onValueChange={lotField.onChange}
-                            defaultValue={lotField.value}
-                            disabled={true}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Lote selecionado..." />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {/* Conteúdo não será usado, pois a seleção é via modal */}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`sourceLots.${index}.gramsToUse`}
-                      render={({ field: quantityField }) => (
-                        <FormItem className="w-32">
-                          <FormLabel>Quantidade (g)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.001"
-                              placeholder="0.000"
-                              {...quantityField}
-                              onChange={(e) =>
-                                quantityField.onChange(
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => removeSourceLot(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                {sourceLotFields.length === 0 ? (
+                  <div className="text-center py-8 border border-dashed rounded-lg text-sm text-muted-foreground bg-muted/20">
+                    <p className="font-medium text-foreground">Nenhum lote de metal selecionado</p>
+                    <p className="text-xs mt-1">Clique no botão abaixo para selecionar os lotes de metal que serão utilizados como insumo.</p>
                   </div>
-                ))}
+                ) : (
+                  <div className="space-y-3">
+                    {sourceLotFields.map((field, index) => {
+                      const lot = metalLots.find((l) => l.id === field.pureMetalLotId);
+                      const typeInfo = getLotSourceTypeInfo(lot?.sourceType);
+                      const identifier = lot ? getLotIdentifier(lot) : `#${field.pureMetalLotId.substring(0, 8)}`;
+                      const partner = lot ? getLotPartner(lot) : "-";
+                      const description = lot ? getLotDescription(lot) : "-";
+                      const dateFormatted =
+                        lot?.entryDate || lot?.createdAt
+                          ? new Date(lot.entryDate || lot.createdAt).toLocaleDateString("pt-BR")
+                          : "";
+
+                      return (
+                        <div
+                          key={field.id}
+                          className="p-3.5 rounded-lg border bg-card/70 hover:bg-card transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs"
+                        >
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-semibold text-sm text-foreground">{identifier}</span>
+                              {lot?.sourceType && (
+                                <Badge
+                                  variant={typeInfo.variant}
+                                  className={`text-[10px] px-2 py-0 ${typeInfo.badgeClass || ""}`}
+                                >
+                                  {typeInfo.label}
+                                </Badge>
+                              )}
+                              {dateFormatted && (
+                                <span className="text-xs text-muted-foreground">{dateFormatted}</span>
+                              )}
+                            </div>
+
+                            <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                              {partner !== "-" && (
+                                <span>
+                                  <strong className="text-foreground">Cliente/Fornecedor:</strong> {partner}
+                                </span>
+                              )}
+                              {partner !== "-" && description !== "-" && <span>•</span>}
+                              {description !== "-" && (
+                                <span className="truncate max-w-[420px]" title={description}>
+                                  {description}
+                                </span>
+                              )}
+                            </div>
+
+                            {lot && (
+                              <div className="text-xs text-muted-foreground">
+                                Disponível no lote:{" "}
+                                <span className="font-mono font-medium text-foreground">
+                                  {lot.remainingGrams.toFixed(3)}g
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                            <FormField
+                              control={form.control}
+                              name={`sourceLots.${index}.gramsToUse`}
+                              render={({ field: quantityField }) => (
+                                <FormItem className="space-y-1">
+                                  <FormLabel className="text-xs font-medium">Qtd a Usar (g)</FormLabel>
+                                  <div className="flex items-center gap-1">
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        step="0.001"
+                                        min="0.001"
+                                        max={lot?.remainingGrams}
+                                        placeholder="0.000"
+                                        value={quantityField.value || ""}
+                                        onChange={(e) =>
+                                          quantityField.onChange(
+                                            parseFloat(e.target.value) || 0
+                                          )
+                                        }
+                                        className="w-28 h-9 text-right font-mono text-sm"
+                                      />
+                                    </FormControl>
+                                    {lot && (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-9 px-2 text-xs font-semibold"
+                                        onClick={() =>
+                                          quantityField.onChange(lot.remainingGrams)
+                                        }
+                                        title="Usar quantidade total disponível"
+                                      >
+                                        Máx
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="mt-5 h-9 w-9 shrink-0"
+                              onClick={() => removeSourceLot(index)}
+                              title="Remover lote"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <Dialog
                   open={isMetalLotModalOpen}
                   onOpenChange={setIsMetalLotModalOpen}
@@ -372,7 +470,7 @@ export function NewReactionForm() {
                           <FormControl>
                             <FormCombobox
                               items={rawMaterialsList.map(rm => ({ value: rm.id, label: `${rm.name} (${rm.unit})` }))}
-                              value={rmField.value}
+                              value={rmField.value || null}
                               onSelect={rmField.onChange}
                               triggerPlaceholder="Selecione..."
                             />

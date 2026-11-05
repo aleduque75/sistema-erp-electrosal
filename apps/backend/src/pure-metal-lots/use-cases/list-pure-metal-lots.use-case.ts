@@ -29,7 +29,9 @@ export class ListPureMetalLotsUseCase {
             }
           }
         } else if (
-          (lot.sourceType === 'SALE_PAYMENT' || lot.sourceType === 'LEGACY_SALE_CORRECTION') &&
+          (lot.sourceType === 'SALE_PAYMENT' ||
+            lot.sourceType === 'LEGACY_SALE_CORRECTION' ||
+            lot.sourceType === 'PAGAMENTO_PEDIDO_CLIENTE') &&
           sale?.pessoa?.name
         ) {
           originDetails.name = sale.pessoa.name;
@@ -49,6 +51,34 @@ export class ListPureMetalLotsUseCase {
             if (reaction.notes) {
               originDetails.name = reaction.notes;
             }
+          }
+        } else if (lot.sourceType === 'SUPPLIER_ACCOUNT_TRANSFER') {
+          const supplierMatch = lot.notes?.match(/Conta Fornecedor\s+([^:]+)/i);
+          if (supplierMatch && supplierMatch[1]) {
+            originDetails.name = supplierMatch[1].trim();
+          }
+        }
+
+        // Fallback for partner/client from notes or description if not populated
+        if (!originDetails.name) {
+          const combined = `${lot.description || ''} ${lot.notes || ''}`;
+          const clientMatch = combined.match(/Cliente:\s*([^\n\r,-]+)/i);
+          if (clientMatch && clientMatch[1]) {
+            originDetails.name = clientMatch[1].trim();
+          } else {
+            const supplierMatch = combined.match(/Conta Fornecedor\s+([^:\n\r-]+)/i);
+            if (supplierMatch && supplierMatch[1]) {
+              originDetails.name = supplierMatch[1].trim();
+            }
+          }
+        }
+
+        // Fallback for orderNumber from notes or description if not populated
+        if (!originDetails.orderNumber) {
+          const combined = `${lot.description || ''} ${lot.notes || ''}`;
+          const orderMatch = combined.match(/(?:Venda|Pedido)\s*#(\d+)/i);
+          if (orderMatch && orderMatch[1]) {
+            originDetails.orderNumber = orderMatch[1].trim();
           }
         }
 
