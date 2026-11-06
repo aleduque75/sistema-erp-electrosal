@@ -11,6 +11,9 @@ export const CurrentUser = createParamDecorator(
     }
 
     if (data) {
+      if (data === 'orgId' || data === 'organizationId') {
+        return request.user.orgId || request.user.organizationId;
+      }
       // Se pedimos uma propriedade específica (como 'id'), retornamos ela
       return request.user[data];
     }

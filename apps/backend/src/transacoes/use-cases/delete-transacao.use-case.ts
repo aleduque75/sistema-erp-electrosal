@@ -12,9 +12,27 @@ export class DeleteTransacaoUseCase {
   ) {}
 
   async execute(id: string, organizationId: string): Promise<void> {
-    const transacao = await this.transacaoRepository.findById(id, organizationId);
+    let transacao = await this.transacaoRepository.findById(id, organizationId);
+    let effectiveOrgId = organizationId;
+
+    if (!transacao && this.prisma) {
+      const rawTx = await this.prisma.transacao.findUnique({
+        where: { id },
+        include: { contaCorrente: true },
+      });
+
+      if (
+        rawTx &&
+        (rawTx.organizationId === organizationId ||
+          rawTx.contaCorrente?.organizationId === organizationId)
+      ) {
+        effectiveOrgId = rawTx.organizationId;
+        transacao = await this.transacaoRepository.findById(id, effectiveOrgId);
+      }
+    }
+
     if (!transacao) {
-      throw new NotFoundException(`Transação com ID ${id} não encontrada.`);
+      throw new NotFoundException(`Transação com ID ${id} não encontrada ou já foi excluída.`);
     }
 
     let saleIdToRecalculate: string | null = null;
@@ -23,7 +41,7 @@ export class DeleteTransacaoUseCase {
       // 1. Verifica se há lote de metal puro gerado a partir desta transação
       const linkedLot = await this.transacaoRepository.findPureMetalLotBySource(
         id,
-        organizationId,
+        effectiveOrgId,
         tx,
       );
 
@@ -41,7 +59,7 @@ export class DeleteTransacaoUseCase {
 
         await this.transacaoRepository.deletePureMetalLotWithMovements(
           linkedLot.id,
-          organizationId,
+          effectiveOrgId,
           tx,
         );
       }
@@ -60,7 +78,7 @@ export class DeleteTransacaoUseCase {
 
         const linked = await this.transacaoRepository.findById(
           linkedId,
-          organizationId,
+          effectiveOrgId,
           tx,
         );
         if (linked) {
@@ -151,7 +169,7 @@ export class DeleteTransacaoUseCase {
 
       if (orderNum) {
         const linkedSale = await this.prisma.sale.findFirst({
-          where: { organizationId, orderNumber: orderNum },
+          where: { organizationId: effectiveOrgId, orderNumber: orderNum },
           select: { id: true },
         });
         if (linkedSale) {
@@ -165,7 +183,7 @@ export class DeleteTransacaoUseCase {
       try {
         await this.calculateSaleAdjustmentUseCase.execute(
           saleIdToRecalculate,
-          organizationId,
+          effectiveOrgId,
         );
       } catch (error) {
         console.warn(`Aviso: Falha ao recalcular ajuste da venda ${saleIdToRecalculate} após exclusão de transação:`, error);

@@ -505,12 +505,24 @@ export default function ExtratoPage() {
 
   const handleDelete = async () => {
     if (!deletingTransacaoId) return;
+    const targetId = deletingTransacaoId;
     try {
-      await api.delete(`/transacoes/${deletingTransacaoId}`);
+      await api.delete(`/transacoes/${targetId}`);
       toast.success("Transação excluída com sucesso!");
+      setDisplayTransacoes((prev) => prev.filter((t) => t.id !== targetId));
       fetchExtrato();
-    } catch (err) {
-      toast.error("Falha ao excluir transação.");
+    } catch (err: any) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Falha ao excluir transação.";
+      toast.error(errorMsg);
+
+      // Se deu 404 (já não existe no banco ou foi excluída previamente), remove da tela para não travar
+      if (err?.response?.status === 404) {
+        setDisplayTransacoes((prev) => prev.filter((t) => t.id !== targetId));
+        fetchExtrato();
+      }
     } finally {
       setIsDeleteModalOpen(false);
       setDeletingTransacaoId(null);
