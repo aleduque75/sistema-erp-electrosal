@@ -68,6 +68,7 @@ interface ContaContabil {
   id: string;
   nome: string;
   codigo: string;
+  aceitaLancamento?: boolean;
 }
 
 interface Fornecedor {
@@ -142,15 +143,10 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
 
   useEffect(() => {
     const fetchContas = async () => {
-      if (tipoLancamento) {
-        const endpoint = `/contas-contabeis?tipo=${tipoLancamento === "CREDITO" ? "RECEITA" : "DESPESA"}`;
-        try {
-          const res = await api.get(endpoint);
-          setContasContabeis(res.data);
-        } catch (error) {
-          setContasContabeis([]);
-        }
-      } else {
+      try {
+        const res = await api.get("/contas-contabeis");
+        setContasContabeis(res.data);
+      } catch (error) {
         setContasContabeis([]);
       }
     };
@@ -252,10 +248,12 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
   };
 
   const filteredOptions = useMemo(() => {
-    return contasContabeis.map((c) => ({
-      value: c.id,
-      label: `${c.codigo} - ${c.nome}`,
-    }));
+    return contasContabeis
+      .filter((c) => c.aceitaLancamento !== false)
+      .map((c) => ({
+        value: c.id,
+        label: `${c.codigo} - ${c.nome}`,
+      }));
   }, [contasContabeis]);
 
   const onSubmit = async (data: FormValues) => {

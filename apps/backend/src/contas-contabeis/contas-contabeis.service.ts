@@ -57,12 +57,11 @@ export class ContasContabeisService {
     };
 
     if (tipo === 'RECEITA') {
-      // Para Receitas, a contrapartida é geralmente uma conta de Receita.
-      where.tipo = { in: ['RECEITA'] };
+      // Para Receitas/Créditos, pode ser Receita, Aporte (Patrimônio Líquido), Empréstimo tomado (Passivo) ou Devolução (Ativo)
+      where.tipo = { in: ['RECEITA', 'PATRIMONIO_LIQUIDO', 'PASSIVO', 'ATIVO'] };
     } else if (tipo === 'DESPESA') {
-      // 👇 CORREÇÃO AQUI 👇
-      // Para Despesas, a contrapartida pode ser uma Despesa ou um Passivo.
-      where.tipo = { in: ['DESPESA', 'PASSIVO'] };
+      // Para Despesas/Débitos, pode ser Despesa, Passivo (fornecedores), Retirada/Pró-labore (Patrimônio Líquido) ou Empréstimo/Adiantamento (Ativo)
+      where.tipo = { in: ['DESPESA', 'PASSIVO', 'PATRIMONIO_LIQUIDO', 'ATIVO'] };
     }
 
     return this.prisma.contaContabil.findMany({
