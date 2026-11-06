@@ -89,8 +89,36 @@ export class DeleteTransacaoUseCase {
           unlinkedOther.linkTransaction(null as any);
           await this.transacaoRepository.update(unlinkedOther, tx);
 
+          // Desvincula foreign keys que apontam para linkedId
+          if (tx.accountPay) {
+            await tx.accountPay.updateMany({
+              where: { transacaoId: linkedId },
+              data: { transacaoId: null },
+            });
+          }
+          if (tx.media) {
+            await tx.media.updateMany({
+              where: { transacaoId: linkedId },
+              data: { transacaoId: null },
+            });
+          }
+
           await this.transacaoRepository.delete(linkedId, tx);
         }
+      }
+
+      // Desvincula foreign keys que apontam para a transação antes da exclusão
+      if (tx.accountPay) {
+        await tx.accountPay.updateMany({
+          where: { transacaoId: id },
+          data: { transacaoId: null },
+        });
+      }
+      if (tx.media) {
+        await tx.media.updateMany({
+          where: { transacaoId: id },
+          data: { transacaoId: null },
+        });
       }
 
       await this.transacaoRepository.delete(id, tx);
@@ -155,39 +183,36 @@ export class DeleteTransacaoUseCase {
       }
     });
 
-    // 4. Se a transação excluída não tinha accountRecId direto, tenta encontrar a venda associada por fitId ou descrição
-    if (!saleIdToRecalculate && this.prisma) {
-      let orderNum: number | null = null;
-      if (transacao.fitId && !isNaN(Number(transacao.fitId))) {
-        orderNum = Number(transacao.fitId);
-      } else if (transacao.descricao) {
+    // 4. Se a transação excluída não tinha accountRecId direto, tenta encontrar a venda associada por número de pedido na descrição (ex: #32045)
+    try {
+      if (!saleIdToRecalculate && this.prisma && transacao.descricao) {
         const match = transacao.descricao.match(/#(\d+)/);
         if (match && match[1]) {
-          orderNum = Number(match[1]);
+          const orderNum = Number(match[1]);
+          if (orderNum > 0 && orderNum <= 2147483647) {
+            const linkedSale = await this.prisma.sale.findFirst({
+              where: { organizationId: effectiveOrgId, orderNumber: orderNum },
+              select: { id: true },
+            });
+            if (linkedSale) {
+              saleIdToRecalculate = linkedSale.id;
+            }
+          }
         }
       }
 
-      if (orderNum) {
-        const linkedSale = await this.prisma.sale.findFirst({
-          where: { organizationId: effectiveOrgId, orderNumber: orderNum },
-          select: { id: true },
-        });
-        if (linkedSale) {
-          saleIdToRecalculate = linkedSale.id;
-        }
-      }
-    }
-
-    // 5. Recalcula os ajustes e lucros da venda após a exclusão
-    if (saleIdToRecalculate && this.calculateSaleAdjustmentUseCase) {
-      try {
+      // 5. Recalcula os ajustes e lucros da venda após a exclusão
+      if (saleIdToRecalculate && this.calculateSaleAdjustmentUseCase) {
         await this.calculateSaleAdjustmentUseCase.execute(
           saleIdToRecalculate,
           effectiveOrgId,
         );
-      } catch (error) {
-        console.warn(`Aviso: Falha ao recalcular ajuste da venda ${saleIdToRecalculate} após exclusão de transação:`, error);
       }
+    } catch (error) {
+      console.warn(
+        `Aviso pós-exclusão: Falha ao recalcular ajuste da transação ${id}:`,
+        error,
+      );
     }
   }
 }

@@ -218,4 +218,35 @@ describe('DeleteTransacaoUseCase', () => {
       'org-1',
     );
   });
+
+  it('should successfully delete an imported bank transaction with numeric fitId without integer overflow', async () => {
+    const tx = TransacaoEntity.create({
+      id: 'tx-ofx-1',
+      tipo: TipoTransacaoPrisma.DEBITO,
+      valor: 47,
+      contaContabilId: 'cc-1',
+      organizationId: 'org-1',
+      fitId: '20260902123456789',
+      descricao: 'PAGAMENTOS BOTECO PRACA DA SE',
+    });
+
+    const mockPrisma = {
+      sale: { findFirst: jest.fn() },
+      accountPay: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      media: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    };
+
+    const useCaseOfx = new DeleteTransacaoUseCase(
+      mockRepository,
+      undefined,
+      mockPrisma as any,
+    );
+
+    mockRepository.findById.mockResolvedValue(tx);
+
+    await expect(useCaseOfx.execute('tx-ofx-1', 'org-1')).resolves.not.toThrow();
+    expect(mockRepository.delete).toHaveBeenCalledWith('tx-ofx-1', expect.anything());
+    // Should NOT have queried sale with the giant bank fitId
+    expect(mockPrisma.sale.findFirst).not.toHaveBeenCalled();
+  });
 });
