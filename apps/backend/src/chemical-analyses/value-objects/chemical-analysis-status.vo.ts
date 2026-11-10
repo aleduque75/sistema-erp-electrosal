@@ -72,7 +72,7 @@ export class ChemicalAnalysisStatusVO {
   }
 
   canPostResult(): boolean {
-    return this.isReceived || this.isInAnalysis;
+    return this.isReceived || this.isInAnalysis || this.isPendingApproval;
   }
 
   canApprove(): boolean {

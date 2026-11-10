@@ -71,14 +71,36 @@ export class PayMetalCreditWithCashUseCase {
         where: { id: bankAccountId },
       });
 
-      if (!bankAccount || !bankAccount.contaContabilId) {
-        throw new NotFoundException(`Conta corrente com ID ${bankAccountId} não encontrada ou não possui conta contábil associada.`);
+      if (!bankAccount) {
+        throw new NotFoundException(`Conta corrente com ID ${bankAccountId} não encontrada.`);
       }
 
       // 5. Get default settings for accounting
       const settings = await this.settingsService.findOne(userId);
-      if (!settings?.metalCreditPayableAccountId) {
-        throw new BadRequestException('Conta contábil para pagamento de crédito de metal não configurada.');
+      const contaContabilId = bankAccount.contaContabilId || settings?.defaultCaixaContaId;
+      if (!contaContabilId) {
+        throw new BadRequestException(
+          `Conta corrente "${bankAccount.nome}" não possui conta contábil associada e não há conta Caixa padrão configurada nas Configurações.`,
+        );
+      }
+
+      let metalCreditPayableAccountId = settings?.metalCreditPayableAccountId;
+      if (!metalCreditPayableAccountId) {
+        const fallbackAcc = await tx.contaContabil.findFirst({
+          where: {
+            organizationId,
+            OR: [
+              { nome: { contains: 'Crédito de Metal', mode: 'insensitive' } },
+              { nome: { contains: 'Credito de Metal', mode: 'insensitive' } },
+              { nome: { contains: 'Passivo', mode: 'insensitive' } },
+            ],
+          },
+        });
+        metalCreditPayableAccountId = fallbackAcc?.id;
+      }
+
+      if (!metalCreditPayableAccountId) {
+        throw new BadRequestException('Conta contábil para pagamento de crédito de metal não configurada nas Configurações.');
       }
 
       const description = `Pagamento do crédito de metal para o cliente ${metalCredit.clientId} [Ref:${metalCreditId}]`;
@@ -91,7 +113,7 @@ export class PayMetalCreditWithCashUseCase {
           valor: finalAmountBRL.toNumber(),
           descricao: description,
           dataHora: transactionDate,
-          contaContabilId: settings.metalCreditPayableAccountId,
+          contaContabilId: metalCreditPayableAccountId,
           goldAmount: gramsToSettle.negated().toNumber(),
           goldPrice: quotationValue.toNumber(),
         },
@@ -106,7 +128,7 @@ export class PayMetalCreditWithCashUseCase {
           valor: finalAmountBRL.toNumber(),
           descricao: description,
           dataHora: transactionDate,
-          contaContabilId: bankAccount.contaContabilId,
+          contaContabilId: contaContabilId,
           contaCorrenteId: bankAccountId,
           goldAmount: gramsToSettle.toNumber(),
           goldPrice: quotationValue.toNumber(),

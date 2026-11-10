@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -66,13 +66,25 @@ export function LancarResultadoModal({
   const form = useForm<LancarResultadoFormData>({
     resolver: zodResolver(lancarResultadoSchema) as any,
     defaultValues: {
-      resultadoAnaliseValor: 0,
-      unidadeResultado: "g/kg", // Unidade padrão mais comum
-      percentualQuebra: 0.05,
-      taxaServicoPercentual: 0.2,
+      resultadoAnaliseValor: analise?.resultadoAnaliseValor ?? 0,
+      unidadeResultado: analise?.unidadeResultado || "g/kg", // Unidade padrão mais comum
+      percentualQuebra: analise?.percentualQuebra ?? 0.05,
+      taxaServicoPercentual: analise?.taxaServicoPercentual ?? 0.2,
       observacoes: analise?.observacoes || "",
     },
   });
+
+  useEffect(() => {
+    if (isOpen && analise) {
+      form.reset({
+        resultadoAnaliseValor: analise.resultadoAnaliseValor ?? 0,
+        unidadeResultado: analise.unidadeResultado ?? "g/kg",
+        percentualQuebra: analise.percentualQuebra ?? 0.05,
+        taxaServicoPercentual: analise.taxaServicoPercentual ?? 0.2,
+        observacoes: analise.observacoes ?? "",
+      });
+    }
+  }, [isOpen, analise, form]);
 
   // --- Lógica para cálculo e exibição do resumo ---
   const watchedValues = form.watch();
@@ -109,7 +121,9 @@ export function LancarResultadoModal({
       onSuccess();
       onOpenChange(false);
     } catch (err: any) {
-      toast.error("Erro ao lançar resultado", { description: err.message });
+      const apiMessage = err?.response?.data?.message || err?.message || "Ocorreu um erro ao lançar resultado.";
+      const description = Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage;
+      toast.error("Erro ao lançar resultado", { description });
     } finally {
       setIsSubmitting(false);
     }

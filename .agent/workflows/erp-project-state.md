@@ -131,6 +131,13 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - **Contraste de Status no Dark Mode:** Atualizados os badges com tons translúcidos e bordas correspondentes (ex: `CANCELADO` corrigido de vermelho sobre vermelho para `text-rose-400 bg-rose-500/10 border-rose-500/30`).
    - **Busca Híbrida no Backend:** `prisma-sale.repository.ts` aprimorado para buscar dinamicamente por número de pedido ou por nome de cliente na mesma barra de busca.
 
+### [10/11/2026]
+1. **Correção de Edição de Resultado em Análises Químicas (`/analises-quimicas`):**
+   - `ChemicalAnalysisStatusVO.canPostResult()` atualizado para permitir o status `ANALISADO_AGUARDANDO_APROVACAO`, permitindo alterar o resultado lançado antes da aprovação final sem gerar erro HTTP 400 (`BadRequestException`).
+   - `LancarResultadoModal.tsx` corrigido com hook `useEffect` para preencher os campos com os valores atuais da análise ao abrir a modalidade de edição, além de exibir mensagens descritivas de erro retornadas pelo backend.
+2. **Melhoria no Pagamento de Crédito de Metal com Dinheiro (`PayMetalCreditWithCashUseCase`):**
+   - Adicionado fallback automático para contas correntes sem conta contábil explícita (utilizando `settings.defaultCaixaContaId`) e para conta contábil de crédito de metal (`settings.metalCreditPayableAccountId` com busca automática por conta do passivo de crédito de metal).
+
 ---
 
 ## 5. 🎯 Diretrizes para o Agente em Novas Sessões
