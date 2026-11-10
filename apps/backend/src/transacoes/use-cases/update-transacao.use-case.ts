@@ -5,6 +5,7 @@ import { UpdateTransacaoDto } from '../dtos/update-transacao.dto';
 import { MediaService } from '../../media/media.service';
 import { CalculateSaleAdjustmentUseCase } from '../../sales/use-cases/calculate-sale-adjustment.use-case';
 import Decimal from 'decimal.js';
+import { parseDateOnlyToSaoPaulo } from '../../common/utils/date-utils';
 
 @Injectable()
 export class UpdateTransacaoUseCase {
@@ -68,7 +69,7 @@ export class UpdateTransacaoUseCase {
       });
 
       if (updatedProps.dataHora) {
-        updatedProps.dataHora = new Date(updatedProps.dataHora);
+        updatedProps.dataHora = parseDateOnlyToSaoPaulo(updatedProps.dataHora);
       }
 
       const updatedEntity = TransacaoEntity.create(updatedProps);

@@ -4,6 +4,7 @@ import { TransacaoEntity } from '../entities/transacao.entity';
 import { CreateTransacaoDto } from '../dtos/create-transacao.dto';
 import { MediaService } from '../../media/media.service';
 import { TipoTransacaoPrisma } from '@prisma/client';
+import { parseDateOnlyToSaoPaulo } from '../../common/utils/date-utils';
 
 @Injectable()
 export class CreateTransacaoUseCase {
@@ -29,7 +30,7 @@ export class CreateTransacaoUseCase {
         ...restData
       } = dto;
 
-      const dataHoraDate = dataHora ? new Date(dataHora) : new Date();
+      const dataHoraDate = parseDateOnlyToSaoPaulo(dataHora);
 
       const transacaoEntity = TransacaoEntity.create({
         ...restData,

@@ -4,6 +4,7 @@ import * as z from "zod";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { useEffect, useState, useMemo } from "react";
+import { formatDateForInput } from "@/lib/date-utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -96,7 +97,7 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      dataHora: new Date().toISOString().split("T")[0],
+      dataHora: formatDateForInput(new Date()),
       tipo: "CREDITO",
       descricao: "",
       valor: 0,
@@ -115,7 +116,7 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
     if (initialData) {
       reset({
         ...initialData,
-        dataHora: initialData.dataHora.split('T')[0],
+        dataHora: formatDateForInput(initialData.dataHora),
         mediaIds: initialData.medias?.map(media => media.id) || [],
         contaCorrenteId: initialData.contaCorrenteId || contaCorrenteId,
       });
@@ -126,7 +127,7 @@ export function TransacaoForm({ contaCorrenteId, onSave, initialData }: Transaca
       }
     } else {
       reset({
-        dataHora: new Date().toISOString().split("T")[0],
+        dataHora: formatDateForInput(new Date()),
         tipo: "CREDITO",
         descricao: "",
         valor: 0,

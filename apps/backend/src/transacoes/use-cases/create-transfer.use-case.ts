@@ -4,6 +4,7 @@ import { TransacaoEntity } from '../entities/transacao.entity';
 import { CreateTransferDto } from '../dtos/create-transfer.dto';
 import { MediaService } from '../../media/media.service';
 import { TipoTransacaoPrisma } from '@prisma/client';
+import { parseDateOnlyToSaoPaulo } from '../../common/utils/date-utils';
 
 @Injectable()
 export class CreateTransferUseCase {
@@ -25,7 +26,7 @@ export class CreateTransferUseCase {
     } = dto;
 
     let { amount, goldAmount, quotation } = dto;
-    const dataHoraDate: Date = dto.dataHora ? new Date(dto.dataHora) : new Date();
+    const dataHoraDate: Date = parseDateOnlyToSaoPaulo(dto.dataHora);
 
     if (!amount && !goldAmount) {
       throw new BadRequestException('É necessário fornecer o valor em BRL ou em metal.');

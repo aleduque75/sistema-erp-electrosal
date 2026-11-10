@@ -10,6 +10,7 @@ import { Decimal } from 'decimal.js';
 import { SettingsService } from '../../settings/settings.service';
 import { CalculateSaleAdjustmentUseCase } from '../../sales/use-cases/calculate-sale-adjustment.use-case';
 import { CreatePureMetalLotUseCase } from '../../pure-metal-lots/use-cases/create-pure-metal-lot.use-case';
+import { parseDateOnlyToSaoPaulo } from '../../common/utils/date-utils';
 
 enum TipoTransacaoPrisma {
   CREDITO = 'CREDITO',
@@ -129,7 +130,7 @@ export class HybridReceiveUseCase {
           await tx.metalAccountEntry.create({
             data: {
               metalAccountId: targetMetalAccount.id,
-              date: new Date(dto.receivedAt),
+              date: parseDateOnlyToSaoPaulo(dto.receivedAt),
               description: `Pagamento de crédito de metal via transferência [Ref:${targetMetalCredit.id}] - Venda #${accountRec.sale?.orderNumber || accountRec.description}`,
               grams: transferGrams.negated().toDecimalPlaces(4).toNumber(), // Débito na conta de metal do cliente
               type: 'TRANSFER_IN', // Tipo alterado para indicar entrada de recursos
@@ -145,7 +146,7 @@ export class HybridReceiveUseCase {
               contaContabilId: settings.metalCreditPayableAccountId!, // Conta de passivo do crédito de metal
               valor: transferValueBRL.toNumber(),
               goldAmount: transferGrams.negated().toDecimalPlaces(4).toNumber(), // Ouro sai do passivo da empresa
-              dataHora: new Date(dto.receivedAt),
+              dataHora: parseDateOnlyToSaoPaulo(dto.receivedAt),
               descricao: `Transferência de recebimento de Venda #${accountRec.sale?.orderNumber || accountRec.description} para pagar Crédito de Metal (${targetMetalCredit.clientId})`,
               tipo: TipoTransacaoPrisma.DEBITO,
               moeda: 'BRL',
@@ -162,7 +163,7 @@ export class HybridReceiveUseCase {
               contaContabilId: settings.defaultReceitaContaId!, // Conta de Receita (ou uma de Compensação se definida)
               valor: transferValueBRL.toNumber(),
               goldAmount: transferGrams.toDecimalPlaces(4).toNumber(), // Ouro "entra" na receita da empresa
-              dataHora: new Date(dto.receivedAt),
+              dataHora: parseDateOnlyToSaoPaulo(dto.receivedAt),
               descricao: `Recebimento de Transferência para Crédito de Metal (${targetMetalCredit.clientId}) da Venda #${accountRec.sale?.orderNumber || accountRec.description}`,
               tipo: TipoTransacaoPrisma.CREDITO,
               moeda: 'BRL',
@@ -189,7 +190,7 @@ export class HybridReceiveUseCase {
 
       if (dto.financialPayments && dto.financialPayments.length > 0) {
         for (const payment of dto.financialPayments) {
-          const paymentDate = payment.receivedAt ? new Date(payment.receivedAt) : new Date(dto.receivedAt);
+          const paymentDate = parseDateOnlyToSaoPaulo(payment.receivedAt || dto.receivedAt);
           const paymentQuotation = payment.quotation ? new Decimal(payment.quotation) : new Decimal(dto.quotation || 0);
 
           if (paymentQuotation.isZero() && totalPaidGoldForAccountRec.gt(0)) {
@@ -235,7 +236,7 @@ export class HybridReceiveUseCase {
           );
         }
         for (const payment of dto.metalCreditPayments) {
-          const paymentDate = payment.receivedAt ? new Date(payment.receivedAt) : new Date(dto.receivedAt);
+          const paymentDate = parseDateOnlyToSaoPaulo(payment.receivedAt || dto.receivedAt);
           const paymentQuotation = payment.quotation ? new Decimal(payment.quotation) : new Decimal(dto.quotation || 0);
 
           if (paymentQuotation.isZero()) {
@@ -319,7 +320,7 @@ export class HybridReceiveUseCase {
           throw new BadRequestException('Pagamentos com metal físico só podem ser aplicados a contas a receber de vendas.');
         }
         for (const payment of dto.metalPayments) {
-          const paymentDate = payment.receivedAt ? new Date(payment.receivedAt) : new Date(dto.receivedAt);
+          const paymentDate = parseDateOnlyToSaoPaulo(payment.receivedAt || dto.receivedAt);
           const paymentQuotation = payment.quotation ? new Decimal(payment.quotation) : new Decimal(dto.quotation || 0);
 
           if (paymentQuotation.isZero()) {
@@ -382,7 +383,7 @@ export class HybridReceiveUseCase {
             where: { id: dto.installmentId },
             data: {
               status: 'PAID',
-              paidAt: new Date(dto.receivedAt),
+              paidAt: parseDateOnlyToSaoPaulo(dto.receivedAt),
             }
           });
         } else {
@@ -400,7 +401,7 @@ export class HybridReceiveUseCase {
             if (remainingAmortization.gte(instAmount.minus(0.01))) {
               await tx.saleInstallment.update({
                 where: { id: inst.id },
-                data: { status: 'PAID', paidAt: new Date(dto.receivedAt) },
+                data: { status: 'PAID', paidAt: parseDateOnlyToSaoPaulo(dto.receivedAt) },
               });
               remainingAmortization = remainingAmortization.minus(instAmount);
             } else if (remainingAmortization.gt(0.01)) {
@@ -424,13 +425,13 @@ export class HybridReceiveUseCase {
       if (isFullyPaid) {
         await tx.accountRec.update({
           where: { id: accountRec.id },
-          data: { received: true, receivedAt: new Date(dto.receivedAt) },
+          data: { received: true, receivedAt: parseDateOnlyToSaoPaulo(dto.receivedAt) },
         });
 
         // Sincronizar o status da parcela da venda (SaleInstallment) vinculada a esta duplicata
         await tx.saleInstallment.updateMany({
           where: { accountRecId: accountRec.id },
-          data: { status: 'PAID', paidAt: new Date(dto.receivedAt) },
+          data: { status: 'PAID', paidAt: parseDateOnlyToSaoPaulo(dto.receivedAt) },
         });
 
         if (accountRec.saleId) {

@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import * as Handlebars from 'handlebars';
 import { Decimal } from 'decimal.js';
+import { formatDate, formatDateTime } from '../../common/utils/date-utils';
 
 export interface GenerateSelectedExtratoPdfCommand {
   transactionIds: string[];
@@ -126,7 +127,7 @@ export class GenerateSelectedExtratoPdfUseCase {
         }
 
         return {
-            date: format(new Date(t.dataHora), 'dd/MM/yy', { locale: ptBR }),
+            date: formatDate(t.dataHora, 'dd/MM/yy'),
             description,
             entityName,
             quotation: t.goldPrice ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.goldPrice)) : '-',
@@ -153,7 +154,7 @@ export class GenerateSelectedExtratoPdfUseCase {
 
     const templateData = {
       logoUrl,
-      currentDate: format(new Date(), 'dd/MM/yy HH:mm', { locale: ptBR }),
+      currentDate: formatDateTime(new Date(), 'dd/MM/yy HH:mm'),
       accountName: contaCorrente.nome,
       accountNumber: contaCorrente.numeroConta,
       totalBRL: totalBRL.toNumber(),

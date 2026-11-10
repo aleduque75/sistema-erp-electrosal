@@ -12,6 +12,7 @@ import * as path from 'path';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import * as Handlebars from 'handlebars';
+import { formatDate, formatDateTime } from '../../common/utils/date-utils';
 
 export interface GenerateExtratoPdfCommand {
   contaCorrenteId: string;
@@ -136,7 +137,7 @@ export class GenerateExtratoPdfUseCase {
         }
 
         return {
-            date: format(new Date(t.dataHora), 'dd/MM/yy', { locale: ptBR }),
+            date: formatDate(t.dataHora, 'dd/MM/yy'),
             description,
             entityName,
             quotation: t.goldPrice ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.goldPrice)) : '-',
@@ -149,12 +150,12 @@ export class GenerateExtratoPdfUseCase {
 
     const templateData = {
       logoUrl,
-      currentDate: format(new Date(), 'dd/MM/yy HH:mm', { locale: ptBR }),
+      currentDate: formatDateTime(new Date(), 'dd/MM/yy HH:mm'),
       accountName: extratoData.contaCorrente.nome,
       accountNumber: extratoData.contaCorrente.numeroConta,
       currency: extratoData.contaCorrente.moeda,
-      startDate: format(startDate, 'dd/MM/yy'),
-      endDate: format(endDate, 'dd/MM/yy'),
+      startDate: formatDate(startDate, 'dd/MM/yy'),
+      endDate: formatDate(endDate, 'dd/MM/yy'),
       
       saldoAnteriorBRL: extratoData.saldoAnteriorBRL,
       saldoAnteriorGold: extratoData.saldoAnteriorGold,

@@ -8,6 +8,7 @@ import Link from "next/link";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { subDays, format } from "date-fns";
+import { formatDateForInput, BRAZIL_TIMEZONE } from "@/lib/date-utils";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -122,19 +123,35 @@ const formatGold = (value?: number | null) => {
   return `${value.toFixed(2).replace(".", ",")} g`;
 };
 
-const formatDateOnly = (dateString?: string | null) =>
-  dateString
-    ? new Date(dateString).toLocaleDateString("pt-BR", {
+const formatDateOnly = (dateString?: string | null) => {
+  if (!dateString) return "N/A";
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return "N/A";
+    // Se for meia-noite UTC (00:00:00Z), preserva dia/mês/ano sem subtrair timezone
+    if (d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0) {
+      return d.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+        timeZone: "UTC",
+      });
+    }
+    // Para timestamps completos, converte no fuso de São Paulo
+    return d.toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "2-digit",
-      timeZone: "UTC",
-    })
-    : "N/A";
+      timeZone: BRAZIL_TIMEZONE,
+    });
+  } catch {
+    return "N/A";
+  }
+};
 
 const formatDateTime = (dateString?: string | null) =>
   dateString
-    ? new Date(dateString).toLocaleString("pt-BR", { timeZone: "UTC" })
+    ? new Date(dateString).toLocaleString("pt-BR", { timeZone: BRAZIL_TIMEZONE })
     : "N/A";
 
 // Define o TIPO STRING LITERAL do Enum para uso nas interfaces
@@ -195,9 +212,9 @@ export default function ExtratoPage() {
   const [isFetching, setIsFetching] = useState(true);
 
   const [startDate, setStartDate] = useState(
-    format(subDays(new Date(), 30), "yyyy-MM-dd")
+    formatDateForInput(subDays(new Date(), 30))
   );
-  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(formatDateForInput(new Date()));
 
   const [currencyView, setCurrencyView] = useState<"BRL" | "GOLD">(mode === "GOLD" ? "GOLD" : "BRL");
 

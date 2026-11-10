@@ -20,8 +20,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ContaCorrenteType } from '@prisma/client'; // Adicionado
 import { GenerateExtratoPdfUseCase } from './use-cases/generate-extrato-pdf.use-case';
-
 import { GenerateSelectedExtratoPdfUseCase } from './use-cases/generate-selected-extrato-pdf.use-case';
+import { parseDateRangeFilter } from '../common/utils/date-utils';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('contas-correntes')
@@ -57,31 +57,7 @@ export class ContasCorrentesController {
     @Query('startDate') startDateString?: string,
     @Query('endDate') endDateString?: string,
   ) {
-    let startDate: Date;
-    let endDate: Date;
-
-    if (startDateString) {
-      startDate = new Date(startDateString.includes('T') ? startDateString : `${startDateString}T00:00:00`);
-    } else {
-      const now = new Date();
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    }
-
-    if (endDateString) {
-      endDate = new Date(endDateString.includes('T') ? endDateString : `${endDateString}T23:59:59.999`);
-    } else {
-      endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
-    }
-
-    // Validação para evitar 'Invalid Date'
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      const now = new Date();
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-      endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
-    }
-
+    const { startDate, endDate } = parseDateRangeFilter(startDateString, endDateString);
     return this.service.getExtrato(organizationId, id, startDate, endDate);
   }
 
@@ -94,29 +70,7 @@ export class ContasCorrentesController {
     @Query('endDate') endDateString?: string,
     @Query('omitirPedidos') omitirPedidosString?: string,
   ) {
-    let startDate: Date;
-    let endDate: Date;
-
-    if (startDateString) {
-      startDate = new Date(startDateString.includes('T') ? startDateString : `${startDateString}T00:00:00`);
-    } else {
-      const now = new Date();
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    }
-
-    if (endDateString) {
-      endDate = new Date(endDateString.includes('T') ? endDateString : `${endDateString}T23:59:59.999`);
-    } else {
-      endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
-    }
-
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      const now = new Date();
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-      endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
-    }
+    const { startDate, endDate } = parseDateRangeFilter(startDateString, endDateString);
 
     const pdfBuffer = await this.generateExtratoPdfUseCase.execute({
         contaCorrenteId: id,

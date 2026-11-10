@@ -11,6 +11,7 @@ import { ReceivePaymentDto } from '../dtos/account-rec.dto';
 import { TipoTransacaoPrisma, TipoMetal, SaleInstallmentStatus } from '@prisma/client';
 import { startOfDay } from 'date-fns';
 import Decimal from 'decimal.js';
+import { parseDateOnlyToSaoPaulo } from '../../common/utils/date-utils';
 
 @Injectable()
 export class ReceiveAccountRecPaymentUseCase {
@@ -48,12 +49,7 @@ export class ReceiveAccountRecPaymentUseCase {
         );
       }
 
-      let receivedAt: Date;
-      if (data.receivedAt && typeof data.receivedAt === 'string' && data.receivedAt.trim().length > 0) {
-        receivedAt = new Date(`${data.receivedAt}T12:00:00`);
-      } else {
-        receivedAt = new Date();
-      }
+      const receivedAt: Date = parseDateOnlyToSaoPaulo(data.receivedAt);
 
       let paymentQuotation: Decimal | null = accountToReceive.sale?.goldPrice ?? null;
       if (!paymentQuotation || paymentQuotation.isZero()) {

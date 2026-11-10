@@ -7,6 +7,7 @@ import { PayAccountsRecWithMetalDto } from '../dtos/pay-accounts-rec-with-metal.
 import { Decimal } from 'decimal.js';
 import { TipoTransacaoPrisma, SaleStatus } from '@prisma/client';
 import { CreatePureMetalLotUseCase } from '../../pure-metal-lots/use-cases/create-pure-metal-lot.use-case';
+import { parseDateOnlyToSaoPaulo } from '../../common/utils/date-utils';
 
 @Injectable()
 export class PayAccountsRecWithMetalUseCase {
@@ -27,7 +28,7 @@ organizationId: string,
     dto: PayAccountsRecWithMetalDto,
   ): Promise<{ accountRec: any, overpayment: number }> {
     const { metalType, amountInGrams, quotation, purity, receivedAt } = dto;
-    const paymentDate = receivedAt ? new Date(receivedAt) : new Date();
+    const paymentDate = parseDateOnlyToSaoPaulo(receivedAt);
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Find AccountsReceivable and include related sale and person

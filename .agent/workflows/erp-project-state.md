@@ -144,6 +144,12 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
 4. **Opção de Extrato para Cliente (Substituição de Pedidos/Clientes por "Depósito Acerto"):**
    - Backend: Suporte a `omitirPedidos` nos endpoints `GET /contas-correntes/:id/extrato/pdf` e `POST /contas-correntes/extrato/pdf/selected`. Quando ativo, substitui descrições que expõem vendas/pedidos de terceiros (ex: "Recebimento Ref. Receber de GEMAS DO MUNDO...") por "Depósito Acerto" e oculta a linha secundária contábil.
    - Frontend (`contas-correntes/[id]/extrato/page.tsx`): Adicionado menu dropdown nos botões de PDF ("Extrato Padrão" vs "Extrato p/ Cliente (Depósito Acerto)") e checkbox no painel de filtros para acionamento direto.
+5. **Correção Global de Datas e Fuso Horário de São Paulo / Brasília (UTC-3):**
+   - **Bug do Dia Anterior em Pagamentos / Extrato:** Quando datas no formato `YYYY-MM-DD` eram convertidas diretamente via `new Date("YYYY-MM-DD")`, o JavaScript criava instâncias à meia-noite UTC (`00:00:00.000Z`). Em São Paulo (UTC-3), isso subtraía 3 horas (21:00 do dia anterior), fazendo com que pagamentos de `10/11` fossem gravados/exibidos como `09/11` e ficassem fora do filtro do extrato.
+   - **Utilitário Backend (`apps/backend/src/common/utils/date-utils.ts`):** Criados métodos `parseDateOnlyToSaoPaulo`, `parseDateRangeFilter`, `formatDate` e `formatDateTime` com detecção de meia-noite UTC para evitar perda de dia e formatação estrita no fuso `America/Sao_Paulo`.
+   - **Casos de Uso de Pagamento e Transação:** Atualizados `hybrid-receive.use-case.ts`, `create-transacao.use-case.ts`, `create-transfer.use-case.ts`, `update-transacao.use-case.ts`, `pay-accounts-rec-with-metal-credit.use-case.ts`, `pay-accounts-rec-with-metal.use-case.ts` e `receive-account-rec-payment.use-case.ts` para usar `parseDateOnlyToSaoPaulo`.
+   - **Geração de PDFs:** Atualizados `generate-extrato-pdf.use-case.ts`, `generate-selected-extrato-pdf.use-case.ts`, `generate-chemical-analysis-pdf.use-case.ts` e `generate-chemical-reaction-pdf.use-case.ts` para usar `formatDate` e `formatDateTime` no fuso de São Paulo sem retrocesso de dia.
+   - **Filtros e Formulários Frontend:** `extrato/page.tsx`, `transacao-form.tsx` e `receive-payment-form.tsx` ajustados para usar `formatDateForInput` no fuso de Brasília, eliminando o problema de `toISOString().split('T')[0]` avançar para o dia seguinte quando usado à noite.
 
 ---
 

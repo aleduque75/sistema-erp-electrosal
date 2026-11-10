@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import * as Handlebars from 'handlebars';
 import { ChemicalReactionStatusPrisma } from '@prisma/client';
+import { formatDate } from '../../common/utils/date-utils';
 
 export interface GenerateChemicalReactionPdfCommand {
   reactionId: string;
@@ -44,13 +45,7 @@ export class GenerateChemicalReactionPdfUseCase {
     if (!Handlebars.helpers.formatDate) {
       Handlebars.registerHelper('formatDate', (data) => {
         if (!data) return '-';
-        try {
-          const dateObj = new Date(data);
-          if (isNaN(dateObj.getTime())) return '-';
-          return format(dateObj, 'dd/MM/yyyy', { locale: ptBR });
-        } catch (e) {
-          return '-';
-        }
+        return formatDate(data, 'dd/MM/yyyy');
       });
     }
   }

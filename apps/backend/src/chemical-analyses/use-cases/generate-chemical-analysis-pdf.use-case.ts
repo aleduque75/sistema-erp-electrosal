@@ -11,6 +11,7 @@ import * as path from 'path';
 import { format } from 'date-fns';
 import { Buffer } from 'buffer';
 import * as Handlebars from 'handlebars';
+import { formatDate } from '../../common/utils/date-utils';
 
 export interface GenerateChemicalAnalysisPdfCommand {
   analiseId: string;
@@ -37,13 +38,7 @@ export class GenerateChemicalAnalysisPdfUseCase {
 
     Handlebars.registerHelper('formatarData', (data) => {
       if (!data) return 'N/A';
-      try {
-        const dateObj = new Date(data);
-        if (isNaN(dateObj.getTime())) return 'Data inválida';
-        return format(dateObj, 'dd/MM/yyyy');
-      } catch (e) {
-        return '';
-      }
+      return formatDate(data, 'dd/MM/yyyy');
     });
 
     Handlebars.registerHelper('formatarPercentual', (valor) => {

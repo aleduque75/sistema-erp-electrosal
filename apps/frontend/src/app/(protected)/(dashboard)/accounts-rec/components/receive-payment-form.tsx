@@ -15,7 +15,7 @@ import { Trash2 } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AddPaymentDialog } from "./add-payment-dialog"; // Import the new dialog component
-import { formatDate } from "@/lib/date-utils";
+import { formatDate, formatDateForInput } from "@/lib/date-utils";
 
 // Interfaces
 import { SaleInstallment } from '@/types/sale';
@@ -131,7 +131,7 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      receivedAt: new Date().toISOString().split("T")[0],
+      receivedAt: formatDateForInput(new Date()),
       quotationBuyPrice: 0,
       financialPayments: [],
       metalCreditPayments: [],
@@ -266,7 +266,7 @@ export function ReceivePaymentForm({ accountRec: rawAccountRec, onSave }: Receiv
     if (selectedInstallmentId && accountRec.saleInstallments) {
       const selected = accountRec.saleInstallments.find(inst => inst.id === selectedInstallmentId);
       if (selected) {
-        const dueDate = new Date(selected.dueDate).toISOString().split("T")[0];
+        const dueDate = formatDateForInput(selected.dueDate);
         form.setValue("financialPayments", [{
           amount: parseFloat(Number(selected.amount).toFixed(2)),
           contaCorrenteId: form.getValues("financialPayments.0.contaCorrenteId") || "",

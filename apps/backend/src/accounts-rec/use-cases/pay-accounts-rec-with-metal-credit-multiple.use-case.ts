@@ -19,6 +19,7 @@ import { PayAccountsRecWithMetalCreditMultipleDto } from '../dtos/pay-accounts-r
 import { Decimal } from 'decimal.js';
 import { TipoTransacaoPrisma, SaleStatus } from '@prisma/client';
 import { UniqueEntityID } from '@sistema-erp-electrosal/core';
+import { parseDateOnlyToSaoPaulo } from '../../common/utils/date-utils';
 
 @Injectable()
 export class PayAccountsRecWithMetalCreditMultipleUseCase {
@@ -47,7 +48,7 @@ export class PayAccountsRecWithMetalCreditMultipleUseCase {
       `[PayWithMetalCreditMultiple] Starting for accountsRecId: ${accountsRecId}`,
     );
     const { payments, quotationId, customBuyPrice, receivedAt } = dto;
-    const paymentDate = receivedAt ? new Date(receivedAt) : new Date();
+    const paymentDate = parseDateOnlyToSaoPaulo(receivedAt);
 
     return this.prisma.$transaction(async (tx) => {
       this.logger.debug(`[PayWithMetalCreditMultiple] Transaction started.`);

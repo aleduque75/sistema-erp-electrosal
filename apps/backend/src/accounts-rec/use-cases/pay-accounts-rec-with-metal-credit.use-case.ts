@@ -8,6 +8,7 @@ import { PayAccountsRecWithMetalCreditDto } from '../dtos/pay-accounts-rec-with-
 import { Decimal } from 'decimal.js';
 import { TipoTransacaoPrisma, TipoMetal, SaleStatus } from '@prisma/client';
 import { UniqueEntityID } from '@sistema-erp-electrosal/core';
+import { parseDateOnlyToSaoPaulo } from '../../common/utils/date-utils';
 
 @Injectable()
 export class PayAccountsRecWithMetalCreditUseCase {
@@ -30,7 +31,7 @@ export class PayAccountsRecWithMetalCreditUseCase {
   ): Promise<any> {
     this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] Starting execution for accountsRecId: ${accountsRecId}, organizationId: ${organizationId}`);
     const { metalCreditId, amountInGrams, quotationId, customBuyPrice, receivedAt } = dto;
-    const paymentDate = receivedAt ? new Date(receivedAt) : new Date();
+    const paymentDate = parseDateOnlyToSaoPaulo(receivedAt);
 
     return this.prisma.$transaction(async (tx) => {
       this.logger.debug(`[PayAccountsRecWithMetalCreditUseCase] Transaction started.`);
