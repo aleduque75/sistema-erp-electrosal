@@ -92,6 +92,7 @@ export class ContasCorrentesController {
     @Res() res: Response,
     @Query('startDate') startDateString?: string,
     @Query('endDate') endDateString?: string,
+    @Query('omitirPedidos') omitirPedidosString?: string,
   ) {
     let startDate: Date;
     let endDate: Date;
@@ -121,7 +122,8 @@ export class ContasCorrentesController {
         contaCorrenteId: id,
         organizationId,
         startDate,
-        endDate
+        endDate,
+        omitirPedidos: omitirPedidosString === 'true',
     });
 
     res.set({
@@ -138,10 +140,12 @@ export class ContasCorrentesController {
     @CurrentUser('orgId') organizationId: string,
     @Res() res: Response,
     @Body('transactionIds') transactionIds: string[],
+    @Body('omitirPedidos') omitirPedidos?: boolean,
   ) {
     const pdfBuffer = await this.generateSelectedExtratoPdfUseCase.execute({
       transactionIds,
       organizationId,
+      omitirPedidos: Boolean(omitirPedidos),
     });
 
     res.set({

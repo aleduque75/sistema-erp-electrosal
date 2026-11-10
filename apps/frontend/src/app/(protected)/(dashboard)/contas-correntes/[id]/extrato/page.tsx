@@ -30,6 +30,8 @@ import {
   Scale,
   FileText,
   ArrowUpDown,
+  ChevronDown,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Select,
@@ -233,6 +235,7 @@ export default function ExtratoPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<TransacaoExtrato | null>(null); // Adicionar estado
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false); // Adicionar estado
   const [isAdjusting, setIsAdjusting] = useState(false);
+  const [omitirPedidosNoPdf, setOmitirPedidosNoPdf] = useState(false);
 
   const hasGoldResidue = useMemo(() => {
     if (!extrato) return false;
@@ -566,9 +569,13 @@ export default function ExtratoPage() {
     return result;
   }, [displayTransacoes, tipoFilter, descriptionFilter, sortOrder]);
 
-  const handleGeneratePdf = async () => {
+  const handleGeneratePdf = async (forceOmitir?: boolean) => {
+    const shouldOmit = forceOmitir !== undefined ? forceOmitir : omitirPedidosNoPdf;
     try {
       const queryParams = new URLSearchParams({ startDate, endDate });
+      if (shouldOmit) {
+        queryParams.set("omitirPedidos", "true");
+      }
       const response = await api.get(
         `/contas-correntes/${id}/extrato/pdf?${queryParams.toString()}`,
         { responseType: "blob" }
@@ -577,7 +584,7 @@ export default function ExtratoPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `extrato-${id}.pdf`);
+      link.setAttribute('download', `extrato-${id}${shouldOmit ? '-cliente' : ''}.pdf`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -587,22 +594,23 @@ export default function ExtratoPage() {
     }
   };
 
-  const handleGenerateSelectedPdf = async () => {
+  const handleGenerateSelectedPdf = async (forceOmitir?: boolean) => {
     if (selectedIds.length === 0) {
       toast.error("Selecione as transações para imprimir.");
       return;
     }
+    const shouldOmit = forceOmitir !== undefined ? forceOmitir : omitirPedidosNoPdf;
     try {
       const response = await api.post(
         `/contas-correntes/extrato/pdf/selected`,
-        { transactionIds: selectedIds },
+        { transactionIds: selectedIds, omitirPedidos: shouldOmit },
         { responseType: "blob" }
       );
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `extrato-selecionado.pdf`);
+      link.setAttribute('download', `extrato-selecionado${shouldOmit ? '-cliente' : ''}.pdf`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -649,9 +657,21 @@ export default function ExtratoPage() {
                   <Button variant="outline" size="icon" onClick={fetchExtrato} title="Atualizar">
                     <RefreshCw className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="icon" onClick={handleGeneratePdf} title="PDF">
-                    <FileText className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" title="Imprimir PDF">
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64">
+                      <DropdownMenuItem onClick={() => handleGeneratePdf(false)}>
+                        <FileText className="mr-2 h-4 w-4 text-muted-foreground" /> Extrato Padrão
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleGeneratePdf(true)}>
+                        <ShieldCheck className="mr-2 h-4 w-4 text-emerald-600" /> Extrato p/ Cliente (Depósito Acerto)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
@@ -663,9 +683,22 @@ export default function ExtratoPage() {
                   <Button variant="outline" size="sm" onClick={fetchExtrato}>
                     <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleGeneratePdf}>
-                    <FileText className="mr-2 h-4 w-4" /> PDF
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <FileText className="mr-1 h-4 w-4" /> PDF
+                        <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64">
+                      <DropdownMenuItem onClick={() => handleGeneratePdf(false)}>
+                        <FileText className="mr-2 h-4 w-4 text-muted-foreground" /> Extrato Padrão
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleGeneratePdf(true)}>
+                        <ShieldCheck className="mr-2 h-4 w-4 text-emerald-600" /> Extrato p/ Cliente (Depósito Acerto)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 <Button
@@ -772,6 +805,20 @@ export default function ExtratoPage() {
                 className="h-9 focus-visible:ring-primary"
               />
             </div>
+          </div>
+
+          <div className="flex items-center space-x-2 my-2 px-1">
+            <Checkbox
+              id="omitirPedidosCheckbox"
+              checked={omitirPedidosNoPdf}
+              onCheckedChange={(c) => setOmitirPedidosNoPdf(Boolean(c))}
+            />
+            <Label
+              htmlFor="omitirPedidosCheckbox"
+              className="text-xs font-normal cursor-pointer text-muted-foreground flex items-center gap-1.5"
+            >
+              <span>Omitir detalhes de pedidos/clientes no PDF (exibir como <strong>"Depósito Acerto"</strong>)</span>
+            </Label>
           </div>
 
           {selectedIds.length > 0 && (
@@ -881,15 +928,27 @@ export default function ExtratoPage() {
                   </AlertDescription>
                 </Alert>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="mb-4"
-                onClick={handleGenerateSelectedPdf}
-                disabled={selectedIds.length === 0}
-              >
-                <FileText className="mr-2 h-4 w-4" /> Imprimir Selecionados
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mb-4 gap-1"
+                    disabled={selectedIds.length === 0}
+                  >
+                    <FileText className="mr-2 h-4 w-4" /> Imprimir Selecionados
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  <DropdownMenuItem onClick={() => handleGenerateSelectedPdf(false)}>
+                    <FileText className="mr-2 h-4 w-4 text-muted-foreground" /> Extrato Padrão
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleGenerateSelectedPdf(true)}>
+                    <ShieldCheck className="mr-2 h-4 w-4 text-emerald-600" /> Extrato p/ Cliente (Depósito Acerto)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* Desktop Table View */}
               <div className="hidden md:block overflow-x-auto rounded-xl border border-border/50 bg-background shadow-sm">

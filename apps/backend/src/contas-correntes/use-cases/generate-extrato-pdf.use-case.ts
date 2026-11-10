@@ -18,6 +18,7 @@ export interface GenerateExtratoPdfCommand {
   organizationId: string;
   startDate: Date;
   endDate: Date;
+  omitirPedidos?: boolean;
 }
 
 @Injectable()
@@ -119,9 +120,24 @@ export class GenerateExtratoPdfUseCase {
         else if (t.contrapartida?.contaCorrente?.nome) entityName = `Transferência: ${t.contrapartida.contaCorrente.nome}`;
         else if (t.contaContabilNome) entityName = t.contaContabilNome;
 
+        let description = t.descricao;
+        if (command.omitirPedidos) {
+          const isOrderReceipt =
+            Boolean((t as any).sale || (t as any).accountRecId) ||
+            /recebimento.*(?:receber de|venda\s*#|pedido\s*#)/i.test(description || '') ||
+            /receber de.*(?:venda\s*#|pedido\s*#)/i.test(description || '') ||
+            /venda\s*#\d+/i.test(description || '') ||
+            /pedido\s*#\d+/i.test(description || '');
+
+          if (isOrderReceipt) {
+            description = 'Depósito Acerto';
+            entityName = '';
+          }
+        }
+
         return {
             date: format(new Date(t.dataHora), 'dd/MM/yy', { locale: ptBR }),
-            description: t.descricao,
+            description,
             entityName,
             quotation: t.goldPrice ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.goldPrice)) : '-',
             amountBRL: t.tipo === 'DEBITO' ? -valorBRL : valorBRL,

@@ -18,6 +18,7 @@ import { Decimal } from 'decimal.js';
 export interface GenerateSelectedExtratoPdfCommand {
   transactionIds: string[];
   organizationId: string;
+  omitirPedidos?: boolean;
 }
 
 @Injectable()
@@ -109,9 +110,24 @@ export class GenerateSelectedExtratoPdfUseCase {
         else if (t.linkedTransaction?.contaCorrente?.nome) entityName = `Transferência: ${t.linkedTransaction.contaCorrente.nome}`;
         else if (t.contaContabil?.nome) entityName = t.contaContabil.nome;
 
+        let description = t.descricao;
+        if (command.omitirPedidos) {
+          const isOrderReceipt =
+            Boolean(t.accountRecId) ||
+            /recebimento.*(?:receber de|venda\s*#|pedido\s*#)/i.test(description || '') ||
+            /receber de.*(?:venda\s*#|pedido\s*#)/i.test(description || '') ||
+            /venda\s*#\d+/i.test(description || '') ||
+            /pedido\s*#\d+/i.test(description || '');
+
+          if (isOrderReceipt) {
+            description = 'Depósito Acerto';
+            entityName = '';
+          }
+        }
+
         return {
             date: format(new Date(t.dataHora), 'dd/MM/yy', { locale: ptBR }),
-            description: t.descricao,
+            description,
             entityName,
             quotation: t.goldPrice ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.goldPrice)) : '-',
             amountBRL: t.tipo === 'DEBITO' ? valorBRL.negated() : valorBRL,

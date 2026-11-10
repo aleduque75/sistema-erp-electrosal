@@ -141,6 +141,9 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - `process-recovery-finalization.use-case.ts`: Substituído o uso do UUID longo pelo número curto da ordem (`recoveryOrder.orderNumber`, ex: `REC-014`) nas observações do lote, descrição do resíduo e lançamentos contábeis.
    - `OrderNumberVO`: Adicionado método `toString()` para interpolação limpa em strings.
    - `PureMetalLotMapper` e frontend (`pure-metal-lots/page.tsx`): Implementada sanitização inteligente para substituir UUIDs de ordens de recuperação pelo número curto (`originDetails.orderNumber` ou hash curto de 8 caracteres).
+4. **Opção de Extrato para Cliente (Substituição de Pedidos/Clientes por "Depósito Acerto"):**
+   - Backend: Suporte a `omitirPedidos` nos endpoints `GET /contas-correntes/:id/extrato/pdf` e `POST /contas-correntes/extrato/pdf/selected`. Quando ativo, substitui descrições que expõem vendas/pedidos de terceiros (ex: "Recebimento Ref. Receber de GEMAS DO MUNDO...") por "Depósito Acerto" e oculta a linha secundária contábil.
+   - Frontend (`contas-correntes/[id]/extrato/page.tsx`): Adicionado menu dropdown nos botões de PDF ("Extrato Padrão" vs "Extrato p/ Cliente (Depósito Acerto)") e checkbox no painel de filtros para acionamento direto.
 
 ---
 
