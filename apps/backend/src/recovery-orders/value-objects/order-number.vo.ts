@@ -16,6 +16,10 @@ export class OrderNumberVO {
     return this._value;
   }
 
+  toString(): string {
+    return this._value;
+  }
+
   equals(other: OrderNumberVO | string): boolean {
     const otherVal = other instanceof OrderNumberVO ? other.value : (other ?? '').toString().trim();
     return this._value.toUpperCase() === otherVal.toUpperCase();

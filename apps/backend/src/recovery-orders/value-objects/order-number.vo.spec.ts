@@ -1,9 +1,11 @@
 import { OrderNumberVO } from './order-number.vo';
 
 describe('OrderNumberVO', () => {
-  it('should accept valid order number', () => {
+  it('should accept valid order number and support toString', () => {
     const vo = new OrderNumberVO('REC-2026-001');
     expect(vo.value).toBe('REC-2026-001');
+    expect(vo.toString()).toBe('REC-2026-001');
+    expect(`${vo}`).toBe('REC-2026-001');
   });
 
   it('should throw error when empty', () => {

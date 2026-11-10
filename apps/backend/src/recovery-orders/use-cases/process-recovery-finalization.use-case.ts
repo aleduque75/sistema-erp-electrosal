@@ -115,6 +115,8 @@ export class ProcessRecoveryFinalizationUseCase {
     // --- Calculations ---
     const auPuroRecuperadoGramas = recoveryOrder.resultadoProcessamentoGramas * teorFinal;
     const residuoGramas = recoveryOrder.totalBrutoEstimadoGramas - auPuroRecuperadoGramas;
+    const orderNum = recoveryOrder.orderNumber ? String(recoveryOrder.orderNumber) : recoveryOrder.id.toString().substring(0, 8);
+    const orderNumFormatted = orderNum.startsWith('REC-') || orderNum.startsWith('#') ? orderNum : `#${orderNum}`;
 
     this.logger.log(`Teor Final: ${teorFinal}`);
     this.logger.log(`Resultado Processamento Gramas: ${recoveryOrder.resultadoProcessamentoGramas}`);
@@ -130,7 +132,7 @@ export class ProcessRecoveryFinalizationUseCase {
         initialGrams: auPuroRecuperadoGramas,
         remainingGrams: auPuroRecuperadoGramas,
         purity: teorFinal,
-        notes: `Lote gerado a partir da Ordem de Recuperação #${recoveryOrder.id.toString()}`,
+        notes: `Lote gerado a partir da Ordem de Recuperação ${orderNumFormatted}`,
       });
       await this.pureMetalLotRepository.create(pureMetalLot);
       this.logger.log(`Lote de metal puro criado: ${pureMetalLot.id.toString()}`);
@@ -143,7 +145,7 @@ export class ProcessRecoveryFinalizationUseCase {
       const residueAnalysis = AnaliseQuimica.criarResiduo({
         organizationId,
         clienteId: internalClient.id.toString(), // Passar o clienteId do cliente interno
-        descricaoMaterial: `Resíduo da Ordem de Recuperação ${recoveryOrder.id.toString()}`,
+        descricaoMaterial: `Resíduo da Ordem de Recuperação ${orderNumFormatted}`,
         volumeOuPesoEntrada: residuoGramas,
         unidadeEntrada: 'g',
         auEstimadoBrutoGramas: residuoGramas,
@@ -174,7 +176,7 @@ export class ProcessRecoveryFinalizationUseCase {
             const dataTransacao = new Date();
             // Débito (Aumenta o valor do estoque de metal)
             await this.createTransacaoUseCase.execute({
-              descricao: `Valorização de estoque por recuperação de metal da Ordem #${recoveryOrder.id.toString()}`,
+              descricao: `Valorização de estoque por recuperação de metal da Ordem ${orderNumFormatted}`,
               valor: valorBRL,
               tipo: TipoTransacaoPrisma.DEBITO,
               dataHora: dataTransacao,
@@ -185,7 +187,7 @@ export class ProcessRecoveryFinalizationUseCase {
 
             // Crédito (Registra o custo da produção/recuperação)
             await this.createTransacaoUseCase.execute({
-              descricao: `Contrapartida da valorização de estoque da Ordem #${recoveryOrder.id.toString()}`,
+              descricao: `Contrapartida da valorização de estoque da Ordem ${orderNumFormatted}`,
               valor: valorBRL,
               tipo: TipoTransacaoPrisma.CREDITO,
               dataHora: dataTransacao,
@@ -230,7 +232,7 @@ export class ProcessRecoveryFinalizationUseCase {
         }
       }
 
-      const description = `Comissão sobre Ordem de Recuperação #${recoveryOrder.orderNumber} - ${salesperson?.name || 'Vendedor não informado'}`;
+      const description = `Comissão sobre Ordem de Recuperação ${orderNumFormatted} - ${salesperson?.name || 'Vendedor não informado'}`;
 
       const quotation = await this.cotacoesService.findLatest(
         TipoMetal.AU, // Always use Gold for commissions

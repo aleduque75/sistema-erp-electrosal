@@ -278,9 +278,25 @@ export default function PureMetalLotsPage() {
       header: "Origem",
       cell: ({ row }) => {
         const lot = row.original;
+        let displayNotes = lot.notes;
+        if (displayNotes && lot.originDetails?.orderNumber) {
+          const orderNum = lot.originDetails.orderNumber.startsWith('REC-') || lot.originDetails.orderNumber.startsWith('#')
+            ? lot.originDetails.orderNumber
+            : `#${lot.originDetails.orderNumber}`;
+          displayNotes = displayNotes.replace(
+            /Ordem de Recuperação\s*#?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+            `Ordem de Recuperação ${orderNum}`,
+          );
+        } else if (displayNotes) {
+          displayNotes = displayNotes.replace(
+            /(Ordem de Recuperação\s*#?)([0-9a-f]{8})-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+            `$1$2`,
+          );
+        }
+
         return (
           <span className="text-sm font-medium">
-            {lot.notes || (
+            {displayNotes || (
               <>
                 {lot.originDetails?.orderNumber ? `${lot.originDetails.orderNumber} ` : ''}
                 {lot.originDetails?.name ? `(${lot.originDetails.name})` : ''}

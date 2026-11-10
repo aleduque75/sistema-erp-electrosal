@@ -47,6 +47,24 @@ export class PureMetalLotMapper {
     originDetails?: { name?: string; orderNumber?: string };
     chemicalReactions?: any[];
   }): any {
+    let notes = entity.notes;
+    if (notes) {
+      if (extra?.originDetails?.orderNumber) {
+        const orderNum = extra.originDetails.orderNumber.startsWith('REC-') || extra.originDetails.orderNumber.startsWith('#')
+          ? extra.originDetails.orderNumber
+          : `#${extra.originDetails.orderNumber}`;
+        notes = notes.replace(
+          /Ordem de Recuperação\s*#?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+          `Ordem de Recuperação ${orderNum}`,
+        );
+      } else {
+        notes = notes.replace(
+          /(Ordem de Recuperação\s*#?)([0-9a-f]{8})-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+          `$1$2`,
+        );
+      }
+    }
+
     return {
       id: entity.id,
       organizationId: entity.organizationId,
@@ -58,7 +76,7 @@ export class PureMetalLotMapper {
       purity: entity.purity.value,
       status: entity.status.value,
       entryDate: entity.entryDate,
-      notes: entity.notes,
+      notes,
       lotNumber: entity.lotNumber ? entity.lotNumber.value : null,
       description: entity.description,
       saleId: entity.saleId,

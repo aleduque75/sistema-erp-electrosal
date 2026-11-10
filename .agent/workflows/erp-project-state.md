@@ -137,6 +137,10 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - `LancarResultadoModal.tsx` corrigido com hook `useEffect` para preencher os campos com os valores atuais da análise ao abrir a modalidade de edição, além de exibir mensagens descritivas de erro retornadas pelo backend.
 2. **Melhoria no Pagamento de Crédito de Metal com Dinheiro (`PayMetalCreditWithCashUseCase`):**
    - Adicionado fallback automático para contas correntes sem conta contábil explícita (utilizando `settings.defaultCaixaContaId`) e para conta contábil de crédito de metal (`settings.metalCreditPayableAccountId` com busca automática por conta do passivo de crédito de metal).
+3. **Identificador Curto de Ordem de Recuperação nos Lotes de Metal Puro (`/pure-metal-lots`):**
+   - `process-recovery-finalization.use-case.ts`: Substituído o uso do UUID longo pelo número curto da ordem (`recoveryOrder.orderNumber`, ex: `REC-014`) nas observações do lote, descrição do resíduo e lançamentos contábeis.
+   - `OrderNumberVO`: Adicionado método `toString()` para interpolação limpa em strings.
+   - `PureMetalLotMapper` e frontend (`pure-metal-lots/page.tsx`): Implementada sanitização inteligente para substituir UUIDs de ordens de recuperação pelo número curto (`originDetails.orderNumber` ou hash curto de 8 caracteres).
 
 ---
 
