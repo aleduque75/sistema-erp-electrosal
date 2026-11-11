@@ -82,6 +82,7 @@ backup_pre_migration_*.sql
 
 # Backups e imagens de upload (não commitar no Git)
 *.sql
+!apps/backend/prisma/migrations/**/*.sql
 uploads/
 backup_hoje.sql
 scripts/generate_*

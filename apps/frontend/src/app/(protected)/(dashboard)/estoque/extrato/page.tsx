@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format, subDays } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 // --- Types ---
 interface Product {
@@ -33,11 +34,13 @@ interface StatementLine {
 
 interface StockStatement {
   productName: string;
+  productId?: string;
   startDate: string;
   endDate: string;
   initialBalance: number;
   statement: StatementLine[];
   finalBalance: number;
+  currentStock?: number;
 }
 
 const formSchema = z.object({
@@ -52,6 +55,7 @@ export default function StockStatementPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [statement, setStatement] = useState<StockStatement | null>(null);
   const [loading, setIsPageLoading] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -78,6 +82,24 @@ export default function StockStatementPage() {
       toast.error('Falha ao gerar o extrato de estoque.');
     } finally {
       setIsPageLoading(false);
+    }
+  };
+
+  const handleReconcile = async () => {
+    const currentProductId = form.getValues('productId');
+    if (!currentProductId) return;
+    setReconciling(true);
+    try {
+      await api.post('/stock/reconcile', { productId: currentProductId });
+      toast.success('Extrato sincronizado com o estoque dos lotes com sucesso!');
+      const response = await api.get('/stock-statement', {
+        params: form.getValues(),
+      });
+      setStatement(response.data);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Erro ao sincronizar extrato com lotes.');
+    } finally {
+      setReconciling(false);
     }
   };
 
@@ -161,7 +183,36 @@ export default function StockStatementPage() {
                     <p className="text-sm text-muted-foreground">Saldo Final</p>
                     <p className="font-semibold">{formatNumber(statement.finalBalance)}</p>
                 </div>
+                <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">Estoque Atual (Lotes)</p>
+                    <p className="font-semibold">{formatNumber(statement.currentStock ?? statement.finalBalance)}</p>
+                </div>
             </div>
+
+            {statement.currentStock !== undefined && Math.abs(statement.finalBalance - statement.currentStock) > 0.01 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 mb-4 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-600 dark:text-amber-400">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">Divergência detectada entre o Extrato e o Saldo dos Lotes</p>
+                    <p className="text-xs opacity-90">
+                      Saldo do Extrato: <strong>{formatNumber(statement.finalBalance)}</strong> | Saldo dos Lotes: <strong>{formatNumber(statement.currentStock)}</strong> (Diferença: {formatNumber(statement.currentStock - statement.finalBalance)})
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-500/40 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0"
+                  onClick={handleReconcile}
+                  disabled={reconciling}
+                >
+                  <RefreshCw className={cn("h-4 w-4 mr-1.5", reconciling && "animate-spin")} />
+                  {reconciling ? "Sincronizando..." : "Sincronizar Extrato"}
+                </Button>
+              </div>
+            )}
+
             <Table>
               <TableHeader>
                 <TableRow>

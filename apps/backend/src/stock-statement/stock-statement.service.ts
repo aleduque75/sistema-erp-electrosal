@@ -97,11 +97,13 @@ export class StockStatementService {
 
     return {
       productName: product.name,
+      productId: product.id,
       startDate,
       endDate,
       initialBalance: previousBalance.toNumber(),
       statement: statementLines,
       finalBalance: currentBalance.toNumber(),
+      currentStock: Number(product.stock),
     };
   }
 }

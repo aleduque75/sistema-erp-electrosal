@@ -153,6 +153,18 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
 
 ---
 
+### [11/11/2026]
+1. **Sincronização Bidirecional entre Lotes, Saldo do Produto e Extrato de Estoque:**
+   - **Causa Raiz Resolvida:** A edição direta da quantidade restante de lotes (`remainingQuantity` no `ProductLotsModal` ou `lot-edit-form`) e o zeramento de saldo recalculavam `Product.stock`, mas nunca geravam um `StockMovement`. Com isso, o Extrato de Estoque (que soma estritamente a tabela `StockMovement`) ficava com saldo defasado em relação ao estoque real (ex: Ag CN 54% com 2.579g nos lotes vs 2.434g no extrato).
+   - **`UpdateInventoryLotUseCase`:** Agora calcula a variação do saldo remanescente (`diff = novo - antigo`) e gera automaticamente um `StockMovement` do tipo `MANUAL_ADJUSTMENT` com documento descritivo (`Ajuste Manual de Lote #...` ou `Zeramento de Lote #...`).
+   - **`AdjustStockUseCase`:** Ajustado para associar `inventoryLotId` e `sourceDocument` legível na criação manual de lotes.
+   - **`ReconcileStockUseCase` & Rota `POST /stock/reconcile`:** Novo caso de uso capaz de auditar e sincronizar em lote qualquer produto que apresente discrepância entre os lotes ativos e o histórico de movimentações.
+   - **Ajuste Retroativo Seguro:** `StockModule` no bootstrap (`onApplicationBootstrap`) e migration Prisma garantem a inserção da movimentação pendente de +145g do Lote 1209 de Ag CN 54%, alinhando o Extrato de 2.434g para 2.579g sem intervenção manual.
+   - **Frontend do Extrato (`/estoque/extrato`):** Exibe o "Estoque Atual (Lotes)" ao lado do Saldo Final e, caso detecte divergência, exibe um alerta explicativo com botão "Sincronizar Extrato".
+   - **Formulário de Lotes (`lot-edit-form.tsx`):** Adicionado campo para edição direta de `remainingQuantity` com validação de tipagem e unidade de medida.
+
+---
+
 ## 5. 🎯 Diretrizes para o Agente em Novas Sessões
 
 Ao iniciar qualquer sessão:

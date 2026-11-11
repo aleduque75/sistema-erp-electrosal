@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdjustStockUseCase } from './use-cases/adjust-stock.use-case';
 import { ListInventoryLotsUseCase } from './use-cases/list-inventory-lots.use-case';
 import { UpdateInventoryLotUseCase } from './use-cases/update-inventory-lot.use-case';
+import { ReconcileStockUseCase } from './use-cases/reconcile-stock.use-case';
 import { AdjustStockDto } from './dto/adjust-stock.dto';
 
 @UseGuards(JwtAuthGuard)
@@ -12,6 +13,7 @@ export class StockController {
     private readonly adjustStockUseCase: AdjustStockUseCase,
     private readonly listInventoryLotsUseCase: ListInventoryLotsUseCase,
     private readonly updateInventoryLotUseCase: UpdateInventoryLotUseCase,
+    private readonly reconcileStockUseCase: ReconcileStockUseCase,
   ) {}
 
   private resolveOrgId(req: any): string {
@@ -42,5 +44,11 @@ export class StockController {
   async update(@Req() req, @Param('id') id: string, @Body() body: any) {
     const organizationId = this.resolveOrgId(req);
     return this.updateInventoryLotUseCase.execute(organizationId, id, body);
+  }
+
+  @Post('reconcile')
+  async reconcile(@Req() req, @Body() body: { productId: string }) {
+    const organizationId = this.resolveOrgId(req);
+    return this.reconcileStockUseCase.execute(organizationId, body.productId);
   }
 }

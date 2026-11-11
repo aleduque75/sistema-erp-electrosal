@@ -26,7 +26,9 @@ import api from '@/lib/api';
 
 const formSchema = z.object({
   batchNumber: z.string().optional(),
-  costPrice: z.preprocess((val) => Number(val), z.number().min(0, 'Custo não pode ser negativo')),
+  costPrice: z.coerce.number().min(0, 'Custo não pode ser negativo'),
+  remainingQuantity: z.coerce.number().min(0, 'Saldo não pode ser negativo'),
+  notes: z.string().optional(),
 });
 
 interface LotEditFormProps {
@@ -49,6 +51,8 @@ export function LotEditForm({
     defaultValues: {
       batchNumber: '',
       costPrice: 0,
+      remainingQuantity: 0,
+      notes: '',
     },
   });
 
@@ -57,6 +61,8 @@ export function LotEditForm({
       form.reset({
         batchNumber: lot.batchNumber || '',
         costPrice: Number(lot.costPrice) || 0,
+        remainingQuantity: Number(lot.remainingQuantity) || 0,
+        notes: lot.notes || '',
       });
     }
   }, [lot, open, form]);
@@ -68,8 +74,8 @@ export function LotEditForm({
       toast.success('Lote de estoque atualizado com sucesso!');
       onSuccess();
       onOpenChange(false);
-    } catch (error) {
-      toast.error('Erro ao atualizar lote.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Erro ao atualizar lote.');
       console.error(error);
     } finally {
       setLoading(false);
@@ -102,12 +108,40 @@ export function LotEditForm({
             />
             <FormField
               control={form.control}
+              name="remainingQuantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground">
+                    Saldo Restante ({lot?.product?.stockUnit || 'g'})
+                  </FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} className="bg-input text-input-foreground border-border" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="costPrice"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-foreground">Custo Unitário (R$)</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} className="bg-input text-input-foreground border-border" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground">Motivo / Observações</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Acerto de inventário" {...field} className="bg-input text-input-foreground border-border" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

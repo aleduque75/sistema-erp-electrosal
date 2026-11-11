@@ -29,7 +29,7 @@ export class AdjustStockUseCase {
 
       const finalBatchNumber = batchNumber || `LOTE-${nanoid(6).toUpperCase()}`;
 
-      await tx.inventoryLot.create({
+      const createdLot = await tx.inventoryLot.create({
         data: {
           organizationId,
           productId,
@@ -47,8 +47,10 @@ export class AdjustStockUseCase {
         data: {
           organizationId,
           productId,
+          inventoryLotId: createdLot.id,
           quantity,
           type: 'MANUAL_ADJUSTMENT',
+          sourceDocument: `Ajuste Lote #${finalBatchNumber}${notes ? ` (${notes})` : ''}`,
         },
       });
 
