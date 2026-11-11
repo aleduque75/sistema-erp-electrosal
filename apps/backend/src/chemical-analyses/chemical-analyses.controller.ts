@@ -89,12 +89,15 @@ export class ChemicalAnalysesController {
   @Get(':id/pdf')
   async generatePdf(
     @Param('id', new ParseUUIDPipe()) id: string,
+    @Query('incluirImagens') incluirImagens: string,
     @CurrentUser('orgId') organizationId: string,
     @Res() res: Response,
   ) {
+    const comImagens = incluirImagens !== 'false';
     const pdfBuffer = await this.generateChemicalAnalysisPdfUseCase.execute({
       analiseId: id,
       organizationId,
+      incluirImagens: comImagens,
     });
 
     res.set({

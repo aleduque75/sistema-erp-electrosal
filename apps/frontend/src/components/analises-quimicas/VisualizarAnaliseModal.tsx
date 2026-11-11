@@ -23,7 +23,13 @@ import { Button } from "@/components/ui/button";
 import { AnaliseQuimica } from '@/types/analise-quimica';
 import { Media } from '@/types/media';
 import { format } from "date-fns";
-import { Printer, X, Paperclip, Pencil, Check, Loader2, ClipboardList, FlaskConical, DollarSign, Image as ImageIcon } from "lucide-react";
+import { Printer, X, Paperclip, Pencil, Check, Loader2, ClipboardList, FlaskConical, DollarSign, Image as ImageIcon, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -446,17 +452,21 @@ export function VisualizarAnaliseModal({
       setIsSaving(false);
     }
   };
-  const handleDownloadPdf = async (analiseId: string) => {
+  const handleDownloadPdf = async (analiseId: string, incluirImagens: boolean = true) => {
     setIsDownloadingPdf(analiseId);
     try {
       const response = await api.get(`/analises-quimicas/${analiseId}/pdf`, {
+        params: {
+          incluirImagens,
+        },
         responseType: "blob",
       });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `analise_${analiseId}.pdf`);
+      const numAnalise = currentAnalise?.numeroAnalise || analiseId;
+      link.setAttribute("download", `analise_${numAnalise}${incluirImagens ? '_com_fotos' : ''}.pdf`);
 
       document.body.appendChild(link);
       link.click();
@@ -466,7 +476,7 @@ export function VisualizarAnaliseModal({
       }
 
       window.URL.revokeObjectURL(url);
-      toast.success("Download do PDF iniciado.");
+      toast.success(incluirImagens ? "Download do laudo com fotos iniciado." : "Download do laudo iniciado.");
     } catch (error) {
       console.error("Falha ao baixar o PDF:", error);
       toast.error("Falha ao baixar o PDF. Tente novamente.");
@@ -499,20 +509,62 @@ export function VisualizarAnaliseModal({
               <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-3">
                 Análise #{currentAnalise.numeroAnalise}
                 <ChemicalAnalysisStatusBadge status={currentAnalise.status} showText />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 ml-2 print:hidden"
-                  onClick={() => handleDownloadPdf(currentAnalise.id)}
-                  disabled={isDownloadingPdf === currentAnalise.id}
-                  title="Imprimir PDF"
-                >
-                  {isDownloadingPdf === currentAnalise.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Printer className="h-5 w-5" />
-                  )}
-                </Button>
+                {media && media.length > 0 ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 ml-2 print:hidden hover:bg-muted"
+                        disabled={isDownloadingPdf === currentAnalise.id}
+                        title="Imprimir PDF (Opções)"
+                      >
+                        {isDownloadingPdf === currentAnalise.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        ) : (
+                          <Printer className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-56">
+                      <DropdownMenuItem
+                        onClick={() => handleDownloadPdf(currentAnalise.id, true)}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <ImageIcon className="h-4 w-4 text-blue-500" />
+                        <div className="flex flex-col text-left">
+                          <span className="font-medium">Com Fotos ({media.length})</span>
+                          <span className="text-xs text-muted-foreground">Laudo completo com fotos</span>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDownloadPdf(currentAnalise.id, false)}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <Printer className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex flex-col text-left">
+                          <span className="font-medium">Sem Fotos</span>
+                          <span className="text-xs text-muted-foreground">Apenas laudo e resultados</span>
+                        </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 ml-2 print:hidden"
+                    onClick={() => handleDownloadPdf(currentAnalise.id, false)}
+                    disabled={isDownloadingPdf === currentAnalise.id}
+                    title="Imprimir PDF"
+                  >
+                    {isDownloadingPdf === currentAnalise.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Printer className="h-5 w-5" />
+                    )}
+                  </Button>
+                )}
               </DialogTitle>
               <DialogDescription>
                 Detalhes completos da análise, resultados e valores.
@@ -524,16 +576,64 @@ export function VisualizarAnaliseModal({
           </div>
           <div className="flex justify-end gap-2 p-4 border-t">
             {/* Footer Buttons */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDownloadPdf(currentAnalise.id)}
-              disabled={isDownloadingPdf === currentAnalise.id}
-              className="flex items-center gap-2"
-            >
-              <Printer className="h-4 w-4" />
-              {isDownloadingPdf === currentAnalise.id ? "Gerando..." : "Imprimir PDF"}
-            </Button>
+            {media && media.length > 0 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isDownloadingPdf === currentAnalise.id}
+                    className="flex items-center gap-2 border-primary/30 hover:border-primary"
+                  >
+                    {isDownloadingPdf === currentAnalise.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <span>Gerando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Printer className="h-4 w-4 text-primary" />
+                        <span>Imprimir PDF</span>
+                        <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                      </>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem
+                    onClick={() => handleDownloadPdf(currentAnalise.id, true)}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <ImageIcon className="h-4 w-4 text-blue-500" />
+                    <div className="flex flex-col text-left">
+                      <span className="font-medium">Com Fotos ({media.length})</span>
+                      <span className="text-xs text-muted-foreground">Laudo completo com anexos</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleDownloadPdf(currentAnalise.id, false)}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Printer className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex flex-col text-left">
+                      <span className="font-medium">Sem Fotos</span>
+                      <span className="text-xs text-muted-foreground">Apenas resultados e laudo</span>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadPdf(currentAnalise.id, false)}
+                disabled={isDownloadingPdf === currentAnalise.id}
+                className="flex items-center gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                {isDownloadingPdf === currentAnalise.id ? "Gerando..." : "Imprimir PDF"}
+              </Button>
+            )}
             <DialogClose asChild>
               <Button variant="ghost" size="sm">Fechar</Button>
             </DialogClose>
@@ -556,15 +656,47 @@ export function VisualizarAnaliseModal({
           <ModalContent {...contentProps} />
         </div>
         <DrawerFooter className="pt-2 flex flex-row gap-2">
-          <Button
-            variant="outline"
-            className="flex-1 flex items-center gap-2"
-            onClick={() => handleDownloadPdf(currentAnalise.id)}
-            disabled={isDownloadingPdf === currentAnalise.id}
-          >
-            <Printer className="h-4 w-4" />
-            {isDownloadingPdf === currentAnalise.id ? "Gerando..." : "PDF"}
-          </Button>
+          {media && media.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="flex-1 flex items-center justify-center gap-2"
+                  disabled={isDownloadingPdf === currentAnalise.id}
+                >
+                  <Printer className="h-4 w-4" />
+                  {isDownloadingPdf === currentAnalise.id ? "Gerando..." : "PDF"}
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuItem
+                  onClick={() => handleDownloadPdf(currentAnalise.id, true)}
+                  className="flex items-center gap-2"
+                >
+                  <ImageIcon className="h-4 w-4 text-blue-500" />
+                  <span>Com Fotos ({media.length})</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleDownloadPdf(currentAnalise.id, false)}
+                  className="flex items-center gap-2"
+                >
+                  <Printer className="h-4 w-4 text-muted-foreground" />
+                  <span>Sem Fotos</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="outline"
+              className="flex-1 flex items-center justify-center gap-2"
+              onClick={() => handleDownloadPdf(currentAnalise.id, false)}
+              disabled={isDownloadingPdf === currentAnalise.id}
+            >
+              <Printer className="h-4 w-4" />
+              {isDownloadingPdf === currentAnalise.id ? "Gerando..." : "PDF"}
+            </Button>
+          )}
           <DrawerClose asChild>
             <Button variant="ghost" className="flex-1">Fechar</Button>
           </DrawerClose>

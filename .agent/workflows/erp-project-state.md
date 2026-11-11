@@ -167,6 +167,12 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - **`EditSaleUseCase`:** O valor total da venda em BRL agora é SEMPRE calculado estritamente pela soma dos itens (`sum(item.price * item.quantity)`), com o valor em ouro (`totalGoldValue`) sendo apenas derivado por conveniência contábil (`netAmountBRL / goldPrice`). Sincroniza automaticamente a duplicata única pendente em `AccountRec` e invoca `CalculateSaleAdjustmentUseCase`.
    - **Frontend (`AddItemModal.tsx` e `EditSaleModal.tsx`):** Adicionada flag de metal (`metal: 'AU'` vs `metal: 'AG'`) e inclusão explícita de `Ag CN 54%`. Os recálculos automáticos disparados por variação da cotação de ouro agora afetam apenas produtos de ouro puro ou ligas de ouro (`AU`).
    - **Ajuste Automático da Venda #32069:** Migration SQL idempotente e hook `OnApplicationBootstrap` no `SalesModule` corrigem retroativamente a venda #32069 para R$ 3.180,00 e ajustam a(s) duplicata(s) de Contas a Receber para R$ 3.180,00 (ou 2x de R$ 1.590,00 se desmembrada), recalculando os lucros da venda.
+3. **Inclusão de Fotos / Mídias e Opção Com/Sem Imagens no Laudo em PDF de Análise Química:**
+   - **Template PDF (`analise-quimica-pdf.template.html`):** Adicionada seção estilizada "REGISTRO FOTOGRÁFICO / MÍDIAS DA AMOSTRA" com grid responsivo de 2 colunas, centralização com preservação de aspect ratio (`object-fit: contain`), bordas elegantes e `page-break-inside: avoid` para evitar corte de fotos entre páginas. Adicionada também a exibição da seção de Observações textuais.
+   - **Backend (`generate-chemical-analysis-pdf.use-case.ts` e `chemical-analyses.controller.ts`):** O endpoint `GET /analises-quimicas/:id/pdf` agora aceita o parâmetro `@Query('incluirImagens')`. Suporta imagens locais (`/uploads/`) e remotas (S3/Cloudflare R2 via HTTP/HTTPS com timeout de 10s e conversão para base64).
+   - **Frontend (`VisualizarAnaliseModal.tsx` e `AnalisesQuimicasTable.tsx`):**
+     - No modal de detalhes da análise: quando houver fotos cadastradas (`media.length > 0`), o botão e ícone de "Imprimir PDF" oferecem menu suspenso (Dropdown) com as opções "Com Fotos (X imagens)" e "Sem Fotos (Apenas laudo)". Se não houver fotos, comporta-se como impressão direta.
+     - Na tabela de análises químicas: menu de ações de cada linha conta com "Imprimir com Fotos" e "Imprimir sem Fotos".
 
 ---
 

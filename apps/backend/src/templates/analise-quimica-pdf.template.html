@@ -109,6 +109,57 @@
         left: 15mm;
         right: 15mm;
       }
+      /* Registro Fotográfico e Mídias */
+      .photo-section {
+        margin-top: 20px;
+        page-break-inside: auto;
+      }
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        padding: 12px;
+      }
+      .photo-card {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background-color: #fafafa;
+        padding: 8px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+      }
+      .photo-container {
+        width: 100%;
+        height: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #ffffff;
+        border-radius: 4px;
+        border: 1px solid #eee;
+        overflow: hidden;
+      }
+      .photo-container img {
+        max-width: 100%;
+        max-height: 220px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
+      }
+      .photo-caption {
+        margin-top: 6px;
+        font-size: 8pt;
+        color: #555;
+        font-weight: bold;
+        text-align: center;
+        width: 100%;
+        word-break: break-word;
+      }
       /* Para garantir que o Puppeteer imprima cores e fundos */
       @media print {
         body {
@@ -216,6 +267,31 @@
             >
           </div>
           {{/if}}
+        </div>
+      </section>
+      {{/if}}
+
+      {{#if observacoes}}
+      <section class="content-section">
+        <div class="section-title">OBSERVAÇÕES</div>
+        <div class="observacoes">
+          {{observacoes}}
+        </div>
+      </section>
+      {{/if}}
+
+      {{#if temImagens}}
+      <section class="content-section photo-section">
+        <div class="section-title">REGISTRO FOTOGRÁFICO / MÍDIAS DA AMOSTRA</div>
+        <div class="photo-grid">
+          {{#each imagens}}
+          <div class="photo-card">
+            <div class="photo-container">
+              <img src="{{this.base64}}" alt="{{this.legenda}}" />
+            </div>
+            <div class="photo-caption">{{this.legenda}}</div>
+          </div>
+          {{/each}}
         </div>
       </section>
       {{/if}}

@@ -28,6 +28,7 @@ import {
   RotateCw,
   Pencil,
   Trash2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { LancarResultadoModal } from "./LancarResultadoModal";
 import { VisualizarAnaliseModal } from "./VisualizarAnaliseModal";
@@ -101,16 +102,11 @@ export function AnalisesQuimicasTable({
     }
   };
 
-  const handleDownloadPdf = async (analiseId: string) => {
-    const token = localStorage.getItem("accessToken");
-    console.log(
-      "Tentando baixar PDF. Token de acesso encontrado:",
-      token ? "Sim" : "Não"
-    );
-
+  const handleDownloadPdf = async (analiseId: string, incluirImagens: boolean = true) => {
     setIsDownloadingPdf(analiseId);
     try {
       const response = await api.get(`/analises-quimicas/${analiseId}/pdf`, {
+        params: { incluirImagens },
         responseType: "blob", // Importante para obter a resposta como um blob binário
       });
 
@@ -118,7 +114,7 @@ export function AnalisesQuimicasTable({
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `analise_${analiseId}.pdf`);
+      link.setAttribute("download", `analise_${analiseId}${incluirImagens ? '_com_fotos' : ''}.pdf`);
 
       // Adiciona ao html, clica e remove
       document.body.appendChild(link);
@@ -130,7 +126,7 @@ export function AnalisesQuimicasTable({
 
       // Limpa a URL do blob
       window.URL.revokeObjectURL(url);
-      toast.success("Download do PDF iniciado.");
+      toast.success(incluirImagens ? "Download do laudo com fotos iniciado." : "Download do laudo iniciado.");
     } catch (error) {
       console.error("Falha ao baixar o PDF:", error);
       toast.error("Falha ao baixar o PDF. Tente novamente.");
@@ -327,13 +323,22 @@ export function AnalisesQuimicasTable({
                         {analise.status === "APROVADO_PARA_RECUPERACAO" && (
                           <>
                             <DropdownMenuItem
-                              onClick={() => handleDownloadPdf(analise.id)}
+                              onClick={() => handleDownloadPdf(analise.id, true)}
+                              disabled={isDownloadingPdf === analise.id}
+                            >
+                              <ImageIcon className="mr-2 h-4 w-4 text-blue-500" />
+                              {isDownloadingPdf === analise.id
+                                ? "Baixando..."
+                                : "Imprimir com Fotos"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDownloadPdf(analise.id, false)}
                               disabled={isDownloadingPdf === analise.id}
                             >
                               <Paperclip className="mr-2 h-4 w-4" />
                               {isDownloadingPdf === analise.id
                                 ? "Baixando..."
-                                : "Imprimir PDF"}
+                                : "Imprimir sem Fotos"}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => onRevertToPendingApproval(analise.id)}
@@ -434,11 +439,18 @@ export function AnalisesQuimicasTable({
                     {analise.status === "APROVADO_PARA_RECUPERACAO" && (
                       <>
                         <DropdownMenuItem
-                          onClick={() => handleDownloadPdf(analise.id)}
+                          onClick={() => handleDownloadPdf(analise.id, true)}
+                          disabled={isDownloadingPdf === analise.id}
+                        >
+                          <ImageIcon className="mr-2 h-4 w-4 text-blue-500" />
+                          {isDownloadingPdf === analise.id ? "Baixando..." : "Imprimir com Fotos"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDownloadPdf(analise.id, false)}
                           disabled={isDownloadingPdf === analise.id}
                         >
                           <Paperclip className="mr-2 h-4 w-4" />
-                          {isDownloadingPdf === analise.id ? "Baixando..." : "Imprimir PDF"}
+                          {isDownloadingPdf === analise.id ? "Baixando..." : "Imprimir sem Fotos"}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onRevertToPendingApproval(analise.id)}>
                           <RotateCw className="mr-2 h-4 w-4" /> Reverter

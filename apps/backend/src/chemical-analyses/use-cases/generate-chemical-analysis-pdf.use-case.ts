@@ -16,6 +16,7 @@ import { formatDate } from '../../common/utils/date-utils';
 export interface GenerateChemicalAnalysisPdfCommand {
   analiseId: string;
   organizationId: string;
+  incluirImagens?: boolean;
 }
 
 @Injectable()
@@ -63,35 +64,74 @@ export class GenerateChemicalAnalysisPdfUseCase {
       if (!filePath) return null;
 
       let imageBuffer: Buffer;
+      let detectedMime = 'image/jpeg';
 
-      if (filePath.startsWith('http')) {
-        const response = await fetch(filePath);
-        if (!response.ok) throw new Error(`Falha ao baixar imagem: ${response.statusText}`);
-        const arrayBuffer = await response.arrayBuffer();
-        imageBuffer = Buffer.from(arrayBuffer);
+      if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+        // Se for rota interna do sistema /api/media/file/, tenta ler direto do disco local se disponível
+        if (filePath.includes('/api/media/file/')) {
+          const filename = filePath.split('/api/media/file/').pop();
+          if (filename) {
+            const localUploadPath = path.join(process.cwd(), 'uploads', filename);
+            try {
+              imageBuffer = await fs.readFile(localUploadPath);
+              return this.bufferToBase64(imageBuffer, filename);
+            } catch {
+              // Prossegue para fetch HTTP se não estiver local
+            }
+          }
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        try {
+          const response = await fetch(filePath, { signal: controller.signal });
+          clearTimeout(timeout);
+          if (!response.ok) {
+            this.logger.warn(`Falha ao baixar imagem remota ${filePath}: HTTP ${response.status}`);
+            return null;
+          }
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.startsWith('image/')) {
+            detectedMime = contentType;
+          }
+          const arrayBuffer = await response.arrayBuffer();
+          imageBuffer = Buffer.from(arrayBuffer);
+        } catch (fetchErr: any) {
+          clearTimeout(timeout);
+          this.logger.error(`Erro ao fazer download da imagem ${filePath}: ${fetchErr.message}`);
+          return null;
+        }
       } else {
         let absolutePath = filePath;
         if (filePath.startsWith('/uploads/')) {
           absolutePath = path.join(process.cwd(), filePath.substring(1));
+        } else if (!path.isAbsolute(filePath)) {
+          absolutePath = path.join(process.cwd(), filePath);
         }
         imageBuffer = await fs.readFile(absolutePath);
       }
 
-      const base64Image = imageBuffer.toString('base64');
-      const ext = path.extname(filePath.split('?')[0]).toLowerCase();
-      let mimeType = 'image/jpeg';
-      if (ext === '.png') mimeType = 'image/png';
-      else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
-
-      return `data:${mimeType};base64,${base64Image}`;
-    } catch (error) {
-      console.error(`Erro ao processar imagem para PDF: ${filePath}`, error);
+      return this.bufferToBase64(imageBuffer, filePath, detectedMime);
+    } catch (error: any) {
+      this.logger.error(`Erro ao processar imagem para PDF: ${filePath}`, error);
       return null;
     }
   }
 
+  private bufferToBase64(buffer: Buffer, filePath: string, defaultMime = 'image/jpeg'): string {
+    const ext = path.extname(filePath.split('?')[0]).toLowerCase();
+    let mimeType = defaultMime;
+    if (ext === '.png') mimeType = 'image/png';
+    else if (ext === '.webp') mimeType = 'image/webp';
+    else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
+    else if (ext === '.gif') mimeType = 'image/gif';
+
+    const base64Image = buffer.toString('base64');
+    return `data:${mimeType};base64,${base64Image}`;
+  }
+
   async execute(command: GenerateChemicalAnalysisPdfCommand): Promise<Buffer> {
-    const { analiseId, organizationId } = command;
+    const { analiseId, organizationId, incluirImagens = true } = command;
 
     const analise = await this.chemicalAnalysesRepository.findByIdWithDetails(
       analiseId,
@@ -100,6 +140,34 @@ export class GenerateChemicalAnalysisPdfUseCase {
     if (!analise) {
       throw new NotFoundException(
         `Análise química com ID ${analiseId} não encontrada.`,
+      );
+    }
+
+    // Processamento de imagens se solicitado
+    let imagensParaPdf: { base64: string; index: number; legenda: string }[] = [];
+    if (incluirImagens && Array.isArray(analise.media) && analise.media.length > 0) {
+      this.logger.log(
+        `Processando ${analise.media.length} mídias para inclusão no laudo da análise ${analise.numeroAnalise || analiseId}...`,
+      );
+
+      const promises = analise.media.map(async (item: any, idx: number) => {
+        const filePath = item.path || item.url;
+        if (!filePath) return null;
+        const base64 = await this.getImageAsBase64(filePath);
+        if (!base64) return null;
+        return {
+          base64,
+          index: idx + 1,
+          legenda: `Foto ${idx + 1}${item.filename ? ` - ${item.filename}` : ''}`,
+        };
+      });
+
+      const resolved = await Promise.all(promises);
+      imagensParaPdf = resolved.filter(
+        (img): img is { base64: string; index: number; legenda: string } => img !== null,
+      );
+      this.logger.log(
+        `${imagensParaPdf.length} de ${analise.media.length} imagens convertidas para o PDF.`,
       );
     }
 
@@ -131,6 +199,8 @@ export class GenerateChemicalAnalysisPdfUseCase {
       ...analise,
       dataEmissaoPdf: new Date(),
       statusAnalise: (analise.status || '').replace(/_/g, ' '),
+      temImagens: imagensParaPdf.length > 0,
+      imagens: imagensParaPdf,
     };
 
     const template = Handlebars.compile(htmlComLogo);
@@ -144,12 +214,12 @@ export class GenerateChemicalAnalysisPdfUseCase {
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
       });
       const page = await browser.newPage();
-      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      await page.setContent(htmlContent, { waitUntil: 'load' });
 
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
-        margin: { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' },
+        margin: { top: '15mm', right: '12mm', bottom: '15mm', left: '12mm' },
       });
 
       return Buffer.from(pdfBuffer);
