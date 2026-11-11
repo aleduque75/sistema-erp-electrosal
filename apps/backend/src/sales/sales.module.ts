@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { Module, OnApplicationBootstrap, Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { SalesController } from './sales.controller';
 import { PessoaModule } from '../pessoa/pessoa.module';
 import { ProductsModule } from '../products/products.module';
@@ -97,4 +98,85 @@ import { PrismaSaleRepository } from './repositories/prisma-sale.repository';
     DiagnoseSaleUseCase,
   ],
 })
-export class SalesModule {}
+export class SalesModule implements OnApplicationBootstrap {
+  private readonly logger = new Logger(SalesModule.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
+  ) {}
+
+  async onApplicationBootstrap() {
+    try {
+      // Correção retroativa da Venda #32069 (Hoxtro Serviços / Ag CN 54%)
+      const sale32069 = await this.prisma.sale.findFirst({
+        where: {
+          orderNumber: 32069,
+        },
+        include: {
+          saleItems: true,
+          accountsRec: true,
+        },
+      });
+
+      if (sale32069 && (Number(sale32069.netAmount) > 10000 || Number(sale32069.totalAmount) > 10000)) {
+        this.logger.log(`[SALES_FIX] Corrigindo valores da venda #32069 e duplicatas a receber associadas...`);
+
+        // Calcular o valor correto dos itens
+        const itemsTotal = sale32069.saleItems.reduce(
+          (sum, item) => sum + Number(item.price) * Number(item.quantity),
+          0,
+        );
+        const correctAmount = itemsTotal > 0 ? itemsTotal : 3180.00;
+        const goldPrice = Number(sale32069.goldPrice) || 364.50;
+        const correctGoldValue = correctAmount / goldPrice;
+
+        await this.prisma.sale.update({
+          where: { id: sale32069.id },
+          data: {
+            totalAmount: correctAmount,
+            netAmount: correctAmount,
+            goldValue: correctGoldValue,
+          },
+        });
+
+        // Corrigir contas a receber pendentes vinculadas a esta venda
+        const pendingARs = sale32069.accountsRec.filter(
+          (ar) => !ar.received && (!ar.amountPaid || Number(ar.amountPaid) === 0),
+        );
+
+        if (pendingARs.length === 1) {
+          await this.prisma.accountRec.update({
+            where: { id: pendingARs[0].id },
+            data: {
+              amount: correctAmount,
+              goldAmount: correctGoldValue,
+            },
+          });
+          this.logger.log(`[SALES_FIX] Duplicata ${pendingARs[0].id} ajustada para R$ ${correctAmount.toFixed(2)}.`);
+        } else if (pendingARs.length > 1) {
+          // Se foi desmembrada, ajusta proporcionalmente
+          const totalARAmount = pendingARs.reduce((sum, ar) => sum + Number(ar.amount), 0);
+          for (const ar of pendingARs) {
+            const ratio = Number(ar.amount) / totalARAmount;
+            const newArAmount = Number((correctAmount * ratio).toFixed(2));
+            await this.prisma.accountRec.update({
+              where: { id: ar.id },
+              data: {
+                amount: newArAmount,
+                goldAmount: Number((correctGoldValue * ratio).toFixed(4)),
+              },
+            });
+          }
+          this.logger.log(`[SALES_FIX] ${pendingARs.length} duplicatas desmembradas ajustadas proporcionalmente para somar R$ ${correctAmount.toFixed(2)}.`);
+        }
+
+        // Recalcular ajuste financeiro
+        await this.calculateSaleAdjustmentUseCase.execute(sale32069.id, sale32069.organizationId);
+        this.logger.log(`[SALES_FIX] Venda #32069 corrigida com sucesso.`);
+      }
+    } catch (error) {
+      this.logger.error('Erro ao executar correção de vendas no bootstrap', error);
+    }
+  }
+}

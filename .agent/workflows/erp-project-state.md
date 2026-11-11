@@ -162,6 +162,11 @@ description: Estado Atual, Arquitetura (Oracle ARM / Dokploy), Histórico de Dec
    - **Ajuste Retroativo Seguro:** `StockModule` no bootstrap (`onApplicationBootstrap`) e migration Prisma garantem a inserção da movimentação pendente de +145g do Lote 1209 de Ag CN 54%, alinhando o Extrato de 2.434g para 2.579g sem intervenção manual.
    - **Frontend do Extrato (`/estoque/extrato`):** Exibe o "Estoque Atual (Lotes)" ao lado do Saldo Final e, caso detecte divergência, exibe um alerta explicativo com botão "Sincronizar Extrato".
    - **Formulário de Lotes (`lot-edit-form.tsx`):** Adicionado campo para edição direta de `remainingQuantity` com validação de tipagem e unidade de medida.
+2. **Cálculo Financeiro de Produtos de Prata (Ag CN 54%) e Duplicatas em Contas a Receber:**
+   - **Causa Raiz Resolvida:** O caso de uso `EditSaleUseCase` recalculava o valor total da venda em BRL multiplicando a gramatura de metal puro pela cotação do Ouro puro (`totalGoldValue * goldPrice`). Para produtos de prata como `Ag CN 54%` (Cianeto de Prata 54%), 400g vendidos a R$ 7,95/g (total de R$ 3.180,00) eram indevidamente multiplicados por R$ 364,50/g (cotação de ouro), inflando a venda e a duplicata no Contas a Receber (`/accounts-rec`) para R$ 145.800,00.
+   - **`EditSaleUseCase`:** O valor total da venda em BRL agora é SEMPRE calculado estritamente pela soma dos itens (`sum(item.price * item.quantity)`), com o valor em ouro (`totalGoldValue`) sendo apenas derivado por conveniência contábil (`netAmountBRL / goldPrice`). Sincroniza automaticamente a duplicata única pendente em `AccountRec` e invoca `CalculateSaleAdjustmentUseCase`.
+   - **Frontend (`AddItemModal.tsx` e `EditSaleModal.tsx`):** Adicionada flag de metal (`metal: 'AU'` vs `metal: 'AG'`) e inclusão explícita de `Ag CN 54%`. Os recálculos automáticos disparados por variação da cotação de ouro agora afetam apenas produtos de ouro puro ou ligas de ouro (`AU`).
+   - **Ajuste Automático da Venda #32069:** Migration SQL idempotente e hook `OnApplicationBootstrap` no `SalesModule` corrigem retroativamente a venda #32069 para R$ 3.180,00 e ajustam a(s) duplicata(s) de Contas a Receber para R$ 3.180,00 (ou 2x de R$ 1.590,00 se desmembrada), recalculando os lucros da venda.
 
 ---
 

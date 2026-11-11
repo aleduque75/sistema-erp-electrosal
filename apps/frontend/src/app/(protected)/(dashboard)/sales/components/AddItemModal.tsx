@@ -49,6 +49,8 @@ interface AddItemModalProps {
 const CONVERSION_PRODUCTS = [
   { name: 'El Sal 68%', metal: 'AU', factor: 0.68, laborDefault: 5, unitName: 'Sal' },
   { name: 'Cianeto de Prata 54%', metal: 'AG', factor: 0.54, laborDefault: 0, unitName: 'Cianeto' },
+  { name: 'Ag CN 54%', metal: 'AG', factor: 0.54, laborDefault: 0, unitName: 'Cianeto' },
+  { name: 'Ag CN', metal: 'AG', factor: 0.54, laborDefault: 0, unitName: 'Cianeto' },
 ];
 
 export function AddItemModal({
@@ -210,9 +212,9 @@ export function AddItemModal({
                   if (product?.name.includes('El Sal 68%')) {
                     setEntryUnit('metal');
                     setLaborPercentInput(5);
-                  } else if (product?.name.includes('Cianeto de Prata 54%')) {
-                    setEntryUnit('metal');
-                    setLaborPercentInput(5);
+                  } else if (product?.name.includes('Cianeto de Prata 54%') || product?.name.includes('Ag CN')) {
+                    setEntryUnit('product');
+                    setLaborPercentInput(0);
                   } else {
                     setEntryUnit('product');
                     setLaborPercentInput(0);

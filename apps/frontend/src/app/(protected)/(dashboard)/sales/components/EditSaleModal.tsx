@@ -21,9 +21,10 @@ import { Sale, Product } from '@/types/sale';
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
-const CONVERSION_FACTORS: Record<string, { factor: number; defaultLabor: number }> = {
-  'El Sal 68%': { factor: 0.68, defaultLabor: 5 },
-  'Cianeto de Prata 54%': { factor: 0.54, defaultLabor: 5 },
+const CONVERSION_FACTORS: Record<string, { factor: number; defaultLabor: number; metal: string }> = {
+  'El Sal 68%': { factor: 0.68, defaultLabor: 5, metal: 'AU' },
+  'Cianeto de Prata 54%': { factor: 0.54, defaultLabor: 0, metal: 'AG' },
+  'Ag CN 54%': { factor: 0.54, defaultLabor: 0, metal: 'AG' },
 };
 
 interface EditSaleModalProps {
@@ -146,14 +147,15 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
     }
   }, [initialSale, reset]);
 
-  // Automatically recalculate Sal 68% item price when gold quote changes
+  // Automatically recalculate Sal 68% (Gold) item price when gold quote changes
   useEffect(() => {
     if (!updatedGoldPrice || updatedGoldPrice <= 0) return;
 
     setEditableItems(prevItems =>
       prevItems.map(item => {
         const conv = Object.entries(CONVERSION_FACTORS).find(([name]) => item.productName.includes(name));
-        if (!conv || item.quantity <= 0) return item;
+        // Apenas recalcula pelo ouro se for item de Ouro (AU)
+        if (!conv || conv[1].metal !== 'AU' || item.quantity <= 0) return item;
 
         const factor = conv[1].factor;
         const laborPct = item.laborPercentage ?? conv[1].defaultLabor;
@@ -181,7 +183,8 @@ export function EditSaleModal({ sale: initialSale, open, onOpenChange, onSave }:
         const conv = Object.entries(CONVERSION_FACTORS).find(([name]) => item.productName.includes(name));
         
         let newPrice = item.price;
-        if (conv && updatedGoldPrice && parsed > 0) {
+        // Apenas recalcula preço se for produto de ouro (AU)
+        if (conv && conv[1].metal === 'AU' && updatedGoldPrice && parsed > 0) {
           const factor = conv[1].factor;
           const laborPct = item.laborPercentage ?? conv[1].defaultLabor;
           const metalGrams = item.entryUnit === 'metal' && item.entryQuantity

@@ -2,11 +2,15 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service';
 import { SaleStatus } from '@prisma/client';
 import { EditSaleDto } from '../dtos/edit-sale.dto';
+import { CalculateSaleAdjustmentUseCase } from './calculate-sale-adjustment.use-case';
 import Decimal from 'decimal.js';
 
 @Injectable()
 export class EditSaleUseCase {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private calculateSaleAdjustmentUseCase: CalculateSaleAdjustmentUseCase,
+  ) { }
 
   async execute(organizationId: string, saleId: string, dto: EditSaleDto) {
     return this.prisma.$transaction(async (tx) => {
@@ -25,9 +29,9 @@ export class EditSaleUseCase {
         throw new NotFoundException(`Venda com ID ${saleId} não encontrada.`);
       }
 
-      if (sale.status !== SaleStatus.PENDENTE) {
+      if (sale.status !== SaleStatus.PENDENTE && sale.status !== SaleStatus.A_SEPARAR) {
         throw new BadRequestException(
-          `Apenas vendas com status PENDENTE podem ser editadas.`,
+          `Apenas vendas com status PENDENTE ou A_SEPARAR podem ser editadas.`,
         );
       }
 
@@ -93,35 +97,15 @@ export class EditSaleUseCase {
       const goldPrice = new Decimal(dto.updatedGoldPrice ?? sale.goldPrice ?? 0);
       const shippingCostBRL = new Decimal(dto.shippingCost ?? sale.shippingCost ?? 0);
 
-      // Calculate Item Gold from (updated) sale items including item labor percentage
-      const itemGold = sale.saleItems.reduce((sum, item) => {
-        const productGoldValue = new Decimal(item.product.goldValue || 0);
-        const qty = new Decimal(item.quantity);
-        const pureMetal = qty.times(productGoldValue);
-        const laborPct = new Decimal((item as any).laborPercentage ?? 0);
-        const itemLaborGold = pureMetal.times(laborPct).dividedBy(100);
-        return sum.plus(pureMetal).plus(itemLaborGold);
+      // O total da venda em BRL é SEMPRE a soma do subtotal dos itens (quantidade x preço unitário)
+      const totalAmountBRL = sale.saleItems.reduce((sum, item) => {
+        return sum.plus(new Decimal(item.price || 0).times(item.quantity || 0));
       }, new Decimal(0));
 
-      // Calculate Labor Gold from the cost table
-      const laborCostEntry = await tx.laborCostTableEntry.findFirst({
-        where: {
-          organizationId: organizationId,
-          minGrams: { lte: itemGold.toNumber() },
-          OR: [{ maxGrams: { gte: itemGold.toNumber() } }, { maxGrams: null }],
-        },
-      });
-      const laborGold = laborCostEntry ? new Decimal(laborCostEntry.goldGramsCharged) : new Decimal(0);
+      const netAmountBRL = totalAmountBRL.plus(shippingCostBRL);
 
-      // Calculate Shipping Gold
-      const shippingGold = goldPrice.isZero() ? new Decimal(0) : shippingCostBRL.dividedBy(goldPrice);
-
-      // Calculate Total Gold Value
-      const totalGoldValue = itemGold.plus(laborGold).plus(shippingGold);
-
-      // Recalculate BRL amounts based on the final gold value
-      const netAmountBRL = totalGoldValue.times(goldPrice);
-      const totalAmountBRL = netAmountBRL.minus(shippingCostBRL);
+      // O valor em metal é derivado do valor líquido dividido pela cotação do metal de referência (Ouro)
+      const totalGoldValue = goldPrice.gt(0) ? netAmountBRL.dividedBy(goldPrice) : new Decimal(0);
 
       // --- 3. Update the sale record ---
       const updatedSale = await tx.sale.update({
@@ -137,6 +121,25 @@ export class EditSaleUseCase {
           observation: dto.observation ?? sale.observation,
         },
       });
+
+      // --- 4. Sincronizar contas a receber pendentes se houver ---
+      const pendingAccountsRec = await tx.accountRec.findMany({
+        where: { saleId: sale.id, received: false },
+      });
+
+      if (pendingAccountsRec.length === 1 && (!pendingAccountsRec[0].amountPaid || new Decimal(pendingAccountsRec[0].amountPaid).isZero())) {
+        // Se há uma única conta a receber pendente e sem pagamentos (ex: A Combinar ou à vista pendente)
+        await tx.accountRec.update({
+          where: { id: pendingAccountsRec[0].id },
+          data: {
+            amount: netAmountBRL,
+            goldAmount: totalGoldValue,
+          },
+        });
+      }
+
+      // Recalcular ajuste financeiro da venda
+      await this.calculateSaleAdjustmentUseCase.execute(saleId, organizationId, tx);
 
       return updatedSale;
     });
